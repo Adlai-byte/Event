@@ -1,0 +1,27 @@
+{
+  "name": "event-database",
+  "version": "1.0.0",
+  "description": "Database schema and migration scripts for Event Management System",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "seed": "node seed.js",
+    "reset": "node reset.js"
+  },
+  "keywords": ["database", "migration", "mysql"],
+  "author": "",
+  "license": "ISC"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,483 @@
+import { Platform } from 'react-native';
+import { User } from '../models/User';
+import { AuthState } from '../models/AuthState';
+import { getApiBaseUrl } from '../services/api';
+import { LoginFormData, RegisterFormData } from '../models/FormData';
+import AuthService from '../services/AuthService';
+
+// AuthController - Handles authentication business logic
+export class AuthController {
+  private authState: AuthState;
+  private onStateChange: (state: AuthState) => void;
+
+  constructor(onStateChange: (state: AuthState) => void) {
+    this.authState = new AuthState();
+    this.onStateChange = onStateChange;
+    this.initializeAuth();
+  }
+
+  private async initializeAuth(): Promise<void> {
+    this.updateState(this.authState.setLoading(true));
+    
+    // Listen to authentication state changes
+    AuthService.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        let baseUser = User.fromFirebaseUser(firebaseUser);
+        
+        // Fetch user role and name from database (important for page reloads)
+        if (firebaseUser.email) {
+          try {
+            const q = encodeURIComponent(firebaseUser.email);
+            const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.ok && data.exists) {
+                // Check if user has password - if they do, this might be a Google login attempt
+                // Check if this is a Google provider (not email/password)
+                const providerData = (firebaseUser as any).providerData;
+                const isGoogleProvider = providerData && 
+                  Array.isArray(providerData) &&
+                  providerData.some((provider: any) => provider && provider.providerId === 'google.com');
+                
+                if (isGoogleProvider && data.hasPassword === true) {
+                  // User has password but trying to login with Google - reject
+                  await AuthService.logout();
+                  this.updateState(this.authState.logout().setError("This account is registered with email/password. Please use email and password to login instead."));
+                  return;
+                }
+                
+                // Check if user is blocked
+                if (data.blocked === true) {
+                  // Sign out blocked user
+                  await AuthService.logout();
+                  this.updateState(this.authState.logout().setError("You've been blocked"));
+                  return;
+                }
+                
+                // Create new User object with all properties from database
+                const user = new User(
+                  baseUser.uid,
+                  baseUser.email,
+                  baseUser.displayName,
+                  baseUser.emailVerified,
+                  baseUser.createdAt,
+                  baseUser.lastLoginAt,
+                  data.firstName || baseUser.firstName,
+                  data.middleName || baseUser.middleName,
+                  data.lastName || baseUser.lastName,
+                  baseUser.phone,
+                  baseUser.dateOfBirth,
+                  baseUser.address,
+                  baseUser.city,
+                  baseUser.state,
+                  baseUser.zipCode,
+                  data.role || baseUser.role || 'user',
+                  data.profilePicture || baseUser.profilePicture
+                );
+                
+                this.updateState(this.authState.setUser(user).setLoading(false));
+                return;
+              }
+            }
+          } catch (error: any) {
+            console.error('Error fetching user data on auth state change:', error);
+            // Log more details about the network error
+            if (error?.message?.includes('Network request failed') || error?.message?.includes('Failed to fetch')) {
+              const apiUrl = getApiBaseUrl();
+              const isEmulator = Platform.OS === 'android' && apiUrl.includes('10.0.2.2');
+              const isPhysicalDevice = !isEmulator && (Platform.OS === 'android' || Platform.OS === 'ios');
+              
+              console.error('🌐 Network Error Details:');
+              console.error('  - API Base URL:', apiUrl);
+              console.error('  - Platform:', Platform.OS);
+              console.error('  - Error:', error.message);
+              
+              if (isEmulator) {
+                console.error('  - ⚠️  Android Emulator Detected');
+                console.error('  - Solution: Make sure your server is running: npm run server');
+                console.error('  - Test server: Open http://localhost:3001/api/health in your browser');
+                console.error('  - If server is running, check Windows Firewall settings');
+              } else if (isPhysicalDevice) {
+                console.error('  - ⚠️  Physical Device Detected');
+                console.error('  - Solution: Set EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP:3001 in .env file');
+                console.error('  - Find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)');
+              } else {
+                console.error('  - Solution: Make sure your server is running: npm run server');
+              }
+            }
+            // Continue with default values if fetch fails
+          }
+        }
+        
+        this.updateState(this.authState.setUser(baseUser).setLoading(false));
+      } else {
+        this.updateState(this.authState.logout().setLoading(false));
+      }
+    });
+  }
+
+  private updateState(newState: AuthState): void {
+    this.authState = newState;
+    this.onStateChange(this.authState);
+  }
+
+  // Login method
+  public async login(formData: LoginFormData): Promise<{ success: boolean; error?: string }> {
+    try {
+      this.updateState(this.authState.setLoading(true).clearError());
+      
+      const errors = formData.getErrors();
+      if (Object.keys(errors).length > 0) {
+        this.updateState(this.authState.setError('Please fix the form errors'));
+        return { success: false, error: 'Please fix the form errors' };
+      }
+
+      const result = await AuthService.login(formData.email, formData.password);
+      
+      if (result.success && result.user) {
+        // Check MySQL blocked status and get user role and name
+        const baseUser = User.fromFirebaseUser(result.user);
+        let userRole: 'user' | 'admin' | 'provider' = 'user';
+        let firstName: string | undefined;
+        let middleName: string | undefined;
+        let lastName: string | undefined;
+        let profilePicture: string | undefined;
+        
+        try {
+          const q = encodeURIComponent(formData.email);
+          const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.ok && data.exists) {
+              if (data.blocked === true) {
+                // Sign out and surface error
+                await AuthService.logout();
+                this.updateState(this.authState.setError("You've been blocked").setLoading(false));
+                return { success: false, error: "You've been blocked" };
+              }
+              // Get user role and name from database
+              if (data.role) {
+                userRole = data.role;
+              }
+              if (data.firstName) {
+                firstName = data.firstName;
+              }
+              if (data.middleName) {
+                middleName = data.middleName;
+              }
+              if (data.lastName) {
+                lastName = data.lastName;
+              }
+              if (data.profilePicture) {
+                profilePicture = data.profilePicture;
+              }
+            }
+          }
+        } catch {}
+
+        // Create new User object with all properties
+        const user = new User(
+          baseUser.uid,
+          baseUser.email,
+          baseUser.displayName,
+          baseUser.emailVerified,
+          baseUser.createdAt,
+          baseUser.lastLoginAt,
+          firstName || baseUser.firstName,
+          middleName || baseUser.middleName,
+          lastName || baseUser.lastName,
+          baseUser.phone,
+          baseUser.dateOfBirth,
+          baseUser.address,
+          baseUser.city,
+          baseUser.state,
+          baseUser.zipCode,
+          userRole,
+          profilePicture || baseUser.profilePicture
+        );
+        
+        this.updateState(this.authState.setUser(user).setLoading(false));
+        return { success: true };
+      } else {
+        this.updateState(this.authState.setError(result.error || 'Login failed').setLoading(false));
+        return { success: false, error: result.error || 'Login failed' };
+      }
+    } catch (error: any) {
+      this.updateState(this.authState.setError(error.message).setLoading(false));
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Register method
+  public async register(formData: RegisterFormData): Promise<{ success: boolean; error?: string }> {
+    try {
+      this.updateState(this.authState.setLoading(true).clearError());
+      
+      const errors = formData.getErrors();
+      if (Object.keys(errors).length > 0) {
+        this.updateState(this.authState.setError('Please fix the form errors'));
+        return { success: false, error: 'Please fix the form errors' };
+      }
+
+      // Check if email already exists in database BEFORE attempting Firebase registration
+      try {
+        const q = encodeURIComponent(formData.email);
+        const checkResp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+        if (checkResp.ok) {
+          const checkData = await checkResp.json();
+          if (checkData && checkData.ok && checkData.exists) {
+            // Email already exists in database
+            this.updateState(this.authState.setError("This email is already registered. Please use a different email or try logging in instead.").setLoading(false));
+            return { success: false, error: "This email is already registered. Please use a different email or try logging in instead." };
+          }
+        }
+      } catch (checkError) {
+        console.error('Error checking email existence:', checkError);
+        // Continue with registration if check fails (don't block registration due to check error)
+      }
+
+      const result = await AuthService.register(formData.email, formData.password, formData.getFullName());
+      
+      if (result.success && result.user) {
+        // Insert into MySQL via local API
+        try {
+          const response = await fetch(`${getApiBaseUrl()}/api/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: formData.firstName,
+              middleName: formData.middleName,
+              lastName: formData.lastName,
+              suffix: formData.suffix,
+              email: formData.email,
+              password: formData.password,
+            })
+          });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            // If Firebase user was created but MySQL insert failed, clean up Firebase user
+            const errorMessage = data.error || 'Failed to save user to database';
+            
+            // Clean up Firebase user if MySQL insert failed
+            try {
+              await AuthService.logout();
+            } catch (logoutErr) {
+              console.error('Error cleaning up Firebase user:', logoutErr);
+            }
+            
+            throw new Error(errorMessage);
+          }
+        } catch (dbErr: any) {
+          // Clean up Firebase user if MySQL insert failed
+          try {
+            await AuthService.logout();
+          } catch (logoutErr) {
+            console.error('Error cleaning up Firebase user:', logoutErr);
+          }
+          this.updateState(this.authState.setError(dbErr.message).setLoading(false));
+          return { success: false, error: dbErr.message };
+        }
+
+        const user = User.fromFirebaseUser(result.user);
+        this.updateState(this.authState.setUser(user).setLoading(false));
+        return { success: true };
+      } else {
+        this.updateState(this.authState.setError(result.error || 'Registration failed').setLoading(false));
+        return { success: false, error: result.error || 'Registration failed' };
+      }
+    } catch (error: any) {
+      this.updateState(this.authState.setError(error.message).setLoading(false));
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Google login method
+  public async loginWithGoogle(): Promise<boolean> {
+    try {
+      this.updateState(this.authState.setLoading(true).clearError());
+      
+      const result = await AuthService.loginWithGoogle();
+      
+      if (result.success) {
+        if (result.user) {
+          // Check if user has password before allowing Google login
+          if (result.user.email) {
+            try {
+              const q = encodeURIComponent(result.user.email);
+              const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+              if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.ok && data.exists) {
+                  // If user has a password, reject Google login
+                  if (data.hasPassword === true) {
+                    await AuthService.logout();
+                    this.updateState(this.authState.setError("This account is registered with email/password. Please use email and password to login instead.").setLoading(false));
+                    return false;
+                  }
+                  
+                  if (data.blocked === true) {
+                    await AuthService.logout();
+                    this.updateState(this.authState.setError("You've been blocked").setLoading(false));
+                    return false;
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error checking user password:', error);
+              // Continue if check fails, but log the error
+            }
+          }
+          
+          const baseUser = User.fromFirebaseUser(result.user);
+          let userRole: 'user' | 'admin' | 'provider' = 'user';
+          let firstName: string | undefined;
+          let middleName: string | undefined;
+          let lastName: string | undefined;
+          let profilePicture: string | undefined;
+          
+          try {
+            if (result.user.email) {
+              const q = encodeURIComponent(result.user.email);
+              const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+              if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.ok && data.exists) {
+                  // Get user role and name from database
+                  if (data.role) {
+                    userRole = data.role;
+                  }
+                  if (data.firstName) {
+                    firstName = data.firstName;
+                  }
+                  if (data.middleName) {
+                    middleName = data.middleName;
+                  }
+                  if (data.lastName) {
+                    lastName = data.lastName;
+                  }
+                  if (data.profilePicture) {
+                    profilePicture = data.profilePicture;
+                  }
+                }
+              }
+            }
+          } catch {}
+          
+          // Create new User object with all properties
+          const user = new User(
+            baseUser.uid,
+            baseUser.email,
+            baseUser.displayName,
+            baseUser.emailVerified,
+            baseUser.createdAt,
+            baseUser.lastLoginAt,
+            firstName || baseUser.firstName,
+            middleName || baseUser.middleName,
+            lastName || baseUser.lastName,
+            baseUser.phone,
+            baseUser.dateOfBirth,
+            baseUser.address,
+            baseUser.city,
+            baseUser.state,
+            baseUser.zipCode,
+            userRole,
+            profilePicture || baseUser.profilePicture
+          );
+
+          // Also save Google user to MySQL (no password)
+          try {
+            const displayName = result.user.displayName || '';
+            const parts = displayName.trim().split(/\s+/);
+            const firstName = parts[0] || '';
+            const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+            await fetch(`${getApiBaseUrl()}/api/register`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                firstName,
+                middleName: '',
+                lastName,
+                suffix: '',
+                email: result.user.email,
+              })
+            });
+          } catch (e) {
+            // Non-blocking: continue login even if DB save fails
+          }
+          this.updateState(this.authState.setUser(user).setLoading(false));
+          return true;
+        }
+      } else {
+        this.updateState(this.authState.setError(result.error || 'Google login failed').setLoading(false));
+        return false;
+      }
+    } catch (error: any) {
+      this.updateState(this.authState.setError(error.message).setLoading(false));
+      return false;
+    }
+    return false;
+  }
+
+  // Password reset method
+  public async resetPassword(email: string): Promise<boolean> {
+    try {
+      this.updateState(this.authState.setLoading(true).clearError());
+      
+      if (!email.trim()) {
+        this.updateState(this.authState.setError('Please enter your email address').setLoading(false));
+        return false;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        this.updateState(this.authState.setError('Please enter a valid email address').setLoading(false));
+        return false;
+      }
+
+      const result = await AuthService.resetPassword(email);
+      
+      if (result.success) {
+        this.updateState(this.authState.setLoading(false).clearError());
+        return true;
+      } else {
+        this.updateState(this.authState.setError(result.error || 'Password reset failed').setLoading(false));
+        return false;
+      }
+    } catch (error: any) {
+      this.updateState(this.authState.setError(error.message).setLoading(false));
+      return false;
+    }
+  }
+
+  // Logout method
+  public async logout(): Promise<boolean> {
+    try {
+      console.log('AuthController: Starting logout...');
+      
+      const result = await AuthService.logout();
+      console.log('AuthController: AuthService result:', result);
+      
+      // Always reset the state to logged out, regardless of Firebase result
+      console.log('AuthController: Resetting state to logged out...');
+      this.updateState(new AuthState(false, null, false, null));
+      console.log('AuthController: State reset to logged out');
+      
+      return true; // Always return true since we're forcing logout
+    } catch (error: any) {
+      console.error('AuthController: Logout error:', error);
+      // Even if there's an error, reset to logged out state
+      this.updateState(new AuthState(false, null, false, null));
+      return true;
+    }
+  }
+
+  // Get current state
+  public getState(): AuthState {
+    return this.authState;
+  }
+
+  // Clear error
+  public clearError(): void {
+    this.updateState(this.authState.clearError());
+  }
+}

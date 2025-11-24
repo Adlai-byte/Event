@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+            color: white;
+        }
+        h1 {
+            color: #1f2937;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        p {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .button {
+            background: #10b981;
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background: #059669;
+        }
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Payment Successful!</h1>
+        <p>Your payment has been processed successfully. You will be redirected back to the homepage shortly.</p>
+        <div class="loading" id="loading">Redirecting...</div>
+        <a href="#" class="button" id="backButton" onclick="goBack()">Return to App</a>
+    </div>
+
+    <script>
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        function goBack() {
+            // Try to get frontend URL from referrer first
+            let frontendUrl = null;
+            
+            if (document.referrer) {
+                try {
+                    const referrerUrl = new URL(document.referrer);
+                    // If referrer is from a different port (likely the frontend), use it
+                    if (referrerUrl.port !== window.location.port) {
+                        frontendUrl = referrerUrl.origin;
+                    }
+                } catch (e) {
+                    console.log('Could not parse referrer');
+                }
+            }
+            
+            // If no referrer or same port, try common frontend ports
+            if (!frontendUrl) {
+                const protocol = window.location.protocol;
+                const hostname = window.location.hostname;
+                const currentPort = window.location.port;
+                
+                if (currentPort === '3001') {
+                    // Backend is on 3001, redirect to frontend on port 8081
+                    frontendUrl = `${protocol}//${hostname}:8081`;
+                } else {
+                    // Same origin, just go to root
+                    frontendUrl = `${protocol}//${hostname}${currentPort ? ':' + currentPort : ''}`;
+                }
+            }
+            
+            // Try to close the window (for popups) or redirect
+            if (window.opener) {
+                // If opened in popup, send message and close
+                window.opener.postMessage({ 
+                    type: 'payment_success', 
+                    bookingId: getUrlParam('bookingId') 
+                }, '*');
+                window.close();
+            } else {
+                // Redirect to frontend app homepage
+                // The app will load and show the dashboard by default
+                console.log('Redirecting to:', frontendUrl);
+                window.location.href = frontendUrl;
+            }
+        }
+
+        // Auto-redirect after 2 seconds (faster for better UX)
+        setTimeout(() => {
+            goBack();
+        }, 2000);
+
+        // Show loading after 0.5 seconds
+        setTimeout(() => {
+            document.getElementById('loading').style.display = 'block';
+        }, 500);
+    </script>
+</body>
+</html>
+
