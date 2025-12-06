@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,10 +37,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onSuccess,
 }) => {
   const [processing, setProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'paymongo' | 'cash'>('paymongo');
 
   const handlePay = async () => {
     console.log('Pay button clicked');
+    setErrorMessage(''); // Clear previous error
+    
+    if (paymentMethod === 'cash') {
+      await processCashPayment();
+    } else {
     await processPayment();
+    }
   };
 
   const processPayment = async () => {
@@ -105,7 +113,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           status: resp.status,
           data: data,
         });
-        Alert.alert('Payment Failed', errorMessage);
+        
+        // Check if it's a provider payment setup error
+        if (errorMessage.includes('not yet set up') || errorMessage.includes('Provider not yet')) {
+          setErrorMessage('Provider not yet set up his payment');
+        } else {
+          setErrorMessage(errorMessage);
+        }
         setProcessing(false);
       }
     } catch (error) {
@@ -119,6 +133,75 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  const processCashPayment = async () => {
+    try {
+      setProcessing(true);
+      console.log('Processing cash payment for booking:', booking.id);
+
+      const apiUrl = `${getApiBaseUrl()}/api/bookings/${booking.id}/pay-cash`;
+      console.log('Calling API:', apiUrl);
+
+      const resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: userEmail,
+        }),
+      });
+
+      console.log('API Response status:', resp.status);
+      const data = await resp.json();
+      console.log('API Response data:', data);
+
+      if (resp.ok && data.ok) {
+        console.log('Cash payment recorded successfully');
+        
+        // Close modal
+        onClose();
+        
+        // Show success message
+        Alert.alert(
+          'Payment Recorded',
+          'Your cash payment has been recorded. Please bring the exact amount when you meet the provider.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Call onSuccess to trigger refresh
+                onSuccess();
+              },
+            },
+          ]
+        );
+      } else {
+        const errorMessage = data?.error || data?.message || 'Failed to record cash payment. Please try again.';
+        console.error('Cash payment failed:', {
+          status: resp.status,
+          data: data,
+        });
+        setErrorMessage(errorMessage);
+        setProcessing(false);
+      }
+    } catch (error) {
+      console.error('Error processing cash payment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert(
+        'Payment Error', 
+        `Failed to process cash payment: ${errorMessage}\n\nPlease check:\n1. Server is running\n2. Network connection is active`
+      );
+      setProcessing(false);
+    }
+  };
+
+
+  // Clear error when modal opens
+  useEffect(() => {
+    if (visible) {
+      setErrorMessage('');
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -138,6 +221,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Error Message */}
+          {errorMessage ? (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton}>
+                <Text style={styles.errorCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          
           {/* Booking Summary */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Booking Summary</Text>
@@ -159,7 +252,78 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </View>
           </View>
 
+          {/* Payment Method Selection */}
+          <View style={styles.paymentSection}>
+            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <View style={styles.paymentMethodContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.paymentMethodCard,
+                  paymentMethod === 'paymongo' && styles.paymentMethodCardActive,
+                ]}
+                onPress={() => setPaymentMethod('paymongo')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.paymentMethodContent}>
+                  <Text style={styles.paymentMethodIcon}>💳</Text>
+                  <View style={styles.paymentMethodTextContainer}>
+                    <Text style={[
+                      styles.paymentMethodTitle,
+                      paymentMethod === 'paymongo' && styles.paymentMethodTitleActive,
+                    ]}>
+                      Online Payment (PayMongo)
+                    </Text>
+                    <Text style={[
+                      styles.paymentMethodDescription,
+                      paymentMethod === 'paymongo' && styles.paymentMethodDescriptionActive,
+                    ]}>
+                      Pay securely via GCash or other online methods
+                    </Text>
+                  </View>
+                  {paymentMethod === 'paymongo' && (
+                    <View style={styles.radioButton}>
+                      <View style={styles.radioButtonInner} />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.paymentMethodCard,
+                  paymentMethod === 'cash' && styles.paymentMethodCardActive,
+                ]}
+                onPress={() => setPaymentMethod('cash')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.paymentMethodContent}>
+                  <Text style={styles.paymentMethodIcon}>💵</Text>
+                  <View style={styles.paymentMethodTextContainer}>
+                    <Text style={[
+                      styles.paymentMethodTitle,
+                      paymentMethod === 'cash' && styles.paymentMethodTitleActive,
+                    ]}>
+                      Cash on Hand
+                    </Text>
+                    <Text style={[
+                      styles.paymentMethodDescription,
+                      paymentMethod === 'cash' && styles.paymentMethodDescriptionActive,
+                    ]}>
+                      Pay with cash when you meet the provider
+                    </Text>
+                  </View>
+                  {paymentMethod === 'cash' && (
+                    <View style={styles.radioButton}>
+                      <View style={styles.radioButtonInner} />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Payment Info */}
+          {paymentMethod === 'paymongo' && (
           <View style={styles.paymentSection}>
             <Text style={styles.sectionTitle}>Payment Information</Text>
             <View style={styles.infoCard}>
@@ -171,6 +335,21 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </Text>
             </View>
           </View>
+          )}
+
+          {paymentMethod === 'cash' && (
+            <View style={styles.paymentSection}>
+              <Text style={styles.sectionTitle}>Cash Payment Information</Text>
+              <View style={styles.cashInfoCard}>
+                <Text style={styles.cashInfoText}>
+                  💵 You will pay with cash directly to the provider when you meet them.
+                </Text>
+                <Text style={styles.cashInfoSubtext}>
+                  Make sure to bring the exact amount: ₱{booking.totalCost.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* Action Buttons */}
@@ -187,7 +366,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.payButtonText}>
-                Pay ₱{booking.totalCost.toLocaleString()}
+                {paymentMethod === 'cash' 
+                  ? `Confirm Cash Payment ₱${booking.totalCost.toLocaleString()}`
+                  : `Pay ₱${booking.totalCost.toLocaleString()}`
+                }
               </Text>
             )}
           </TouchableOpacity>
@@ -334,6 +516,111 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorCard: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '600',
+    flex: 1,
+  },
+  errorCloseButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  errorCloseText: {
+    color: '#DC2626',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+  paymentMethodContainer: {
+    gap: 12,
+  },
+  paymentMethodCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    ...getShadowStyle(0.1, 2, 2),
+  },
+  paymentMethodCardActive: {
+    borderColor: '#6C63FF',
+    backgroundColor: '#F5F3FF',
+  },
+  paymentMethodContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentMethodIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  paymentMethodTextContainer: {
+    flex: 1,
+  },
+  paymentMethodTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  paymentMethodTitleActive: {
+    color: '#6C63FF',
+  },
+  paymentMethodDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  paymentMethodDescriptionActive: {
+    color: '#7C3AED',
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#6C63FF',
+  },
+  cashInfoCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  cashInfoText: {
+    fontSize: 16,
+    color: '#166534',
+    marginBottom: 8,
+    lineHeight: 22,
+    fontWeight: '600',
+  },
+  cashInfoSubtext: {
+    fontSize: 14,
+    color: '#15803D',
+    lineHeight: 20,
   },
 });
 

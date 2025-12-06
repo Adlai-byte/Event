@@ -25,6 +25,7 @@ interface BookingModalProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768 || Platform.OS !== 'web';
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   visible,
@@ -209,7 +210,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         return `${hours} hour${hours !== 1 ? 's' : ''}`;
       }
       return `${hours} hour${hours !== 1 ? 's' : ''} ${mins} minute${mins !== 1 ? 's' : ''}`;
-    }
+      }
   };
 
   const calculateEstimatedCost = (slots: Array<{ start: string; end: string }>) => {
@@ -359,9 +360,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       presentationStyle="fullScreen"
     >
       <View style={styles.modalOverlay}>
+        {/* Background with gradient and decorative elements */}
+        {Platform.OS === 'web' && (
+          <View style={styles.backgroundContainer}>
+            <View style={styles.decorativeCircle1} />
+            <View style={styles.decorativeCircle2} />
+          </View>
+        )}
+        
         <View style={styles.modalContent}>
+          {/* Modern Header with Gradient */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Book {serviceName}</Text>
+            <View style={styles.headerContent}>
+              <Text style={styles.modalTitle}>Book {serviceName}</Text>
+              <Text style={styles.modalSubtitle}>Select your preferred date and time</Text>
+            </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -372,111 +385,101 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#4a55e1" />
               </View>
-            ) : (
-              <BookingWeekCalendar
-                currentWeek={currentWeek}
-                onWeekChange={setCurrentWeek}
-                availableSlots={availableSlots}
-                selectedSlots={selectedSlots}
-                onSlotToggle={handleSlotToggle}
-                selectedDate={selectedDate}
-                noSlotsDates={noSlotsDates}
-                onDateSelect={(dateStr) => {
-                  // Check if date has no available slots before selecting
-                  if (isDateNoSlots(dateStr)) {
-                    Alert.alert(
-                      'No Available Slots',
-                      'This date has no available time slots. Please select another date.',
-                      [{ text: 'OK' }]
-                    );
-                    return;
-                  }
-                  if (isDateAvailable(dateStr)) {
-                    setSelectedDate(dateStr);
-                    // Don't clear selected slots when date changes - allow user to keep selections
-                  }
-                }}
-                onTimeSlotClick={(dateStr, hour, minute) => {
-                  // Create a 1-hour slot when user clicks on a time cell
-                  const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
-                  const endHour = hour + 1;
-                  const endTime = `${endHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
-                  
-                  const newSlot: { start: string; end: string; available: boolean } = {
-                    start: startTime,
-                    end: endTime,
-                    available: true,
-                  };
-                  
-                  handleSlotToggle(newSlot);
-                }}
-              />
-            )}
-            
-            {/* Time Selection Buttons */}
-            {selectedDate && !loadingSlots && (
-              <View style={styles.timeSelectionSection}>
-                <View style={styles.timeSelectionHeader}>
-                  <Text style={styles.timeSelectionTitle}>Select Time</Text>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setShowTimePicker(true)}
-                  >
-                    <Text style={styles.timePickerButtonText}>Use Time Picker</Text>
-                  </TouchableOpacity>
-                </View>
-                {(() => {
-                  // Filter to get only available slots (exclude booked/taken slots)
-                  const availableOnly = availableSlots.filter(slot => slot.available === true);
-                  
-                  return availableOnly.length > 0 ? (
-                    <ScrollView 
-                      horizontal 
-                      showsHorizontalScrollIndicator={false}
-                      style={styles.timeButtonsContainer}
-                      contentContainerStyle={styles.timeButtonsContent}
-                    >
-                      {availableOnly.map((slot, index) => {
-                        const isSelected = selectedSlots.some(s => s.start === slot.start && s.end === slot.end);
-                        return (
-                          <TouchableOpacity
-                            key={index}
-                            style={[
-                              styles.timeButton,
-                              isSelected && styles.timeButtonSelected
-                            ]}
-                            onPress={() => {
-                              handleSlotToggle(slot);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[
-                              styles.timeButtonText,
-                              isSelected && styles.timeButtonTextSelected
-                            ]}>
-                              {formatTime(slot.start)} - {formatTime(slot.end)}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  ) : (
-                    <View style={styles.noSlotsContainer}>
-                      <Text style={styles.noSlotsIcon}>📅</Text>
-                      <Text style={styles.noSlotsText}>No Available Time Slots</Text>
-                      <Text style={styles.noSlotsSubtext}>
-                        This date is fully booked. Please select another date.
-                      </Text>
+            ) : serviceDetails?.category.toLowerCase() === 'catering' ? (
+              // For catering: Show date picker and time picker only
+              <>
+                <BookingWeekCalendar
+                  currentWeek={currentWeek}
+                  onWeekChange={setCurrentWeek}
+                  availableSlots={[]}
+                  selectedSlots={[]}
+                  onSlotToggle={() => {}}
+                  selectedDate={selectedDate}
+                  noSlotsDates={noSlotsDates}
+                  onDateSelect={(dateStr) => {
+                    if (isDateAvailable(dateStr)) {
+                      setSelectedDate(dateStr);
+                    }
+                  }}
+                  onTimeSlotClick={() => {}}
+                />
+                {/* Time Selection for Catering - Only Time Picker */}
+                {selectedDate && !loadingSlots && (
+                  <View style={styles.timeSelectionSection}>
+                    <View style={styles.timeSelectionHeader}>
+                      <Text style={styles.timeSelectionTitle}>Select Pickup Time</Text>
+                      <TouchableOpacity
+                        style={styles.timePickerButton}
+                        onPress={() => setShowTimePicker(true)}
+                      >
+                        <Text style={styles.timePickerButtonText}>Use Time Picker</Text>
+                      </TouchableOpacity>
                     </View>
-                  );
-                })()}
-              </View>
+                  </View>
+                )}
+              </>
+            ) : (
+              // For other services: Show full calendar with time slots
+              <>
+                <BookingWeekCalendar
+                  currentWeek={currentWeek}
+                  onWeekChange={setCurrentWeek}
+                  availableSlots={availableSlots}
+                  selectedSlots={selectedSlots}
+                  onSlotToggle={handleSlotToggle}
+                  selectedDate={selectedDate}
+                  noSlotsDates={noSlotsDates}
+                  onDateSelect={(dateStr) => {
+                    // Check if date has no available slots before selecting
+                    if (isDateNoSlots(dateStr)) {
+                      Alert.alert(
+                        'No Available Slots',
+                        'This date has no available time slots. Please select another date.',
+                        [{ text: 'OK' }]
+                      );
+                      return;
+                    }
+                    if (isDateAvailable(dateStr)) {
+                      setSelectedDate(dateStr);
+                      // Don't clear selected slots when date changes - allow user to keep selections
+                    }
+                  }}
+                  onTimeSlotClick={(dateStr, hour, minute) => {
+                    // Create a 1-hour slot when user clicks on a time cell
+                    const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+                    const endHour = hour + 1;
+                    const endTime = `${endHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+                    
+                    const newSlot: { start: string; end: string; available: boolean } = {
+                      start: startTime,
+                      end: endTime,
+                      available: true,
+                    };
+                    
+                    handleSlotToggle(newSlot);
+                  }}
+                />
+                {/* Time Selection Buttons */}
+                {selectedDate && !loadingSlots && (
+                  <View style={styles.timeSelectionSection}>
+                    <View style={styles.timeSelectionHeader}>
+                      <Text style={styles.timeSelectionTitle}>Select Time</Text>
+                      <TouchableOpacity
+                        style={styles.timePickerButton}
+                        onPress={() => setShowTimePicker(true)}
+                      >
+                        <Text style={styles.timePickerButtonText}>Use Time Picker</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </>
             )}
             
             {/* Attendees Input (for catering services) */}
             {serviceDetails?.category.toLowerCase() === 'catering' && (
               <View style={styles.attendeesContainer}>
-                <Text style={styles.attendeesLabel}>Number of Attendees (Pax) *</Text>
+                <Text style={styles.attendeesLabel}>Per Pax *</Text>
                 <View style={styles.attendeesInputContainer}>
                   <TextInput
                     style={styles.attendeesInput}
@@ -493,41 +496,61 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       }
                     }}
                     keyboardType="numeric"
-                    placeholder="Enter number of attendees"
+                    placeholder="Enter number of pax"
                     placeholderTextColor="#999"
                   />
                 </View>
                 <Text style={styles.attendeesHint}>
-                  Cost will be calculated per person
+                  Cost will be calculated per pax
                 </Text>
               </View>
             )}
-
-            {/* Selected Slots Info */}
+            
+            {/* Modern Booking Summary Card */}
             {selectedDate && selectedSlots.length > 0 && (
-              <View style={styles.selectedSlotsInfo}>
-                <Text style={styles.selectedSlotsText}>
-                  {selectedSlots.length} time slot{selectedSlots.length !== 1 ? 's' : ''} selected
-                </Text>
-                {serviceDetails?.category.toLowerCase() !== 'catering' && (
-                  <Text style={styles.selectedSlotsSubtext}>
-                    Total duration: {formatDuration(calculateTotalDuration(selectedSlots))}
-                  </Text>
-                )}
-                {serviceDetails?.category.toLowerCase() === 'catering' && (
-                  <Text style={styles.selectedSlotsSubtext}>
-                    {attendees} {parseInt(attendees) === 1 ? 'person' : 'people'}
-                  </Text>
-                )}
+              <View style={styles.bookingSummaryCard}>
+                <View style={styles.summaryHeader}>
+                  <Text style={styles.summaryTitle}>Booking Summary</Text>
+                  <View style={styles.summaryBadge}>
+                    <Text style={styles.summaryBadgeText}>
+                      {selectedSlots.length} slot{selectedSlots.length !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.summaryDetails}>
+                  {serviceDetails?.category.toLowerCase() !== 'catering' && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Duration:</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatDuration(calculateTotalDuration(selectedSlots))}
+                      </Text>
+                    </View>
+                  )}
+                  {serviceDetails?.category.toLowerCase() === 'catering' && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Attendees:</Text>
+                      <Text style={styles.summaryValue}>
+                        {attendees} {parseInt(attendees) === 1 ? 'pax' : 'pax'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                
                 {estimatedCost > 0 && (
-                  <View style={styles.costEstimationContainer}>
-                    <Text style={styles.costEstimationLabel}>Estimated Cost:</Text>
-                    <Text style={styles.costEstimationValue}>₱{estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                  <View style={styles.priceCard}>
+                    <Text style={styles.priceLabel}>Estimated Cost</Text>
+                    <Text style={styles.priceValue}>
+                      ₱{estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
                   </View>
                 )}
-                <Text style={styles.selectedSlotsHint}>
-                  Click on any time slot in the calendar to add more bookings
-                </Text>
+                
+                {serviceDetails?.category.toLowerCase() !== 'catering' && (
+                  <Text style={styles.summaryHint}>
+                    💡 Click on any time slot in the calendar to add more bookings
+                  </Text>
+                )}
               </View>
             )}
           </View>
@@ -540,6 +563,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             existingBookings={availableSlots
               .filter(slot => !slot.available)
               .map(slot => ({ start: slot.start, end: slot.end }))}
+            hideDuration={serviceDetails?.category.toLowerCase() === 'catering'}
             onClose={() => setShowTimePicker(false)}
             onConfirm={(startTime, endTime) => {
               const newSlot: { start: string; end: string; available: boolean } = {
@@ -559,7 +583,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             }}
           />
 
-          {/* Confirm Button */}
+          {/* Modern Confirm Button */}
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={[
@@ -568,8 +592,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               ]}
               onPress={handleConfirm}
               disabled={!selectedDate || selectedSlots.length === 0 || (serviceDetails?.category.toLowerCase() === 'catering' && (!attendees || parseInt(attendees) < 1))}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
+              <Text style={styles.confirmButtonIcon}>✓</Text>
               <Text style={[
                 styles.confirmButtonText,
                 (!selectedDate || selectedSlots.length === 0) && styles.confirmButtonTextDisabled
@@ -577,10 +602,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Confirm Booking
               </Text>
             </TouchableOpacity>
-            {selectedSlots.length > 0 && (
-              <Text style={styles.confirmButtonHint}>
-                {selectedSlots.length} time slot{selectedSlots.length !== 1 ? 's' : ''} selected
-              </Text>
+            {selectedSlots.length > 0 && estimatedCost > 0 && (
+              <View style={styles.footerInfo}>
+                <Text style={styles.footerInfoText}>
+                  {selectedSlots.length} time slot{selectedSlots.length !== 1 ? 's' : ''} • 
+                  {' '}₱{estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -592,118 +620,169 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Platform.OS === 'web' ? '#F8FAFC' : '#FFFFFF',
+    position: 'relative',
+  },
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    overflow: 'hidden',
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    top: -100,
+    right: -100,
+    ...(Platform.OS === 'web' ? {
+      filter: 'blur(60px)',
+    } : {}),
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(66, 133, 244, 0.06)',
+    bottom: -50,
+    left: -50,
+    ...(Platform.OS === 'web' ? {
+      filter: 'blur(50px)',
+    } : {}),
   },
   modalContent: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 16, // Account for status bar on iOS
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-    backgroundColor: '#FFFFFF',
+    alignItems: 'flex-start',
+    paddingHorizontal: isMobile ? 16 : 20,
+    paddingVertical: isMobile ? 12 : 16,
+    paddingTop: Platform.OS === 'ios' ? (isMobile ? 44 : 50) : (isMobile ? 12 : 20),
+    backgroundColor: '#4f46e5',
+    borderBottomWidth: 0,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 12px rgba(79, 70, 229, 0.2)',
+    } : {
+      shadowColor: '#4f46e5',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 6,
+    }),
+  },
+  headerContent: {
+    flex: 1,
+    marginRight: 10,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-    flex: 1,
-    marginRight: 8,
+    fontSize: isMobile ? 20 : 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 2,
+    letterSpacing: -0.3,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 1px 4px rgba(0, 0, 0, 0.15)',
+    } : {}),
+  },
+  modalSubtitle: {
+    fontSize: isMobile ? 11 : 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 0,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f2f5',
+    width: isMobile ? 32 : 36,
+    height: isMobile ? 32 : 36,
+    borderRadius: isMobile ? 16 : 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+    } : {}),
   },
   closeButtonText: {
-    fontSize: 18,
-    color: '#636E72',
-    fontWeight: 'bold',
+    fontSize: isMobile ? 18 : 20,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   calendarContainer: {
     flex: 1,
-    minHeight: Platform.OS === 'web' ? 500 : 300,
+    minHeight: Platform.OS === 'web' ? 400 : 250,
+    paddingHorizontal: isMobile ? 12 : 16,
+    paddingTop: isMobile ? 12 : 16,
   },
   timeSelectionSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: isMobile ? 12 : 16,
+    paddingVertical: isMobile ? 10 : 12,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+    marginTop: 6,
+    borderRadius: 10,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 2,
+    }),
   },
   timeSelectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     flexWrap: 'wrap',
   },
   timeSelectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: Platform.OS === 'web' ? 0 : 8,
+    fontSize: isMobile ? 14 : 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: Platform.OS === 'web' ? 0 : 6,
+    letterSpacing: -0.1,
   },
   timePickerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: '#4285F4',
+    paddingVertical: isMobile ? 8 : 10,
+    paddingHorizontal: isMobile ? 12 : 14,
+    backgroundColor: '#4f46e5',
     borderRadius: 8,
-    minHeight: 40, // Better touch target
+    minHeight: 36,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+    } : {
+      shadowColor: '#4f46e5',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3,
+      elevation: 3,
+    }),
   },
   timePickerButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  timeButtonsContainer: {
-    flexDirection: 'row',
-  },
-  timeButtonsContent: {
-    paddingRight: 20,
-  },
-  timeButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F1F3F4',
-    marginRight: 8,
-    marginBottom: 8,
-    minWidth: 110,
-    minHeight: 44, // Better touch target for mobile
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeButtonSelected: {
-    backgroundColor: '#4285F4',
-  },
-  timeButtonDisabled: {
-    backgroundColor: '#E0E0E0',
-    opacity: 0.5,
-  },
-  timeButtonText: {
-    fontSize: 14,
-    color: '#2D3436',
-    fontWeight: '500',
-  },
-  timeButtonTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  timeButtonTextDisabled: {
-    color: '#A4B0BE',
+    fontSize: isMobile ? 12 : 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   section: {
     padding: 20,
@@ -715,8 +794,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   loadingContainer: {
-    padding: 20,
+    padding: isMobile ? 30 : 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -874,78 +955,144 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  selectedSlotsInfo: {
+  bookingSummaryCard: {
     marginTop: 12,
-    marginHorizontal: 16,
-    padding: 12,
-    backgroundColor: '#E8F0FE',
-    borderRadius: 8,
-    marginBottom: 8,
+    marginHorizontal: isMobile ? 12 : 16,
+    padding: isMobile ? 14 : 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  selectedSlotsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4a55e1',
-    marginBottom: 4,
-  },
-  costEstimationContainer: {
+  summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    marginBottom: 12,
   },
-  costEstimationLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3436',
+  summaryTitle: {
+    fontSize: isMobile ? 15 : 16,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.2,
   },
-  costEstimationValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4a55e1',
+  summaryBadge: {
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
   },
-  selectedSlotsSubtext: {
-    fontSize: 12,
-    color: '#636E72',
-  },
-  selectedSlotsHint: {
+  summaryBadgeText: {
     fontSize: 11,
-    color: '#4a55e1',
-    marginTop: 4,
-    fontStyle: 'italic',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  summaryDetails: {
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  priceCard: {
+    backgroundColor: '#F3F4F6',
+    padding: isMobile ? 12 : 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#4f46e5',
+    marginTop: 6,
+  },
+  priceLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  priceValue: {
+    fontSize: isMobile ? 22 : 24,
+    fontWeight: '800',
+    color: '#4f46e5',
+    letterSpacing: -0.3,
+  },
+  summaryHint: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 8,
+    lineHeight: 16,
   },
   attendeesContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: isMobile ? 12 : 16,
     marginTop: 12,
     marginBottom: 8,
+    padding: isMobile ? 12 : 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 2,
+    }),
   },
   attendeesLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontSize: isMobile ? 13 : 14,
+    fontWeight: '700',
+    color: '#111827',
     marginBottom: 8,
+    letterSpacing: -0.1,
   },
   attendeesInputContainer: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
+    ...(Platform.OS === 'web' ? {
+      transition: 'border-color 0.2s ease',
+    } : {}),
   },
   attendeesInput: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2D3436',
-    minHeight: 48,
+    paddingHorizontal: isMobile ? 12 : 14,
+    paddingVertical: isMobile ? 12 : 14,
+    fontSize: isMobile ? 15 : 16,
+    color: '#111827',
+    minHeight: isMobile ? 44 : 48,
+    fontWeight: '600',
   },
   attendeesHint: {
-    fontSize: 12,
-    color: '#636E72',
-    marginTop: 4,
-    fontStyle: 'italic',
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 6,
+    lineHeight: 16,
   },
   timeSlotDisabled: {
     opacity: 0.5,
@@ -955,54 +1102,76 @@ const styles = StyleSheet.create({
     color: '#A4B0BE',
   },
   modalFooter: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16, // Account for safe area on iOS
+    paddingHorizontal: isMobile ? 16 : 20,
+    paddingVertical: isMobile ? 14 : 16,
+    paddingBottom: Platform.OS === 'ios' ? (isMobile ? 28 : 32) : (isMobile ? 14 : 20),
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 6,
+    }),
   },
   confirmButton: {
-    backgroundColor: '#4285F4',
-    paddingVertical: 16,
+    backgroundColor: '#4f46e5',
+    paddingVertical: isMobile ? 14 : 16,
     borderRadius: 12,
     alignItems: 'center',
-    minHeight: 56, // Better touch target for mobile
+    minHeight: isMobile ? 48 : 52,
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 8px rgba(66, 133, 244, 0.3)',
+      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.3), 0 2px 4px rgba(79, 70, 229, 0.2)',
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
     } : {
-      shadowColor: '#4285F4',
-      shadowOffset: { width: 0, height: 2 },
+      shadowColor: '#4f46e5',
+      shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 4,
+      shadowRadius: 8,
+      elevation: 6,
     }),
   },
   confirmButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#D1D5DB',
     opacity: 0.6,
     ...(Platform.OS === 'web' ? {
       boxShadow: 'none',
+      cursor: 'not-allowed',
     } : {
       shadowOpacity: 0,
       elevation: 0,
     }),
   },
+  confirmButtonIcon: {
+    fontSize: isMobile ? 16 : 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
   confirmButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontSize: isMobile ? 15 : 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   confirmButtonTextDisabled: {
-    color: '#9E9E9E',
+    color: '#9CA3AF',
   },
-  confirmButtonHint: {
+  footerInfo: {
     marginTop: 8,
+    alignItems: 'center',
+  },
+  footerInfoText: {
     fontSize: 12,
-    color: '#636E72',
-    textAlign: 'center',
+    color: '#6B7280',
+    fontWeight: '500',
   },
 });
 

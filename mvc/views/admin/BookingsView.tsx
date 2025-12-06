@@ -97,7 +97,6 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
           <SidebarItem icon="👤" label="Users" route="user" />
           <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
           <SidebarItem icon="📊" label="Analytics" route="analytics" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>

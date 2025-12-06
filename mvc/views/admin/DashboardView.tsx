@@ -6,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
@@ -27,8 +29,7 @@ interface DashboardStats {
   activeServices: number;
   totalBookings: number;
   pendingBookings: number;
-  totalRevenue: number;
-  monthlyRevenue: number;
+  monthlyBookings?: Array<{ month: string; bookings: number }>;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNavigate, onLogout }) => {
@@ -38,12 +39,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     totalServices: 0,
     activeServices: 0,
     totalBookings: 0,
-    pendingBookings: 0,
-    totalRevenue: 0,
-    monthlyRevenue: 0
+    pendingBookings: 0
   });
   const [loading, setLoading] = useState(true);
   const [activeRoute, setActiveRoute] = useState('dashboard');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     loadDashboardStats();
@@ -97,6 +97,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
         onPress={() => {
           setActiveRoute(route);
           onNavigate?.(route);
+          if (isMobile) setSidebarVisible(false); // Close sidebar on mobile after navigation
         }}
       >
         <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
@@ -105,10 +106,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     );
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Sidebar */}
+  const SidebarContent = () => (
       <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
@@ -122,27 +126,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
           <SidebarItem icon="👤" label="Users" route="user" />
           <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
           <SidebarItem icon="📊" label="Analytics" route="analytics" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
         </View>
 
-        {/* Sidebar Footer */}
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
+      <TouchableOpacity style={styles.logoutButton} onPress={() => {
+        if (isMobile) setSidebarVisible(false);
+        onLogout?.();
+      }}>
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Sidebar */}
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <SidebarContent />
+          </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {isMobile && (
+              <TouchableOpacity
+                onPress={() => setSidebarVisible(true)}
+                style={styles.mobileMenuButton}
+              >
+                <Text style={styles.mobileMenuIcon}>≡</Text>
+              </TouchableOpacity>
+            )}
           <View>
             <Text style={styles.headerTitle}>Admin Dashboard</Text>
             <Text style={styles.headerSubtitle}>Welcome back, {user?.getFullName() || 'Admin'}</Text>
           </View>
+          </View>
+          {!isMobile && (
           <TouchableOpacity onPress={onMenu} style={styles.menuButton}>
             <Text style={styles.menuIcon}>≡</Text>
           </TouchableOpacity>
+          )}
         </View>
 
         {loading ? (
@@ -175,39 +211,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                 color="#f59e0b"
                 subtitle={`${stats.pendingBookings} pending`}
               />
-              <MetricCard 
-                title="Revenue" 
-                value={`₱ ${stats.monthlyRevenue.toLocaleString()}`} 
-                icon="💰" 
-                color="#ef4444"
-                subtitle={`₱ ${stats.totalRevenue.toLocaleString()} total`}
-              />
             </View>
 
             {/* Quick Stats Row */}
-            <View style={styles.row}>
-              <View style={styles.cardLarge}>
+            <View style={[styles.row, isMobile && styles.rowMobile]}>
+              <View style={[styles.cardLarge, styles.cardGlowBlue]}>
+                <View style={[styles.glowOverlay, { backgroundColor: '#4a55e1' }]} />
                 <View style={styles.cardHeader}> 
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
                   <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')}>
                     <Text style={styles.ctaText}>View Details</Text>
                   </TouchableOpacity>
                 </View>
-                {/* Bar chart placeholder */}
+                {/* Bar chart with real data */}
                 <View style={styles.barChart}>
                   <Text style={styles.chartLabel}>Bookings per month</Text>
                   <View style={styles.barChartContainer}>
-                    {Array.from({ length: 12 }).map((_, i) => (
+                    {stats.monthlyBookings && stats.monthlyBookings.length > 0 ? (
+                      (() => {
+                        const maxBookings = Math.max(...stats.monthlyBookings.map(m => m.bookings), 1);
+                        return stats.monthlyBookings.map((monthData, i) => {
+                          const barHeight = maxBookings > 0 
+                            ? Math.max((monthData.bookings / maxBookings) * (isMobile ? 80 : 100), 4)
+                            : 4;
+                          return (
+                            <View key={i} style={styles.barGroup}>
+                              <View style={[styles.bar, { height: barHeight }]} />
+                              <Text style={styles.barLabel}>{monthData.month}</Text>
+                            </View>
+                          );
+                        });
+                      })()
+                    ) : (
+                      Array.from({ length: 12 }).map((_, i) => (
                       <View key={i} style={styles.barGroup}>
-                        <View style={[styles.bar, { height: 20 + (i % 6) * 8 }]} />
+                          <View style={[styles.bar, { height: 4, opacity: 0.3 }]} />
                         <Text style={styles.barLabel}>{['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</Text>
                       </View>
-                    ))}
+                      ))
+                    )}
                   </View>
                 </View>
               </View>
 
-              <View style={styles.cardRightCol}>
+              <View style={[styles.cardRightCol, isMobile && styles.cardRightColMobile]}>
                 {/* Activity Summary */}
                 <View style={styles.progressCard}>
                   <Text style={styles.cardTitle}>Activity Summary</Text>
@@ -231,13 +278,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Bookings completed</Text>
                         <Text style={styles.activityValue}>{stats.totalBookings - stats.pendingBookings}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#ef4444' }]} />
-                      <View style={styles.activityContent}>
-                        <Text style={styles.activityText}>Revenue growth</Text>
-                        <Text style={styles.activityValue}>+12%</Text>
                       </View>
                     </View>
                   </View>
@@ -290,12 +330,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
+const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   sidebar: {
@@ -303,6 +343,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    ...(isMobile && {
+      height: '100%',
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      zIndex: 1000,
+    }),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -388,25 +459,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: isMobile ? 'column' : 'row',
+    alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: isMobile ? 16 : 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  mobileMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
   },
   loadingContainer: {
@@ -436,14 +533,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 16,
+    ...(isMobile && {
+      marginLeft: -6,
+      marginRight: -6,
+    }),
   },
   metricCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
-    marginBottom: 12,
-    width: Math.min(180, (screenWidth - sidebarWidth - 80) / 4),
+    padding: isMobile ? 12 : 16,
+    marginRight: isMobile ? 6 : 12,
+    marginBottom: isMobile ? 8 : 12,
+    width: isMobile
+      ? (screenWidth - 48) / 2 // 2 cards per row on mobile
+      : Math.min(180, (screenWidth - (isMobile ? 0 : sidebarWidth) - 80) / 4), // 4 cards per row on desktop
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -451,7 +554,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   metricSubtitle: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#64748B',
     marginTop: 4,
   },
@@ -462,67 +565,93 @@ const styles = StyleSheet.create({
   },
   metricTitle: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
   metricIcon: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
   },
   metricDot: {
     color: '#CBD5E1',
-    fontSize: 18,
+    fontSize: isMobile ? 16 : 18,
   },
   metricValue: {
     marginTop: 8,
-    fontSize: 22,
+    fontSize: isMobile ? 18 : 22,
     fontWeight: '700',
     color: '#0F172A',
   },
   row: {
     flexDirection: 'row',
   },
+  rowMobile: {
+    flexDirection: 'column',
+  },
   cardLarge: {
-    flex: 1,
+    flex: isMobile ? undefined : 1,
+    width: isMobile ? '100%' : undefined,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
-    elevation: 2,
+    padding: isMobile ? 12 : 16,
+    marginRight: isMobile ? 0 : 12,
+    marginBottom: isMobile ? 12 : 0,
+    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardGlowBlue: {
+    shadowColor: '#4a55e1',
+    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+  },
+  glowOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    opacity: 0.6,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    flexWrap: isMobile ? 'wrap' : 'nowrap',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 13 : 14,
     fontWeight: '700',
     color: '#1E293B',
   },
   ctaButton: {
     backgroundColor: '#F1F5F9',
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: isMobile ? 8 : 10,
+    paddingVertical: isMobile ? 5 : 6,
+    marginTop: isMobile ? 4 : 0,
   },
   ctaText: {
     color: '#0EA5E9',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
   },
   barChart: {
-    marginTop: 16,
+    marginTop: isMobile ? 12 : 16,
   },
   chartLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#64748B',
-    marginBottom: 12,
+    marginBottom: isMobile ? 8 : 12,
   },
   barChartContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 120,
+    height: isMobile ? 100 : 120,
     justifyContent: 'space-around',
   },
   barGroup: {
@@ -530,29 +659,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bar: {
-    width: 20,
+    width: isMobile ? 16 : 20,
     backgroundColor: '#4a55e1',
     borderRadius: 4,
     marginBottom: 4,
     minHeight: 4,
+    shadowColor: '#4a55e1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
   },
   barLabel: {
-    fontSize: 10,
+    fontSize: isMobile ? 9 : 10,
     color: '#64748B',
   },
   activityList: {
-    marginTop: 12,
+    marginTop: isMobile ? 8 : 12,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: isMobile ? 12 : 16,
   },
   activityDot: {
-    width: 8,
-    height: 8,
+    width: isMobile ? 7 : 8,
+    height: isMobile ? 7 : 8,
     borderRadius: 4,
-    marginRight: 12,
+    marginRight: isMobile ? 10 : 12,
   },
   activityContent: {
     flex: 1,
@@ -561,18 +695,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activityText: {
-    fontSize: 13,
+    fontSize: isMobile ? 12 : 13,
     color: '#64748B',
   },
   activityValue: {
-    fontSize: 14,
+    fontSize: isMobile ? 13 : 14,
     fontWeight: '700',
     color: '#1E293B',
   },
   quickActionsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     marginTop: 12,
     marginBottom: 12,
     elevation: 2,
@@ -580,57 +714,62 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 12,
+    marginTop: isMobile ? 8 : 12,
   },
   quickActionBtn: {
-    width: (screenWidth - sidebarWidth - 80) / 4,
+    width: isMobile
+      ? (screenWidth - 48) / 2 // 2 per row on mobile
+      : (screenWidth - sidebarWidth - 80) / 4, // 4 per row on desktop
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     alignItems: 'center',
-    marginRight: 12,
-    marginBottom: 12,
+    marginRight: isMobile ? 6 : 12,
+    marginBottom: isMobile ? 8 : 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   quickActionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: isMobile ? 20 : 24,
+    marginBottom: isMobile ? 6 : 8,
   },
   quickActionLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#1E293B',
     fontWeight: '600',
     textAlign: 'center',
   },
   activityTable: {
-    marginTop: 12,
+    marginTop: isMobile ? 8 : 12,
   },
   activityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: isMobile ? 10 : 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   activityCell: {
-    fontSize: 13,
+    fontSize: isMobile ? 12 : 13,
     color: '#64748B',
   },
   cardRightCol: {
-    width: 200,
+    width: isMobile ? '100%' : 200,
+  },
+  cardRightColMobile: {
+    marginTop: 12,
   },
   progressCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     elevation: 2,
   },
   cardWide: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     marginTop: 12,
     elevation: 2,
   },

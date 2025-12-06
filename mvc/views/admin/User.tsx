@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Modal } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import UserService, { AdminUserRow } from '../../services/UserService';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
 
 interface AdminUserProps {
   user?: UserModel;
@@ -15,6 +16,9 @@ interface AdminUserProps {
 export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) => {
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [activeTab, setActiveTab] = useState<'list' | 'add'>('list');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -69,11 +73,72 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
     return () => { cancelled = true; };
   }, []);
 
+  // Auto-hide success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  // Auto-hide error message after 5 seconds
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
   const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity style={styles.sidebarItem} onPress={() => onNavigate?.(route)}>
+    <TouchableOpacity 
+      style={styles.sidebarItem} 
+      onPress={() => {
+        onNavigate?.(route);
+        if (isMobile) setSidebarVisible(false);
+      }}
+    >
       <Text style={styles.sidebarIcon}>{icon}</Text>
       <Text style={styles.sidebarLabel}>{label}</Text>
     </TouchableOpacity>
+  );
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
+        <SidebarItem icon="👤" label="Users" route="user" />
+        <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
+        <SidebarItem icon="📊" label="Analytics" route="analytics" />
+      </View>
+
+      <TouchableOpacity 
+        style={styles.logoutButton} 
+        onPress={() => {
+          if (isMobile) setSidebarVisible(false);
+          onLogout?.();
+        }}
+      >
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const handleEditUser = async (userEmail: string) => {
@@ -107,12 +172,16 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
 
   const handleUpdateUser = async () => {
     if (!editingUserId) return;
+    
+    // Clear previous error message
+    setErrorMessage('');
+    
     if (!editFirstName.trim() || !editLastName.trim() || !editEmail.trim()) {
-      Alert.alert('Update User', 'First name, last name, and email are required.');
+      setErrorMessage('First name, last name, and email are required.');
       return;
     }
     if (editPassword && editPassword !== editConfirmPassword) {
-      Alert.alert('Update User', 'Passwords do not match.');
+      setErrorMessage('Passwords do not match.');
       return;
     }
     try {
@@ -154,10 +223,11 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
         setRows(mapped);
       }
       
+      // Switch to list view and show success message
       setActiveTab('list');
-      Alert.alert('Success', 'User updated successfully');
+      setSuccessMessage('User updated successfully!');
     } catch (e: any) {
-      Alert.alert('Update User', e.message || 'Failed to update user');
+      setErrorMessage(e.message || 'Failed to update user. Please try again.');
     }
   };
 
@@ -176,35 +246,39 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   return (
     <View style={styles.layout}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <SidebarContent />
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="👤" label="Users" route="user" />
-          <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-          <SidebarItem icon="📊" label="Analytics" route="analytics" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.card}>
           <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {isMobile && (
+              <TouchableOpacity
+                onPress={() => setSidebarVisible(true)}
+                style={styles.mobileMenuButton}
+              >
+                <Text style={styles.mobileMenuIcon}>≡</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.title}>Users Management</Text>
-            <View style={styles.headerActions}>
+          </View>
+        </View>
+
+        {/* Tab Buttons */}
+        <View style={styles.tabContainer}>
               <TouchableOpacity 
                 style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('list')}
@@ -218,32 +292,91 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                 <Text style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}>Add User</Text>
               </TouchableOpacity>
             </View>
-          </View>
+
+        <View style={styles.card}>
           {activeTab === 'add' && (
             <View>
+              {errorMessage ? (
+                <View style={styles.errorMessage}>
+                  <Text style={styles.errorMessageText}>{errorMessage}</Text>
+                  <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton}>
+                    <Text style={styles.errorCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               {editingUserId ? (
                 <>
                   <Text style={styles.formTitle}>Edit User</Text>
                   <Text style={styles.formLabel}>First Name</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your first name" value={editFirstName} onChangeText={setEditFirstName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your first name" 
+                    value={editFirstName} 
+                    onChangeText={setEditFirstName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your middle name" value={editMiddleName} onChangeText={setEditMiddleName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your middle name" 
+                    value={editMiddleName} 
+                    onChangeText={setEditMiddleName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Last Name</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your last name" value={editLastName} onChangeText={setEditLastName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your last name" 
+                    value={editLastName} 
+                    onChangeText={setEditLastName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Jr., Sr., III, etc." value={editSuffix} onChangeText={setEditSuffix} autoCapitalize="characters" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Jr., Sr., III, etc." 
+                    value={editSuffix} 
+                    onChangeText={setEditSuffix} 
+                    autoCapitalize="characters"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Email</Text>
-                  <TextInput style={styles.addInputFull} placeholder="you@example.com" value={editEmail} onChangeText={setEditEmail} autoCapitalize="none" keyboardType="email-address" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="you@example.com" 
+                    value={editEmail} 
+                    onChangeText={setEditEmail} 
+                    autoCapitalize="none" 
+                    keyboardType="email-address"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>New Password (leave blank to keep current)</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput style={[styles.addInputFull, { flex: 1 }]} placeholder="••••••••" value={editPassword} onChangeText={setEditPassword} secureTextEntry={!showEditPassword} />
+                    <TextInput 
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
+                      placeholder="••••••••" 
+                      value={editPassword} 
+                      onChangeText={setEditPassword} 
+                      secureTextEntry={!showEditPassword}
+                      placeholderTextColor="#94A3B8"
+                    />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditPassword(prev => !prev)}>
                       <Text style={styles.eyeText}>{showEditPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.formLabel}>Confirm New Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput style={[styles.addInputFull, { flex: 1 }]} placeholder="••••••••" value={editConfirmPassword} onChangeText={setEditConfirmPassword} secureTextEntry={!showEditConfirm} />
+                    <TextInput 
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
+                      placeholder="••••••••" 
+                      value={editConfirmPassword} 
+                      onChangeText={setEditConfirmPassword} 
+                      secureTextEntry={!showEditConfirm}
+                      placeholderTextColor="#94A3B8"
+                    />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditConfirm(prev => !prev)}>
                       <Text style={styles.eyeText}>{showEditConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
@@ -260,32 +393,91 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               ) : (
                 <>
                   <Text style={styles.formLabel}>First Name</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your first name" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your first name" 
+                    value={firstName} 
+                    onChangeText={setFirstName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your middle name" value={middleName} onChangeText={setMiddleName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your middle name" 
+                    value={middleName} 
+                    onChangeText={setMiddleName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Last Name</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Enter your last name" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Enter your last name" 
+                    value={lastName} 
+                    onChangeText={setLastName} 
+                    autoCapitalize="words"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
-                  <TextInput style={styles.addInputFull} placeholder="Jr., Sr., III, etc." value={suffix} onChangeText={setSuffix} autoCapitalize="characters" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="Jr., Sr., III, etc." 
+                    value={suffix} 
+                    onChangeText={setSuffix} 
+                    autoCapitalize="characters"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Email</Text>
-                  <TextInput style={styles.addInputFull} placeholder="you@example.com" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+                  <TextInput 
+                    style={styles.addInputFull} 
+                    placeholder="you@example.com" 
+                    value={email} 
+                    onChangeText={setEmail} 
+                    autoCapitalize="none" 
+                    keyboardType="email-address"
+                    placeholderTextColor="#94A3B8"
+                  />
                   <Text style={styles.formLabel}>Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput style={[styles.addInputFull, { flex: 1 }]} placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+                    <TextInput 
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChangeText={setPassword} 
+                      secureTextEntry={!showPassword}
+                      placeholderTextColor="#94A3B8"
+                    />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
                       <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.formLabel}>Confirm Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput style={[styles.addInputFull, { flex: 1 }]} placeholder="••••••••" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showConfirm} />
+                    <TextInput 
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
+                      placeholder="••••••••" 
+                      value={confirmPassword} 
+                      onChangeText={setConfirmPassword} 
+                      secureTextEntry={!showConfirm}
+                      placeholderTextColor="#94A3B8"
+                    />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(prev => !prev)}>
                       <Text style={styles.eyeText}>{showConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={styles.addButtonLarge} onPress={async () => {
-                    if (!firstName.trim() || !lastName.trim() || !email.trim()) { Alert.alert('Add User', 'First name, last name, and email are required.'); return; }
-                    if (password !== confirmPassword) { Alert.alert('Add User', 'Passwords do not match.'); return; }
+                    // Clear previous error message
+                    setErrorMessage('');
+                    
+                    if (!firstName.trim() || !lastName.trim() || !email.trim()) { 
+                      setErrorMessage('First name, last name, and email are required.');
+                      return; 
+                    }
+                    if (password !== confirmPassword) { 
+                      setErrorMessage('Passwords do not match.');
+                      return; 
+                    }
                     try {
                       const resp = await fetch(`${getApiBaseUrl()}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, middleName, lastName, suffix, email, password: password || undefined }) });
                       const data = await resp.json();
@@ -297,8 +489,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         const mapped = j.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({ name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(), email: x.u_email, role: x.u_role ? x.u_role.charAt(0).toUpperCase() + x.u_role.slice(1) : 'User', status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active' }));
                         setRows(mapped);
                       }
-                      Alert.alert('Success', 'User added');
-                    } catch (e: any) { Alert.alert('Add User', e.message); }
+                      // Switch back to list view and show success message
+                      setActiveTab('list');
+                      setSuccessMessage('User successfully added!');
+                    } catch (e: any) { 
+                      setErrorMessage(e.message || 'Failed to add user. Please try again.');
+                    }
                   }}>
                     <Text style={styles.addButtonText}>Add user</Text>
                   </TouchableOpacity>
@@ -308,6 +504,17 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
           )}
           {activeTab === 'list' && (
             <>
+              {successMessage ? (
+                <View style={styles.successMessage}>
+                  <Text style={styles.successMessageText}>{successMessage}</Text>
+                  <TouchableOpacity onPress={() => setSuccessMessage('')} style={styles.successCloseButton}>
+                    <Text style={styles.successCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {isMobile ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableScrollView}>
+                  <View style={styles.tableContainer}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.th, { flex: 2 }]}>Name</Text>
                 <Text style={[styles.th, { flex: 2 }]}>Email</Text>
@@ -320,8 +527,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
                   <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
                   <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
-                  <Text style={[styles.tdStatus, { flex: 1, color: u.status === 'Active' ? '#16A34A' : '#DC2626' }]}>{u.status}</Text>
-                  <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                      <View style={[styles.tdStatus, { flex: 1 }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? '#D1FAE5' : '#FEE2E2' }]}>
+                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : '#DC2626' }]}>{u.status}</Text>
+                        </View>
+                      </View>
+                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                     <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)}>
                       <Text style={styles.editButtonText}>Edit</Text>
                     </TouchableOpacity>
@@ -348,6 +559,56 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   </View>
                 </View>
               ))}
+                  </View>
+                </ScrollView>
+              ) : (
+                <View style={styles.tableContainer}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.th, { flex: 2 }]}>Name</Text>
+                    <Text style={[styles.th, { flex: 2 }]}>Email</Text>
+                    <Text style={[styles.th, { flex: 1 }]}>Role</Text>
+                    <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+                    <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Actions</Text>
+                  </View>
+                  {rows.map((u, i) => (
+                    <View key={i} style={[styles.row, i % 2 === 1 && styles.rowAlt]}>
+                      <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
+                      <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
+                      <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
+                      <View style={[styles.tdStatus, { flex: 1 }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? '#D1FAE5' : '#FEE2E2' }]}>
+                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : '#DC2626' }]}>{u.status}</Text>
+                        </View>
+                      </View>
+                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                        <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)}>
+                          <Text style={styles.editButtonText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} onPress={async () => {
+                          try {
+                            const r = await fetch(`${getApiBaseUrl()}/api/users`);
+                            const j = await r.json();
+                            if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
+                            const match = j.rows.find((x: any) => x.u_email === u.email);
+                            if (!match) throw new Error('User not found');
+                            const resp = await fetch(`${getApiBaseUrl()}/api/users/${match.iduser}/block`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blocked: u.status === 'Active' }) });
+                            const data = await resp.json();
+                            if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update');
+                            const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
+                            const j2 = await r2.json();
+                            if (r2.ok && j2.ok) {
+                              const mapped2 = j2.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({ name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(), email: x.u_email, role: 'User', status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active' }));
+                              setRows(mapped2);
+                            }
+                          } catch (e: any) { Alert.alert('Update User', e.message); }
+                        }}>
+                          <Text style={styles.actionButtonText}>{u.status === 'Active' ? 'Block' : 'Unblock'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </>
           )}
         </View>
@@ -356,12 +617,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
+const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
 
 const styles = StyleSheet.create({
   layout: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   container: {
@@ -369,7 +630,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF1F5',
   },
   content: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   // Sidebar styles (mirrors admin Dashboard)
   sidebar: {
@@ -377,6 +640,61 @@ const styles = StyleSheet.create({
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    ...(isMobile && {
+      height: '100%',
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      zIndex: 1000,
+    }),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  mobileMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -418,11 +736,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   formLabel: {
-    fontSize: 16,
+    fontSize: isMobile ? 13 : 14,
     fontWeight: '600',
-    color: '#333',
-    marginTop: 12,
-    marginBottom: 6,
+    color: '#1E293B',
+    marginTop: isMobile ? 12 : 16,
+    marginBottom: isMobile ? 6 : 8,
   },
   sidebarIcon: {
     width: 26,
@@ -458,69 +776,116 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 16 : 24,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: isMobile ? 16 : 24,
   },
   title: {
-    fontSize: 18,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
   },
-  headerActions: {
+  tabContainer: {
     flexDirection: 'row',
-    gap: 8,
+    marginBottom: isMobile ? 12 : 20,
+    backgroundColor: '#FFFFFF',
+    flexWrap: 'wrap',
+    borderRadius: 8,
+    padding: 4,
   },
   tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flex: isMobile ? undefined : 0,
+    minWidth: isMobile ? (screenWidth - 48) / 2 : 120,
+    paddingVertical: isMobile ? 8 : 8,
+    paddingHorizontal: isMobile ? 12 : 16,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabButtonActive: {
     backgroundColor: '#4a55e1',
+    elevation: 2,
+    shadowColor: '#4a55e1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   tabButtonText: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 13,
     color: '#64748B',
     fontWeight: '600',
   },
   tabButtonTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  tableScrollView: {
+    marginTop: 8,
+  },
+  tableContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...(isMobile && { minWidth: 700 }),
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   tableHeader: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: isMobile ? 12 : 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2,
     borderBottomColor: '#E2E8F0',
-    paddingVertical: 10,
-    marginTop: 8,
   },
   th: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   row: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: isMobile ? 14 : 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    alignItems: 'center',
   },
   rowAlt: {
     backgroundColor: '#F8FAFC',
   },
   td: {
     color: '#1E293B',
-    fontSize: 13,
+    fontSize: isMobile ? 13 : 14,
+    fontWeight: '500',
   },
   tdStatus: {
-    color: '#16A34A',
-    fontSize: 13,
-    textAlign: 'right',
-    fontWeight: '700',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: isMobile ? 11 : 12,
+    fontWeight: '600',
   },
   addRow: {
     flexDirection: 'row',
@@ -538,12 +903,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   addInputFull: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderRadius: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingVertical: isMobile ? 12 : 14,
+    paddingHorizontal: isMobile ? 14 : 16,
+    backgroundColor: '#FFFFFF',
+    fontSize: isMobile ? 14 : 15,
+    color: '#1E293B',
   },
   addButton: {
     backgroundColor: '#4a55e1',
@@ -554,37 +921,60 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
   addButtonLarge: {
     backgroundColor: '#4a55e1',
     paddingVertical: 15,
+    paddingHorizontal: 32,
     borderRadius: 8,
-    marginTop: 16,
+    marginTop: 24,
     alignItems: 'center',
-    width: '8%',
     alignSelf: 'center',
+    minWidth: 150,
+    elevation: 2,
+    shadowColor: '#4a55e1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   passwordRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingRight: 8,
   },
   eyeButton: {
     marginLeft: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 4,
   },
   eyeText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: '#64748B',
   },
   actionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: isMobile ? 8 : 8,
+    paddingHorizontal: isMobile ? 14 : 16,
     borderRadius: 6,
+    minWidth: isMobile ? 70 : 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   actionButtonText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '600',
+    fontSize: isMobile ? 11 : 12,
   },
   blockButton: {
     backgroundColor: '#DC2626',
@@ -593,21 +983,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#16A34A',
   },
   editButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: isMobile ? 8 : 8,
+    paddingHorizontal: isMobile ? 14 : 16,
     borderRadius: 6,
     backgroundColor: '#4a55e1',
+    minWidth: isMobile ? 70 : 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    shadowColor: '#4a55e1',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   editButtonText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '600',
+    fontSize: isMobile ? 11 : 12,
   },
   formTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 16,
+    marginBottom: 20,
+    marginTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   editButtonRow: {
     flexDirection: 'row',
@@ -639,8 +1041,56 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  successMessage: {
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  successMessageText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  successCloseButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  successCloseText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+  errorMessage: {
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorMessageText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  errorCloseButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  errorCloseText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
 });
 
 export default User;
-
-

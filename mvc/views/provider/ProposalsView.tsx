@@ -8,12 +8,15 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
-  TextInput
+  TextInput,
+  Modal
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
+const sidebarWidth = 260;
 
 interface ProposalsViewProps {
   user?: User;
@@ -156,7 +159,9 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
     }
   };
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
     const isActive = activeRoute === route;
     return (
       <TouchableOpacity 
@@ -164,6 +169,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
         onPress={() => {
           setActiveRoute(route);
           onNavigate?.(route);
+          onPress?.(); // Close sidebar on mobile
         }}
       >
         <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
@@ -171,6 +177,38 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
       </TouchableOpacity>
     );
   };
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
+      </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const filteredProposals = proposals.filter(p => filterStatus === 'all' || p.status === filterStatus);
   const statusFilters = ['all', 'submitted', 'under_review', 'accepted', 'rejected', 'revised', 'withdrawn'];
@@ -190,49 +228,53 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   return (
     <View style={styles.container}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.sidebarOverlay}>
+            <View style={styles.mobileSidebar}>
+              <SidebarContent />
+            </View>
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="🎯" label="Services" route="services" />
-          <SidebarItem icon="📅" label="Bookings" route="bookings" />
-          <SidebarItem icon="📝" label="Proposals" route="proposals" />
-          <SidebarItem icon="💬" label="Messages" route="messages" />
-          <SidebarItem icon="👤" label="Profile" route="profile" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Proposals</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={[styles.tabButton, activeTab === 'my-proposals' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('my-proposals')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'my-proposals' && styles.tabButtonTextActive]}>My Proposals</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tabButton, activeTab === 'available-requests' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('available-requests')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'available-requests' && styles.tabButtonTextActive]}>Available Requests</Text>
-            </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            {isMobile && (
+              <TouchableOpacity 
+                style={styles.mobileMenuButton}
+                onPress={() => setSidebarVisible(true)}
+              >
+                <Text style={styles.mobileMenuIcon}>≡</Text>
+              </TouchableOpacity>
+            )}
+            <Text style={styles.headerTitle}>Proposals</Text>
           </View>
+        </View>
+
+        {/* Tab Buttons */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'my-proposals' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('my-proposals')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'my-proposals' && styles.tabButtonTextActive]}>My Proposals</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'available-requests' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('available-requests')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'available-requests' && styles.tabButtonTextActive]}>Available Requests</Text>
+          </TouchableOpacity>
         </View>
 
         {activeTab === 'my-proposals' && (
@@ -446,19 +488,76 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   sidebar: {
-    width: sidebarWidth,
+    width: isMobile ? '80%' : sidebarWidth,
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    height: isMobile ? '100%' : undefined,
+  },
+  mobileSidebar: {
+    width: '80%',
+    height: '100%',
+    backgroundColor: '#102A43',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  sidebarOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  mobileMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -544,37 +643,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: isMobile ? 16 : 24,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 12,
   },
-  headerActions: {
+  tabContainer: {
     flexDirection: 'row',
-    gap: 8,
+    marginBottom: isMobile ? 12 : 20,
+    backgroundColor: '#FFFFFF',
+    flexWrap: 'wrap',
+    borderRadius: 8,
+    padding: 4,
   },
   tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flex: isMobile ? undefined : 1,
+    minWidth: isMobile ? (screenWidth - 48) / 2 : undefined,
+    paddingVertical: isMobile ? 8 : 10,
+    paddingHorizontal: isMobile ? 12 : 20,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabButtonActive: {
     backgroundColor: '#4a55e1',
+    elevation: 2,
+    shadowColor: '#4a55e1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   tabButtonText: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
     fontWeight: '600',
   },
   tabButtonTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
   },
   filterContainer: {
     marginBottom: 20,
@@ -613,7 +727,7 @@ const styles = StyleSheet.create({
   proposalCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
@@ -622,22 +736,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   proposalHeader: {
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: isMobile ? 'flex-start' : 'flex-start',
     marginBottom: 12,
+    gap: isMobile ? 8 : 0,
   },
   proposalTitleSection: {
     flex: 1,
   },
   proposalTitle: {
-    fontSize: 18,
+    fontSize: isMobile ? 16 : 18,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   proposalHiringRequest: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
   },
   statusBadge: {
@@ -662,9 +777,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
   },
   proposalDetailRow: {
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+    gap: isMobile ? 4 : 0,
   },
   proposalDetailLabel: {
     fontSize: 14,

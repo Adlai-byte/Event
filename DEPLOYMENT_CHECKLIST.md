@@ -1,127 +1,133 @@
-# Deployment Checklist
+# Hostinger VPS Deployment Checklist
 
-Use this checklist to ensure everything is ready before publishing.
+Use this checklist to ensure you don't miss any steps during deployment.
 
-## Backend Server
+## Pre-Deployment
 
-- [ ] Backend deployed to hosting service (Railway/Render/Heroku)
-- [ ] Backend URL is accessible (test with browser/curl)
-- [ ] Database is accessible from hosting service
-- [ ] All environment variables are set in hosting service
-- [ ] CORS is configured to allow your app domain
-- [ ] File uploads directory is configured
-- [ ] Health check endpoint works: `/api/health`
-- [ ] Test all API endpoints work with production URL
+- [ ] VPS access credentials (IP, username, password/SSH key)
+- [ ] Domain name configured (if using)
+- [ ] MySQL database created
+- [ ] Database user created with proper permissions
+- [ ] PayMongo API keys (live keys for production)
+- [ ] Firebase credentials (if using Firebase)
+- [ ] All environment variables documented
 
-## Database
+## Server Setup
 
-- [ ] Production database created
-- [ ] Database schema migrated
-- [ ] Test data seeded (if needed)
-- [ ] Database backups configured
-- [ ] Database credentials are secure
+- [ ] Connected to VPS via SSH
+- [ ] System packages updated (`apt update && apt upgrade`)
+- [ ] Node.js 20.x installed and verified
+- [ ] PM2 installed globally
+- [ ] MySQL installed and secured
+- [ ] Nginx installed and running
+- [ ] Firewall configured (UFW)
 
-## Mobile App Configuration
+## Database Setup
 
-- [ ] `eas.json` created and configured
-- [ ] `app.json` updated with production settings
-- [ ] App icon and splash screen are set
-- [ ] App version number updated
-- [ ] Android package name is correct: `com.ploxy1.Event`
-- [ ] iOS bundle identifier is correct (if publishing to iOS)
+- [ ] MySQL database created (`event_db`)
+- [ ] Database user created (`event_user`)
+- [ ] User permissions granted
+- [ ] Database schema imported
+- [ ] Test connection successful
 
-## API Configuration
+## Application Deployment
 
-- [ ] `EXPO_PUBLIC_API_BASE_URL` set in `eas.json` production profile
-- [ ] API base URL points to production backend
-- [ ] Test app connects to production API
-- [ ] All API calls work correctly
+- [ ] Files transferred to `/var/www/event-app/`
+- [ ] Server directory structure verified
+- [ ] `.env` file created in `server/` directory
+- [ ] All environment variables configured correctly
+- [ ] Dependencies installed (`npm install --production`)
+- [ ] Upload directories created (`uploads/images`, `uploads/documents`)
+- [ ] File permissions set correctly
+- [ ] Application started with PM2
+- [ ] PM2 startup script configured
+
+## Nginx Configuration
+
+- [ ] Nginx configuration file created
+- [ ] Reverse proxy configured (port 3001)
+- [ ] Static files (uploads) configured
+- [ ] Site enabled (`ln -s`)
+- [ ] Nginx configuration tested (`nginx -t`)
+- [ ] Nginx reloaded successfully
+
+## SSL Certificate
+
+- [ ] Certbot installed
+- [ ] SSL certificate obtained
+- [ ] HTTPS redirect configured
+- [ ] Auto-renewal verified
 
 ## Testing
 
-- [ ] Build preview APK and test on physical device
-- [ ] Test login/registration
-- [ ] Test booking creation
-- [ ] Test messaging functionality
-- [ ] Test payment flow (if applicable)
-- [ ] Test service browsing and details
-- [ ] Test on different Android versions (if possible)
-- [ ] Test on different screen sizes
-
-## App Store Preparation
-
-### Google Play Store
-- [ ] Google Play Developer account created ($25 one-time fee)
-- [ ] App listing prepared (description, screenshots, etc.)
-- [ ] Privacy policy URL ready
-- [ ] App content rating completed
-- [ ] Production AAB built successfully
-- [ ] App signing key configured
-
-### Apple App Store (if applicable)
-- [ ] Apple Developer account ($99/year)
-- [ ] App Store Connect app created
-- [ ] App listing prepared
-- [ ] Privacy policy URL ready
-- [ ] App content rating completed
-- [ ] Production IPA built successfully
-- [ ] Certificates and provisioning profiles configured
+- [ ] PM2 status shows app running
+- [ ] Application logs checked (no errors)
+- [ ] API health endpoint tested (`/api/health`)
+- [ ] Database connection tested
+- [ ] File upload functionality tested
+- [ ] Payment integration tested (if applicable)
+- [ ] External access verified (from browser/Postman)
 
 ## Security
 
-- [ ] All API keys are in environment variables (not hardcoded)
-- [ ] Database passwords are strong
-- [ ] JWT secrets are secure
-- [ ] Payment API keys are secure
-- [ ] No sensitive data in code or logs
+- [ ] Firewall rules configured
+- [ ] Strong passwords set for database
+- [ ] SSH key authentication enabled (recommended)
+- [ ] `.env` file permissions secured (600)
+- [ ] Regular backup strategy planned
 
-## Monitoring
+## Post-Deployment
 
-- [ ] Error tracking set up (Sentry, etc.)
-- [ ] Analytics configured (if needed)
-- [ ] Server monitoring configured
-- [ ] Database monitoring configured
+- [ ] React Native app updated with production API URL
+- [ ] API endpoints tested from mobile app
+- [ ] Monitoring setup (PM2 monit or external service)
+- [ ] Backup scripts created
+- [ ] Documentation updated with production URLs
 
-## Documentation
+## Maintenance
 
-- [ ] API documentation updated
-- [ ] User guide prepared (if needed)
-- [ ] Deployment guide reviewed
-- [ ] Team members have access to necessary accounts
+- [ ] Log rotation configured
+- [ ] Backup automation setup
+- [ ] Update procedure documented
+- [ ] Monitoring alerts configured
 
-## Final Steps
+## Troubleshooting Reference
 
-- [ ] All tests pass
-- [ ] Code reviewed
-- [ ] Backup of current version
-- [ ] Rollback plan prepared
-- [ ] Team notified of deployment
+| Issue | Solution |
+|-------|----------|
+| App not starting | Check `pm2 logs event-api` |
+| 502 Bad Gateway | Verify app is running, check Nginx config |
+| Database errors | Verify credentials in `.env`, test MySQL connection |
+| File upload fails | Check uploads directory permissions |
+| SSL errors | Verify certificate with `certbot certificates` |
 
----
-
-## Quick Test Commands
+## Quick Commands Reference
 
 ```bash
-# Test backend health
-curl https://your-backend-url.com/api/health
+# Application
+pm2 status
+pm2 logs event-api
+pm2 restart event-api
+pm2 monit
 
-# Build preview APK
-npm run build:android:preview
+# Nginx
+systemctl status nginx
+nginx -t
+systemctl reload nginx
 
-# Build production AAB
-npm run build:android:production
+# Database
+mysql -u event_user -p event_db
+systemctl status mysql
 
-# Submit to Play Store
-npm run submit:android
+# Logs
+tail -f /var/log/nginx/error.log
+pm2 logs event-api --lines 100
 ```
 
 ---
 
-## Post-Deployment
-
-- [ ] Monitor error logs
-- [ ] Check user feedback
-- [ ] Monitor server performance
-- [ ] Verify all features work in production
-- [ ] Update documentation if needed
+**Deployment Date:** _______________
+**Deployed By:** _______________
+**Production URL:** _______________
+**Notes:** _______________
 

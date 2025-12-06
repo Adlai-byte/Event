@@ -1,9 +1,30 @@
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { User } from '../models/User';
 import { AuthState } from '../models/AuthState';
 import { getApiBaseUrl } from '../services/api';
 import { LoginFormData, RegisterFormData } from '../models/FormData';
 import AuthService from '../services/AuthService';
+
+// Helper function to add timeout to fetch requests
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout: number = 10000): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout: Server is not responding');
+    }
+    throw error;
+  }
+};
 
 // AuthController - Handles authentication business logic
 export class AuthController {
@@ -28,7 +49,7 @@ export class AuthController {
         if (firebaseUser.email) {
           try {
             const q = encodeURIComponent(firebaseUser.email);
-            const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+            const resp = await fetchWithTimeout(`${getApiBaseUrl()}/api/users/by-email?email=${q}`, {}, 10000);
             if (resp.ok) {
               const data = await resp.json();
               if (data && data.ok && data.exists) {
@@ -81,16 +102,52 @@ export class AuthController {
             }
           } catch (error: any) {
             console.error('Error fetching user data on auth state change:', error);
+            // Get API URL first to check if it's a Cloudflare tunnel
+            const apiUrl = getApiBaseUrl();
+            const isCloudflareTunnel = apiUrl.includes('trycloudflare.com');
+            
             // Log more details about the network error
-            if (error?.message?.includes('Network request failed') || error?.message?.includes('Failed to fetch')) {
-              const apiUrl = getApiBaseUrl();
+            const isTimeout = error?.message?.includes('timeout') || error?.message?.includes('Request timeout');
+            const isDnsError = error?.message?.includes('ERR_NAME_NOT_RESOLVED') || 
+                              error?.message?.includes('Failed to resolve') ||
+                              error?.message?.includes('getaddrinfo ENOTFOUND') ||
+                              (error?.message?.includes('Failed to fetch') && isCloudflareTunnel);
+            const isNetworkError = error?.message?.includes('Network request failed') || 
+                                  error?.message?.includes('Failed to fetch') ||
+                                  error?.message?.includes('ERR_CONNECTION_TIMED_OUT') ||
+                                  isTimeout ||
+                                  isDnsError;
+            
+            if (isNetworkError) {
               const isEmulator = Platform.OS === 'android' && apiUrl.includes('10.0.2.2');
               const isPhysicalDevice = !isEmulator && (Platform.OS === 'android' || Platform.OS === 'ios');
+              const isWeb = Platform.OS === 'web';
               
               console.error('🌐 Network Error Details:');
               console.error('  - API Base URL:', apiUrl);
               console.error('  - Platform:', Platform.OS);
               console.error('  - Error:', error.message);
+              
+              if (isDnsError || (isCloudflareTunnel && error?.message?.includes('Failed to fetch'))) {
+                console.error('  - ❌ DNS Resolution Failed: Cannot resolve domain name');
+                console.error('  - ⚠️  Cloudflare Tunnel URL is not resolving');
+                if (isWeb) {
+                  console.error('  - 💡 Solution for Web/Vercel:');
+                  console.error('     1. SSH to your VPS: ssh root@72.62.64.59');
+                  console.error('     2. Check tunnel status: pm2 list | grep cloudflare-tunnel');
+                  console.error('     3. Get new tunnel URL: pm2 logs cloudflare-tunnel --lines 200 --nostream | grep -i "https://.*trycloudflare.com" | tail -1');
+                  console.error('     4. Update Vercel Environment Variable:');
+                  console.error('        - Go to Vercel Dashboard → Project → Settings → Environment Variables');
+                  console.error('        - Update EXPO_PUBLIC_API_BASE_URL with the new tunnel URL');
+                  console.error('        - Redeploy your Vercel deployment');
+                  console.error('  - 📖 See FIX_ERR_NAME_NOT_RESOLVED.md for detailed instructions');
+                } else {
+                  console.error('  - 💡 Solution: The Cloudflare tunnel URL has expired or stopped');
+                  console.error('     Contact your administrator to restart the tunnel and get a new URL');
+                }
+              } else if (isTimeout) {
+                console.error('  - ⚠️  Connection Timeout: Server is not responding');
+              }
               
               if (isEmulator) {
                 console.error('  - ⚠️  Android Emulator Detected');
@@ -101,7 +158,7 @@ export class AuthController {
                 console.error('  - ⚠️  Physical Device Detected');
                 console.error('  - Solution: Set EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP:3001 in .env file');
                 console.error('  - Find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)');
-              } else {
+              } else if (!isDnsError && !isCloudflareTunnel) {
                 console.error('  - Solution: Make sure your server is running: npm run server');
               }
             }
@@ -145,9 +202,20 @@ export class AuthController {
         
         try {
           const q = encodeURIComponent(formData.email);
-          const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+          const apiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${q}`;
+          console.log('🔍 Fetching user role from:', apiUrl);
+          
+          const resp = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
           if (resp.ok) {
             const data = await resp.json();
+            console.log('✅ User data received:', { exists: data.exists, role: data.role, blocked: data.blocked });
+            
             if (data && data.ok && data.exists) {
               if (data.blocked === true) {
                 // Sign out and surface error
@@ -158,6 +226,9 @@ export class AuthController {
               // Get user role and name from database
               if (data.role) {
                 userRole = data.role;
+                console.log('✅ User role set to:', userRole);
+              } else {
+                console.warn('⚠️ No role in response, defaulting to user');
               }
               if (data.firstName) {
                 firstName = data.firstName;
@@ -171,9 +242,34 @@ export class AuthController {
               if (data.profilePicture) {
                 profilePicture = data.profilePicture;
               }
-            }
+            } else {
+              console.warn('⚠️ User not found in database or invalid response');
           }
-        } catch {}
+          } else {
+            console.error('❌ API response not OK:', resp.status, resp.statusText);
+            const errorText = await resp.text();
+            console.error('❌ Error response:', errorText);
+          }
+        } catch (error: any) {
+          console.error('❌ [CRITICAL] Error fetching user role from API:', error);
+          console.error('❌ [CRITICAL] Error details:', {
+            message: error.message,
+            stack: error.stack,
+            apiUrl: getApiBaseUrl(),
+            platform: Platform.OS,
+            isDev: __DEV__
+          });
+          // In production, if API fails, show alert to user
+          if (!__DEV__) {
+            Alert.alert(
+              'Network Error',
+              `Unable to verify user role. API URL: ${getApiBaseUrl()}\n\nError: ${error.message}\n\nPlease check your internet connection and try again.`,
+              [{ text: 'OK' }]
+            );
+          }
+          // Don't fail login if API call fails, but log the error
+          // Role will default to 'user' which is handled below
+        }
 
         // Create new User object with all properties
         const user = new User(
@@ -195,6 +291,9 @@ export class AuthController {
           userRole,
           profilePicture || baseUser.profilePicture
         );
+        
+        console.log('👤 User created with role:', userRole, 'Email:', user.email);
+        console.log('👤 Full user object role:', user.role);
         
         this.updateState(this.authState.setUser(user).setLoading(false));
         return { success: true };
@@ -241,7 +340,18 @@ export class AuthController {
       if (result.success && result.user) {
         // Insert into MySQL via local API
         try {
-          const response = await fetch(`${getApiBaseUrl()}/api/register`, {
+          const apiUrl = `${getApiBaseUrl()}/api/register`;
+          console.log('🔍 [REGISTER] Calling API:', apiUrl);
+          console.log('🔍 [REGISTER] Request body:', {
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            suffix: formData.suffix,
+            email: formData.email,
+            password: '***hidden***',
+          });
+          
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -253,29 +363,64 @@ export class AuthController {
               password: formData.password,
             })
           });
-          const data = await response.json();
+          
+          console.log('📡 [REGISTER] Response status:', response.status, response.statusText);
+          
+          let data;
+          try {
+            const responseText = await response.text();
+            console.log('📡 [REGISTER] Response text:', responseText);
+            data = JSON.parse(responseText);
+          } catch (parseErr) {
+            console.error('❌ [REGISTER] Failed to parse response:', parseErr);
+            throw new Error(`Server returned invalid response (${response.status}). Please try again.`);
+          }
+          
+          console.log('📡 [REGISTER] Response data:', data);
+          
           if (!response.ok || !data.ok) {
             // If Firebase user was created but MySQL insert failed, clean up Firebase user
-            const errorMessage = data.error || 'Failed to save user to database';
+            const errorMessage = data.error || `Failed to save user to database (${response.status})`;
+            const errorCode = data.errorCode || 'UNKNOWN_ERROR';
+            
+            console.error('❌ [REGISTER] API registration failed:', {
+              status: response.status,
+              error: errorMessage,
+              errorCode: errorCode,
+              details: data.details
+            });
             
             // Clean up Firebase user if MySQL insert failed
             try {
+              console.log('🧹 [REGISTER] Cleaning up Firebase user due to MySQL insert failure');
               await AuthService.logout();
             } catch (logoutErr) {
-              console.error('Error cleaning up Firebase user:', logoutErr);
+              console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
             }
             
             throw new Error(errorMessage);
           }
+          
+          console.log('✅ [REGISTER] MySQL registration successful, user ID:', data.id);
         } catch (dbErr: any) {
+          console.error('❌ [REGISTER] Database registration error:', dbErr);
+          console.error('❌ [REGISTER] Error details:', {
+            message: dbErr.message,
+            stack: dbErr.stack,
+            apiUrl: getApiBaseUrl()
+          });
+          
           // Clean up Firebase user if MySQL insert failed
           try {
+            console.log('🧹 [REGISTER] Cleaning up Firebase user due to error');
             await AuthService.logout();
           } catch (logoutErr) {
-            console.error('Error cleaning up Firebase user:', logoutErr);
+            console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
           }
-          this.updateState(this.authState.setError(dbErr.message).setLoading(false));
-          return { success: false, error: dbErr.message };
+          
+          const errorMessage = dbErr.message || 'Failed to complete registration. Please try again.';
+          this.updateState(this.authState.setError(errorMessage).setLoading(false));
+          return { success: false, error: errorMessage };
         }
 
         const user = User.fromFirebaseUser(result.user);
@@ -338,13 +483,27 @@ export class AuthController {
           try {
             if (result.user.email) {
               const q = encodeURIComponent(result.user.email);
-              const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+              const apiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${q}`;
+              console.log('🔍 [Google Login] Fetching user role from:', apiUrl);
+              
+              const resp = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+              
               if (resp.ok) {
                 const data = await resp.json();
+                console.log('✅ [Google Login] User data received:', { exists: data.exists, role: data.role, blocked: data.blocked });
+                
                 if (data && data.ok && data.exists) {
                   // Get user role and name from database
                   if (data.role) {
                     userRole = data.role;
+                    console.log('✅ [Google Login] User role set to:', userRole);
+                  } else {
+                    console.warn('⚠️ [Google Login] No role in response, defaulting to user');
                   }
                   if (data.firstName) {
                     firstName = data.firstName;
@@ -358,10 +517,23 @@ export class AuthController {
                   if (data.profilePicture) {
                     profilePicture = data.profilePicture;
                   }
+                } else {
+                  console.warn('⚠️ [Google Login] User not found in database or invalid response');
                 }
+              } else {
+                console.error('❌ [Google Login] API response not OK:', resp.status, resp.statusText);
+                const errorText = await resp.text();
+                console.error('❌ [Google Login] Error response:', errorText);
               }
             }
-          } catch {}
+          } catch (error: any) {
+            console.error('❌ [Google Login] Error fetching user role from API:', error);
+            console.error('❌ [Google Login] Error details:', {
+              message: error.message,
+              stack: error.stack,
+              apiUrl: getApiBaseUrl()
+            });
+          }
           
           // Create new User object with all properties
           const user = new User(
@@ -383,6 +555,9 @@ export class AuthController {
             userRole,
             profilePicture || baseUser.profilePicture
           );
+
+          console.log('👤 [Google Login] User created with role:', userRole, 'Email:', user.email);
+          console.log('👤 [Google Login] Full user object role:', user.role);
 
           // Also save Google user to MySQL (no password)
           try {

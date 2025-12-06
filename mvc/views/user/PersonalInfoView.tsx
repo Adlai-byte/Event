@@ -147,8 +147,10 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
             const base64String = `data:image/${asset.uri.split('.').pop()?.toLowerCase() || 'jpeg'};base64,${asset.base64}`;
             setProfilePicture(base64String);
           } else {
-            // Fallback to URI if base64 is not available
-            setProfilePicture(asset.uri);
+            // If base64 is not available, try to fetch and convert the image
+            // This ensures the image can be sent to the server for saving to server/uploads/images
+            Alert.alert('Warning', 'Image processing failed. Please try selecting the image again.');
+            console.warn('Base64 data not available for image:', asset.uri);
           }
         }
       }
@@ -166,7 +168,15 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
     }
     // If it's a URL path, prepend the API base URL
     if (profilePicture.startsWith('/uploads/')) {
-      return `${getApiBaseUrl()}${profilePicture}`;
+      const apiUrl = getApiBaseUrl();
+      // Ensure the path doesn't have double slashes
+      const cleanPath = profilePicture.startsWith('/') ? profilePicture : `/${profilePicture}`;
+      const cleanApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+      const imageUrl = `${cleanApiUrl}${cleanPath}`;
+      console.log('🔍 Profile picture URL:', imageUrl);
+      console.log('🔍 Profile picture path:', profilePicture);
+      console.log('🔍 API base URL:', apiUrl);
+      return imageUrl;
     }
     // If it's already a full URL or local file URI, return as is
     return profilePicture;
@@ -233,6 +243,15 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                     source={{ uri: getImageUri()! }}
                     style={styles.avatarImage}
                     resizeMode="cover"
+                    onError={(error) => {
+                      console.error('❌ Image load error:', error.nativeEvent.error);
+                      console.error('❌ Failed to load image from:', getImageUri());
+                      // Fallback to initials if image fails to load
+                      setProfilePicture(null);
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Image loaded successfully:', getImageUri());
+                    }}
                   />
                 ) : (
                   <Text style={styles.avatarText}>{user.getInitials()}</Text>
@@ -318,6 +337,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     position: 'relative',
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   backgroundContainer: {
     position: 'absolute',
@@ -358,8 +379,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#E9ECEF',
@@ -390,6 +411,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   profilePictureSection: {
     alignItems: 'center',

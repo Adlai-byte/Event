@@ -8,12 +8,16 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
-  Platform
+  Platform,
+  Linking,
+  Modal
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
+const sidebarWidth = 260;
 
 interface BookingsViewProps {
   user?: User;
@@ -31,6 +35,10 @@ interface Booking {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   totalCost: number;
   serviceName: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  hasPendingCashPayment?: boolean;
+  isPaid?: boolean;
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, onLogout }) => {
@@ -85,7 +93,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok && Array.isArray(data.rows)) {
-          const mapped: Booking[] = data.rows.map((b: any) => ({
+          const mapped: Booking[] = data.rows.map((b: any) => {
+            const hasPendingCash = b.has_pending_cash_payment === 1 || 
+                                   (b.payment_method === 'Cash on Hand' && b.payment_status === 'pending');
+            
+            // Debug log
+            if (b.b_status === 'confirmed') {
+              console.log(`Booking ${b.idbooking}: payment_method=${b.payment_method}, payment_status=${b.payment_status}, hasPendingCash=${hasPendingCash}`);
+            }
+            
+            return {
             id: b.idbooking.toString(),
             eventName: b.b_event_name,
             clientName: b.client_name || 'Unknown Client',
@@ -94,8 +111,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
             location: b.b_location,
             status: b.b_status,
             totalCost: parseFloat(b.b_total_cost) || 0,
-            serviceName: b.service_name || 'Service'
-          }));
+              serviceName: b.service_name || 'Service',
+            paymentMethod: b.payment_method || null,
+            paymentStatus: b.payment_status || null,
+            hasPendingCashPayment: hasPendingCash,
+            isPaid: b.is_paid === 1
+            };
+          });
           setBookings(mapped);
         } else {
           setBookings([]);
@@ -145,7 +167,57 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
     }
   };
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
+  const handleMarkPaymentAsPaid = async (bookingId: string) => {
+    try {
+      const resp = await fetch(`${getApiBaseUrl()}/api/provider/bookings/${bookingId}/mark-payment-paid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerEmail: user?.email })
+      });
+      
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.ok) {
+          await loadBookings();
+          Alert.alert('Success', 'Payment marked as paid successfully');
+        } else {
+          Alert.alert('Error', data.error || 'Failed to mark payment as paid');
+        }
+      } else {
+        const errorData = await resp.json().catch(() => ({ error: 'Failed to mark payment as paid' }));
+        Alert.alert('Error', errorData.error || `Failed to mark payment as paid (${resp.status})`);
+      }
+    } catch (error) {
+      console.error('Error marking payment as paid:', error);
+      Alert.alert('Error', `Failed to mark payment as paid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleDownloadInvoice = async (bookingId: string) => {
+    try {
+      const invoiceUrl = `${getApiBaseUrl()}/api/provider/bookings/${bookingId}/invoice?providerEmail=${encodeURIComponent(user?.email || '')}`;
+      
+      if (Platform.OS === 'web') {
+        // For web, open in new tab to download
+        if (typeof window !== 'undefined') {
+          window.open(invoiceUrl, '_blank');
+        }
+      } else {
+        // For mobile, use Linking
+        Linking.openURL(invoiceUrl).catch((err) => {
+          console.error('Error opening invoice URL:', err);
+          Alert.alert('Error', 'Failed to download invoice. Please try again.');
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      Alert.alert('Error', `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
     const isActive = activeRoute === route;
     return (
       <TouchableOpacity 
@@ -153,6 +225,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
         onPress={() => {
           setActiveRoute(route);
           onNavigate?.(route);
+          onPress?.(); // Close sidebar on mobile
         }}
       >
         <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
@@ -160,6 +233,38 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
       </TouchableOpacity>
     );
   };
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
+        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
+      </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const filteredBookings = bookings.filter(b => filterStatus === 'all' || b.status === filterStatus);
   const statusFilters = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -177,37 +282,39 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
   return (
     <View style={styles.container}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.sidebarOverlay}>
+            <View style={styles.mobileSidebar}>
+              <SidebarContent />
+            </View>
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="🎯" label="Services" route="services" />
-          <SidebarItem icon="📅" label="Bookings" route="bookings" />
-          <SidebarItem icon="📝" label="Proposals" route="proposals" />
-          <SidebarItem icon="💬" label="Messages" route="messages" />
-          <SidebarItem icon="👤" label="Profile" route="profile" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
         <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {isMobile && (
+              <TouchableOpacity 
+                style={styles.mobileMenuButton}
+                onPress={() => setSidebarVisible(true)}
+              >
+                <Text style={styles.mobileMenuIcon}>≡</Text>
+              </TouchableOpacity>
+            )}
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Bookings</Text>
             <Text style={styles.headerSubtitle}>Manage your service bookings</Text>
+            </View>
           </View>
           <TouchableOpacity 
             style={styles.refreshButton}
@@ -250,6 +357,153 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                     : `No ${filterStatus} bookings`}
                 </Text>
               </View>
+            ) : (
+              isMobile ? (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={true}
+                  style={styles.tableScrollContainer}
+                  contentContainerStyle={styles.tableScrollContent}
+                >
+                  <View style={styles.tableContainer}>
+                    {/* Table Header */}
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Service / Event</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Client</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Date</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Time</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Location</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Total</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 0.8 }]}>Status</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Actions</Text>
+                    </View>
+
+                    {/* Table Rows */}
+                    {filteredBookings.map((booking) => (
+                      <View key={booking.id} style={styles.tableRow}>
+                        <View style={[styles.tableCell, { flex: 2 }]}>
+                          <Text style={styles.tableCellEventName}>{booking.eventName}</Text>
+                          <Text style={styles.tableCellServiceName}>{booking.serviceName}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1.5 }]}>
+                          <Text style={styles.tableCellText}>{booking.clientName}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1.2 }]}>
+                          <Text style={styles.tableCellText}>{booking.date}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1.2 }]}>
+                          <Text style={styles.tableCellText}>{booking.time}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1 }]}>
+                          <Text style={styles.tableCellText} numberOfLines={1}>{booking.location}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1 }]}>
+                          <Text style={[styles.tableCellText, styles.tableCellPrice]}>
+                            ₱{booking.totalCost.toLocaleString()}
+                          </Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 0.8 }]}>
+                          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) + '20' }]}>
+                            <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
+                              {booking.status.toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={[styles.tableCell, styles.tableCellActions, { flex: 1.5 }]}>
+                          {booking.status === 'pending' && (
+                            <>
+                              <TouchableOpacity 
+                                style={[styles.tableActionButton, styles.confirmButton]}
+                                onPress={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                              >
+                                <Text style={styles.tableActionButtonText}>Confirm</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity 
+                                style={[styles.tableActionButton, styles.cancelButton]}
+                                onPress={async () => {
+                                  if (Platform.OS === 'web') {
+                                    const confirmed = window.confirm('Are you sure you want to cancel this booking?');
+                                    if (confirmed) {
+                                      await handleUpdateBookingStatus(booking.id, 'cancelled');
+                                    }
+                                  } else {
+                                    Alert.alert(
+                                      'Cancel Booking',
+                                      'Are you sure you want to cancel this booking?',
+                                      [
+                                        { text: 'No', style: 'cancel' },
+                                        { 
+                                          text: 'Yes', 
+                                          style: 'destructive',
+                                          onPress: async () => await handleUpdateBookingStatus(booking.id, 'cancelled')
+                                        }
+                                      ],
+                                      { cancelable: true }
+                                    );
+                                  }
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={styles.tableActionButtonText}>Cancel</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
+                          {booking.status === 'confirmed' && (
+                            <>
+                              {booking.hasPendingCashPayment && (
+                                <TouchableOpacity 
+                                  style={[styles.tableActionButton, styles.paidButton]}
+                                  onPress={() => {
+                                    if (Platform.OS === 'web') {
+                                      const confirmed = window.confirm('Mark this cash payment as paid?');
+                                      if (confirmed) {
+                                        handleMarkPaymentAsPaid(booking.id);
+                                      }
+                                    } else {
+                                      Alert.alert(
+                                        'Mark Payment as Paid',
+                                        'Have you received the cash payment from the customer?',
+                                        [
+                                          { text: 'Cancel', style: 'cancel' },
+                                          { 
+                                            text: 'Yes, Mark as Paid', 
+                                            onPress: () => handleMarkPaymentAsPaid(booking.id)
+                                          }
+                                        ]
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <Text style={styles.tableActionButtonText}>Paid</Text>
+                                </TouchableOpacity>
+                              )}
+                              <TouchableOpacity 
+                                style={[styles.tableActionButton, styles.completeButton]}
+                                onPress={() => handleUpdateBookingStatus(booking.id, 'completed')}
+                              >
+                                <Text style={styles.tableActionButtonText}>Complete</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
+                          {booking.status === 'completed' && (
+                            <Text style={styles.tableCellText}>-</Text>
+                          )}
+                          {booking.status === 'confirmed' && booking.isPaid && (
+                            <TouchableOpacity 
+                              style={[styles.tableActionButton, styles.invoiceButton]}
+                              onPress={() => handleDownloadInvoice(booking.id)}
+                            >
+                              <Text style={styles.tableActionButtonText}>📄 Invoice</Text>
+                            </TouchableOpacity>
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <Text style={styles.tableCellText}>-</Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
             ) : (
               <View style={styles.tableContainer}>
                 {/* Table Header */}
@@ -335,16 +589,53 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                         </>
                       )}
                       {booking.status === 'confirmed' && (
+                          <>
+                            {booking.hasPendingCashPayment && (
+                              <TouchableOpacity 
+                                style={[styles.tableActionButton, styles.paidButton]}
+                                onPress={() => {
+                                  if (Platform.OS === 'web') {
+                                    const confirmed = window.confirm('Mark this cash payment as paid?');
+                                    if (confirmed) {
+                                      handleMarkPaymentAsPaid(booking.id);
+                                    }
+                                  } else {
+                                    Alert.alert(
+                                      'Mark Payment as Paid',
+                                      'Have you received the cash payment from the customer?',
+                                      [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { 
+                                          text: 'Yes, Mark as Paid', 
+                                          onPress: () => handleMarkPaymentAsPaid(booking.id)
+                                        }
+                                      ]
+                                    );
+                                  }
+                                }}
+                              >
+                                <Text style={styles.tableActionButtonText}>Paid</Text>
+                              </TouchableOpacity>
+                            )}
                         <TouchableOpacity 
                           style={[styles.tableActionButton, styles.completeButton]}
                           onPress={() => handleUpdateBookingStatus(booking.id, 'completed')}
                         >
                           <Text style={styles.tableActionButtonText}>Complete</Text>
                         </TouchableOpacity>
+                          </>
                       )}
                       {booking.status === 'completed' && (
                         <Text style={styles.tableCellText}>-</Text>
                       )}
+                        {booking.status === 'confirmed' && booking.isPaid && (
+                          <TouchableOpacity 
+                            style={[styles.tableActionButton, styles.invoiceButton]}
+                            onPress={() => handleDownloadInvoice(booking.id)}
+                          >
+                            <Text style={styles.tableActionButtonText}>📄 Invoice</Text>
+                          </TouchableOpacity>
+                        )}
                       {booking.status === 'cancelled' && (
                         <Text style={styles.tableCellText}>-</Text>
                       )}
@@ -352,6 +643,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                   </View>
                 ))}
               </View>
+              )
             )}
           </>
         )}
@@ -360,19 +652,82 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   sidebar: {
-    width: sidebarWidth,
+    width: isMobile ? '80%' : sidebarWidth,
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    height: isMobile ? '100%' : undefined,
+  },
+  sidebarOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  mobileSidebar: {
+    width: '80%',
+    height: '100%',
+    backgroundColor: '#102A43',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  mobileMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -458,25 +813,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   header: {
-    marginBottom: 20,
-    flexDirection: 'row',
+    marginBottom: isMobile ? 12 : 20,
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: isMobile ? 'flex-start' : 'flex-start',
+    gap: isMobile ? 12 : 0,
   },
   headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: isMobile ? 18 : 24,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
   },
   refreshButton: {
@@ -526,6 +884,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
   },
+  tableScrollContainer: {
+    marginTop: 16,
+    ...(isMobile && {
+      maxHeight: '100%',
+    }),
+  },
+  tableScrollContent: {
+    ...(isMobile && {
+      minWidth: 900, // Minimum width to ensure all columns are visible
+    }),
+  },
   tableContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -535,6 +904,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    width: isMobile ? 900 : '100%', // Fixed width on mobile for horizontal scroll, full width on web
   },
   tableHeader: {
     flexDirection: 'row',
@@ -586,15 +956,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   tableActionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: isMobile ? 8 : 6,
+    paddingHorizontal: isMobile ? 10 : 12,
     borderRadius: 6,
-    minWidth: 70,
+    minWidth: isMobile ? 65 : 70,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tableActionButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: isMobile ? 10 : 12,
     fontWeight: '600',
   },
   statusBadge: {
@@ -619,6 +990,14 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#ef4444',
+  },
+  paidButton: {
+    backgroundColor: '#10b981',
+    marginRight: 8,
+  },
+  invoiceButton: {
+    backgroundColor: '#F59E0B',
+    marginRight: 8,
   },
   completeButton: {
     backgroundColor: '#4a55e1',

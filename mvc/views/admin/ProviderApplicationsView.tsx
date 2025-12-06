@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Modal, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Modal, Image, Platform, TextInput } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
+const isMobile = screenWidth < 768;
+const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
 
 interface ProviderApplicationsProps {
   user?: UserModel;
@@ -30,6 +31,10 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
   const [selectedApplication, setSelectedApplication] = useState<ProviderApplication | null>(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectApplicationId, setRejectApplicationId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -47,7 +52,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
             name: [u.u_fname, u.u_lname].filter(Boolean).join(' ').trim() || 'Unknown',
             email: u.u_email,
             status: u.u_provider_status || (u.u_role === 'provider' ? 'approved' : 'pending'),
-            appliedAt: u.u_created_at || new Date().toISOString(),
+            appliedAt: u.applied_at || u.u_created_at || new Date().toISOString(),
             role: u.u_role || 'user',
             businessDocument: u.u_business_document || null,
             validIdDocument: u.u_valid_id_document || null
@@ -205,7 +210,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
     }
   };
 
-  const handleReject = async (applicationId: number) => {
+  const handleReject = (applicationId: number) => {
     console.log('handleReject called with ID:', applicationId);
     // Prevent multiple clicks on the same application
     if (processingId === applicationId) {
@@ -213,95 +218,34 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
       return;
     }
     
-    const confirmMessage = 'Are you sure you want to reject this provider application? This action cannot be undone.';
+    setRejectApplicationId(applicationId);
+    setRejectionReason('');
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectApplicationId) return;
     
-    // Use window.confirm for web, Alert.alert for mobile
-    let confirmed = false;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      confirmed = window.confirm(confirmMessage);
-      if (!confirmed) {
+    if (!rejectionReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for rejection');
         return;
       }
-    } else {
-      // For mobile, use Alert.alert with callback
-      return new Promise<void>((resolve) => {
-        Alert.alert(
-          'Reject Provider',
-          confirmMessage,
-          [
-            { 
-              text: 'Cancel', 
-              style: 'cancel',
-              onPress: () => {
-                console.log('Rejection cancelled');
-                resolve();
-              }
-            },
-            {
-              text: 'Reject',
-              style: 'destructive',
-              onPress: async () => {
-                confirmed = true;
-                // Process rejection
-                setProcessingId(applicationId);
-                try {
-                  const apiUrl = `${getApiBaseUrl()}/api/admin/provider-applications/${applicationId}/reject`;
-                  console.log('Calling API:', apiUrl);
-                  
-                  const resp = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    }
-                  });
-                  
-                  console.log('API Response status:', resp.status);
-                  const data = await resp.json();
-                  console.log('API Response data:', data);
-                  
-                  if (resp.ok && data.ok) {
-                    console.log('Rejection successful');
-                    Alert.alert('Success', 'Provider application rejected.', [
-                      { 
-                        text: 'OK', 
-                        onPress: () => {
-                          console.log('Reloading applications...');
-                          setProcessingId(null);
-                          loadApplications();
-                          resolve();
-                        }
-                      }
-                    ]);
-                  } else {
-                    console.error('Rejection failed:', data.error);
-                    setProcessingId(null);
-                    Alert.alert('Error', data.error || 'Failed to reject application. Please try again.');
-                    resolve();
-                  }
-                } catch (error) {
-                  console.error('Reject error:', error);
-                  setProcessingId(null);
-                  Alert.alert('Error', 'An error occurred while rejecting the application. Please try again.');
-                  resolve();
-                }
-              }
-            }
-          ]
-        );
-      });
-    }
     
-    console.log('Rejection confirmed, processing...');
-    setProcessingId(applicationId);
+    setProcessingId(rejectApplicationId);
+    setShowRejectModal(false);
+    
     try {
-      const apiUrl = `${getApiBaseUrl()}/api/admin/provider-applications/${applicationId}/reject`;
+      const apiUrl = `${getApiBaseUrl()}/api/admin/provider-applications/${rejectApplicationId}/reject`;
       console.log('Calling API:', apiUrl);
       
       const resp = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          rejectionReason: rejectionReason.trim()
+        })
       });
       
       console.log('API Response status:', resp.status);
@@ -311,24 +255,29 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
       if (resp.ok && data.ok) {
         console.log('Rejection successful');
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          window.alert('Provider application rejected.');
+          window.alert('Provider application rejected. The user has been notified.');
         } else {
-          Alert.alert('Success', 'Provider application rejected.', [
+          Alert.alert('Success', 'Provider application rejected. The user has been notified.', [
             { 
               text: 'OK', 
               onPress: () => {
                 console.log('Reloading applications...');
                 setProcessingId(null);
+                setRejectApplicationId(null);
+                setRejectionReason('');
                 loadApplications();
               }
             }
           ]);
         }
         setProcessingId(null);
+        setRejectApplicationId(null);
+        setRejectionReason('');
         loadApplications();
       } else {
         console.error('Rejection failed:', data.error);
         setProcessingId(null);
+        setRejectApplicationId(null);
         const errorMsg = data.error || 'Failed to reject application. Please try again.';
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           window.alert('Error: ' + errorMsg);
@@ -339,6 +288,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
     } catch (error) {
       console.error('Reject error:', error);
       setProcessingId(null);
+      setRejectApplicationId(null);
       const errorMsg = 'An error occurred while rejecting the application. Please try again.';
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.alert('Error: ' + errorMsg);
@@ -349,10 +299,51 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
   };
 
   const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity style={styles.sidebarItem} onPress={() => onNavigate?.(route)}>
+    <TouchableOpacity 
+      style={styles.sidebarItem} 
+      onPress={() => {
+        onNavigate?.(route);
+        if (isMobile) setSidebarVisible(false);
+      }}
+    >
       <Text style={styles.sidebarIcon}>{icon}</Text>
       <Text style={styles.sidebarLabel}>{label}</Text>
     </TouchableOpacity>
+  );
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
+        <SidebarItem icon="👤" label="Users" route="user" />
+        <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
+        <SidebarItem icon="📊" label="Analytics" route="analytics" />
+      </View>
+
+      <TouchableOpacity 
+        style={styles.logoutButton} 
+        onPress={() => {
+          if (isMobile) setSidebarVisible(false);
+          onLogout?.();
+        }}
+      >
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const filteredApplications = applications.filter(app => 
@@ -380,33 +371,35 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
   return (
     <View style={styles.layout}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <SidebarContent />
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="👤" label="Users" route="user" />
-          <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-          <SidebarItem icon="📊" label="Analytics" route="analytics" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {isMobile && (
+              <TouchableOpacity
+                onPress={() => setSidebarVisible(true)}
+                style={styles.mobileMenuButton}
+              >
+                <Text style={styles.mobileMenuIcon}>≡</Text>
+              </TouchableOpacity>
+            )}
           <Text style={styles.title}>Provider Applications</Text>
+          </View>
         </View>
 
         {/* Filter Tabs */}
@@ -439,6 +432,12 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
             </Text>
           </View>
         ) : (
+          <ScrollView 
+            horizontal={isMobile}
+            showsHorizontalScrollIndicator={isMobile}
+            style={isMobile ? styles.tableScrollView : undefined}
+            contentContainerStyle={isMobile ? styles.tableScrollContent : undefined}
+          >
           <View style={styles.tableContainer}>
             {/* Table Header */}
             <View style={styles.tableHeader}>
@@ -467,7 +466,11 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                 </View>
                 <View style={styles.tableColDate}>
                   <Text style={styles.tableCell}>
-                    {new Date(app.appliedAt).toLocaleDateString()}
+                    {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    }) : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.tableColActions}>
@@ -534,6 +537,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
               </View>
             ))}
           </View>
+          </ScrollView>
         )}
 
         {/* Document View Modal */}
@@ -543,7 +547,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
           transparent={true}
           onRequestClose={() => setShowDocumentModal(false)}
         >
-          <View style={styles.modalOverlay}>
+          <View style={styles.documentModalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
@@ -598,6 +602,94 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
             </View>
           </View>
         </Modal>
+
+        {/* Reject Application Modal */}
+        <Modal
+          visible={showRejectModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => {
+            if (!processingId) {
+              setShowRejectModal(false);
+              setRejectApplicationId(null);
+              setRejectionReason('');
+            }
+          }}
+        >
+          <View style={styles.documentModalOverlay}>
+            <View style={styles.rejectModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Reject Provider Application</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!processingId) {
+                      setShowRejectModal(false);
+                      setRejectApplicationId(null);
+                      setRejectionReason('');
+                    }
+                  }}
+                  style={styles.closeButton}
+                  disabled={!!processingId}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.rejectModalBody}>
+                <Text style={styles.rejectModalDescription}>
+                  Please provide a reason for rejecting this provider application. This reason will be sent to the user as a notification.
+                </Text>
+
+                <Text style={styles.rejectModalLabel}>Rejection Reason *</Text>
+                <TextInput
+                  style={styles.rejectReasonInput}
+                  placeholder="Enter the reason for rejection..."
+                  placeholderTextColor="#A4B0BE"
+                  multiline
+                  numberOfLines={6}
+                  value={rejectionReason}
+                  onChangeText={setRejectionReason}
+                  editable={!processingId}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.rejectModalNote}>
+                  This message will be visible to the user in their notifications.
+                </Text>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, processingId && styles.buttonDisabled]}
+                  onPress={() => {
+                    if (!processingId) {
+                      setShowRejectModal(false);
+                      setRejectApplicationId(null);
+                      setRejectionReason('');
+                    }
+                  }}
+                  disabled={!!processingId}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.rejectConfirmButton,
+                    (!rejectionReason.trim() || processingId) && styles.submitButtonDisabled
+                  ]}
+                  onPress={handleConfirmReject}
+                  disabled={!rejectionReason.trim() || !!processingId}
+                  activeOpacity={0.7}
+                >
+                  {processingId ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.rejectConfirmButtonText}>Confirm Rejection</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
@@ -606,7 +698,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
 const styles = StyleSheet.create({
   layout: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   sidebar: {
@@ -614,6 +706,61 @@ const styles = StyleSheet.create({
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    ...(isMobile && {
+      height: '100%',
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      zIndex: 1000,
+    }),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  mobileMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -688,27 +835,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: isMobile ? 16 : 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
   },
   filterContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: isMobile ? 12 : 20,
     backgroundColor: '#FFFFFF',
+    flexWrap: 'wrap',
     borderRadius: 8,
     padding: 4,
   },
   filterTab: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    flex: isMobile ? undefined : 1,
+    minWidth: isMobile ? (screenWidth - 48) / 4 : undefined,
+    paddingVertical: isMobile ? 6 : 8,
+    paddingHorizontal: isMobile ? 8 : 12,
     borderRadius: 6,
     alignItems: 'center',
   },
@@ -716,7 +867,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4a55e1',
   },
   filterTabText: {
-    fontSize: 13,
+    fontSize: isMobile ? 11 : 13,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -748,29 +899,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
   },
+  tableScrollView: {
+    marginTop: 8,
+  },
+  tableScrollContent: {
+    minWidth: 800,
+  },
   tableContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     overflow: 'hidden',
+    ...(isMobile && { minWidth: 800 }),
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F8FAFC',
-    paddingVertical: 12,
+    paddingVertical: isMobile ? 10 : 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
   tableHeaderText: {
-    fontSize: 12,
+    fontSize: isMobile ? 10 : 12,
     fontWeight: '700',
     color: '#64748B',
     textTransform: 'uppercase',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: isMobile ? 12 : 16,
+    paddingHorizontal: isMobile ? 12 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -778,23 +936,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   tableCell: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#1E293B',
   },
   tableColName: {
     flex: 1.5,
+    minWidth: isMobile ? 120 : undefined,
+    paddingRight: isMobile ? 8 : 0,
   },
   tableColEmail: {
     flex: 2,
+    minWidth: isMobile ? 150 : undefined,
+    paddingRight: isMobile ? 8 : 0,
   },
   tableColStatus: {
     flex: 1,
+    minWidth: isMobile ? 100 : undefined,
+    paddingRight: isMobile ? 8 : 0,
   },
   tableColDate: {
     flex: 1,
+    minWidth: isMobile ? 100 : undefined,
+    paddingRight: isMobile ? 8 : 0,
   },
   tableColActions: {
     flex: 1.5,
+    minWidth: isMobile ? 200 : undefined,
   },
   statusBadge: {
     paddingVertical: 4,
@@ -813,10 +980,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: isMobile ? 6 : 6,
+    paddingHorizontal: isMobile ? 10 : 12,
     borderRadius: 6,
-    minWidth: 70,
+    minWidth: isMobile ? 60 : 70,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -829,7 +996,7 @@ const styles = StyleSheet.create({
   },
   approveButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
   rejectButton: {
@@ -837,7 +1004,7 @@ const styles = StyleSheet.create({
   },
   rejectButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
   approvedText: {
@@ -856,10 +1023,10 @@ const styles = StyleSheet.create({
   },
   viewDocumentsButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
-  modalOverlay: {
+  documentModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
@@ -948,6 +1115,84 @@ const styles = StyleSheet.create({
   },
   closeModalButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 500,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    }),
+  },
+  rejectModalBody: {
+    padding: 20,
+  },
+  rejectModalDescription: {
+    fontSize: 14,
+    color: '#636E72',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  rejectModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 8,
+  },
+  rejectReasonInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: '#2D3436',
+    backgroundColor: '#F8FAFC',
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 8,
+  },
+  rejectModalNote: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  rejectConfirmButton: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  rejectConfirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cancelButtonText: {
+    color: '#64748B',
     fontSize: 16,
     fontWeight: '600',
   },

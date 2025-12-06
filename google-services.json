@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "491966036189",
+    "project_id": "e-vent-aa93e",
+    "storage_bucket": "e-vent-aa93e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:491966036189:android:ac36d9bbe131b071d8c334",
+        "android_client_info": {
+          "package_name": "com.ploxy1.Event"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "491966036189-6ulchqr6k0e0da1ibbu62jj3n0efnoek.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4XdusvN1Z1NvOcT0ze2IOY7gXeCIBcH8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "491966036189-6ulchqr6k0e0da1ibbu62jj3n0efnoek.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

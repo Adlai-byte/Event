@@ -7,7 +7,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Dimensions
+  Dimensions,
+  Platform,
+  Image
 } from 'react-native';
 import { LoginFormData } from '../models/FormData';
 import { AuthState } from '../models/AuthState';
@@ -22,6 +24,8 @@ interface LoginViewProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
+const isMobile = screenWidth < 768;
+const isMobileWeb = Platform.OS === 'web' && screenWidth < 768;
 
 export const LoginView: React.FC<LoginViewProps> = ({
   authState,
@@ -126,6 +130,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
+  const isWeb = Platform.OS === 'web';
+
   return (
     <View style={styles.container}>
       {/* Background Design */}
@@ -133,15 +139,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <View style={styles.backgroundCircle1} />
         <View style={styles.backgroundCircle2} />
         <View style={styles.backgroundCircle3} />
+        {isWeb ? (
+          <View style={styles.backgroundGradientWeb} />
+        ) : (
         <View style={styles.backgroundGradient} />
+        )}
       </View>
       
+      {/* Web: Centered Card Container */}
+      {isWeb ? (
+        <View style={styles.webCardContainer}>
+          <View style={styles.webCardContent}>
       {/* Logo */}
-      <View style={styles.logo}>
-        <Text style={styles.calendarIcon}>📅</Text>
-        <Text style={styles.logoText}>
-          <Text style={styles.ePart}>E</Text><Text style={styles.ventPart}>-vent</Text>
-        </Text>
+      <View style={styles.logoContainer}>
+        <Image 
+          source={require('../../assets/logo.png')} 
+                style={styles.logoImage as any}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Welcome Message */}
@@ -168,7 +183,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <View style={styles.toggleContainer}>
         <TouchableOpacity 
           style={[styles.toggleButton, styles.activeToggleButton]} 
-          onPress={() => {}} // Already in login mode
+                onPress={() => {}}
         >
           <Text style={[styles.toggleText, styles.activeToggleText]}>Login</Text>
         </TouchableOpacity>
@@ -266,6 +281,143 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <Text style={styles.googleButtonText}>Google</Text>
       </TouchableOpacity>
 
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Mobile: Full Screen Layout */}
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.logoImage as any}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Welcome Message */}
+          <Text style={styles.welcomeText}>
+            Welcome back! Please log in to your account.
+          </Text>
+
+          {/* Error Message for Login Errors */}
+          {authState.error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.errorMessage}>
+                {authState.error.includes('Account not found') 
+                  ? 'No account found with this email address. Please check your email or register for a new account.'
+                  : authState.error.includes('Invalid password')
+                  ? 'Invalid password. Please check your password and try again.'
+                  : authState.error
+                }
+              </Text>
+            </View>
+          )}
+
+          {/* Login/Register Toggle */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity 
+              style={[styles.toggleButton, styles.activeToggleButton]} 
+              onPress={() => {}}
+            >
+              <Text style={[styles.toggleText, styles.activeToggleText]}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.toggleButton]} 
+              onPress={onRegister}
+            >
+              <Text style={styles.toggleText}>Register</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Email Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Email {fieldErrors.email && <Text style={styles.requiredAsterisk}>*</Text>}
+            </Text>
+            <View style={[styles.inputField, fieldErrors.email && styles.inputFieldError]}>
+              <Text style={styles.inputIcon}>✉️</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="you@example.com"
+                value={formData.email}
+                onChangeText={(text: string) => {
+                  setFormData(new LoginFormData(text, formData.password));
+                  clearFieldError('email');
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Password {fieldErrors.password && <Text style={styles.requiredAsterisk}>*</Text>}
+            </Text>
+            <View style={[styles.inputField, fieldErrors.password && styles.inputFieldError]}>
+              <Text style={styles.inputIcon}>🔒</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                value={formData.password}
+                onChangeText={(text: string) => {
+                  setFormData(new LoginFormData(formData.email, text));
+                  clearFieldError('password');
+                }}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
+                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+              </TouchableOpacity>
+            </View>
+            {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
+          </View>
+
+          {/* Forgot Password */}
+          <TouchableOpacity 
+            style={[styles.forgotPassword, isResettingPassword && styles.forgotPasswordDisabled]} 
+            onPress={handleForgotPassword}
+            disabled={isResettingPassword}
+          >
+            {isResettingPassword ? (
+              <View style={styles.forgotPasswordLoading}>
+                <ActivityIndicator size="small" color="#4a55e1" style={styles.loadingSpinner} />
+                <Text style={styles.forgotPasswordText}>Sending reset email...</Text>
+              </View>
+            ) : (
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Login Button */}
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={handleLogin}
+          >
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
+
+          {/* OR Separator */}
+          <View style={styles.orSeparator}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.orText}>OR CONTINUE WITH</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          {/* Google Button */}
+          <TouchableOpacity 
+            style={styles.googleButton} 
+            onPress={handleGoogleLogin}
+          >
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={styles.googleButtonText}>Google</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 };
@@ -273,8 +425,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: isMobile ? 16 : 0,
     position: 'relative',
+    ...(Platform.OS === 'web' ? {
+      justifyContent: isMobileWeb ? 'flex-start' : 'center',
+      alignItems: 'center',
+      minHeight: screenHeight,
+    } : {}),
   },
   backgroundContainer: {
     position: 'absolute',
@@ -317,35 +474,47 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'linear-gradient(135deg, #f0f2f5 0%, #e8f0fe 100%)',
+    backgroundColor: '#f0f2f5',
   },
-  logo: {
-    flexDirection: 'row',
+  backgroundGradientWeb: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(135deg, #f0f2f5 0%, #e8f0fe 100%)',
+    } : {}),
+  },
+  webCardContainer: {
+    width: isMobileWeb ? '100%' : '90%',
+    maxWidth: isMobileWeb ? '100%' : 480,
+    backgroundColor: '#fff',
+    borderRadius: isMobileWeb ? 0 : 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: isMobileWeb ? 'none' : '0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)',
+    } : {}),
+  },
+  webCardContent: {
+    padding: isMobileWeb ? 24 : 40,
+  },
+  logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: isTablet ? 35 : 25,
+    marginTop: isMobile || isMobileWeb ? 20 : 0,
+    marginBottom: isMobile || isMobileWeb ? 16 : 20,
   },
-  calendarIcon: {
-    fontSize: isTablet ? 48 : 36,
-    marginRight: 10,
-  },
-  logoText: {
-    fontSize: isTablet ? 44 : 36,
-    fontWeight: '700',
-    color: '#333',
-  },
-  ePart: {
-    fontWeight: '400',
-  },
-  ventPart: {
-    fontWeight: '700',
+  logoImage: {
+    width: isMobile || isMobileWeb ? 100 : 120,
+    height: isMobile || isMobileWeb ? 100 : 120,
   },
   welcomeText: {
-    fontSize: isTablet ? 22 : 18,
+    fontSize: isMobile || isMobileWeb ? 15 : 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: isTablet ? 30 : 20,
+    marginBottom: isMobile || isMobileWeb ? 16 : 20,
     fontWeight: '400',
+    paddingHorizontal: isMobile || isMobileWeb ? 8 : 0,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -371,45 +540,46 @@ const styles = StyleSheet.create({
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#f0f2f5',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 4,
-    marginBottom: isTablet ? 30 : 25,
+    marginBottom: isMobileWeb ? 16 : 20,
   },
   toggleButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 6,
+    paddingVertical: isMobileWeb ? 8 : 10,
+    paddingHorizontal: isMobileWeb ? 12 : 16,
+    borderRadius: 8,
     alignItems: 'center',
   },
   activeToggleButton: {
     backgroundColor: '#4a55e1',
   },
   toggleText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
   },
   activeToggleText: {
     color: '#fff',
+    fontWeight: '700',
   },
   inputGroup: {
-    marginBottom: isTablet ? 25 : 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: isTablet ? 18 : 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: isTablet ? 10 : 8,
+    marginBottom: 8,
   },
   inputField: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: isTablet ? 20 : 15,
-    paddingVertical: isTablet ? 16 : 10,
+    borderRadius: 10,
+    paddingHorizontal: isMobileWeb ? 12 : 14,
+    paddingVertical: isMobileWeb ? 10 : 12,
     backgroundColor: '#f9f9f9',
   },
   inputIcon: {
@@ -428,13 +598,13 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: isTablet ? 18 : 16,
+    fontSize: isMobile || isMobileWeb ? 16 : (isTablet ? 18 : 16),
     color: '#333',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginTop: -10,
-    marginBottom: 25,
+    marginTop: -8,
+    marginBottom: 20,
   },
   forgotPasswordDisabled: {
     opacity: 0.6,
@@ -448,24 +618,37 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     color: '#4a55e1',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#4a55e1',
-    paddingVertical: isTablet ? 18 : 15,
-    borderRadius: 8,
-    marginBottom: isTablet ? 30 : 25,
+    backgroundColor: '#6366F1',
+    paddingVertical: isMobileWeb ? 12 : 14,
+    borderRadius: 10,
+    marginBottom: 20,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: isMobileWeb ? '0 2px 8px rgba(99, 102, 241, 0.25)' : '0 4px 12px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(99, 102, 241, 0.2)',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {
+      shadowColor: '#6366F1',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    }),
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: isTablet ? 20 : 18,
-    fontWeight: '600',
+    fontSize: isMobileWeb ? 15 : 16,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   orSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 20,
   },
   separatorLine: {
     flex: 1,
@@ -474,28 +657,35 @@ const styles = StyleSheet.create({
   },
   orText: {
     color: '#999',
-    marginHorizontal: 15,
-    fontSize: 14,
+    marginHorizontal: 12,
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f0f2f5',
-    borderWidth: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
     borderColor: '#ddd',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 30,
+    paddingVertical: isMobileWeb ? 10 : 12,
+    borderRadius: 10,
+    marginBottom: 0,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {}),
   },
   googleIcon: {
-    fontSize: 20,
+    fontSize: isMobileWeb ? 18 : 20,
     fontWeight: 'bold',
     marginRight: 10,
     color: '#333',
   },
   googleButtonText: {
-    fontSize: 16,
+    fontSize: isMobile || isMobileWeb ? 15 : 16,
     fontWeight: '600',
     color: '#333',
   },

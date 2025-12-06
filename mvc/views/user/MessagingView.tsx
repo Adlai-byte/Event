@@ -10,13 +10,15 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 
-const { width, height } = Dimensions.get('window');
+const { width, height: screenHeight } = Dimensions.get('window');
+const isMobile = width < 768 || Platform.OS !== 'web';
 
 interface MessagingViewProps {
   userId: string;
@@ -37,6 +39,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   const messagingService = MySQLMessagingService.getInstance();
   const scrollViewRef = useRef<ScrollView>(null);
   const hasHandledInitialConversation = useRef(false);
+  const conversationIdRef = useRef<string | undefined>(conversationId);
 
   useEffect(() => {
     if (!userEmail) {
@@ -44,31 +47,48 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
       return;
     }
 
+    // Update the ref with current conversationId
+    conversationIdRef.current = conversationId;
+    
     // Reset the flag when conversationId changes
     hasHandledInitialConversation.current = false;
-    // Clear selected conversation when conversationId changes
-    setSelectedConversation(null);
+    
+    // Clear selected conversation when conversationId is undefined
+    if (!conversationId) {
+      setSelectedConversation(null);
+    }
 
     loadConversations();
     loadUnreadCount();
     
-    // Subscribe to real-time updates
-    const unsubscribeConversations = messagingService.subscribeToUserConversations(
-      userEmail,
-      (updatedConversations) => {
-        setConversations(updatedConversations);
-        
-        // Only auto-select if conversationId is provided AND we haven't handled it yet
-        // This prevents auto-selecting on every polling update (which happens every 2-3 seconds)
-        if (conversationId && !hasHandledInitialConversation.current) {
-          const conv = updatedConversations.find(c => c.id === conversationId);
-          if (conv) {
-            setSelectedConversation(conv);
-            hasHandledInitialConversation.current = true;
+      // Subscribe to real-time updates
+      const unsubscribeConversations = messagingService.subscribeToUserConversations(
+        userEmail,
+        (updatedConversations) => {
+          // Deduplicate conversations by ID (in case of duplicates from API)
+          const uniqueConvs = updatedConversations.filter((conv, index, self) => 
+            index === self.findIndex(c => c.id === conv.id)
+          );
+          
+          setConversations(uniqueConvs);
+          
+          // Use ref to get the current conversationId value (captured at effect time)
+          // Only auto-select if conversationId is explicitly provided (not undefined/null/empty)
+          // AND we haven't handled it yet
+          // This prevents auto-selecting on every polling update (which happens every 2-3 seconds)
+          // AND prevents auto-selecting when navigating to messages list without a specific conversation
+          const currentConvId = conversationIdRef.current;
+          if (currentConvId && currentConvId.trim() !== '' && !hasHandledInitialConversation.current) {
+            const conv = uniqueConvs.find(c => c.id === currentConvId);
+            if (conv) {
+              setSelectedConversation(conv);
+              hasHandledInitialConversation.current = true;
+            }
           }
+          // Do NOT auto-select or clear selection when conversationId is undefined
+          // This allows users to manually select conversations without interference
         }
-      }
-    );
+      );
 
     return () => {
       unsubscribeConversations();
@@ -107,16 +127,26 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
     setLoading(true);
     try {
       const convs = await messagingService.getUserConversations(userEmail);
-      setConversations(convs);
       
-      // Only auto-select if conversationId is provided AND we haven't handled it yet
-      // This prevents auto-selecting on every load
-      if (conversationId && !selectedConversation && !hasHandledInitialConversation.current) {
-        const conv = convs.find(c => c.id === conversationId);
+      // Deduplicate conversations by ID (in case of duplicates from API)
+      const uniqueConvs = convs.filter((conv, index, self) => 
+        index === self.findIndex(c => c.id === conv.id)
+      );
+      
+      setConversations(uniqueConvs);
+      
+      // Only auto-select if conversationId is explicitly provided (not undefined/null/empty)
+      // AND we haven't handled it yet
+      // This prevents auto-selecting on every load AND when navigating to messages list
+      if (conversationId && conversationId.trim() !== '' && !selectedConversation && !hasHandledInitialConversation.current) {
+        const conv = uniqueConvs.find(c => c.id === conversationId);
         if (conv) {
           setSelectedConversation(conv);
           hasHandledInitialConversation.current = true;
         }
+      } else if (!conversationId || conversationId.trim() === '') {
+        // Explicitly ensure no conversation is selected when conversationId is undefined or empty
+        setSelectedConversation(null);
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -152,6 +182,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation || sending || !userEmail) return;
+    
+    // Prevent sending messages to system conversations
+    if (isSystemConversation()) {
+      Alert.alert('Read Only', 'You cannot send messages to system notifications. These are read-only messages from the system.');
+      return;
+    }
 
     setSending(true);
     const result = await messagingService.sendMessage(
@@ -179,6 +215,15 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
       return selectedConversation.otherParticipant.name || selectedConversation.otherParticipant.email || 'Provider';
     }
     return 'Provider';
+  };
+
+  const isSystemConversation = (): boolean => {
+    if (!selectedConversation) return false;
+    // Check if it's a system conversation
+    const subject = selectedConversation.metadata?.subject;
+    const otherParticipant = selectedConversation.otherParticipant;
+    return subject === 'System Notifications' || 
+           (otherParticipant && (otherParticipant.name === 'System' || otherParticipant.email === 'system@event.com'));
   };
 
   const formatTime = (date: Date): string => {
@@ -283,6 +328,13 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
       ? (otherParticipant.name || otherParticipant.email || 'Provider')
       : 'Provider';
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'P';
+    
+    // Add booking context if available to distinguish conversations with same provider
+    const bookingId = conversation.metadata?.bookingId;
+    const subject = conversation.metadata?.subject;
+    const titleWithContext = bookingId || subject 
+      ? `${displayName}${bookingId ? ` (Booking #${bookingId})` : subject ? ` - ${subject}` : ''}`
+      : displayName;
 
     return (
       <TouchableOpacity
@@ -297,8 +349,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.conversationTitle}>
-              {displayName}
+            <Text style={styles.conversationTitle} numberOfLines={1}>
+              {titleWithContext}
             </Text>
             <Text style={styles.conversationTime}>
               {formatTime(conversation.lastMessageTime)}
@@ -335,6 +387,101 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   
   return (
     <View style={styles.container}>
+      {/* Web: Split view with conversations list and chat side by side */}
+      {Platform.OS === 'web' ? (
+        <View style={styles.webContainer}>
+          {/* Conversations List - Always visible on web */}
+          <View style={styles.conversationsContainer}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Messages</Text>
+              {unreadCount > 0 && (
+                <View style={styles.unreadHeaderBadge}>
+                  <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
+                </View>
+              )}
+            </View>
+
+            <ScrollView style={styles.conversationsList}>
+              {conversations.map(renderConversationItem)}
+              
+              {conversations.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateIcon}>💬</Text>
+                  <Text style={styles.emptyStateText}>No conversations yet</Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Start a conversation by booking a service
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+          {/* Chat Area - Right side on web */}
+          {selectedConversation ? (
+            <KeyboardAvoidingView 
+              style={styles.chatContainer}
+              behavior={(Platform.OS as string) === 'web' ? undefined : (Platform.OS === 'ios' ? 'padding' : 'height')}
+            >
+              <View style={styles.chatHeader}>
+                <Text style={styles.chatTitle}>
+                  {getOtherParticipantName()}
+                </Text>
+              </View>
+
+              <ScrollView
+                ref={scrollViewRef}
+                style={styles.messagesContainer}
+                contentContainerStyle={styles.messagesContent}
+              >
+                {messages.map(renderMessage)}
+              </ScrollView>
+
+              {isSystemConversation() ? (
+                <View style={styles.systemInputContainer}>
+                  <Text style={styles.systemInputText}>
+                    ℹ️ System notifications are read-only. You cannot reply to these messages.
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.messageInput}
+                    value={messageText}
+                    onChangeText={setMessageText}
+                    placeholder="Type a message..."
+                    multiline
+                    maxLength={1000}
+                  />
+                  <TouchableOpacity
+                    onPress={handleSendMessage}
+                    style={[
+                      styles.sendButton,
+                      (!messageText.trim() || sending) && styles.sendButtonDisabled
+                    ]}
+                    disabled={!messageText.trim() || sending}
+                  >
+                    {sending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.sendButtonText}>Send</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </KeyboardAvoidingView>
+          ) : (
+            <View style={styles.emptyChatArea}>
+              <Text style={styles.emptyChatIcon}>💬</Text>
+              <Text style={styles.emptyChatText}>Select a conversation to start messaging</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        /* Mobile: Full screen view */
+        <>
       {!selectedConversation ? (
         // Conversations List
         <View style={styles.conversationsContainer}>
@@ -355,6 +502,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
             
             {conversations.length === 0 && (
               <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateIcon}>💬</Text>
                 <Text style={styles.emptyStateText}>No conversations yet</Text>
                 <Text style={styles.emptyStateSubtext}>
                   Start a conversation by booking a service
@@ -367,13 +515,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
         // Chat View
         <KeyboardAvoidingView 
           style={styles.chatContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              behavior={(Platform.OS as string) === 'web' ? undefined : (Platform.OS === 'ios' ? 'padding' : 'height')}
         >
           <View style={styles.chatHeader}>
             <TouchableOpacity 
               onPress={() => {
                 setSelectedConversation(null);
-                // Clear the conversationId when going back to conversation list
                 hasHandledInitialConversation.current = false;
               }}
               style={styles.backButton}
@@ -394,31 +541,41 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
             {messages.map(renderMessage)}
           </ScrollView>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.messageInput}
-              value={messageText}
-              onChangeText={setMessageText}
-              placeholder="Type a message..."
-              multiline
-              maxLength={1000}
-            />
-            <TouchableOpacity
-              onPress={handleSendMessage}
-              style={[
-                styles.sendButton,
-                (!messageText.trim() || sending) && styles.sendButtonDisabled
-              ]}
-              disabled={!messageText.trim() || sending}
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.sendButtonText}>Send</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          {isSystemConversation() ? (
+            <View style={styles.systemInputContainer}>
+              <Text style={styles.systemInputText}>
+                ℹ️ System notifications are read-only. You cannot reply to these messages.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.messageInput}
+                value={messageText}
+                onChangeText={setMessageText}
+                placeholder="Type a message..."
+                multiline
+                maxLength={1000}
+              />
+              <TouchableOpacity
+                onPress={handleSendMessage}
+                style={[
+                  styles.sendButton,
+                  (!messageText.trim() || sending) && styles.sendButtonDisabled
+                ]}
+                disabled={!messageText.trim() || sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>Send</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </KeyboardAvoidingView>
+          )}
+        </>
       )}
     </View>
   );
@@ -427,7 +584,25 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : '#F8F9FA',
+    paddingTop: Platform.OS === 'web' ? 20 : 10,
+    paddingBottom: Platform.OS === 'web' ? 20 : 10,
+    ...(Platform.OS === 'web' ? {
+      justifyContent: 'center',
+      alignItems: 'center',
+    } : {}),
+  },
+  webContainer: {
+    flexDirection: 'row',
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    maxWidth: Platform.OS === 'web' ? 1200 : '100%',
+    height: Platform.OS === 'web' ? (screenHeight * 0.85) : '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 0,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+    } : {}),
   },
   loadingContainer: {
     flex: 1,
@@ -441,17 +616,24 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
   },
   conversationsContainer: {
-    flex: 1,
+    flex: Platform.OS === 'web' ? 0.4 : 1,
+    width: Platform.OS === 'web' ? 350 : '100%',
+    borderRightWidth: Platform.OS === 'web' ? 1 : 0,
+    borderRightColor: Platform.OS === 'web' ? '#E5E7EB' : 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
+    paddingVertical: Platform.OS === 'web' ? 18 : 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: '#E5E7EB',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    } : {}),
   },
   backButton: {
     padding: 8,
@@ -485,10 +667,14 @@ const styles = StyleSheet.create({
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: Platform.OS === 'web' ? 14 : 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: '#E5E7EB',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'background-color 0.2s ease',
+    } : {}),
   },
   unreadConversation: {
     backgroundColor: '#F0F8FF',
@@ -554,30 +740,58 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#636E72',
+    fontWeight: '700',
+    color: '#111827',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#A4B0BE',
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyChatArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  emptyChatIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
+  emptyChatText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   chatContainer: {
-    flex: 1,
+    flex: Platform.OS === 'web' ? 0.6 : 1,
+    flexDirection: 'column',
+    backgroundColor: '#F9FAFB',
   },
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    paddingVertical: Platform.OS === 'web' ? 18 : 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: '#E5E7EB',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    } : {}),
   },
   chatTitle: {
     fontSize: 18,
@@ -601,10 +815,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   messageBubble: {
-    maxWidth: width * 0.75,
+    maxWidth: Platform.OS === 'web' ? '60%' : width * 0.75,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 20,
+    borderRadius: 18,
   },
   ownMessageBubble: {
     backgroundColor: '#6C63FF',
@@ -687,27 +901,41 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingTop: Platform.OS === 'web' ? 16 : 12,
+    paddingBottom: Platform.OS === 'web' ? 20 : 30,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: '#E5E7EB',
   },
   messageInput: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    maxHeight: 100,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: (Platform.OS as string) === 'web' ? 14 : 12,
+    fontSize: (Platform.OS as string) === 'web' ? 15 : 16,
+    maxHeight: 120,
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...((Platform.OS as string) === 'web' ? {
+      outlineWidth: 0,
+      outlineStyle: 'none' as any,
+      transition: 'border-color 0.2s ease',
+    } : {}),
   },
   sendButton: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    paddingVertical: Platform.OS === 'web' ? 14 : 12,
+    borderRadius: 24,
+    minWidth: Platform.OS === 'web' ? 80 : undefined,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+    } : {}),
   },
   sendButtonDisabled: {
     backgroundColor: '#A4B0BE',
@@ -716,6 +944,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  systemInputContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80,
+    backgroundColor: '#FFF3CD',
+    borderTopWidth: 1,
+    borderTopColor: '#FFC107',
+    alignItems: 'center',
+  },
+  systemInputText: {
+    fontSize: 14,
+    color: '#856404',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

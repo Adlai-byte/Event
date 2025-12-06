@@ -292,9 +292,9 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
     const endMinutes = endHour * 60 + endMin;
     const duration = endMinutes - startMinutes;
     
-    // Position from top (8 AM = 0, each hour = 60px)
-    const topOffset = (startMinutes - 8 * 60) * (60 / 60);
-    const height = duration * (60 / 60);
+    // Position from top (8 AM = 0, each hour = 40px for compact view)
+    const topOffset = (startMinutes - 8 * 60) * (40 / 60);
+    const height = duration * (40 / 60);
     
     const isSelected = isSlotSelected(slot);
     const isDisabled = isSlotDisabled(slot);
@@ -594,15 +594,15 @@ const styles = StyleSheet.create({
     borderRightColor: '#E0E0E0',
   },
   timeHeader: {
-    height: 50,
+    height: 40,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   timeSlot: {
-    height: 50, // Match hourCell height for mobile
+    height: 40, // Match hourCell height
     justifyContent: 'flex-start',
-    paddingTop: 4,
-    paddingRight: 6,
+    paddingTop: 2,
+    paddingRight: 4,
     alignItems: 'flex-end',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F3F4',
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   },
   dayHeaders: {
     flexDirection: 'row',
-    height: 50,
+    height: 40,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
@@ -711,14 +711,14 @@ const styles = StyleSheet.create({
   },
   dayTimeSlots: {
     position: 'relative',
-    minHeight: 600, // 12 hours * 50px per hour (adjusted for mobile)
+    minHeight: 400, // Reduced for better visibility (8 hours * 50px)
   },
   hourCell: {
-    height: 50, // Reduced for mobile to fit more content
+    height: 40, // More compact for better visibility
     borderBottomWidth: 1,
     borderBottomColor: '#F1F3F4',
     position: 'relative',
-    minHeight: 50,
+    minHeight: 40,
   },
   hourCellAvailable: {
     backgroundColor: '#E8F5E9', // Green background for available

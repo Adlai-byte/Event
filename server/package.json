@@ -1,0 +1,24 @@
+{
+  "name": "event-server",
+  "version": "1.0.0",
+  "description": "Event App Backend Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test:db": "node test-db-connection.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "mysql2": "^3.11.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "pdfkit": "^0.17.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true
+}
+

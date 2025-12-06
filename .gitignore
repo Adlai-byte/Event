@@ -32,36 +32,8 @@ yarn-error.*
 
 # local env files
 .env*.local
-.env
 
 # typescript
 *.tsbuildinfo
 
-# Sensitive files
-google-service-account.json
-*.keystore
-debug.keystore
-google-services.json
-
-# Build files
-android/app/build/
-android/build/
-android/.gradle/
-
-# Logs
-*.log
-logs/
-
-# OS files
-Thumbs.db
-.DS_Store
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Temporary files
-*.tmp
-*.temp
+.vercel

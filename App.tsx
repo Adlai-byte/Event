@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
   StyleSheet, 
@@ -8,12 +8,15 @@ import {
   Modal,
   Dimensions,
   TouchableOpacity,
-  Text
+  Text,
+  Platform,
+  AppState
 } from 'react-native';
 import { AuthController } from './mvc/controllers/AuthController';
 import { AuthState } from './mvc/models/AuthState';
 import { User } from './mvc/models/User';
 import { getApiBaseUrl } from './mvc/services/api';
+import { LandingPage } from './mvc/views/LandingPage';
 import { LoginView } from './mvc/views/LoginView';
 import { RegisterView } from './mvc/views/user/RegisterView';
 import { DashboardView } from './mvc/views/user/DashboardView';
@@ -27,7 +30,7 @@ import { SettingsView } from './mvc/views/user/SettingsView';
 import { PaymentMethodsView } from './mvc/views/user/PaymentMethodsView';
 import { ServiceDetailsView } from './mvc/views/user/ServiceDetailsView';
 import AdminDashboardView from './mvc/views/admin/DashboardView';
-import AdminUserView from './mvc/views/admin/User';
+import { User as AdminUserView } from './mvc/views/admin/User';
 import AdminServicesView from './mvc/views/admin/ServicesView';
 import AdminBookingsView from './mvc/views/admin/BookingsView';
 import AdminAnalyticsView from './mvc/views/admin/AnalyticsView';
@@ -39,6 +42,7 @@ import { BookingsView as ProviderBookingsView } from './mvc/views/provider/Booki
 import { ProposalsView as ProviderProposalsView } from './mvc/views/provider/ProposalsView';
 import { MessagingView as ProviderMessagingView } from './mvc/views/provider/MessagingView';
 import { AnalyticsView as ProviderAnalyticsView } from './mvc/views/provider/AnalyticsView';
+import { HiringView as ProviderHiringView } from './mvc/views/provider/HiringView';
 import { ProfileView as ProviderProfileView } from './mvc/views/provider/ProfileView';
 import { SettingsView as ProviderSettingsView } from './mvc/views/provider/SettingsView';
 import { PaymentSetupView } from './mvc/views/provider/PaymentSetupView';
@@ -48,16 +52,19 @@ import GoogleLoginWebView from './components/GoogleLoginWebView';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
 const isLandscape = screenWidth > screenHeight;
+const isMobile = screenWidth < 768 || Platform.OS !== 'web';
 
-type ViewMode = 'login' | 'register';
-type MainView = 'dashboard' | 'bookings' | 'messages' | 'hiring' | 'profile' | 'personalInfo' | 'helpCenter' | 'settings' | 'paymentMethods' | 'serviceDetails' | 'adminDashboard' | 'adminUser' | 'adminServices' | 'adminBookings' | 'adminAnalytics' | 'adminMessages' | 'adminSettings' | 'adminProviderApplications' | 'providerDashboard' | 'providerServices' | 'providerBookings' | 'providerProposals' | 'providerMessages' | 'providerAnalytics' | 'providerProfile' | 'providerSettings' | 'providerPaymentSetup';
+type ViewMode = 'landing' | 'login' | 'register';
+type MainView = 'dashboard' | 'bookings' | 'messages' | 'hiring' | 'profile' | 'personalInfo' | 'helpCenter' | 'settings' | 'paymentMethods' | 'serviceDetails' | 'adminDashboard' | 'adminUser' | 'adminServices' | 'adminBookings' | 'adminAnalytics' | 'adminMessages' | 'adminSettings' | 'adminProviderApplications' | 'providerDashboard' | 'providerServices' | 'providerBookings' | 'providerProposals' | 'providerHiring' | 'providerMessages' | 'providerAnalytics' | 'providerProfile' | 'providerSettings' | 'providerPaymentSetup';
 
 export default function App(): React.JSX.Element {
   const [authState, setAuthState] = useState<AuthState>(new AuthState());
-  const [viewMode, setViewMode] = useState<ViewMode>('login');
+  // Redirect mobile users directly to login page
+  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? 'login' : 'landing');
   const [mainView, setMainView] = useState<MainView>('dashboard');
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [serviceIdToBook, setServiceIdToBook] = useState<string | null>(null);
   const [showGoogleWebView, setShowGoogleWebView] = useState<boolean>(false);
   const [authController, setAuthController] = useState<AuthController | null>(null);
 
@@ -95,33 +102,57 @@ export default function App(): React.JSX.Element {
       Alert.alert('Error', authState.error);
     }
 
-    // If not authenticated, force login and default view
+    // If not authenticated, redirect based on device type
     if (!authState.isAuthenticated) {
-      setViewMode('login');
+      // Mobile users go directly to login, desktop users see landing page
+      if (isMobile) {
+        // Only set to login if not already in a view mode
+        if (viewMode !== 'login' && viewMode !== 'register') {
+          setViewMode('login');
+        }
+      } else {
+        // Desktop users see landing page
+      if (viewMode !== 'landing' && viewMode !== 'login' && viewMode !== 'register') {
+        setViewMode('landing');
+        }
+      }
       setMainView('dashboard');
       return;
     }
+  }, [authState.isAuthenticated, authState.error]);
 
-    // If authenticated, route users based on role
-    const userRole = authState.user?.role;
+  // Route users to correct dashboard based on role when authenticated
+  useEffect(() => {
+    if (!authState.isAuthenticated || !authState.user) {
+      return;
+    }
+
+    const userRole = authState.user.role;
     const adminViews = ['adminDashboard', 'adminUser', 'adminServices', 'adminBookings', 'adminAnalytics', 'adminMessages', 'adminSettings', 'adminProviderApplications'];
-    const providerViews = ['providerDashboard', 'providerServices', 'providerBookings', 'providerProposals', 'providerMessages', 'providerAnalytics', 'providerProfile', 'providerSettings', 'providerPaymentSetup'];
+    const providerViews = ['providerDashboard', 'providerServices', 'providerBookings', 'providerProposals', 'providerHiring', 'providerMessages', 'providerAnalytics', 'providerProfile', 'providerSettings', 'providerPaymentSetup'];
     
+    // Immediately route to correct dashboard based on role
+    // Check if current view is appropriate for the user's role
     if (userRole === 'admin') {
+      // If not on an admin view, redirect to admin dashboard
       if (!adminViews.includes(mainView)) {
+        console.log('Routing admin user to adminDashboard');
         setMainView('adminDashboard');
       }
     } else if (userRole === 'provider') {
+      // If not on a provider view, redirect to provider dashboard
       if (!providerViews.includes(mainView)) {
+        console.log('Routing provider user to providerDashboard');
         setMainView('providerDashboard');
       }
     } else {
-      // Regular user or default
+      // Regular user - if on admin/provider view, redirect to user dashboard
       if (adminViews.includes(mainView) || providerViews.includes(mainView)) {
+        console.log('Routing regular user to dashboard');
         setMainView('dashboard');
       }
     }
-  }, [authState.isAuthenticated, authState.error, authState.user, mainView]);
+  }, [authState.isAuthenticated, authState.user?.role, mainView]);
 
   // Handle login
   const handleLogin = async (formData: any): Promise<{ success: boolean; error?: string }> => {
@@ -190,6 +221,11 @@ export default function App(): React.JSX.Element {
     }
   };
 
+  // Wrapper for components that expect void return
+  const handleLogoutVoid = async (): Promise<void> => {
+    await handleLogout();
+  };
+
   // Handle Google WebView success
   const handleGoogleWebViewSuccess = (result: any): void => {
     setShowGoogleWebView(false);
@@ -223,7 +259,7 @@ export default function App(): React.JSX.Element {
     return (
       <View style={[
         styles.container,
-        (mainView === 'dashboard' || mainView.startsWith('admin')) && { paddingBottom: 0 }
+        (mainView === 'dashboard' || mainView.startsWith('admin') || mainView.startsWith('provider')) && { paddingBottom: 0 }
       ]}>
         <StatusBar style="auto" />
         
@@ -242,10 +278,6 @@ export default function App(): React.JSX.Element {
             onNavigateToHiring={() => setMainView('hiring')}
             onNavigateToProfile={() => setMainView('profile')}
             onNavigateToNotifications={() => setMainView('dashboard')}
-            onNavigateToMessages={() => {
-              setSelectedConversationId(undefined); // Clear any previous conversationId
-              setMainView('messages');
-            }}
             onNavigateToLikes={() => setMainView('dashboard')}
             onNavigateToFeatured={() => setMainView('dashboard')}
             onNavigateToNearby={() => setMainView('dashboard')}
@@ -256,13 +288,15 @@ export default function App(): React.JSX.Element {
               setSelectedServiceId(eventId);
               setMainView('serviceDetails');
             }}
+            serviceIdToBook={serviceIdToBook}
+            onBookingModalClosed={() => setServiceIdToBook(null)}
           />
         )}
         
         {mainView === 'adminDashboard' && (
           <AdminDashboardView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'user') setMainView('adminUser');
               if (route === 'services') setMainView('adminServices');
@@ -279,7 +313,7 @@ export default function App(): React.JSX.Element {
         {mainView === 'adminUser' && (
           <AdminUserView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'services') setMainView('adminServices');
@@ -296,7 +330,7 @@ export default function App(): React.JSX.Element {
         {mainView === 'adminServices' && (
           <AdminServicesView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'user') setMainView('adminUser');
@@ -313,7 +347,7 @@ export default function App(): React.JSX.Element {
         {mainView === 'adminBookings' && (
           <AdminBookingsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'user') setMainView('adminUser');
@@ -330,7 +364,7 @@ export default function App(): React.JSX.Element {
         {mainView === 'adminAnalytics' && (
           <AdminAnalyticsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'user') setMainView('adminUser');
@@ -359,14 +393,14 @@ export default function App(): React.JSX.Element {
               if (route === 'settings') setMainView('adminSettings');
               if (route === 'providerApplications') setMainView('adminProviderApplications');
             }}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'adminProviderApplications' && (
           <ProviderApplicationsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'user') setMainView('adminUser');
@@ -384,12 +418,13 @@ export default function App(): React.JSX.Element {
         {mainView === 'providerDashboard' && (
           <ProviderDashboardView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('providerDashboard');
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -401,12 +436,13 @@ export default function App(): React.JSX.Element {
         {mainView === 'providerServices' && (
           <ProviderServicesView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('providerDashboard');
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -418,12 +454,13 @@ export default function App(): React.JSX.Element {
         {mainView === 'providerBookings' && (
           <ProviderBookingsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('providerDashboard');
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -435,12 +472,31 @@ export default function App(): React.JSX.Element {
         {mainView === 'providerProposals' && (
           <ProviderProposalsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('providerDashboard');
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
+              if (route === 'messages') setMainView('providerMessages');
+              if (route === 'analytics') setMainView('providerAnalytics');
+              if (route === 'profile') setMainView('providerProfile');
+              if (route === 'settings') setMainView('providerSettings');
+            }}
+          />
+        )}
+
+        {mainView === 'providerHiring' && (
+          <ProviderHiringView
+            user={authState.user || undefined}
+            onLogout={handleLogoutVoid}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('providerDashboard');
+              if (route === 'services') setMainView('providerServices');
+              if (route === 'bookings') setMainView('providerBookings');
+              if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -459,24 +515,26 @@ export default function App(): React.JSX.Element {
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
               if (route === 'settings') setMainView('providerSettings');
             }}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'providerAnalytics' && (
           <ProviderAnalyticsView
             user={authState.user || undefined}
-            onLogout={handleLogout}
+            onLogout={handleLogoutVoid}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('providerDashboard');
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -494,6 +552,7 @@ export default function App(): React.JSX.Element {
               if (route === 'services') setMainView('providerServices');
               if (route === 'bookings') setMainView('providerBookings');
               if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
               if (route === 'messages') setMainView('providerMessages');
               if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
@@ -555,6 +614,7 @@ export default function App(): React.JSX.Element {
         {mainView === 'hiring' && (
           <HiringView
             userId={authState.user?.uid || ''}
+            userEmail={authState.user?.email || undefined}
             userType="client" // This could be determined by user role
             onBack={() => setMainView('dashboard')}
           />
@@ -604,7 +664,7 @@ export default function App(): React.JSX.Element {
                     firstName: updatedUser.firstName || authState.user.firstName || '',
                     middleName: updatedUser.middleName || authState.user.middleName || '',
                     lastName: updatedUser.lastName || authState.user.lastName || '',
-                    suffix: updatedUser.suffix || '',
+                    suffix: (updatedUser as any).suffix || '',
                     email: updatedUser.email || authState.user.email || '',
                     phone: updatedUser.phone || authState.user.phone || '',
                     dateOfBirth: updatedUser.dateOfBirth || authState.user.dateOfBirth || '',
@@ -621,6 +681,10 @@ export default function App(): React.JSX.Element {
                   throw new Error(errorData.error || 'Failed to update user');
                 }
 
+                // Get the update response data (may include profilePicture path)
+                const updateData = await updateResp.json();
+                console.log('📸 Update response:', updateData);
+                
                 // Refresh user data after update
                 if (authController) {
                   // Trigger a refresh by re-fetching user data
@@ -630,8 +694,11 @@ export default function App(): React.JSX.Element {
                     const refreshData = await refreshResp.json();
                     if (refreshData.ok && refreshData.exists) {
                       // Update the user object in authState
-                      // Use refreshData.profilePicture first (server path), then fallback to updatedUser.profilePicture (base64 if still uploading)
-                      const profilePic = refreshData.profilePicture || (updatedUser.profilePicture && updatedUser.profilePicture.startsWith('/uploads/') ? updatedUser.profilePicture : undefined);
+                      // Priority: 1) refreshData.profilePicture (from DB), 2) updateData.profilePicture (from response), 3) updatedUser.profilePicture (if it's a path)
+                      const profilePic = refreshData.profilePicture || 
+                                        updateData.profilePicture || 
+                                        (updatedUser.profilePicture && updatedUser.profilePicture.startsWith('/uploads/') ? updatedUser.profilePicture : undefined);
+                      console.log('📸 Final profile picture path:', profilePic);
                       const updatedUserObj = new User(
                         authState.user!.uid,
                         authState.user!.email,
@@ -689,10 +756,10 @@ export default function App(): React.JSX.Element {
               // Navigate back to dashboard and trigger booking
               setMainView('dashboard');
               setSelectedServiceId(null);
-              // You can add logic here to open booking modal with this service
+              setServiceIdToBook(serviceId);
             }}
-          />
-        )}
+           />
+         )}
 
         {mainView === 'paymentMethods' && (
           <PaymentMethodsView
@@ -701,27 +768,27 @@ export default function App(): React.JSX.Element {
           />
         )}
 
-        {/* Bottom Navigation (hidden on Home, Admin, and Provider views) */}
-        {mainView !== 'dashboard' && !mainView.startsWith('admin') && !mainView.startsWith('provider') && (
+        {/* Bottom Navigation (hidden on Home, Admin, Provider views, and Web) */}
+        {mainView !== 'dashboard' && !mainView.startsWith('admin') && !mainView.startsWith('provider') && Platform.OS !== 'web' && (
           <View style={styles.bottomNavigation}>
             <TouchableOpacity 
-              style={[styles.bottomNavItem, mainView === 'dashboard' && styles.activeBottomNavItem]}
+              style={styles.bottomNavItem}
               onPress={() => setMainView('dashboard')}
             >
-              <Text style={[styles.bottomNavIcon, mainView === 'dashboard' && styles.activeBottomNavIcon]}>🏠</Text>
-              <Text style={[styles.bottomNavLabel, mainView === 'dashboard' && styles.activeBottomNavLabel]}>Home</Text>
+              <Text style={styles.bottomNavIcon}>🏠</Text>
+              <Text style={styles.bottomNavLabel}>Home</Text>
             </TouchableOpacity>
             
-              <TouchableOpacity
-                style={[styles.bottomNavItem, mainView === 'messages' && styles.activeBottomNavItem]}
+            <TouchableOpacity 
+              style={[styles.bottomNavItem, mainView === 'messages' && styles.activeBottomNavItem]}
                 onPress={() => {
                   setSelectedConversationId(undefined); // Clear any previous conversationId
                   setMainView('messages');
                 }}
-              >
+            >
                 <Text style={[styles.bottomNavIcon, mainView === 'messages' && styles.activeBottomNavIcon]}>💬</Text>
                 <Text style={[styles.bottomNavLabel, mainView === 'messages' && styles.activeBottomNavLabel]}>Message</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.bottomNavItem, mainView === 'bookings' && styles.activeBottomNavItem]}
@@ -735,8 +802,8 @@ export default function App(): React.JSX.Element {
               style={[styles.bottomNavItem, mainView === 'hiring' && styles.activeBottomNavItem]}
               onPress={() => setMainView('hiring')}
             >
-              <Text style={[styles.bottomNavIcon, mainView === 'hiring' && styles.activeBottomNavIcon]}>❤️</Text>
-              <Text style={[styles.bottomNavLabel, mainView === 'hiring' && styles.activeBottomNavLabel]}>Like</Text>
+              <Text style={[styles.bottomNavIcon, mainView === 'hiring' && styles.activeBottomNavIcon]}>💼</Text>
+              <Text style={[styles.bottomNavLabel, mainView === 'hiring' && styles.activeBottomNavLabel]}>Job</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -752,11 +819,34 @@ export default function App(): React.JSX.Element {
      );
   }
 
-  // Show login/register views
+  // Show landing page or login/register views
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <StatusBar style="auto" />
+      {viewMode === 'landing' ? (
+        <LandingPage
+          onLogin={() => setViewMode('login')}
+          onRegister={() => setViewMode('register')}
+          onNavigateToService={(serviceId) => {
+            // If not authenticated, prompt to login
+            if (!authState.isAuthenticated) {
+              Alert.alert(
+                'Login Required',
+                'Please login to view service details.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Login', onPress: () => setViewMode('login') }
+                ]
+              );
+            } else {
+              // If authenticated, navigate to service details
+              setSelectedServiceId(serviceId);
+              setMainView('serviceDetails');
+            }
+          }}
+        />
+      ) : (
+        <ScrollView style={[styles.container, Platform.OS === 'web' && { paddingBottom: 0 }]} contentContainerStyle={styles.scrollContent}>
         <View style={[
           styles.authContainer,
           isTablet && styles.authContainerTablet,
@@ -775,11 +865,11 @@ export default function App(): React.JSX.Element {
               authState={authState}
               onRegister={handleRegister}
               onLogin={toggleViewMode}
-              onGoogleLogin={handleGoogleLogin}
             />
           )}
         </View>
       </ScrollView>
+      )}
 
       {/* Google Login WebView Modal */}
       <Modal
@@ -842,8 +932,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E9ECEF',
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    paddingBottom: 20,
+    paddingTop: 8,
+    paddingBottom: 40,
     position: 'absolute',
     bottom: 0,
     left: 0,

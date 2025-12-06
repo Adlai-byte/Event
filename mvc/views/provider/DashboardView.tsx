@@ -6,10 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Platform
 } from 'react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
@@ -61,6 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
   const [loading, setLoading] = useState(true);
   const [activeRoute, setActiveRoute] = useState('dashboard');
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     if (user?.email) {
@@ -163,22 +167,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     <View style={[styles.metricCard, color && { borderLeftWidth: 4, borderLeftColor: color }]}>
       <View style={styles.metricHeader}>
         <Text style={styles.metricTitle}>{title}</Text>
-        {icon ? <Text style={styles.metricIcon}>{icon}</Text> : <Text style={styles.metricDot}>•</Text>}
+        {icon ? (
+          <View style={[styles.metricIconContainer, color && { backgroundColor: `${color}15` }]}>
+            <Text style={styles.metricIcon}>{icon}</Text>
+          </View>
+        ) : <Text style={styles.metricDot}>•</Text>}
       </View>
-      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={[styles.metricValue, color && { color: color }]}>{value}</Text>
       {subtitle && <Text style={styles.metricSubtitle}>{subtitle}</Text>}
     </View>
   );
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
+  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress: (route: string) => void }) => {
     const isActive = activeRoute === route;
     return (
       <TouchableOpacity 
         style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-        }}
+        onPress={() => onPress(route)}
       >
         <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
         <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
@@ -186,34 +191,69 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     );
   };
 
+  const handleSidebarItemPress = (route: string) => {
+    setActiveRoute(route);
+    onNavigate?.(route);
+    if (isMobile) {
+      setSidebarVisible(false);
+    }
+  };
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      <View style={styles.profileCard}>
+        {isMobile && (
+          <TouchableOpacity 
+            style={styles.closeSidebarButton}
+            onPress={() => setSidebarVisible(false)}
+          >
+            <Text style={styles.closeSidebarIcon}>✕</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="🎯" label="Services" route="services" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="💬" label="Messages" route="messages" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="👤" label="Profile" route="profile" onPress={handleSidebarItemPress} />
+        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={handleSidebarItemPress} />
+      </View>
+
+      {/* Sidebar Footer */}
+      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+      {/* Sidebar - Desktop always visible, Mobile in modal */}
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.sidebarOverlay}>
+            <View style={styles.mobileSidebar}>
+              <SidebarContent />
+            </View>
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="🎯" label="Services" route="services" />
-          <SidebarItem icon="📅" label="Bookings" route="bookings" />
-          <SidebarItem icon="📝" label="Proposals" route="proposals" />
-          <SidebarItem icon="💬" label="Messages" route="messages" />
-          <SidebarItem icon="👤" label="Profile" route="profile" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        {/* Sidebar Footer */}
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
@@ -223,7 +263,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             <Text style={styles.headerTitle}>Provider Dashboard</Text>
             <Text style={styles.headerSubtitle}>Welcome back, {user?.getFullName() || user?.email || 'Provider'}</Text>
           </View>
-          <TouchableOpacity onPress={onMenu} style={styles.menuButton}>
+          <TouchableOpacity 
+            onPress={isMobile ? () => setSidebarVisible(true) : onMenu} 
+            style={styles.menuButton}
+          >
             <Text style={styles.menuIcon}>≡</Text>
           </TouchableOpacity>
         </View>
@@ -269,29 +312,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
 
             {/* Quick Stats Row */}
             <View style={styles.row}>
-              <View style={styles.cardLarge}>
-                <View style={styles.cardHeader}> 
-                  <Text style={styles.cardTitle}>Booking Overview</Text>
-                  <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('bookings')}>
-                    <Text style={styles.ctaText}>View All</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: '#4a55e1' }]}>
+                <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#4a55e1', paddingBottom: 12 }]}>
+                  <Text style={[styles.cardTitle, { color: '#4a55e1' }]}>Booking Overview</Text>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#4a55e1' }]} onPress={() => onNavigate?.('bookings')}>
+                  <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
+                </TouchableOpacity>
+              </View>
                 {/* Booking status breakdown */}
                 <View style={styles.bookingBreakdown}>
-                  <View style={styles.bookingStat}>
-                    <Text style={styles.bookingStatLabel}>Pending</Text>
+                  <View style={[styles.bookingStat, { backgroundColor: '#FEF3C7', borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#f59e0b' }]} />
+                    <Text style={[styles.bookingStatLabel, { color: '#92400E', fontWeight: '600' }]}>Pending</Text>
                     <Text style={[styles.bookingStatValue, { color: '#f59e0b' }]}>{stats.pendingBookings}</Text>
                   </View>
-                  <View style={styles.bookingStat}>
-                    <Text style={styles.bookingStatLabel}>Confirmed</Text>
+                  <View style={[styles.bookingStat, { backgroundColor: '#D1FAE5', borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#10b981' }]} />
+                    <Text style={[styles.bookingStatLabel, { color: '#065F46', fontWeight: '600' }]}>Confirmed</Text>
                     <Text style={[styles.bookingStatValue, { color: '#10b981' }]}>{stats.confirmedBookings}</Text>
                   </View>
-                  <View style={styles.bookingStat}>
-                    <Text style={styles.bookingStatLabel}>Completed</Text>
+                  <View style={[styles.bookingStat, { backgroundColor: '#E0E7FF', borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#4a55e1' }]} />
+                    <Text style={[styles.bookingStatLabel, { color: '#3730A3', fontWeight: '600' }]}>Completed</Text>
                     <Text style={[styles.bookingStatValue, { color: '#4a55e1' }]}>{stats.completedBookings}</Text>
                   </View>
-                  <View style={styles.bookingStat}>
-                    <Text style={styles.bookingStatLabel}>Cancelled</Text>
+                  <View style={[styles.bookingStat, { backgroundColor: '#FEE2E2', borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#ef4444' }]} />
+                    <Text style={[styles.bookingStatLabel, { color: '#991B1B', fontWeight: '600' }]}>Cancelled</Text>
                     <Text style={[styles.bookingStatValue, { color: '#ef4444' }]}>{stats.cancelledBookings}</Text>
                   </View>
                 </View>
@@ -299,35 +346,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
 
               <View style={styles.cardRightCol}>
                 {/* Performance Summary */}
-                <View style={styles.progressCard}>
+                <View style={[styles.progressCard, { borderTopWidth: 4, borderTopColor: '#4a55e1' }]}>
                   <Text style={styles.cardTitle}>Performance</Text>
                   <View style={styles.activityList}>
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#4a55e1' }]} />
+                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: '#4a55e1', width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={styles.activityText}>Average Rating</Text>
-                        <Text style={styles.activityValue}>⭐ {stats.averageRating.toFixed(1)}</Text>
+                        <Text style={[styles.activityText, { color: '#4a55e1', fontWeight: '600' }]}>Average Rating</Text>
+                        <Text style={[styles.activityValue, { color: '#4a55e1', fontSize: 16 }]}>⭐ {stats.averageRating.toFixed(1)}</Text>
                       </View>
                     </View>
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#10b981' }]} />
+                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: '#10b981', width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={styles.activityText}>Active Services</Text>
-                        <Text style={styles.activityValue}>{stats.activeServices}</Text>
+                        <Text style={[styles.activityText, { color: '#10b981', fontWeight: '600' }]}>Active Services</Text>
+                        <Text style={[styles.activityValue, { color: '#10b981', fontSize: 16 }]}>{stats.activeServices}</Text>
                       </View>
                     </View>
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#f59e0b' }]} />
+                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: '#f59e0b', width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={styles.activityText}>This Month Revenue</Text>
-                        <Text style={styles.activityValue}>₱ {stats.monthlyRevenue.toLocaleString()}</Text>
+                        <Text style={[styles.activityText, { color: '#f59e0b', fontWeight: '600' }]}>This Month Revenue</Text>
+                        <Text style={[styles.activityValue, { color: '#f59e0b', fontSize: 16 }]}>₱ {stats.monthlyRevenue.toLocaleString()}</Text>
                       </View>
                     </View>
-                    <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#ef4444' }]} />
+                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: '#ef4444', width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={styles.activityText}>Active Proposals</Text>
-                        <Text style={styles.activityValue}>{stats.activeProposals}</Text>
+                        <Text style={[styles.activityText, { color: '#ef4444', fontWeight: '600' }]}>Active Proposals</Text>
+                        <Text style={[styles.activityValue, { color: '#ef4444', fontSize: 16 }]}>{stats.activeProposals}</Text>
                       </View>
                     </View>
                   </View>
@@ -336,45 +383,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             </View>
 
             {/* Quick Actions */}
-            <View style={styles.quickActionsCard}>
-              <Text style={styles.cardTitle}>Quick Actions</Text>
+            <View style={[styles.quickActionsCard, { borderTopWidth: 4, borderTopColor: '#f59e0b' }]}>
+              <Text style={[styles.cardTitle, { color: '#f59e0b' }]}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
-                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('services')}>
+                <TouchableOpacity 
+                  style={[styles.quickActionBtn, { backgroundColor: '#4a55e1', borderColor: '#4a55e1' }]} 
+                  onPress={() => onNavigate?.('services')}
+                >
                   <Text style={styles.quickActionIcon}>➕</Text>
-                  <Text style={styles.quickActionLabel}>Add Service</Text>
+                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Add Service</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('bookings')}>
+                <TouchableOpacity 
+                  style={[styles.quickActionBtn, { backgroundColor: '#10b981', borderColor: '#10b981' }]} 
+                  onPress={() => onNavigate?.('bookings')}
+                >
                   <Text style={styles.quickActionIcon}>📅</Text>
-                  <Text style={styles.quickActionLabel}>View Bookings</Text>
+                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>View Bookings</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('proposals')}>
+                <TouchableOpacity 
+                  style={[styles.quickActionBtn, { backgroundColor: '#ef4444', borderColor: '#ef4444' }]} 
+                  onPress={() => onNavigate?.('proposals')}
+                >
                   <Text style={styles.quickActionIcon}>📝</Text>
-                  <Text style={styles.quickActionLabel}>Manage Proposals</Text>
+                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Manage Proposals</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Recent Activity */}
-            <View style={styles.cardWide}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Recent Activity</Text>
-                <TouchableOpacity style={styles.ctaButton}>
-                  <Text style={styles.ctaText}>View All</Text>
+            <View style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: '#10b981' }]}>
+              <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#10b981', paddingBottom: 12 }]}>
+                <Text style={[styles.cardTitle, { color: '#10b981' }]}>Recent Activity</Text>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#10b981' }]}>
+                  <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.activityTable}>
                 {activities.length > 0 ? (
-                  activities.map((activity, index) => (
-                    <View key={`${activity.type}-${activity.entity_id}-${index}`} style={styles.activityRow}>
-                      <Text style={styles.activityCell}>{activity.description}</Text>
-                      <Text style={styles.activityCell}>{formatTimeAgo(activity.created_at)}</Text>
-                    </View>
-                  ))
+                  activities.map((activity, index) => {
+                    // Determine color based on activity type
+                    let activityColor = '#4a55e1';
+                    let bgColor = '#E0E7FF';
+                    if (activity.type?.includes('payment') || activity.description?.toLowerCase().includes('payment')) {
+                      activityColor = '#10b981';
+                      bgColor = '#D1FAE5';
+                    } else if (activity.type?.includes('booking') || activity.description?.toLowerCase().includes('booking')) {
+                      activityColor = '#4a55e1';
+                      bgColor = '#E0E7FF';
+                    } else if (activity.type?.includes('service') || activity.description?.toLowerCase().includes('service')) {
+                      activityColor = '#f59e0b';
+                      bgColor = '#FEF3C7';
+                    }
+                    
+                    return (
+                      <View 
+                        key={`${activity.type}-${activity.entity_id}-${index}`} 
+                        style={[styles.activityRow, { backgroundColor: bgColor, borderRadius: 8, padding: 12, marginBottom: 8 }]}
+                      >
+                        <View style={[styles.activityDot, { backgroundColor: activityColor, width: 8, height: 8, marginRight: 12 }]} />
+                        <Text style={[styles.activityCell, { color: activityColor, fontWeight: '600', flex: 1 }]}>{activity.description}</Text>
+                        <Text style={[styles.activityCell, { color: '#64748B', fontSize: 12 }]}>{formatTimeAgo(activity.created_at)}</Text>
+                      </View>
+                    );
+                  })
                 ) : (
                   <>
-                    <View style={styles.activityRow}>
-                      <Text style={styles.activityCell}>No recent activity</Text>
-                      <Text style={styles.activityCell}>-</Text>
+                    <View style={[styles.activityRow, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12 }]}>
+                      <Text style={[styles.activityCell, { color: '#64748B' }]}>No recent activity</Text>
+                      <Text style={[styles.activityCell, { color: '#64748B' }]}>-</Text>
                     </View>
                   </>
                 )}
@@ -387,12 +463,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
+const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#102A43',
   },
   sidebar: {
@@ -400,6 +476,41 @@ const styles = StyleSheet.create({
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    height: isMobile ? '100%' : undefined,
+  },
+  sidebarOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mobileSidebar: {
+    width: sidebarWidth,
+    height: '100%',
+    backgroundColor: '#102A43',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -486,25 +597,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF1F5',
   },
   mainContent: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
+    paddingBottom: isMobile ? 20 : 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: isMobile ? 16 : 24,
+    paddingBottom: isMobile ? 12 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
   },
   loadingContainer: {
@@ -534,19 +647,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 16,
+    ...(isMobile && {
+      marginLeft: -6,
+      marginRight: -6,
+    }),
   },
   metricCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
+    padding: isMobile ? 12 : 16,
+    marginRight: isMobile ? 6 : 12,
+    marginLeft: isMobile ? 6 : 0,
     marginBottom: 12,
-    width: Math.min(180, (screenWidth - sidebarWidth - 80) / 4),
+    width: isMobile 
+      ? (screenWidth - 48) / 2 
+      : Math.min(180, (screenWidth - (isMobile ? 0 : sidebarWidth) - 80) / 4),
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  metricIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricSubtitle: {
     fontSize: 12,
@@ -572,19 +699,19 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     marginTop: 8,
-    fontSize: 22,
+    fontSize: isMobile ? 18 : 22,
     fontWeight: '700',
-    color: '#0F172A',
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
   },
   cardLarge: {
-    flex: 1,
+    flex: isMobile ? 0 : 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
+    padding: isMobile ? 12 : 16,
+    marginRight: isMobile ? 0 : 12,
+    marginBottom: isMobile ? 12 : 0,
     elevation: 2,
   },
   cardHeader: {
@@ -612,21 +739,31 @@ const styles = StyleSheet.create({
   bookingBreakdown: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: isMobile ? 12 : 16,
+    paddingTop: isMobile ? 12 : 16,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+    flexWrap: isMobile ? 'wrap' : 'nowrap',
   },
   bookingStat: {
     alignItems: 'center',
+    width: isMobile ? '50%' : 'auto',
+    marginBottom: isMobile ? 12 : 0,
+    position: 'relative',
+  },
+  bookingStatIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 6,
   },
   bookingStatLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#64748B',
     marginBottom: 4,
   },
   bookingStatValue: {
-    fontSize: 20,
+    fontSize: isMobile ? 18 : 20,
     fontWeight: '700',
   },
   activityList: {
@@ -661,7 +798,7 @@ const styles = StyleSheet.create({
   quickActionsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     marginTop: 12,
     marginBottom: 12,
     elevation: 2,
@@ -670,24 +807,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 12,
+    ...(isMobile && {
+      marginLeft: -6,
+      marginRight: -6,
+    }),
   },
   quickActionBtn: {
-    width: (screenWidth - sidebarWidth - 80) / 4,
+    width: isMobile 
+      ? (screenWidth - 48) / 3 
+      : (screenWidth - (isMobile ? 0 : sidebarWidth) - 80) / 4,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: isMobile ? 6 : 12,
+    marginLeft: isMobile ? 6 : 0,
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   quickActionIcon: {
     fontSize: 24,
     marginBottom: 8,
   },
   quickActionLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#1E293B',
     fontWeight: '600',
     textAlign: 'center',
@@ -698,16 +847,15 @@ const styles = StyleSheet.create({
   activityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   activityCell: {
     fontSize: 13,
     color: '#64748B',
   },
   cardRightCol: {
-    width: 200,
+    width: isMobile ? '100%' : 200,
   },
   progressCard: {
     backgroundColor: '#FFFFFF',

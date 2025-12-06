@@ -12,8 +12,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4a55e1",
+          "sounds": [],
+          "mode": "production"
+        }
+      ]
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to automatically pin your service location on the map."
+      },
+      "bundleIdentifier": "com.ploxy1.Event"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,11 +36,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ploxy1.Event"
+      "package": "com.ploxy1.Event",
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
     },
     "scheme": "com.event",
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "829882ad-1d3e-4e96-a69f-50a779b1fdc8"
+      }
     }
   }
 }

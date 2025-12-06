@@ -1,6 +1,7 @@
 // Load environment variables
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// Load .env from root directory (parent of server)
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const express = require('express');
 const cors = require('cors');
@@ -8,15 +9,22 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const { getPool } = require('./db');
 const { createInstaPayPayment, createGCashPayment, createPaymentLink, createCheckoutSession, parsePaymentStatus } = require('./services/paymongo');
+const { generateInvoicePDF } = require('./services/invoice');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads', 'images');
+// Use environment variable if set, otherwise use default relative to server directory
+const uploadsDir = process.env.UPLOADS_DIR 
+    ? path.resolve(process.env.UPLOADS_DIR, 'images')
+    : path.join(__dirname, 'uploads', 'images');
+
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
-    console.log('✅ Created uploads/images directory');
+    console.log('✅ Created uploads/images directory:', uploadsDir);
+} else {
+    console.log('✅ Uploads directory exists:', uploadsDir);
 }
 
 // Helper function to save base64 image to file
@@ -82,14 +90,40 @@ function saveProviderDocument(base64String, userId, documentType) {
 // Helper function to save profile picture
 function saveProfilePicture(base64String, userId) {
     try {
+        console.log('📸 Starting profile picture save for user:', userId);
+        console.log('📁 Uploads directory:', uploadsDir);
+        console.log('📁 __dirname:', __dirname);
+        console.log('📁 Directory exists:', fs.existsSync(uploadsDir));
+        
+        // Ensure directory exists and is writable
+        if (!fs.existsSync(uploadsDir)) {
+            console.log('📁 Creating uploads directory:', uploadsDir);
+            fs.mkdirSync(uploadsDir, { recursive: true });
+            console.log('✅ Created uploads directory');
+        }
+        
+        // Verify directory is writable
+        try {
+            fs.accessSync(uploadsDir, fs.constants.W_OK);
+            console.log('✅ Uploads directory is writable');
+        } catch (accessError) {
+            console.error('❌ Uploads directory is NOT writable!');
+            console.error('❌ Directory path:', uploadsDir);
+            throw new Error(`Uploads directory is not writable: ${accessError.message}`);
+        }
+        
         // Extract image format and data
         const matches = base64String.match(/^data:image\/(\w+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
+            console.error('❌ Invalid base64 image format');
             throw new Error('Invalid base64 image format');
         }
         
         const imageFormat = matches[1]; // jpeg, png, etc.
         const imageData = matches[2]; // base64 data without prefix
+        
+        console.log('📸 Image format:', imageFormat);
+        console.log('📸 Image data length:', imageData.length);
         
         // Generate unique filename
         const timestamp = Date.now();
@@ -97,19 +131,159 @@ function saveProfilePicture(base64String, userId) {
         const filename = `profile_${userId}_${timestamp}_${randomStr}.${imageFormat}`;
         const filepath = path.join(uploadsDir, filename);
         
+        console.log('📸 Filename:', filename);
+        console.log('📸 Full file path:', filepath);
+        
         // Convert base64 to buffer and save
         const buffer = Buffer.from(imageData, 'base64');
-        fs.writeFileSync(filepath, buffer);
+        console.log('📸 Buffer size:', buffer.length, 'bytes');
+        
+        // Write file with explicit error handling and ensure it's flushed to disk
+        try {
+            console.log('📸 Attempting to write file...');
+            console.log('📸 File path:', filepath);
+            console.log('📸 Buffer length:', buffer.length, 'bytes');
+            
+            // Ensure parent directory exists
+            const parentDir = path.dirname(filepath);
+            if (!fs.existsSync(parentDir)) {
+                console.log('📁 Creating parent directory:', parentDir);
+                fs.mkdirSync(parentDir, { recursive: true });
+                console.log('✅ Parent directory created');
+            }
+            
+            // Write file using writeFileSync with explicit options
+            fs.writeFileSync(filepath, buffer, { 
+                flag: 'w', 
+                mode: 0o666,
+                encoding: null // Write as binary
+            });
+            
+            // Force sync to ensure data is written to disk
+            try {
+                const fd = fs.openSync(filepath, 'r+');
+                fs.fsyncSync(fd);
+                fs.closeSync(fd);
+                console.log('✅ File synced to disk');
+            } catch (syncError) {
+                console.warn('⚠️  Could not sync file (non-critical):', syncError.message);
+                // Continue anyway - file should still be written
+            }
+            
+            console.log('✅ File write operation completed');
+            
+            // Verify the file was written (with retries for Windows file system)
+            let retries = 10;
+            let fileExists = false;
+            let fileStats = null;
+            
+            while (retries > 0) {
+                if (fs.existsSync(filepath)) {
+                    fileStats = fs.statSync(filepath);
+                    if (fileStats.size === buffer.length && fileStats.size > 0) {
+                        fileExists = true;
+                        break;
+                    }
+                }
+                // Small delay for Windows file system to update
+                const start = Date.now();
+                while (Date.now() - start < 50) { /* wait 50ms */ }
+                retries--;
+            }
+            
+            if (!fileExists || !fileStats) {
+                console.error('❌ File verification failed after retries');
+                console.error('❌ Expected path:', filepath);
+                console.error('❌ File exists:', fs.existsSync(filepath));
+                if (fs.existsSync(filepath)) {
+                    const actualStats = fs.statSync(filepath);
+                    console.error('❌ Actual file size:', actualStats.size);
+                    console.error('❌ Expected file size:', buffer.length);
+                }
+                throw new Error('File was not created or verified on disk');
+            }
+            
+            console.log('✅ File write verified - size matches buffer:', fileStats.size, 'bytes');
+        } catch (writeError) {
+            console.error('❌ Write error code:', writeError.code);
+            console.error('❌ Write error message:', writeError.message);
+            console.error('❌ Write error path:', filepath);
+            console.error('❌ Write error stack:', writeError.stack);
+            throw writeError;
+        }
+        
+        // Final verification - ensure file exists and is readable
+        console.log('📸 Final verification - checking file exists and is readable...');
+        if (!fs.existsSync(filepath)) {
+            console.error('❌ CRITICAL: File does not exist after write and verification!');
+            console.error('❌ File path:', filepath);
+            console.error('❌ Directory exists:', fs.existsSync(path.dirname(filepath)));
+            console.error('❌ Files in directory:', fs.existsSync(path.dirname(filepath)) ? fs.readdirSync(path.dirname(filepath)).slice(0, 5) : 'N/A');
+            throw new Error('File was not created on disk');
+        }
+        
+        // Verify file is readable and has correct size
+        try {
+            const finalStats = fs.statSync(filepath);
+            console.log('✅ Final verification - file exists');
+            console.log('✅ File size:', finalStats.size, 'bytes');
+            console.log('✅ Expected size:', buffer.length, 'bytes');
+            
+            if (finalStats.size === 0) {
+                console.error('❌ CRITICAL: File exists but is empty (0 bytes)!');
+                throw new Error('File was created but is empty');
+            }
+            
+            if (finalStats.size !== buffer.length) {
+                console.error('❌ CRITICAL: File size mismatch in final verification!');
+                console.error('❌ Expected:', buffer.length, 'bytes');
+                console.error('❌ Actual:', finalStats.size, 'bytes');
+                throw new Error(`File size mismatch: expected ${buffer.length} bytes, got ${finalStats.size} bytes`);
+                }
+            
+            // Try to read the file to ensure it's actually accessible
+            const testRead = fs.readFileSync(filepath);
+            if (testRead.length !== buffer.length) {
+                throw new Error('File read size does not match expected size');
+            }
+            console.log('✅ File is readable and size matches');
+        } catch (verifyError) {
+            console.error('❌ Final verification failed:', verifyError.message);
+            throw verifyError;
+        }
         
         // Return the URL path (relative to /uploads)
-        return `/uploads/images/${filename}`;
+        const urlPath = `/uploads/images/${filename}`;
+        console.log('✅ Profile picture saved successfully to:', filepath);
+        console.log('✅ Profile picture URL path:', urlPath);
+        return urlPath;
     } catch (error) {
-        console.error('Error saving profile picture:', error);
+        console.error('❌ Error saving profile picture:', error);
+        console.error('❌ Error stack:', error.stack);
         throw error;
     }
 }
 
-app.use(cors());
+// CORS configuration - allow all origins (including all Vercel deployments)
+// Simple configuration that allows all origins
+app.use(cors({
+    origin: true, // Allow all origins
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400, // 24 hours
+}));
+
+// Set Cross-Origin-Opener-Policy to allow window.opener communication
+// This is needed for payment popups and Google OAuth popups
+app.use((req, res, next) => {
+    // Allow same-origin-allow-popups for popup windows (payment, OAuth)
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    next();
+});
+
 // Increase body parser limit to handle large base64 images (50MB limit)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' })); // For webhook callbacks
@@ -129,8 +303,31 @@ app.use((err, req, res, next) => {
 // Serve static files (payment success/failure pages)
 app.use(express.static('server/public'));
 
-// Serve uploaded images
-app.use('/uploads', express.static('server/uploads'));
+// Serve uploaded images with proper headers
+// Use the same uploadsDir variable that's used for saving files
+console.log('📁 Configuring static file serving from:', uploadsDir);
+app.use('/uploads/images', express.static(uploadsDir, {
+    setHeaders: (res, filePath) => {
+        // Set CORS headers for images
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        // Set proper content type
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png');
+        } else if (filePath.endsWith('.gif')) {
+            res.setHeader('Content-Type', 'image/gif');
+        } else if (filePath.endsWith('.webp')) {
+            res.setHeader('Content-Type', 'image/webp');
+        }
+    }
+}));
+
+// Also serve from /uploads root for backward compatibility
+// Use parent directory of uploadsDir (which is already 'images')
+const uploadsRootDir = path.dirname(uploadsDir);
+app.use('/uploads', express.static(uploadsRootDir));
 
 // Root - helpful message instead of "Cannot GET /"
 app.get('/', (_req, res) => {
@@ -223,6 +420,42 @@ app.get('/api/users/by-email', async (req, res) => {
     }
 });
 
+// Get user provider status and rejection reason
+app.get('/api/user/provider-status', async (req, res) => {
+    const email = req.query.email;
+    if (!email) {
+        return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    try {
+        const pool = getPool();
+        const [rows] = await pool.query(
+            'SELECT u_provider_status, u_rejection_reason FROM `user` WHERE u_email = ? LIMIT 1',
+            [email]
+        );
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        
+        return res.json({
+            ok: true,
+            status: rows[0].u_provider_status || null,
+            rejectionReason: rows[0].u_rejection_reason || null
+        });
+    } catch (err) {
+        // Handle missing columns gracefully
+        if (err.code === 'ER_BAD_FIELD_ERROR') {
+            return res.json({
+                ok: true,
+                status: null,
+                rejectionReason: null
+            });
+        }
+        console.error('Get provider status failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
 // Add a user (admin action)
 app.post('/api/users', async (req, res) => {
     const { firstName, middleName = '', lastName, suffix = '', email, password } = req.body || {};
@@ -242,6 +475,223 @@ app.post('/api/users', async (req, res) => {
             return res.status(409).json({ ok: false, error: 'Email already exists' });
         }
         return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Apply as provider endpoint - now creates pending application with documents
+// IMPORTANT: This route must come BEFORE /api/users/:id/block to avoid route conflicts
+app.post('/api/users/apply-provider', async (req, res) => {
+    console.log('📥 POST /api/users/apply-provider - Request received');
+    console.log('📍 Request URL:', req.url);
+    console.log('📍 Request method:', req.method);
+    console.log('📍 Request headers:', JSON.stringify(req.headers));
+    console.log('📋 Request body type:', typeof req.body);
+    console.log('📋 Request body keys:', req.body ? Object.keys(req.body) : 'NO BODY');
+    console.log('📧 Email:', req.body?.email ? 'Present' : 'Missing');
+    console.log('📄 Business doc:', req.body?.businessDocument ? 'Present (' + (req.body?.businessDocument?.length || 0) + ' chars)' : 'Missing');
+    console.log('🆔 Valid ID doc:', req.body?.validIdDocument ? 'Present (' + (req.body?.validIdDocument?.length || 0) + ' chars)' : 'Missing');
+    
+    // Ensure response is always sent - use timeout as backup
+    let responseSent = false;
+    const responseTimeout = setTimeout(() => {
+        if (!responseSent) {
+            console.error('⚠️ Response timeout - forcing response');
+            responseSent = true;
+            res.status(500).json({ ok: false, error: 'Request timeout' });
+        }
+    }, 30000); // 30 second timeout
+    
+    const sendResponse = (status, data) => {
+        if (!responseSent) {
+            clearTimeout(responseTimeout);
+            responseSent = true;
+            try {
+                res.status(status).json(data);
+                console.log('📤 Response sent:', status, data.ok ? 'OK' : 'ERROR', data.error || data.message || '');
+            } catch (sendErr) {
+                console.error('❌ Error sending response:', sendErr);
+            }
+        }
+    };
+    
+    try {
+        // Check if body was parsed
+        if (!req.body || typeof req.body !== 'object') {
+            console.error('❌ Request body not parsed correctly');
+            return sendResponse(400, { ok: false, error: 'Invalid request body. Please ensure Content-Type is application/json.' });
+        }
+        
+        const { email, businessDocument, validIdDocument } = req.body;
+        
+        // Validate required fields
+        if (!email) {
+            console.log('❌ Missing email');
+            return sendResponse(400, { ok: false, error: 'Email is required' });
+        }
+        
+        if (!businessDocument) {
+            console.log('❌ Missing business document');
+            return sendResponse(400, { ok: false, error: 'Business document is required' });
+        }
+        
+        if (!validIdDocument) {
+            console.log('❌ Missing valid ID document');
+            return sendResponse(400, { ok: false, error: 'Valid ID document is required' });
+        }
+        
+        // Validate base64 format
+        if (!businessDocument.startsWith('data:image/')) {
+            console.log('❌ Invalid business document format');
+            return sendResponse(400, { ok: false, error: 'Business document must be a valid image file' });
+        }
+        
+        if (!validIdDocument.startsWith('data:image/')) {
+            console.log('❌ Invalid valid ID document format');
+            return sendResponse(400, { ok: false, error: 'Valid ID document must be a valid image file' });
+        }
+        
+        const pool = getPool();
+        
+        // Check if user exists
+        console.log('🔍 Looking up user with email:', email);
+        const [userRows] = await pool.query(
+            'SELECT iduser, u_email, u_role, u_provider_status FROM `user` WHERE u_email = ?',
+            [email]
+        );
+        
+        if (userRows.length === 0) {
+            console.log('❌ User not found for email:', email);
+            return sendResponse(404, { ok: false, error: 'User not found' });
+        }
+        
+        const user = userRows[0];
+        console.log('✅ User found:', user.iduser, user.u_email, 'Role:', user.u_role, 'Status:', user.u_provider_status);
+        
+        // Check if user is already a provider
+        if (user.u_role === 'provider') {
+            console.log('❌ User is already a provider');
+            return sendResponse(400, { ok: false, error: 'User is already a provider' });
+        }
+        
+        // Check if user is an admin
+        if (user.u_role === 'admin') {
+            console.log('❌ Admin cannot apply as provider');
+            return sendResponse(400, { ok: false, error: 'Admin users cannot apply as provider' });
+        }
+        
+        // Check if already has pending application
+        if (user.u_provider_status === 'pending') {
+            console.log('❌ User already has pending application');
+            return sendResponse(400, { ok: false, error: 'You already have a pending provider application' });
+        }
+        
+        // If user was previously rejected, allow reapplication (status will be updated to pending)
+        // This allows users to reapply after rejection
+        
+        // Ensure columns exist before proceeding
+        console.log('🔧 Checking/creating database columns...');
+        try {
+            await pool.query('SELECT u_provider_status, u_business_document, u_valid_id_document FROM `user` LIMIT 1');
+        } catch (checkErr) {
+            if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
+                console.log('⚠️ Missing columns detected, creating them...');
+                try {
+                    if (checkErr.message.includes('u_provider_status')) {
+                        await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_status ENUM(\'pending\', \'approved\', \'rejected\') DEFAULT NULL');
+                        console.log('✅ Added u_provider_status column');
+                    }
+                    if (checkErr.message.includes('u_business_document')) {
+                        await pool.query('ALTER TABLE `user` ADD COLUMN u_business_document VARCHAR(500) DEFAULT NULL');
+                        console.log('✅ Added u_business_document column');
+                    }
+                    if (checkErr.message.includes('u_valid_id_document')) {
+                        await pool.query('ALTER TABLE `user` ADD COLUMN u_valid_id_document VARCHAR(500) DEFAULT NULL');
+                        console.log('✅ Added u_valid_id_document column');
+                    }
+                } catch (alterErr) {
+                    console.error('❌ Failed to add columns:', alterErr);
+                    return sendResponse(500, { ok: false, error: 'Database setup error. Please contact support.' });
+                }
+            } else {
+                throw checkErr;
+            }
+        }
+        
+        // Save documents to files
+        console.log('💾 Saving documents...');
+        let businessDocPath = null;
+        let validIdDocPath = null;
+        
+        try {
+            businessDocPath = saveProviderDocument(businessDocument, user.iduser, 'business');
+            console.log('✅ Business document saved:', businessDocPath);
+            
+            validIdDocPath = saveProviderDocument(validIdDocument, user.iduser, 'id');
+            console.log('✅ Valid ID document saved:', validIdDocPath);
+        } catch (docErr) {
+            console.error('❌ Error saving documents:', docErr);
+            console.error('Document error details:', docErr.message, docErr.stack);
+            return sendResponse(500, { ok: false, error: 'Failed to save documents: ' + docErr.message });
+        }
+        
+        // Ensure u_provider_applied_at column exists
+        try {
+            await pool.query('SELECT u_provider_applied_at FROM `user` LIMIT 1');
+        } catch (checkErr) {
+            if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
+                console.log('⚠️ Missing u_provider_applied_at column, creating it...');
+                try {
+                    await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_applied_at TIMESTAMP NULL DEFAULT NULL');
+                    console.log('✅ Added u_provider_applied_at column');
+                } catch (alterErr) {
+                    console.error('❌ Failed to add u_provider_applied_at column:', alterErr);
+                }
+            }
+        }
+        
+        // Update user record with application date (always update date on new application)
+        console.log('💾 Updating user record with new application date...');
+        const updateResult = await pool.query(
+            'UPDATE `user` SET u_provider_status = ?, u_business_document = ?, u_valid_id_document = ?, u_provider_applied_at = NOW(), u_rejection_reason = NULL WHERE iduser = ?',
+            ['pending', businessDocPath, validIdDocPath, user.iduser]
+        );
+        
+        // Verify the update worked by checking the actual value in the database
+        const [verifyRows] = await pool.query(
+            'SELECT u_provider_applied_at FROM `user` WHERE iduser = ?',
+            [user.iduser]
+        );
+        
+        if (verifyRows.length > 0) {
+            console.log(`✅ Application date updated to: ${verifyRows[0].u_provider_applied_at || 'NULL (check column exists!)'}`);
+            if (!verifyRows[0].u_provider_applied_at) {
+                console.error('⚠️ WARNING: u_provider_applied_at is NULL after update! Column may not exist.');
+            }
+        }
+        
+        console.log(`✅ User ${email} applied as provider (pending approval) with documents`);
+        
+        return sendResponse(200, { 
+            ok: true, 
+            message: 'Provider application submitted. Waiting for admin approval.',
+            status: 'pending'
+        });
+        
+    } catch (err) {
+        console.error('❌ Error in apply-provider route:', err);
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
+        console.error('Error code:', err.code);
+        console.error('Error stack:', err.stack);
+        
+        // Ensure we always send a response
+        if (!responseSent) {
+            const errorMessage = err.message || 'An unexpected error occurred';
+            return sendResponse(500, { 
+                ok: false, 
+                error: 'Server error: ' + errorMessage 
+            });
+        }
     }
 });
 
@@ -299,36 +749,129 @@ app.put('/api/users/:id', async (req, res) => {
         
         // Handle profile picture upload if provided
         let profilePicturePath = existing[0].u_profile_picture || null;
+        let profilePictureSaveSuccessful = false; // Flag to track if save was successful
+        console.log('📸 Profile picture received:', profilePicture ? (profilePicture.substring(0, 50) + '...') : 'null');
+        console.log('📸 Profile picture type:', typeof profilePicture);
+        console.log('📸 Profile picture length:', profilePicture ? profilePicture.length : 0);
+        
         if (profilePicture && typeof profilePicture === 'string') {
+            console.log('📸 Processing profile picture...');
             try {
                 // If it's a base64 string, save it to file
                 if (profilePicture.startsWith('data:image')) {
-                    // Delete old profile picture if it exists
-                    if (profilePicturePath && profilePicturePath.startsWith('/uploads/')) {
-                        const oldFilePath = path.join(__dirname, profilePicturePath.replace('/uploads/', 'uploads/'));
-                        if (fs.existsSync(oldFilePath)) {
+                    console.log('📸 Detected base64 image, saving to file...');
+                    // Delete old profile picture if it exists (only after new one is confirmed saved)
+                    const oldProfilePicturePath = profilePicturePath;
+                    
+                    // Save new profile picture
+                    console.log('📸 Calling saveProfilePicture function...');
+                    console.log('📸 Profile picture data preview:', profilePicture.substring(0, 100));
+                    try {
+                        profilePicturePath = saveProfilePicture(profilePicture, id);
+                        console.log('✅ Profile picture saved successfully:', profilePicturePath);
+                        
+                        // Double-check file exists
+                        // Extract filename from path (handle both /uploads/images/filename and just filename)
+                        let filename = profilePicturePath;
+                        if (filename.startsWith('/uploads/images/')) {
+                            filename = filename.replace('/uploads/images/', '');
+                        } else if (filename.startsWith('/uploads/')) {
+                            filename = filename.replace('/uploads/', '');
+                        }
+                        const savedFilePath = path.join(uploadsDir, filename);
+                        console.log('🔍 Checking file at:', savedFilePath);
+                        console.log('🔍 Uploads dir:', uploadsDir);
+                        console.log('🔍 __dirname:', __dirname);
+                        console.log('🔍 Extracted filename:', filename);
+                        
+                        if (fs.existsSync(savedFilePath)) {
+                            const stats = fs.statSync(savedFilePath);
+                            console.log('✅ File confirmed on disk:', savedFilePath);
+                            console.log('✅ File size on disk:', stats.size, 'bytes');
+                            
+                            // Only mark as successful if file exists and has content
+                            if (stats.size > 0) {
+                                profilePictureSaveSuccessful = true;
+                                
+                                // Now delete old profile picture if it exists
+                                if (oldProfilePicturePath && oldProfilePicturePath.startsWith('/uploads/')) {
+                                    const oldFilePath = path.join(__dirname, oldProfilePicturePath.replace('/uploads/', 'uploads/'));
+                                    console.log('🗑️  Checking old profile picture:', oldFilePath);
+                                    if (fs.existsSync(oldFilePath)) {
+                                        try {
+                                            fs.unlinkSync(oldFilePath);
+                                            console.log('🗑️  Deleted old profile picture:', oldFilePath);
+                                        } catch (deleteErr) {
+                                            console.warn('⚠️  Could not delete old profile picture:', deleteErr.message);
+                                        }
+                                    } else {
+                                        console.log('ℹ️  Old profile picture not found (already deleted or never existed)');
+                                    }
+                                }
+                            } else {
+                                console.error('❌ CRITICAL: File exists but is empty (0 bytes)!');
+                                profilePicturePath = existing[0].u_profile_picture || null;
+                                throw new Error('File was created but is empty');
+                            }
+                        } else {
+                            console.error('❌ CRITICAL: File not found after save!');
+                            console.error('❌ Expected path:', savedFilePath);
+                            console.error('❌ Uploads directory exists:', fs.existsSync(uploadsDir));
+                            console.error('❌ Files in uploads directory:', fs.existsSync(uploadsDir) ? fs.readdirSync(uploadsDir).slice(0, 5) : 'N/A');
+                            // Don't update database with invalid path - keep old picture or set to null
+                            console.error('⚠️  WARNING: File save failed, NOT updating database with invalid path');
+                            profilePicturePath = existing[0].u_profile_picture || null;
+                            throw new Error('File was not created on disk after save operation');
+                        }
+                    } catch (saveError) {
+                        console.error('❌ Failed to save profile picture:', saveError);
+                        console.error('❌ Error details:', saveError.message);
+                        console.error('❌ Error stack:', saveError.stack);
+                        console.error('❌ Error code:', saveError.code);
+                        console.error('❌ Error syscall:', saveError.syscall);
+                        console.error('❌ Error errno:', saveError.errno);
+                        // Don't fail the entire request, but log the error
+                        console.error('⚠️  WARNING: Profile picture save failed, keeping old picture');
+                        profilePicturePath = existing[0].u_profile_picture || null;
+                        profilePictureSaveSuccessful = false;
+                        
+                        // Log additional diagnostic info
+                        console.error('🔍 Diagnostic info:');
+                        console.error('  - Uploads dir:', uploadsDir);
+                        console.error('  - __dirname:', __dirname);
+                        console.error('  - Directory exists:', fs.existsSync(uploadsDir));
+                        if (fs.existsSync(uploadsDir)) {
                             try {
-                                fs.unlinkSync(oldFilePath);
-                                console.log('🗑️  Deleted old profile picture:', oldFilePath);
-                            } catch (deleteErr) {
-                                console.warn('⚠️  Could not delete old profile picture:', deleteErr.message);
+                                const testFile = path.join(uploadsDir, 'test_write.txt');
+                                fs.writeFileSync(testFile, 'test');
+                                fs.unlinkSync(testFile);
+                                console.error('  - Directory is writable: YES');
+                            } catch (testErr) {
+                                console.error('  - Directory is writable: NO');
+                                console.error('  - Test write error:', testErr.message);
                             }
                         }
                     }
-                    // Save new profile picture
-                    profilePicturePath = saveProfilePicture(profilePicture, id);
-                    console.log('✅ Profile picture saved:', profilePicturePath);
                 } else if (profilePicture.startsWith('/uploads/')) {
                     // Already a file path, use it as is
+                    console.log('📸 Profile picture is already a file path:', profilePicture);
                     profilePicturePath = profilePicture;
                 } else if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
                     // External URL, store as is
+                    console.log('📸 Profile picture is external URL:', profilePicture);
                     profilePicturePath = profilePicture;
+                } else {
+                    console.warn('⚠️  Unknown profile picture format:', profilePicture.substring(0, 50));
                 }
             } catch (imageErr) {
-                console.error('⚠️  Failed to save profile picture:', imageErr);
-                // Don't fail the entire request if image save fails
+                console.error('❌ CRITICAL: Failed to process profile picture:', imageErr);
+                console.error('❌ Error message:', imageErr.message);
+                console.error('❌ Error stack:', imageErr.stack);
+                // Re-throw to prevent database update with invalid path
+                throw imageErr;
             }
+        } else {
+            console.log('ℹ️  No profile picture provided or invalid format');
         }
         
         // Helper function to check if column exists and add it if needed
@@ -392,10 +935,27 @@ app.put('/api/users/:id', async (req, res) => {
             updateFields.push('u_zip_code = ?');
             params.push(zipCode || null);
         }
+        // Only update profile picture in database if:
+        // 1. We tried to save a base64 image AND it was successful, OR
+        // 2. The profile picture is already a path/URL (not base64)
         if (profilePicturePath !== undefined) {
+            if (profilePicture && profilePicture.startsWith('data:image')) {
+                // We tried to save a base64 image - only update if save was successful
+                if (profilePictureSaveSuccessful) {
             await ensureColumnExists('u_profile_picture', 'VARCHAR(500) DEFAULT NULL');
             updateFields.push('u_profile_picture = ?');
             params.push(profilePicturePath);
+                    console.log('✅ Will update database with profile picture path:', profilePicturePath);
+                } else {
+                    console.warn('⚠️  NOT updating database - profile picture save failed, keeping old picture');
+                }
+            } else {
+                // Profile picture is already a path/URL, safe to update
+                await ensureColumnExists('u_profile_picture', 'VARCHAR(500) DEFAULT NULL');
+                updateFields.push('u_profile_picture = ?');
+                params.push(profilePicturePath);
+                console.log('✅ Will update database with profile picture path:', profilePicturePath);
+            }
         }
         
         // Only update password if provided
@@ -407,7 +967,14 @@ app.put('/api/users/:id', async (req, res) => {
         params.push(id);
         const sql = `UPDATE \`user\` SET ${updateFields.join(', ')} WHERE iduser = ?`;
         await pool.query(sql, params);
-        return res.json({ ok: true });
+        
+        // Return success with profile picture path if it was updated
+        const response = { ok: true };
+        if (profilePicturePath) {
+            response.profilePicture = profilePicturePath;
+            console.log('📸 Returning profile picture path:', profilePicturePath);
+        }
+        return res.json(response);
     } catch (err) {
         console.error('Update user failed:', err.code, err.message);
         if (err && err.code === 'ER_DUP_ENTRY') {
@@ -417,125 +984,110 @@ app.put('/api/users/:id', async (req, res) => {
     }
 });
 
-// Apply as provider endpoint - now creates pending application with documents
-app.post('/api/users/apply-provider', async (req, res) => {
-    const { email, businessDocument, validIdDocument } = req.body || {};
-    
-    if (!email) {
-        return res.status(400).json({ ok: false, error: 'Email is required' });
-    }
-    
-    if (!businessDocument) {
-        return res.status(400).json({ ok: false, error: 'Business document is required' });
-    }
-    
-    if (!validIdDocument) {
-        return res.status(400).json({ ok: false, error: 'Valid ID document is required' });
-    }
-    
+// Test endpoint to save a test image
+app.post('/api/test-save-image', (req, res) => {
     try {
-        const pool = getPool();
-        
-        // Check if user exists
-        const [userRows] = await pool.query(
-            'SELECT iduser, u_email, u_role, u_provider_status FROM `user` WHERE u_email = ?',
-            [email]
-        );
-        
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
+        const { base64Data, userId } = req.body;
+        if (!base64Data || !userId) {
+            return res.status(400).json({ ok: false, error: 'base64Data and userId required' });
         }
         
-        const user = userRows[0];
+        console.log('🧪 Test: Saving test image...');
+        const result = saveProfilePicture(base64Data, userId);
         
-        // Check if user is already a provider
-        if (user.u_role === 'provider') {
-            return res.status(400).json({ ok: false, error: 'User is already a provider' });
-        }
+        // Verify file exists
+        const filename = result.replace('/uploads/images/', '');
+        const filepath = path.join(uploadsDir, filename);
+        const exists = fs.existsSync(filepath);
         
-        // Check if user is an admin
-        if (user.u_role === 'admin') {
-            return res.status(400).json({ ok: false, error: 'Admin users cannot apply as provider' });
-        }
-        
-        // Check if already has pending application
-        if (user.u_provider_status === 'pending') {
-            return res.status(400).json({ ok: false, error: 'You already have a pending provider application' });
-        }
-        
-        // Save documents to files
-        let businessDocPath = null;
-        let validIdDocPath = null;
-        
-        try {
-            businessDocPath = saveProviderDocument(businessDocument, user.iduser, 'business');
-            validIdDocPath = saveProviderDocument(validIdDocument, user.iduser, 'id');
-        } catch (docErr) {
-            console.error('Error saving documents:', docErr);
-            return res.status(500).json({ ok: false, error: 'Failed to save documents' });
-        }
-        
-        // Check if columns exist, if not add them
-        try {
-            await pool.query('SELECT u_provider_status, u_business_document, u_valid_id_document FROM `user` LIMIT 1');
-        } catch (checkErr) {
-            if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
-                // Add missing columns
-                try {
-                    if (checkErr.message.includes('u_provider_status')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_status ENUM(\'pending\', \'approved\', \'rejected\') DEFAULT NULL');
-                    }
-                    if (checkErr.message.includes('u_business_document')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_business_document VARCHAR(500) DEFAULT NULL');
-                    }
-                    if (checkErr.message.includes('u_valid_id_document')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_valid_id_document VARCHAR(500) DEFAULT NULL');
-                    }
-                    if (checkErr.message.includes('u_paymongo_payment_link')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_paymongo_payment_link VARCHAR(500) DEFAULT NULL');
-                    }
-                } catch (alterErr) {
-                    console.error('Failed to add columns:', alterErr);
-                }
-            }
-        }
-        
-        // Set provider status to pending and save document paths
-        await pool.query(
-            'UPDATE `user` SET u_provider_status = ?, u_business_document = ?, u_valid_id_document = ? WHERE iduser = ?',
-            ['pending', businessDocPath, validIdDocPath, user.iduser]
-        );
-        
-        console.log(`✓ User ${email} applied as provider (pending approval) with documents`);
-        
-        return res.json({ 
-            ok: true, 
-            message: 'Provider application submitted. Waiting for admin approval.',
-            status: 'pending'
+        return res.json({
+            ok: true,
+            path: result,
+            filepath: filepath,
+            exists: exists,
+            uploadsDir: uploadsDir,
+            __dirname: __dirname
         });
-    } catch (err) {
-        // If column doesn't exist, add it and retry
-        if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('u_provider_status')) {
-            try {
-                const pool = getPool();
-                await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_status ENUM(\'pending\', \'approved\', \'rejected\') DEFAULT NULL');
-                // Retry the update
-                await pool.query(
-                    'UPDATE `user` SET u_provider_status = ? WHERE iduser = ?',
-                    ['pending', userRows[0].iduser]
-                );
-                return res.json({ 
-                    ok: true, 
-                    message: 'Provider application submitted. Waiting for admin approval.',
-                    status: 'pending'
-                });
-            } catch (alterErr) {
-                console.error('Failed to add u_provider_status column:', alterErr);
-                return res.status(500).json({ ok: false, error: 'Database error: Failed to create provider status column' });
+    } catch (error) {
+        console.error('🧪 Test save failed:', error);
+        return res.status(500).json({
+            ok: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Test endpoint to verify image file exists and can be served
+app.get('/api/test-image/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsDir, filename);
+    
+    console.log('🔍 Testing image file:', filename);
+    console.log('🔍 Looking in:', filePath);
+    console.log('🔍 Uploads directory:', uploadsDir);
+    console.log('🔍 __dirname:', __dirname);
+    console.log('🔍 Directory exists:', fs.existsSync(uploadsDir));
+    console.log('🔍 File exists:', fs.existsSync(filePath));
+    
+    if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        return res.json({
+            ok: true,
+            exists: true,
+            path: filePath,
+            size: stats.size,
+            url: `/uploads/images/${filename}`,
+            uploadsDir: uploadsDir,
+            __dirname: __dirname,
+            staticServingFrom: uploadsDir,
+            message: 'File exists. Try accessing: http://' + req.get('host') + '/uploads/images/' + filename
+        });
+    } else {
+        // List files in directory for debugging
+        let filesInDir = [];
+        try {
+            if (fs.existsSync(uploadsDir)) {
+                filesInDir = fs.readdirSync(uploadsDir);
             }
+        } catch (e) {
+            console.error('Error reading directory:', e);
         }
-        console.error('Apply provider failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
+        
+        return res.json({
+            ok: true,
+            exists: false,
+            path: filePath,
+            searchedIn: uploadsDir,
+            __dirname: __dirname,
+            filesInDir: filesInDir.slice(0, 10), // First 10 files
+            message: 'File not found. Check the path above.'
+        });
+    }
+});
+
+// Direct image serving endpoint (fallback if static serving fails)
+app.get('/api/image/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsDir, filename);
+    
+    console.log('🖼️  Direct image request:', filename);
+    console.log('🖼️  File path:', filePath);
+    
+    if (fs.existsSync(filePath)) {
+        // Determine content type
+        let contentType = 'image/jpeg';
+        if (filename.endsWith('.png')) contentType = 'image/png';
+        else if (filename.endsWith('.gif')) contentType = 'image/gif';
+        else if (filename.endsWith('.webp')) contentType = 'image/webp';
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        
+        return res.sendFile(path.resolve(filePath));
+    } else {
+        return res.status(404).json({ ok: false, error: 'Image not found' });
     }
 });
 
@@ -546,10 +1098,11 @@ app.get('/api/admin/provider-applications', async (req, res) => {
         // Check if column exists, if not return empty array
         try {
             const [rows] = await pool.query(`
-                SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document, u_created_at
+                SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document, 
+                       COALESCE(u_provider_applied_at, u_created_at) as applied_at
                 FROM \`user\`
                 WHERE u_provider_status IN ('pending', 'approved', 'rejected') OR u_role = 'provider'
-                ORDER BY u_created_at DESC
+                ORDER BY COALESCE(u_provider_applied_at, u_created_at) DESC
             `);
             return res.json({ ok: true, rows });
         } catch (queryErr) {
@@ -565,12 +1118,17 @@ app.get('/api/admin/provider-applications', async (req, res) => {
                     if (queryErr.message.includes('u_valid_id_document')) {
                         await pool.query('ALTER TABLE `user` ADD COLUMN u_valid_id_document VARCHAR(500) DEFAULT NULL');
                     }
+                    if (queryErr.message.includes('u_provider_applied_at')) {
+                        await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_applied_at TIMESTAMP NULL DEFAULT NULL');
+                        console.log('✅ Added u_provider_applied_at column in admin query');
+                    }
                     // Query again
                     const [rows] = await pool.query(`
-                        SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document, u_created_at
+                        SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document,
+                               COALESCE(u_provider_applied_at, u_created_at) as applied_at
                         FROM \`user\`
                         WHERE u_provider_status IN ('pending', 'approved', 'rejected') OR u_role = 'provider'
-                        ORDER BY u_created_at DESC
+                        ORDER BY COALESCE(u_provider_applied_at, u_created_at) DESC
                     `);
                     return res.json({ ok: true, rows });
                 } catch (alterErr) {
@@ -631,6 +1189,13 @@ app.post('/api/admin/provider-applications/:id/reject', async (req, res) => {
     if (!Number.isFinite(id)) {
         return res.status(400).json({ ok: false, error: 'Invalid user ID' });
     }
+    
+    const { rejectionReason } = req.body || {};
+    
+    if (!rejectionReason || rejectionReason.trim().length === 0) {
+        return res.status(400).json({ ok: false, error: 'Rejection reason is required' });
+    }
+    
     try {
         const pool = getPool();
         
@@ -646,13 +1211,101 @@ app.post('/api/admin/provider-applications/:id/reject', async (req, res) => {
         
         const user = userRows[0];
         
-        // Update provider status to rejected (role stays as 'user')
+        // Ensure rejection_reason column exists
+        try {
+            await pool.query('SELECT u_rejection_reason FROM `user` LIMIT 1');
+        } catch (checkErr) {
+            if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
+                console.log('⚠️ Missing u_rejection_reason column, creating it...');
+                try {
+                    await pool.query('ALTER TABLE `user` ADD COLUMN u_rejection_reason TEXT DEFAULT NULL');
+                    console.log('✅ Added u_rejection_reason column');
+                } catch (alterErr) {
+                    console.error('❌ Failed to add u_rejection_reason column:', alterErr);
+                }
+            }
+        }
+        
+        // Update provider status to rejected with reason
         await pool.query(
-            'UPDATE `user` SET u_provider_status = ? WHERE iduser = ?',
-            ['rejected', id]
+            'UPDATE `user` SET u_provider_status = ?, u_rejection_reason = ? WHERE iduser = ?',
+            ['rejected', rejectionReason.trim(), id]
         );
         
-        console.log(`✓ Provider application rejected for user ID ${id} (${user.u_email})`);
+        // Create a system notification message for the user
+        try {
+            // Create a unique system conversation for this user (or find existing one)
+            // Use a pattern that includes user ID to make it unique per user
+            const systemSubject = `System Notifications - User ${id}`;
+            
+            let [convRows] = await pool.query(
+                `SELECT c.idconversation 
+                 FROM conversation c
+                 INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
+                 WHERE c.c_subject LIKE ? 
+                 AND c.c_service_id IS NULL 
+                 AND c.c_booking_id IS NULL 
+                 AND c.c_hiring_request_id IS NULL
+                 AND cp.cp_user_id = ?
+                 LIMIT 1`,
+                ['System Notifications%', id]
+            );
+            
+            let conversationId;
+            if (convRows.length === 0) {
+                // Create system conversation with user-specific subject
+                const [insertResult] = await pool.query(
+                    'INSERT INTO `conversation` (c_subject, c_priority, c_is_active) VALUES (?, ?, ?)',
+                    ['System Notifications', 'medium', 1]
+                );
+                conversationId = insertResult.insertId;
+                
+                // Add user as participant
+                await pool.query(
+                    'INSERT INTO `conversation_participant` (cp_conversation_id, cp_user_id, cp_unread_count) VALUES (?, ?, ?)',
+                    [conversationId, id, 0]
+                );
+                
+                console.log(`✅ Created system conversation ${conversationId} for user ${id}`);
+            } else {
+                conversationId = convRows[0].idconversation;
+                console.log(`✅ Using existing system conversation ${conversationId} for user ${id}`);
+            }
+            
+            // Create system message with rejection notification
+            const systemMessage = `Your provider application has been rejected.\n\nReason: ${rejectionReason.trim()}\n\nYou can reapply at any time by submitting a new application.`;
+            
+            // Get admin user ID (first admin user) for sender
+            const [adminRows] = await pool.query(
+                'SELECT iduser FROM `user` WHERE u_role = ? LIMIT 1',
+                ['admin']
+            );
+            const adminId = adminRows.length > 0 ? adminRows[0].iduser : null;
+            
+            await pool.query(
+                'INSERT INTO `message` (m_conversation_id, m_sender_id, m_content, m_message_type, m_is_read, m_action_required) VALUES (?, ?, ?, ?, ?, ?)',
+                [conversationId, adminId || id, systemMessage, 'system', 0, 0]
+            );
+            
+            // Update unread count for the user
+            await pool.query(
+                'UPDATE `conversation_participant` SET cp_unread_count = cp_unread_count + 1 WHERE cp_conversation_id = ? AND cp_user_id = ?',
+                [conversationId, id]
+            );
+            
+            // Update conversation updated_at to make it appear at the top
+            await pool.query(
+                'UPDATE `conversation` SET c_updated_at = NOW() WHERE idconversation = ?',
+                [conversationId]
+            );
+            
+            console.log(`✅ System notification created for user ID ${id} in conversation ${conversationId}`);
+        } catch (notifErr) {
+            console.error('⚠️ Failed to create notification (non-critical):', notifErr);
+            // Don't fail the rejection if notification fails
+        }
+        
+        console.log(`✓ Provider application rejected for user ID ${id} (${user.u_email}) with reason`);
         return res.json({ ok: true, message: 'Provider application rejected' });
     } catch (err) {
         console.error('Reject provider failed:', err.code, err.message);
@@ -703,6 +1356,25 @@ app.post('/api/register', async (req, res) => {
 		
 		// Email doesn't exist, proceed with registration
 		const hashed = password ? await bcrypt.hash(password, 10) : null;
+		
+		// Validate hash length (bcrypt hashes are 60 chars, but ensure it fits in VARCHAR(255))
+		if (hashed && hashed.length > 255) {
+			console.error('Password hash too long:', hashed.length, 'characters');
+			return res.status(500).json({ 
+				ok: false, 
+				error: 'Password hash generation error. Please try again.' 
+			});
+		}
+		
+		console.log('Password hash length:', hashed ? hashed.length : 0);
+		
+		// Try to fix column size automatically if it fails
+		let insertAttempts = 0;
+		const maxAttempts = 2;
+		let lastError = null;
+		
+		while (insertAttempts < maxAttempts) {
+			try {
 		// Align with schema: iduser (AI PK), u_fname, u_mname, u_lname, u_suffix, u_email, u_password
 		const sql = `INSERT INTO \`user\` (u_fname, u_mname, u_lname, u_suffix, u_email, u_password)
 			VALUES (?, ?, ?, ?, ?, ?)`;
@@ -710,15 +1382,63 @@ app.post('/api/register', async (req, res) => {
 		const [result] = await pool.query(sql, params);
 		console.log('Register insert success', { insertId: result.insertId });
 		return res.json({ ok: true, id: result.insertId });
+			} catch (insertErr) {
+				lastError = insertErr;
+				// If error is "Data too long for column", try to fix the column size
+				if (insertErr && insertErr.code === 'ER_DATA_TOO_LONG' && insertErr.message && insertErr.message.includes('u_password') && insertAttempts === 0) {
+					console.warn('⚠️ Password column too small, attempting to fix...');
+					try {
+						await pool.query('ALTER TABLE `user` MODIFY COLUMN `u_password` VARCHAR(255) DEFAULT NULL');
+						console.log('✅ Password column size updated to VARCHAR(255)');
+						insertAttempts++;
+						continue; // Retry the insert
+					} catch (alterErr) {
+						console.error('❌ Failed to update password column:', alterErr);
+						// Don't throw here, let it fall through to re-throw original error
+					}
+				}
+				// If we've exhausted attempts or it's not a fixable error, break and throw
+				if (insertAttempts >= maxAttempts - 1) {
+					break;
+				}
+				insertAttempts++;
+			}
+		}
+		
+		// If we get here, all attempts failed
+		if (lastError) {
+			throw lastError;
+		}
+		throw new Error('Registration failed after multiple attempts');
 	} catch (err) {
-		console.error('Register insert failed:', err.code, err.message);
+		console.error('========================================');
+		console.error('❌ REGISTER INSERT FAILED');
+		console.error('========================================');
+		console.error('Error Code:', err.code);
+		console.error('Error Message:', err.message);
+		console.error('Error Stack:', err.stack);
+		console.error('Request Body:', JSON.stringify(req.body, null, 2));
+		console.error('========================================');
+		
 		if (err && err.code === 'ER_DUP_ENTRY') {
+			console.error('Duplicate entry detected for email:', email);
 			return res.status(409).json({ 
 				ok: false, 
 				error: 'This email is already registered. Please use a different email or try logging in instead.' 
 			});
 		}
-		return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+		
+		// More detailed error response for debugging
+		const errorMessage = err.message || 'Unknown database error';
+		const errorCode = err.code || 'UNKNOWN_ERROR';
+		console.error('Returning 500 error:', errorCode, errorMessage);
+		
+		return res.status(500).json({ 
+			ok: false, 
+			error: 'Database error: ' + errorMessage,
+			errorCode: errorCode,
+			details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+		});
 	}
 });
 
@@ -736,6 +1456,9 @@ app.get('/api/services', async (req, res) => {
         const city = req.query.city;
         const providerId = req.query.providerId; // Firebase UID
         const providerEmail = req.query.providerEmail;
+        const userLat = req.query.latitude ? parseFloat(req.query.latitude) : null;
+        const userLng = req.query.longitude ? parseFloat(req.query.longitude) : null;
+        const radiusKm = req.query.radius ? parseFloat(req.query.radius) : 100; // Default 100km
         
         let query = `
             SELECT s.*, u.u_fname, u.u_lname, 
@@ -788,6 +1511,10 @@ app.get('/api/services', async (req, res) => {
         if (featured) {
             query += ` AND s.s_rating >= 4.5`;
             query += ` ORDER BY s.s_rating DESC, s.s_review_count DESC`;
+        } else if (req.query.highRated === 'true') {
+            // High-rated services (rating >= 4.0, with at least 1 review, rating is not NULL and not 0)
+            query += ` AND s.s_rating IS NOT NULL AND s.s_rating > 0 AND s.s_rating >= 4.0 AND s.s_review_count > 0`;
+            query += ` ORDER BY s.s_rating DESC, s.s_review_count DESC`;
         } else {
             query += ` ORDER BY s.s_created_at DESC`;
         }
@@ -799,7 +1526,59 @@ app.get('/api/services', async (req, res) => {
         }
         
         const [rows] = await pool.query(query, params);
-        return res.json({ ok: true, rows });
+        
+        // Filter by distance if user location is provided
+        let filteredRows = rows;
+        if (userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng)) {
+            filteredRows = rows.filter(service => {
+                const address = service.s_address || '';
+                let serviceLat = null;
+                let serviceLng = null;
+                
+                // Parse coordinates from address: "address (lat,lng)" or just "lat,lng"
+                const coordsMatch = address.match(/\(([\d.-]+),([\d.-]+)\)/);
+                if (coordsMatch) {
+                    serviceLat = parseFloat(coordsMatch[1]);
+                    serviceLng = parseFloat(coordsMatch[2]);
+                } else if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(address.trim())) {
+                    // Address is just coordinates
+                    const [lat, lng] = address.split(',');
+                    serviceLat = parseFloat(lat);
+                    serviceLng = parseFloat(lng);
+                }
+                
+                // If service has coordinates, calculate distance
+                if (serviceLat !== null && serviceLng !== null && !isNaN(serviceLat) && !isNaN(serviceLng)) {
+                    // Haversine formula to calculate distance in kilometers
+                    const R = 6371; // Earth's radius in km
+                    const dLat = (serviceLat - userLat) * Math.PI / 180;
+                    const dLng = (serviceLng - userLng) * Math.PI / 180;
+                    const a = 
+                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(userLat * Math.PI / 180) * Math.cos(serviceLat * Math.PI / 180) *
+                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const distance = R * c;
+                    
+                    // Add distance to service object
+                    service.distance_km = Math.round(distance * 10) / 10; // Round to 1 decimal
+                    
+                    return distance <= radiusKm;
+                }
+                
+                // If service doesn't have coordinates, include it (for backward compatibility)
+                return true;
+            });
+            
+            // Sort by distance if location filtering is active
+            filteredRows.sort((a, b) => {
+                const distA = a.distance_km || 999999;
+                const distB = b.distance_km || 999999;
+                return distA - distB;
+            });
+        }
+        
+        return res.json({ ok: true, rows: filteredRows });
     } catch (err) {
         console.error('List services failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: 'Database error' });
@@ -912,10 +1691,10 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
             // Filter availability for this day of week
             let dayAvailability = availabilityRows.filter(a => a.sa_day_of_week === dayOfWeek);
             
-            // If no availability data exists, use default hours (9 AM - 6 PM)
+            // If no availability data exists, use default hours (8 AM - 7 PM)
             if (dayAvailability.length === 0 && availabilityRows.length === 0) {
                 dayAvailability = [
-                    { sa_start_time: '09:00:00', sa_end_time: '18:00:00' }
+                    { sa_start_time: '08:00:00', sa_end_time: '19:00:00' }
                 ];
             }
             
@@ -1072,7 +1851,7 @@ app.post('/api/services', async (req, res) => {
     }
 
     // Validate category
-    const validCategories = ['venue', 'catering', 'photography', 'music', 'decoration', 'transportation', 'entertainment', 'planning', 'other'];
+    const validCategories = ['venue', 'catering', 'photography', 'music'];
     if (!validCategories.includes(category.toLowerCase())) {
         return res.status(400).json({ ok: false, error: 'Invalid category' });
     }
@@ -1260,7 +2039,7 @@ app.put('/api/services/:id', async (req, res) => {
     }
 
     // Validate category
-    const validCategories = ['venue', 'catering', 'photography', 'music', 'decoration', 'transportation', 'entertainment', 'planning', 'other'];
+    const validCategories = ['venue', 'catering', 'photography', 'music'];
     if (!validCategories.includes(category.toLowerCase())) {
         return res.status(400).json({ ok: false, error: 'Invalid category' });
     }
@@ -1909,15 +2688,25 @@ app.get('/api/user/conversations', async (req, res) => {
                    (SELECT COUNT(*) FROM message m 
                     INNER JOIN conversation_participant cp ON m.m_conversation_id = cp.cp_conversation_id
                     WHERE cp.cp_user_id = ? AND m.m_sender_id != ? AND m.m_is_read = 0 
-                    AND m.m_conversation_id = c.idconversation) as unread_count
+                    AND m.m_conversation_id = c.idconversation) as unread_count,
+                   cp.cp_unread_count as participant_unread_count
             FROM conversation c
             INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
             WHERE cp.cp_user_id = ?
+            GROUP BY c.idconversation
             ORDER BY c.c_updated_at DESC
         `, [userId, userId, userId]);
         
         // Get other participant info for each conversation
         for (const conv of conversations) {
+            // For system conversations, set a special other_participant
+            if (conv.c_subject === 'System Notifications' && !conv.c_service_id && !conv.c_booking_id && !conv.c_hiring_request_id) {
+                conv.other_participant = {
+                    cp_user_id: 0,
+                    u_email: 'system@event.com',
+                    name: 'System'
+                };
+            } else {
             const [participants] = await pool.query(`
                 SELECT cp.cp_user_id, u.u_email, CONCAT(u.u_fname, ' ', u.u_lname) as name
                 FROM conversation_participant cp
@@ -1925,6 +2714,7 @@ app.get('/api/user/conversations', async (req, res) => {
                 WHERE cp.cp_conversation_id = ? AND cp.cp_user_id != ?
             `, [conv.idconversation, userId]);
             conv.other_participant = participants[0] || null;
+            }
         }
         
         return res.json({ ok: true, conversations });
@@ -2022,6 +2812,29 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
             INNER JOIN user u ON m.m_sender_id = u.iduser
             WHERE m.idmessage = ?
         `, [result.insertId]);
+        
+        // Send push notification to other participant
+        const [otherUserRows] = await pool.query(
+            'SELECT u_email FROM `user` WHERE iduser = ?',
+            [otherParticipantRows[0].cp_user_id]
+        );
+        if (otherUserRows.length > 0) {
+            const senderName = messageRows[0].sender_name || 'Someone';
+            const messagePreview = content.trim().length > 50 
+                ? content.trim().substring(0, 50) + '...' 
+                : content.trim();
+            
+            sendPushNotification(
+                otherUserRows[0].u_email,
+                `New message from ${senderName}`,
+                messagePreview,
+                {
+                    type: 'message',
+                    conversationId: conversationId.toString(),
+                    senderId: userId.toString(),
+                }
+            ).catch(err => console.error('Failed to send push notification:', err));
+        }
         
         return res.json({ ok: true, message: messageRows[0] });
     } catch (err) {
@@ -2201,14 +3014,23 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
                     secretKeyPrefix: providerCredentials.secretKey.substring(0, 10) + '...',
                 });
             } else {
-                console.log('⚠️  Provider found but no PayMongo credentials configured:', {
+                // Provider found but no payment setup - return error
+                const providerName = `${providerWithCredentials.u_fname || ''} ${providerWithCredentials.u_lname || ''}`.trim() || providerWithCredentials.u_email;
+                console.log('❌ Provider found but no PayMongo credentials configured:', {
                     providerEmail: providerWithCredentials.u_email,
-                    providerName: `${providerWithCredentials.u_fname || ''} ${providerWithCredentials.u_lname || ''}`.trim(),
+                    providerName: providerName,
                 });
-                console.log('⚠️  Falling back to global PayMongo config');
+                return res.status(400).json({ 
+                    ok: false, 
+                    error: 'Provider not yet set up his payment' 
+                });
             }
         } else {
-            console.log('⚠️  No provider found for booking, using global PayMongo config');
+            console.log('⚠️  No provider found for booking');
+            return res.status(400).json({ 
+                ok: false, 
+                error: 'Provider not yet set up his payment' 
+            });
         }
         
         // Try to create PayMongo Checkout Session first (recommended by PayMongo docs)
@@ -2291,13 +3113,13 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
                 let providerLinkRows = providerRows;
                 if (!providerLinkRows || providerLinkRows.length === 0) {
                     [providerLinkRows] = await pool.query(`
-                        SELECT DISTINCT u.u_paymongo_payment_link
-                        FROM booking_service bs
-                        INNER JOIN service s ON bs.bs_service_id = s.idservice
-                        INNER JOIN user u ON s.s_provider_id = u.iduser
-                        WHERE bs.bs_booking_id = ?
-                        LIMIT 1
-                    `, [bookingId]);
+                    SELECT DISTINCT u.u_paymongo_payment_link
+                    FROM booking_service bs
+                    INNER JOIN service s ON bs.bs_service_id = s.idservice
+                    INNER JOIN user u ON s.s_provider_id = u.iduser
+                    WHERE bs.bs_booking_id = ?
+                    LIMIT 1
+                `, [bookingId]);
                 }
                 
                 if (providerLinkRows.length > 0 && providerLinkRows[0].u_paymongo_payment_link) {
@@ -2355,6 +3177,105 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
     }
 });
 
+// Process cash payment
+app.post('/api/bookings/:bookingId/pay-cash', async (req, res) => {
+    const bookingId = parseInt(req.params.bookingId);
+    const { userEmail } = req.body || {};
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'User email is required' });
+    }
+    
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Get booking details
+        const [bookingRows] = await pool.query(
+            'SELECT b_client_id, b_total_cost, b_status FROM booking WHERE idbooking = ?',
+            [bookingId]
+        );
+        
+        if (bookingRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Booking not found' });
+        }
+        
+        const booking = bookingRows[0];
+        
+        // Verify booking belongs to user
+        if (booking.b_client_id !== userId) {
+            return res.status(403).json({ ok: false, error: 'You can only pay for your own bookings' });
+        }
+        
+        // Check if booking is already paid
+        const [existingPayment] = await pool.query(
+            'SELECT idpayment, p_status FROM payment WHERE p_booking_id = ? AND p_status = "completed"',
+            [bookingId]
+        );
+        
+        if (existingPayment.length > 0) {
+            return res.status(400).json({ ok: false, error: 'This booking has already been paid' });
+        }
+        
+        const amount = parseFloat(booking.b_total_cost) || 0;
+        
+        // Create cash payment record
+        const connection = await pool.getConnection();
+        let paymentId = null;
+        
+        try {
+            await connection.beginTransaction();
+            
+            // Check if there's already a pending cash payment
+            const [existingPendingPayment] = await connection.query(
+                'SELECT idpayment FROM payment WHERE p_booking_id = ? AND p_status IN ("pending", "processing") AND p_payment_method = "Cash on Hand"',
+                [bookingId]
+            );
+            
+            if (existingPendingPayment.length === 0) {
+                // Create new cash payment record
+                const [paymentResult] = await connection.query(
+                    `INSERT INTO payment 
+                     (p_booking_id, p_user_id, p_amount, p_currency, p_status, p_payment_method, p_transaction_id)
+                     VALUES (?, ?, ?, 'PHP', 'pending', 'Cash on Hand', ?)`,
+                    [bookingId, userId, amount, `CASH-${Date.now()}-${bookingId}`]
+                );
+                paymentId = paymentResult.insertId;
+            } else {
+                paymentId = existingPendingPayment[0].idpayment;
+            }
+            
+            await connection.commit();
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+        
+        console.log(`✓ Cash payment recorded for booking ${bookingId} (Payment ID: ${paymentId})`);
+        
+        return res.json({ 
+            ok: true, 
+            message: 'Cash payment recorded successfully',
+            paymentId: paymentId
+        });
+    } catch (err) {
+        console.error('Process cash payment failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
 // PayMongo payment success redirect handler
 app.get('/api/payments/paymongo/success', async (req, res) => {
     const { bookingId, userEmail } = req.query || {};
@@ -2404,6 +3325,10 @@ app.get('/api/payments/paymongo/success', async (req, res) => {
         
         // Redirect to user homepage (configurable via environment variable)
         const homepageUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
+        
+        // Set headers to allow popup communication
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
         
         return res.send(`
             <!DOCTYPE html>
@@ -2520,6 +3445,10 @@ app.get('/api/payments/paymongo/failed', async (req, res) => {
     // Redirect to user homepage (configurable via environment variable)
     const homepageUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
     
+    // Set headers to allow popup communication
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    
     // Return failed page with redirect
     return res.send(`
         <!DOCTYPE html>
@@ -2581,11 +3510,18 @@ app.get('/api/payments/paymongo/failed', async (req, res) => {
                     }, 2000);
                     
                     // Also try to notify parent window if opened in popup
-                    if (window.opener) {
-                        window.opener.postMessage('payment-failed', '*');
-                        setTimeout(() => {
-                            window.close();
-                        }, 500);
+                    try {
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.postMessage({ type: 'payment-failed', bookingId: '${bookingId}' }, '*');
+                            setTimeout(() => {
+                                if (!window.opener.closed) {
+                                    window.close();
+                                }
+                            }, 500);
+                        }
+                    } catch (e) {
+                        // Ignore COOP errors - just redirect
+                        console.log('Popup communication blocked, redirecting normally');
                     }
                 </script>
             </body>
@@ -2698,7 +3634,7 @@ app.get('/api/provider/bookings', async (req, res) => {
             }
         }
         
-        // Get bookings for services owned by this provider
+        // Get bookings for services owned by this provider with payment information
         const [rows] = await pool.query(`
             SELECT DISTINCT
                 b.idbooking,
@@ -2712,11 +3648,19 @@ app.get('/api/provider/bookings', async (req, res) => {
                 b.b_created_at,
                 CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
                 u.u_email as client_email,
-                GROUP_CONCAT(s.s_name SEPARATOR ', ') as service_name
+                GROUP_CONCAT(DISTINCT s.s_name SEPARATOR ', ') as service_name,
+                MAX(CASE WHEN p.p_payment_method = 'Cash on Hand' AND p.p_status = 'pending' THEN p.p_payment_method ELSE NULL END) as payment_method,
+                MAX(CASE WHEN p.p_payment_method = 'Cash on Hand' AND p.p_status = 'pending' THEN p.p_status ELSE NULL END) as payment_status,
+                MAX(CASE 
+                    WHEN p.p_payment_method = 'Cash on Hand' AND p.p_status = 'pending' THEN 1
+                    ELSE 0
+                END) as has_pending_cash_payment,
+                MAX(CASE WHEN p.p_status = 'completed' THEN 1 ELSE 0 END) as is_paid
             FROM booking b
             INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
             INNER JOIN service s ON bs.bs_service_id = s.idservice
             LEFT JOIN user u ON b.b_client_id = u.iduser
+            LEFT JOIN payment p ON b.idbooking = p.p_booking_id
             WHERE s.s_provider_id = ?
             GROUP BY b.idbooking, b.b_event_name, b.b_event_date, b.b_start_time, b.b_end_time, 
                      b.b_location, b.b_total_cost, b.b_status, b.b_created_at, 
@@ -2728,6 +3672,372 @@ app.get('/api/provider/bookings', async (req, res) => {
     } catch (err) {
         console.error('Get provider bookings failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Mark cash payment as paid (for providers)
+app.post('/api/provider/bookings/:bookingId/mark-payment-paid', async (req, res) => {
+    const bookingId = parseInt(req.params.bookingId);
+    const { providerEmail } = req.body || {};
+    
+    if (!providerEmail) {
+        return res.status(400).json({ ok: false, error: 'Provider email is required' });
+    }
+    
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get provider's database user ID
+        const [providerRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [providerEmail]);
+        if (providerRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Provider not found' });
+        }
+        const providerId = providerRows[0].iduser;
+        
+        // Verify that this booking belongs to a service owned by this provider
+        const [bookingRows] = await pool.query(`
+            SELECT b.idbooking
+            FROM booking b
+            INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
+            INNER JOIN service s ON bs.bs_service_id = s.idservice
+            WHERE b.idbooking = ? AND s.s_provider_id = ?
+            LIMIT 1
+        `, [bookingId, providerId]);
+        
+        if (bookingRows.length === 0) {
+            return res.status(403).json({ ok: false, error: 'You can only mark payments for your own bookings' });
+        }
+        
+        // Update cash payment status to completed
+        const [updateResult] = await pool.query(
+            `UPDATE payment 
+             SET p_status = 'completed', 
+                 p_paid_at = NOW()
+             WHERE p_booking_id = ? 
+             AND p_payment_method = 'Cash on Hand'
+             AND p_status = 'pending'`,
+            [bookingId]
+        );
+        
+        if (updateResult.affectedRows === 0) {
+            return res.status(404).json({ 
+                ok: false, 
+                error: 'No pending cash payment found for this booking' 
+            });
+        }
+        
+        console.log(`✓ Cash payment marked as paid for booking ${bookingId} by provider ${providerEmail}`);
+        
+        // Get payment details for invoice
+        const [paymentRows] = await pool.query(
+            'SELECT p_payment_method, p_status, p_paid_at, p_transaction_id FROM payment WHERE p_booking_id = ? AND p_status = "completed" ORDER BY p_paid_at DESC LIMIT 1',
+            [bookingId]
+        );
+        
+        return res.json({
+            ok: true,
+            message: 'Payment marked as paid successfully',
+            payment: paymentRows.length > 0 ? paymentRows[0] : null
+        });
+    } catch (err) {
+        console.error('Mark payment as paid failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Generate and download invoice PDF
+app.get('/api/provider/bookings/:bookingId/invoice', async (req, res) => {
+    const bookingId = parseInt(req.params.bookingId);
+    const providerEmail = req.query.providerEmail;
+    
+    if (!providerEmail) {
+        return res.status(400).json({ ok: false, error: 'Provider email is required' });
+    }
+    
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get provider's database user ID
+        const [providerRows] = await pool.query('SELECT iduser, u_fname, u_lname, u_email, u_address, u_city, u_state FROM `user` WHERE u_email = ?', [providerEmail]);
+        if (providerRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Provider not found' });
+        }
+        const provider = providerRows[0];
+        
+        // Get booking details
+        const [bookingRows] = await pool.query(`
+            SELECT b.*, 
+                   CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
+                   u.u_email as client_email,
+                   u.u_address as client_address,
+                   u.u_city as client_city,
+                   u.u_state as client_state
+            FROM booking b
+            LEFT JOIN user u ON b.b_client_id = u.iduser
+            WHERE b.idbooking = ?
+        `, [bookingId]);
+        
+        if (bookingRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Booking not found' });
+        }
+        
+        const booking = bookingRows[0];
+        
+        // Verify booking belongs to provider
+        const [serviceRows] = await pool.query(`
+            SELECT s.idservice
+            FROM booking_service bs
+            INNER JOIN service s ON bs.bs_service_id = s.idservice
+            WHERE bs.bs_booking_id = ? AND s.s_provider_id = ?
+            LIMIT 1
+        `, [bookingId, provider.iduser]);
+        
+        if (serviceRows.length === 0) {
+            return res.status(403).json({ ok: false, error: 'You can only generate invoices for your own bookings' });
+        }
+        
+        // Get services
+        const [services] = await pool.query(`
+            SELECT s.s_name as name,
+                   bs.bs_quantity as quantity,
+                   bs.bs_unit_price as unitPrice,
+                   bs.bs_total_price as totalPrice
+            FROM booking_service bs
+            LEFT JOIN service s ON bs.bs_service_id = s.idservice
+            WHERE bs.bs_booking_id = ?
+        `, [bookingId]);
+        
+        // Get payment information
+        const [paymentRows] = await pool.query(
+            'SELECT p_payment_method, p_status, p_paid_at, p_transaction_id FROM payment WHERE p_booking_id = ? AND p_status = "completed" ORDER BY p_paid_at DESC LIMIT 1',
+            [bookingId]
+        );
+        
+        if (paymentRows.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No completed payment found for this booking' });
+        }
+        
+        const payment = paymentRows[0];
+        
+        // Format dates
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        };
+        
+        const formatTime = (timeStr) => {
+            if (!timeStr) return '';
+            const time = timeStr.toString().slice(0, 5);
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        };
+        
+        // Prepare invoice data
+        const invoiceData = {
+            booking: {
+                id: booking.idbooking,
+                eventName: booking.b_event_name,
+                date: formatDate(booking.b_event_date),
+                time: `${formatTime(booking.b_start_time)} - ${formatTime(booking.b_end_time)}`,
+                location: booking.b_location,
+                totalCost: parseFloat(booking.b_total_cost) || 0
+            },
+            client: {
+                name: booking.client_name || 'Client',
+                email: booking.client_email || '',
+                address: [booking.client_address, booking.client_city, booking.client_state].filter(Boolean).join(', ') || ''
+            },
+            provider: {
+                name: `${provider.u_fname} ${provider.u_lname}`.trim() || 'Service Provider',
+                email: provider.u_email || '',
+                address: [provider.u_address, provider.u_city, provider.u_state].filter(Boolean).join(', ') || ''
+            },
+            payment: {
+                method: payment.p_payment_method || 'Cash on Hand',
+                status: payment.p_status || 'completed',
+                paidAt: formatDate(payment.p_paid_at),
+                transactionId: payment.p_transaction_id || ''
+            },
+            services: services.map(s => ({
+                name: s.name || 'Service',
+                quantity: s.quantity || 1,
+                unitPrice: parseFloat(s.unitPrice) || 0,
+                totalPrice: parseFloat(s.totalPrice) || 0
+            }))
+        };
+        
+        // Generate PDF
+        const pdfBuffer = await generateInvoicePDF(invoiceData);
+        
+        // Set response headers
+        const invoiceNumber = `INV-${bookingId}-${Date.now()}`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoiceNumber}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send PDF
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error('Generate invoice failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Failed to generate invoice: ' + err.message });
+    }
+});
+
+// Generate and download invoice PDF for user
+app.get('/api/user/bookings/:bookingId/invoice', async (req, res) => {
+    const bookingId = parseInt(req.params.bookingId);
+    const userEmail = req.query.userEmail;
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'User email is required' });
+    }
+    
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user's database user ID
+        const [userRows] = await pool.query('SELECT iduser, u_fname, u_lname, u_email, u_address, u_city, u_state FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const user = userRows[0];
+        
+        // Get booking details
+        const [bookingRows] = await pool.query(`
+            SELECT b.*
+            FROM booking b
+            WHERE b.idbooking = ? AND b.b_client_id = ?
+        `, [bookingId, user.iduser]);
+        
+        if (bookingRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Booking not found or does not belong to you' });
+        }
+        
+        const booking = bookingRows[0];
+        
+        // Get provider information from the booking's services
+        const [providerRows] = await pool.query(`
+            SELECT DISTINCT u.u_fname, u.u_lname, u.u_email, u.u_address, u.u_city, u.u_state
+            FROM booking_service bs
+            INNER JOIN service s ON bs.bs_service_id = s.idservice
+            INNER JOIN user u ON s.s_provider_id = u.iduser
+            WHERE bs.bs_booking_id = ?
+            LIMIT 1
+        `, [bookingId]);
+        
+        const provider = providerRows.length > 0 ? providerRows[0] : {
+            u_fname: 'Service',
+            u_lname: 'Provider',
+            u_email: '',
+            u_address: '',
+            u_city: '',
+            u_state: ''
+        };
+        
+        // Get services
+        const [services] = await pool.query(`
+            SELECT s.s_name as name,
+                   bs.bs_quantity as quantity,
+                   bs.bs_unit_price as unitPrice,
+                   bs.bs_total_price as totalPrice
+            FROM booking_service bs
+            LEFT JOIN service s ON bs.bs_service_id = s.idservice
+            WHERE bs.bs_booking_id = ?
+        `, [bookingId]);
+        
+        // Get payment information
+        const [paymentRows] = await pool.query(
+            'SELECT p_payment_method, p_status, p_paid_at, p_transaction_id FROM payment WHERE p_booking_id = ? AND p_status = "completed" ORDER BY p_paid_at DESC LIMIT 1',
+            [bookingId]
+        );
+        
+        if (paymentRows.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No completed payment found for this booking' });
+        }
+        
+        const payment = paymentRows[0];
+        
+        // Format dates
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        };
+        
+        const formatTime = (timeStr) => {
+            if (!timeStr) return '';
+            const time = timeStr.toString().slice(0, 5);
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        };
+        
+        // Prepare invoice data
+        const invoiceData = {
+            booking: {
+                id: booking.idbooking,
+                eventName: booking.b_event_name,
+                date: formatDate(booking.b_event_date),
+                time: `${formatTime(booking.b_start_time)} - ${formatTime(booking.b_end_time)}`,
+                location: booking.b_location,
+                totalCost: parseFloat(booking.b_total_cost) || 0
+            },
+            client: {
+                name: `${user.u_fname} ${user.u_lname}`.trim() || 'Client',
+                email: user.u_email || '',
+                address: [user.u_address, user.u_city, user.u_state].filter(Boolean).join(', ') || ''
+            },
+            provider: {
+                name: `${provider.u_fname} ${provider.u_lname}`.trim() || 'Service Provider',
+                email: provider.u_email || '',
+                address: [provider.u_address, provider.u_city, provider.u_state].filter(Boolean).join(', ') || ''
+            },
+            payment: {
+                method: payment.p_payment_method || 'Cash on Hand',
+                status: payment.p_status || 'completed',
+                paidAt: formatDate(payment.p_paid_at),
+                transactionId: payment.p_transaction_id || ''
+            },
+            services: services.map(s => ({
+                name: s.name || 'Service',
+                quantity: s.quantity || 1,
+                unitPrice: parseFloat(s.unitPrice) || 0,
+                totalPrice: parseFloat(s.totalPrice) || 0
+            }))
+        };
+        
+        // Generate PDF
+        const pdfBuffer = await generateInvoicePDF(invoiceData);
+        
+        // Set response headers
+        const invoiceNumber = `INV-${bookingId}-${Date.now()}`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoiceNumber}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send PDF
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error('Generate user invoice failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Failed to generate invoice: ' + err.message });
     }
 });
 
@@ -2872,6 +4182,155 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
+// ============================================
+// SERVICE RATINGS API ENDPOINTS
+// ============================================
+
+// Submit a rating for a service in a completed booking
+app.post('/api/bookings/:bookingId/services/:serviceId/rate', async (req, res) => {
+    const bookingId = Number(req.params.bookingId);
+    const serviceId = Number(req.params.serviceId);
+    const { userEmail, rating, comment } = req.body || {};
+    
+    if (!Number.isFinite(bookingId) || !Number.isFinite(serviceId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking or service ID' });
+    }
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'User email is required' });
+    }
+    
+    if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ ok: false, error: 'Rating must be between 1 and 5' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Verify booking exists and is completed, and belongs to this user
+        const [bookingRows] = await pool.query(
+            'SELECT b_client_id, b_status FROM booking WHERE idbooking = ?',
+            [bookingId]
+        );
+        if (bookingRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Booking not found' });
+        }
+        const booking = bookingRows[0];
+        
+        if (booking.b_client_id !== userId) {
+            return res.status(403).json({ ok: false, error: 'You can only rate services for your own bookings' });
+        }
+        
+        if (booking.b_status !== 'completed') {
+            return res.status(400).json({ ok: false, error: 'You can only rate services for completed bookings' });
+        }
+        
+        // Verify service is part of this booking
+        const [serviceRows] = await pool.query(
+            'SELECT bs_service_id FROM booking_service WHERE bs_booking_id = ? AND bs_service_id = ?',
+            [bookingId, serviceId]
+        );
+        if (serviceRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Service not found in this booking' });
+        }
+        
+        // Check if user has already rated this service for this booking
+        const [existingRating] = await pool.query(
+            'SELECT idreview FROM service_review WHERE sr_booking_id = ? AND sr_service_id = ? AND sr_user_id = ?',
+            [bookingId, serviceId, userId]
+        );
+        
+        if (existingRating.length > 0) {
+            // Update existing rating
+            await pool.query(
+                'UPDATE service_review SET sr_rating = ?, sr_comment = ?, sr_updated_at = NOW() WHERE idreview = ?',
+                [rating, comment || null, existingRating[0].idreview]
+            );
+        } else {
+            // Create new rating
+            await pool.query(
+                'INSERT INTO service_review (sr_service_id, sr_booking_id, sr_user_id, sr_rating, sr_comment) VALUES (?, ?, ?, ?, ?)',
+                [serviceId, bookingId, userId, rating, comment || null]
+            );
+        }
+        
+        // Update service average rating and review count
+        const [ratingStats] = await pool.query(`
+            SELECT AVG(sr_rating) as avg_rating, COUNT(*) as review_count
+            FROM service_review
+            WHERE sr_service_id = ?
+        `, [serviceId]);
+        
+        if (ratingStats.length > 0) {
+            const avgRating = parseFloat(ratingStats[0].avg_rating) || 0;
+            const reviewCount = parseInt(ratingStats[0].review_count) || 0;
+            
+            await pool.query(
+                'UPDATE service SET s_rating = ?, s_review_count = ? WHERE idservice = ?',
+                [avgRating, reviewCount, serviceId]
+            );
+        }
+        
+        return res.json({ ok: true, message: 'Rating submitted successfully' });
+    } catch (err) {
+        console.error('Submit rating failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get rating for a service in a booking
+app.get('/api/bookings/:bookingId/services/:serviceId/rating', async (req, res) => {
+    const bookingId = Number(req.params.bookingId);
+    const serviceId = Number(req.params.serviceId);
+    const userEmail = req.query.email;
+    
+    if (!Number.isFinite(bookingId) || !Number.isFinite(serviceId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking or service ID' });
+    }
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'User email is required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.json({ ok: true, rating: null });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Get rating
+        const [ratingRows] = await pool.query(
+            'SELECT sr_rating, sr_comment, sr_created_at, sr_updated_at FROM service_review WHERE sr_booking_id = ? AND sr_service_id = ? AND sr_user_id = ?',
+            [bookingId, serviceId, userId]
+        );
+        
+        if (ratingRows.length === 0) {
+            return res.json({ ok: true, rating: null });
+        }
+        
+        return res.json({ ok: true, rating: {
+            rating: ratingRows[0].sr_rating,
+            comment: ratingRows[0].sr_comment,
+            createdAt: ratingRows[0].sr_created_at,
+            updatedAt: ratingRows[0].sr_updated_at
+        }});
+    } catch (err) {
+        console.error('Get rating failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
 // Update booking status
 app.post('/api/bookings/:id/status', async (req, res) => {
     const id = Number(req.params.id);
@@ -2901,6 +4360,62 @@ app.post('/api/bookings/:id/status', async (req, res) => {
         }
         
         await pool.query('UPDATE booking SET b_status = ? WHERE idbooking = ?', [status, id]);
+        
+        // Get booking details and send push notifications
+        const [bookingDetails] = await pool.query(`
+            SELECT b.b_event_name, b.b_client_id, b.b_event_date,
+                   CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
+                   u.u_email as client_email,
+                   s.s_provider_id,
+                   CONCAT(p.u_fname, ' ', p.u_lname) as provider_name,
+                   p.u_email as provider_email
+            FROM booking b
+            INNER JOIN user u ON b.b_client_id = u.iduser
+            INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
+            INNER JOIN service s ON bs.bs_service_id = s.idservice
+            INNER JOIN user p ON s.s_provider_id = p.iduser
+            WHERE b.idbooking = ?
+            LIMIT 1
+        `, [id]);
+        
+        if (bookingDetails.length > 0) {
+            const booking = bookingDetails[0];
+            const statusMessages = {
+                'confirmed': 'Your booking has been confirmed!',
+                'completed': 'Your booking has been completed.',
+                'cancelled': 'Your booking has been cancelled.',
+                'pending': 'Your booking is pending confirmation.'
+            };
+            
+            // Send notification to client
+            if (booking.client_email) {
+                sendPushNotification(
+                    booking.client_email,
+                    `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+                    statusMessages[status] || `Your booking status has been updated to ${status}`,
+                    {
+                        type: 'booking',
+                        bookingId: id.toString(),
+                        status: status,
+                    }
+                ).catch(err => console.error('Failed to send push notification to client:', err));
+            }
+            
+            // Send notification to provider (if status changed by client)
+            if (booking.provider_email && booking.provider_email !== booking.client_email) {
+                sendPushNotification(
+                    booking.provider_email,
+                    `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+                    `${booking.client_name}'s booking has been ${status}`,
+                    {
+                        type: 'booking',
+                        bookingId: id.toString(),
+                        status: status,
+                    }
+                ).catch(err => console.error('Failed to send push notification to provider:', err));
+            }
+        }
+        
         return res.json({ ok: true });
     } catch (err) {
         console.error('Update booking status failed:', err.code, err.message);
@@ -3381,6 +4896,39 @@ app.get('/api/dashboard/stats', async (req, res) => {
             WHERE b_status = 'completed'
         `);
         
+        // Get monthly bookings for last 12 months
+        const [monthlyBookings] = await pool.query(`
+            SELECT 
+                MONTH(b_created_at) as month,
+                YEAR(b_created_at) as year,
+                COUNT(*) as bookings
+            FROM booking
+            WHERE b_created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
+            GROUP BY YEAR(b_created_at), MONTH(b_created_at)
+            ORDER BY year, month
+        `);
+        
+        // Create array for 12 months with booking data
+        const monthlyBookingsData = [];
+        const monthLabels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+        const bookingsMap = {};
+        monthlyBookings.forEach(row => {
+            const key = `${row.year}-${row.month}`;
+            bookingsMap[key] = parseInt(row.bookings) || 0;
+        });
+        
+        for (let i = 11; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const key = `${year}-${month}`;
+            monthlyBookingsData.push({
+                month: monthLabels[date.getMonth()],
+                bookings: bookingsMap[key] || 0
+            });
+        }
+        
         return res.json({
             ok: true,
             stats: {
@@ -3391,7 +4939,8 @@ app.get('/api/dashboard/stats', async (req, res) => {
                 totalBookings: bookingStats[0].total_bookings || 0,
                 pendingBookings: bookingStats[0].pending_bookings || 0,
                 totalRevenue: parseFloat(revenueStats[0].total_revenue) || 0,
-                monthlyRevenue: parseFloat(revenueStats[0].monthly_revenue) || 0
+                monthlyRevenue: parseFloat(revenueStats[0].monthly_revenue) || 0,
+                monthlyBookings: monthlyBookingsData
             }
         });
     } catch (err) {
@@ -3892,11 +5441,1421 @@ app.get('/api/provider/paymongo-credentials', async (req, res) => {
     }
 });
 
+// ============================================
+// HIRING API ENDPOINTS
+// ============================================
+
+// Create hiring request
+app.post('/api/hiring/requests', async (req, res) => {
+    try {
+        const pool = getPool();
+        const {
+            clientId,
+            serviceId,
+            eventId,
+            title,
+            description,
+            budget,
+            timeline,
+            location,
+            requirements,
+            skillsRequired,
+            experienceLevel,
+            contractType,
+            status = 'draft'
+        } = req.body;
+
+        if (!clientId || !title || !description || !budget || !timeline || !location) {
+            return res.status(400).json({ ok: false, error: 'Missing required fields' });
+        }
+
+        // Get client user ID from email if needed
+        let userId = parseInt(clientId);
+        if (isNaN(userId)) {
+            const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [clientId]);
+            if (userRows.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Client not found' });
+            }
+            userId = userRows[0].iduser;
+        }
+
+        // Insert hiring request
+        const [result] = await pool.query(`
+            INSERT INTO hiring_request (
+                hr_client_id, hr_service_id, hr_event_id, hr_title, hr_description,
+                hr_budget_min, hr_budget_max, hr_currency,
+                hr_start_date, hr_end_date, hr_is_flexible,
+                hr_city, hr_state, hr_address, hr_location_type,
+                hr_status, hr_experience_level, hr_contract_type
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            userId,
+            serviceId ? parseInt(serviceId) : null,
+            eventId ? parseInt(eventId) : null,
+            title,
+            description,
+            budget.min || 0,
+            budget.max || 0,
+            budget.currency || 'PHP',
+            timeline.startDate,
+            timeline.endDate,
+            timeline.isFlexible ? 1 : 0,
+            location.city || '',
+            location.state || '',
+            location.address || null,
+            location.type || 'on-site',
+            status,
+            experienceLevel || 'any',
+            contractType || 'fixed_price'
+        ]);
+
+        const hiringRequestId = result.insertId;
+
+        // Insert requirements
+        if (requirements && Array.isArray(requirements) && requirements.length > 0) {
+            const requirementValues = requirements.map((req, index) => [
+                hiringRequestId,
+                req,
+                index
+            ]);
+            await pool.query(`
+                INSERT INTO hiring_requirement (hrq_hiring_request_id, hrq_requirement, hrq_order)
+                VALUES ?
+            `, [requirementValues]);
+        }
+
+        // Insert skills
+        if (skillsRequired && Array.isArray(skillsRequired) && skillsRequired.length > 0) {
+            const skillValues = skillsRequired.map(skill => [
+                hiringRequestId,
+                skill
+            ]);
+            await pool.query(`
+                INSERT INTO hiring_skill (hs_hiring_request_id, hs_skill)
+                VALUES ?
+            `, [skillValues]);
+        }
+
+        return res.json({
+            ok: true,
+            hiringRequestId: hiringRequestId
+        });
+    } catch (err) {
+        console.error('Create hiring request failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get hiring requests
+app.get('/api/hiring/requests', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { clientId, providerId, status, serviceId, maxBudget, location, hiringRequestId } = req.query;
+
+        let query = `
+            SELECT hr.*,
+                GROUP_CONCAT(DISTINCT hrq.hrq_requirement ORDER BY hrq.hrq_order SEPARATOR '|||') as requirements,
+                GROUP_CONCAT(DISTINCT hs.hs_skill SEPARATOR '|||') as skills
+            FROM hiring_request hr
+            LEFT JOIN hiring_requirement hrq ON hr.idhiring_request = hrq.hrq_hiring_request_id
+            LEFT JOIN hiring_skill hs ON hr.idhiring_request = hs.hs_hiring_request_id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (hiringRequestId) {
+            query += ' AND hr.idhiring_request = ?';
+            params.push(parseInt(hiringRequestId));
+        } else if (clientId) {
+            let userId = parseInt(clientId);
+            if (isNaN(userId)) {
+                const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [clientId]);
+                if (userRows.length > 0) {
+                    userId = userRows[0].iduser;
+                }
+            }
+            query += ' AND hr.hr_client_id = ?';
+            params.push(userId);
+        }
+
+        if (status) {
+            query += ' AND hr.hr_status = ?';
+            params.push(status);
+        }
+
+        if (serviceId) {
+            query += ' AND hr.hr_service_id = ?';
+            params.push(parseInt(serviceId));
+        }
+
+        if (maxBudget) {
+            query += ' AND hr.hr_budget_max <= ?';
+            params.push(parseFloat(maxBudget));
+        }
+
+        if (location) {
+            query += ' AND (hr.hr_city LIKE ? OR hr.hr_state LIKE ?)';
+            const locationParam = `%${location}%`;
+            params.push(locationParam, locationParam);
+        }
+
+        query += ' GROUP BY hr.idhiring_request ORDER BY hr.hr_created_at DESC';
+
+        const [rows] = await pool.query(query, params);
+
+        const hiringRequests = rows.map(row => ({
+            idhiring_request: row.idhiring_request,
+            hr_client_id: row.hr_client_id,
+            hr_provider_id: row.hr_provider_id,
+            hr_service_id: row.hr_service_id,
+            hr_event_id: row.hr_event_id,
+            hr_title: row.hr_title,
+            hr_description: row.hr_description,
+            hr_budget_min: row.hr_budget_min,
+            hr_budget_max: row.hr_budget_max,
+            hr_currency: row.hr_currency,
+            hr_start_date: row.hr_start_date,
+            hr_end_date: row.hr_end_date,
+            hr_is_flexible: row.hr_is_flexible,
+            hr_city: row.hr_city,
+            hr_state: row.hr_state,
+            hr_address: row.hr_address,
+            hr_location_type: row.hr_location_type,
+            hr_status: row.hr_status,
+            hr_experience_level: row.hr_experience_level,
+            hr_contract_type: row.hr_contract_type,
+            hr_selected_proposal_id: row.hr_selected_proposal_id,
+            hr_created_at: row.hr_created_at,
+            hr_updated_at: row.hr_updated_at,
+            requirements: row.requirements ? row.requirements.split('|||') : [],
+            skills: row.skills ? row.skills.split('|||') : []
+        }));
+
+        return res.json({
+            ok: true,
+            hiringRequests: hiringRequests
+        });
+    } catch (err) {
+        console.error('Get hiring requests failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get single hiring request
+app.get('/api/hiring/requests/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const id = parseInt(req.params.id);
+
+        const [rows] = await pool.query(`
+            SELECT hr.*,
+                GROUP_CONCAT(DISTINCT hrq.hrq_requirement ORDER BY hrq.hrq_order SEPARATOR '|||') as requirements,
+                GROUP_CONCAT(DISTINCT hs.hs_skill SEPARATOR '|||') as skills
+            FROM hiring_request hr
+            LEFT JOIN hiring_requirement hrq ON hr.idhiring_request = hrq.hrq_hiring_request_id
+            LEFT JOIN hiring_skill hs ON hr.idhiring_request = hs.hs_hiring_request_id
+            WHERE hr.idhiring_request = ?
+            GROUP BY hr.idhiring_request
+        `, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Hiring request not found' });
+        }
+
+        const row = rows[0];
+        const hiringRequest = {
+            idhiring_request: row.idhiring_request,
+            hr_client_id: row.hr_client_id,
+            hr_provider_id: row.hr_provider_id,
+            hr_service_id: row.hr_service_id,
+            hr_event_id: row.hr_event_id,
+            hr_title: row.hr_title,
+            hr_description: row.hr_description,
+            hr_budget_min: row.hr_budget_min,
+            hr_budget_max: row.hr_budget_max,
+            hr_currency: row.hr_currency,
+            hr_start_date: row.hr_start_date,
+            hr_end_date: row.hr_end_date,
+            hr_is_flexible: row.hr_is_flexible,
+            hr_city: row.hr_city,
+            hr_state: row.hr_state,
+            hr_address: row.hr_address,
+            hr_location_type: row.hr_location_type,
+            hr_status: row.hr_status,
+            hr_experience_level: row.hr_experience_level,
+            hr_contract_type: row.hr_contract_type,
+            hr_selected_proposal_id: row.hr_selected_proposal_id,
+            hr_created_at: row.hr_created_at,
+            hr_updated_at: row.hr_updated_at,
+            requirements: row.requirements ? row.requirements.split('|||') : [],
+            skills: row.skills ? row.skills.split('|||') : []
+        };
+
+        return res.json({
+            ok: true,
+            hiringRequest: hiringRequest
+        });
+    } catch (err) {
+        console.error('Get hiring request failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Update hiring request
+app.put('/api/hiring/requests/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const id = parseInt(req.params.id);
+        const updates = req.body;
+
+        const updateFields = [];
+        const updateValues = [];
+
+        if (updates.title !== undefined) {
+            updateFields.push('hr_title = ?');
+            updateValues.push(updates.title);
+        }
+        if (updates.description !== undefined) {
+            updateFields.push('hr_description = ?');
+            updateValues.push(updates.description);
+        }
+        if (updates.status !== undefined) {
+            updateFields.push('hr_status = ?');
+            updateValues.push(updates.status);
+        }
+        if (updates.budget) {
+            if (updates.budget.min !== undefined) {
+                updateFields.push('hr_budget_min = ?');
+                updateValues.push(updates.budget.min);
+            }
+            if (updates.budget.max !== undefined) {
+                updateFields.push('hr_budget_max = ?');
+                updateValues.push(updates.budget.max);
+            }
+            if (updates.budget.currency !== undefined) {
+                updateFields.push('hr_currency = ?');
+                updateValues.push(updates.budget.currency);
+            }
+        }
+        if (updates.timeline) {
+            if (updates.timeline.startDate) {
+                updateFields.push('hr_start_date = ?');
+                updateValues.push(updates.timeline.startDate);
+            }
+            if (updates.timeline.endDate) {
+                updateFields.push('hr_end_date = ?');
+                updateValues.push(updates.timeline.endDate);
+            }
+            if (updates.timeline.isFlexible !== undefined) {
+                updateFields.push('hr_is_flexible = ?');
+                updateValues.push(updates.timeline.isFlexible ? 1 : 0);
+            }
+        }
+        if (updates.location) {
+            if (updates.location.city !== undefined) {
+                updateFields.push('hr_city = ?');
+                updateValues.push(updates.location.city);
+            }
+            if (updates.location.state !== undefined) {
+                updateFields.push('hr_state = ?');
+                updateValues.push(updates.location.state);
+            }
+            if (updates.location.address !== undefined) {
+                updateFields.push('hr_address = ?');
+                updateValues.push(updates.location.address);
+            }
+            if (updates.location.type !== undefined) {
+                updateFields.push('hr_location_type = ?');
+                updateValues.push(updates.location.type);
+            }
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No fields to update' });
+        }
+
+        updateValues.push(id);
+        await pool.query(
+            `UPDATE hiring_request SET ${updateFields.join(', ')} WHERE idhiring_request = ?`,
+            updateValues
+        );
+
+        // Update requirements if provided
+        if (updates.requirements && Array.isArray(updates.requirements)) {
+            await pool.query('DELETE FROM hiring_requirement WHERE hrq_hiring_request_id = ?', [id]);
+            if (updates.requirements.length > 0) {
+                const requirementValues = updates.requirements.map((req, index) => [id, req, index]);
+                await pool.query(`
+                    INSERT INTO hiring_requirement (hrq_hiring_request_id, hrq_requirement, hrq_order)
+                    VALUES ?
+                `, [requirementValues]);
+            }
+        }
+
+        // Update skills if provided
+        if (updates.skillsRequired && Array.isArray(updates.skillsRequired)) {
+            await pool.query('DELETE FROM hiring_skill WHERE hs_hiring_request_id = ?', [id]);
+            if (updates.skillsRequired.length > 0) {
+                const skillValues = updates.skillsRequired.map(skill => [id, skill]);
+                await pool.query(`
+                    INSERT INTO hiring_skill (hs_hiring_request_id, hs_skill)
+                    VALUES ?
+                `, [skillValues]);
+            }
+        }
+
+        return res.json({ ok: true, message: 'Hiring request updated successfully' });
+    } catch (err) {
+        console.error('Update hiring request failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Create proposal
+app.post('/api/hiring/proposals', async (req, res) => {
+    try {
+        const pool = getPool();
+        const {
+            providerId,
+            hiringRequestId,
+            title,
+            description,
+            proposedBudget,
+            timeline,
+            deliverables,
+            terms,
+            status = 'submitted'
+        } = req.body;
+
+        if (!providerId || !hiringRequestId || !title || !description || !proposedBudget || !timeline || !deliverables) {
+            return res.status(400).json({ ok: false, error: 'Missing required fields' });
+        }
+
+        // Get provider user ID from email if needed
+        let userId = parseInt(providerId);
+        if (isNaN(userId)) {
+            const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [providerId]);
+            if (userRows.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Provider not found' });
+            }
+            userId = userRows[0].iduser;
+        }
+
+        // Insert proposal
+        const [result] = await pool.query(`
+            INSERT INTO proposal (
+                p_provider_id, p_hiring_request_id, p_title, p_description,
+                p_proposed_budget, p_start_date, p_end_date, p_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            userId,
+            parseInt(hiringRequestId),
+            title,
+            description,
+            proposedBudget,
+            timeline.startDate,
+            timeline.endDate,
+            status
+        ]);
+
+        const proposalId = result.insertId;
+
+        // Insert deliverables
+        if (deliverables && Array.isArray(deliverables) && deliverables.length > 0) {
+            const deliverableValues = deliverables.map((del, index) => [
+                proposalId,
+                del,
+                index
+            ]);
+            await pool.query(`
+                INSERT INTO proposal_deliverable (pd_proposal_id, pd_deliverable, pd_order)
+                VALUES ?
+            `, [deliverableValues]);
+        }
+
+        return res.json({
+            ok: true,
+            proposalId: proposalId
+        });
+    } catch (err) {
+        console.error('Create proposal failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get proposals
+app.get('/api/hiring/proposals', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { providerId, hiringRequestId, proposalId } = req.query;
+
+        let query = `
+            SELECT p.*,
+                GROUP_CONCAT(DISTINCT pd.pd_deliverable ORDER BY pd.pd_order SEPARATOR '|||') as deliverables
+            FROM proposal p
+            LEFT JOIN proposal_deliverable pd ON p.idproposal = pd.pd_proposal_id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (proposalId) {
+            query += ' AND p.idproposal = ?';
+            params.push(parseInt(proposalId));
+        } else if (providerId) {
+            let userId = parseInt(providerId);
+            if (isNaN(userId)) {
+                const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [providerId]);
+                if (userRows.length > 0) {
+                    userId = userRows[0].iduser;
+                }
+            }
+            query += ' AND p.p_provider_id = ?';
+            params.push(userId);
+        } else if (hiringRequestId) {
+            query += ' AND p.p_hiring_request_id = ?';
+            params.push(parseInt(hiringRequestId));
+        }
+
+        query += ' GROUP BY p.idproposal ORDER BY p.p_submitted_at DESC';
+
+        const [rows] = await pool.query(query, params);
+
+        const proposals = rows.map(row => ({
+            idproposal: row.idproposal,
+            p_provider_id: row.p_provider_id,
+            p_hiring_request_id: row.p_hiring_request_id,
+            p_title: row.p_title,
+            p_description: row.p_description,
+            p_proposed_budget: row.p_proposed_budget,
+            p_start_date: row.p_start_date,
+            p_end_date: row.p_end_date,
+            p_status: row.p_status,
+            p_client_feedback: row.p_client_feedback,
+            p_submitted_at: row.p_submitted_at,
+            p_updated_at: row.p_updated_at,
+            deliverables: row.deliverables ? row.deliverables.split('|||') : []
+        }));
+
+        return res.json({
+            ok: true,
+            proposals: proposals
+        });
+    } catch (err) {
+        console.error('Get proposals failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Accept proposal
+app.post('/api/hiring/proposals/:id/accept', async (req, res) => {
+    try {
+        const pool = getPool();
+        const proposalId = parseInt(req.params.id);
+        const { hiringRequestId } = req.body;
+
+        if (!hiringRequestId) {
+            return res.status(400).json({ ok: false, error: 'Hiring request ID is required' });
+        }
+
+        // Start transaction
+        await pool.query('START TRANSACTION');
+
+        try {
+            // Update proposal status
+            await pool.query(
+                'UPDATE proposal SET p_status = ? WHERE idproposal = ?',
+                ['accepted', proposalId]
+            );
+
+            // Update hiring request
+            await pool.query(
+                'UPDATE hiring_request SET hr_status = ?, hr_selected_proposal_id = ? WHERE idhiring_request = ?',
+                ['closed', proposalId, parseInt(hiringRequestId)]
+            );
+
+            // Reject other proposals for this hiring request
+            await pool.query(
+                'UPDATE proposal SET p_status = ? WHERE p_hiring_request_id = ? AND idproposal != ?',
+                ['rejected', parseInt(hiringRequestId), proposalId]
+            );
+
+            await pool.query('COMMIT');
+
+            return res.json({ ok: true, message: 'Proposal accepted successfully' });
+        } catch (err) {
+            await pool.query('ROLLBACK');
+            throw err;
+        }
+    } catch (err) {
+        console.error('Accept proposal failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Reject proposal
+app.post('/api/hiring/proposals/:id/reject', async (req, res) => {
+    try {
+        const pool = getPool();
+        const proposalId = parseInt(req.params.id);
+        const { reason } = req.body;
+
+        await pool.query(
+            'UPDATE proposal SET p_status = ?, p_client_feedback = ? WHERE idproposal = ?',
+            ['rejected', reason || 'Proposal rejected', proposalId]
+        );
+
+        return res.json({ ok: true, message: 'Proposal rejected successfully' });
+    } catch (err) {
+        console.error('Reject proposal failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// ============================================
+// PROVIDER JOB POSTINGS API
+// ============================================
+
+// Create provider job posting table if it doesn't exist
+app.get('/api/provider/job-postings/init-table', async (req, res) => {
+    try {
+        const pool = getPool();
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`provider_job_posting\` (
+                \`idjob_posting\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`jp_provider_email\` VARCHAR(255) NOT NULL,
+                \`jp_job_title\` VARCHAR(200) NOT NULL,
+                \`jp_description\` TEXT NOT NULL,
+                \`jp_deadline_date\` DATE NOT NULL,
+                \`jp_status\` ENUM('active', 'closed', 'expired') NOT NULL DEFAULT 'active',
+                \`jp_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`jp_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_posting\`),
+                INDEX \`idx_provider\` (\`jp_provider_email\`),
+                INDEX \`idx_status\` (\`jp_status\`),
+                INDEX \`idx_deadline\` (\`jp_deadline_date\`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        return res.json({ ok: true, message: 'Table created successfully' });
+    } catch (err) {
+        console.error('Init table failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get all job postings for a provider
+app.get('/api/provider/job-postings', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { providerEmail } = req.query;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        // Initialize table if needed
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`provider_job_posting\` (
+                \`idjob_posting\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`jp_provider_email\` VARCHAR(255) NOT NULL,
+                \`jp_job_title\` VARCHAR(200) NOT NULL,
+                \`jp_description\` TEXT NOT NULL,
+                \`jp_deadline_date\` DATE NOT NULL,
+                \`jp_status\` ENUM('active', 'closed', 'expired') NOT NULL DEFAULT 'active',
+                \`jp_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`jp_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_posting\`),
+                INDEX \`idx_provider\` (\`jp_provider_email\`),
+                INDEX \`idx_status\` (\`jp_status\`),
+                INDEX \`idx_deadline\` (\`jp_deadline_date\`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // Update expired postings
+        await pool.query(
+            `UPDATE provider_job_posting 
+             SET jp_status = 'expired' 
+             WHERE jp_provider_email = ? 
+             AND jp_deadline_date < CURDATE() 
+             AND jp_status = 'active'`,
+            [providerEmail]
+        );
+
+        const [rows] = await pool.query(
+            `SELECT 
+                idjob_posting as id,
+                jp_job_title as jobTitle,
+                jp_description as description,
+                jp_deadline_date as deadlineDate,
+                jp_status as status,
+                jp_created_at as createdAt,
+                jp_updated_at as updatedAt
+             FROM provider_job_posting 
+             WHERE jp_provider_email = ? 
+             ORDER BY jp_created_at DESC`,
+            [providerEmail]
+        );
+
+        return res.json({ ok: true, jobPostings: rows });
+    } catch (err) {
+        console.error('Get job postings failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Create a new job posting
+app.post('/api/provider/job-postings', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { providerEmail, jobTitle, description, deadlineDate } = req.body;
+
+        if (!providerEmail || !jobTitle || !description || !deadlineDate) {
+            return res.status(400).json({ ok: false, error: 'All fields are required' });
+        }
+
+        // Validate deadline date is in the future
+        const deadline = new Date(deadlineDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (deadline < today) {
+            return res.status(400).json({ ok: false, error: 'Deadline date must be in the future' });
+        }
+
+        // Initialize table if needed
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`provider_job_posting\` (
+                \`idjob_posting\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`jp_provider_email\` VARCHAR(255) NOT NULL,
+                \`jp_job_title\` VARCHAR(200) NOT NULL,
+                \`jp_description\` TEXT NOT NULL,
+                \`jp_deadline_date\` DATE NOT NULL,
+                \`jp_status\` ENUM('active', 'closed', 'expired') NOT NULL DEFAULT 'active',
+                \`jp_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`jp_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_posting\`),
+                INDEX \`idx_provider\` (\`jp_provider_email\`),
+                INDEX \`idx_status\` (\`jp_status\`),
+                INDEX \`idx_deadline\` (\`jp_deadline_date\`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        const [result] = await pool.query(
+            `INSERT INTO provider_job_posting 
+             (jp_provider_email, jp_job_title, jp_description, jp_deadline_date, jp_status) 
+             VALUES (?, ?, ?, ?, 'active')`,
+            [providerEmail, jobTitle, description, deadlineDate]
+        );
+
+        return res.json({ 
+            ok: true, 
+            message: 'Job posting created successfully',
+            jobPostingId: result.insertId 
+        });
+    } catch (err) {
+        console.error('Create job posting failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Update a job posting
+app.put('/api/provider/job-postings/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const jobPostingId = parseInt(req.params.id);
+        const { providerEmail, jobTitle, description, deadlineDate, status } = req.body;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        // Build update query dynamically
+        const updates = [];
+        const values = [];
+
+        if (jobTitle) {
+            updates.push('jp_job_title = ?');
+            values.push(jobTitle);
+        }
+        if (description) {
+            updates.push('jp_description = ?');
+            values.push(description);
+        }
+        if (deadlineDate) {
+            // Validate deadline date is in the future
+            const deadline = new Date(deadlineDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (deadline < today) {
+                return res.status(400).json({ ok: false, error: 'Deadline date must be in the future' });
+            }
+            updates.push('jp_deadline_date = ?');
+            values.push(deadlineDate);
+        }
+        if (status) {
+            updates.push('jp_status = ?');
+            values.push(status);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No fields to update' });
+        }
+
+        values.push(jobPostingId, providerEmail);
+
+        await pool.query(
+            `UPDATE provider_job_posting 
+             SET ${updates.join(', ')} 
+             WHERE idjob_posting = ? AND jp_provider_email = ?`,
+            values
+        );
+
+        return res.json({ ok: true, message: 'Job posting updated successfully' });
+    } catch (err) {
+        console.error('Update job posting failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Delete a job posting
+app.delete('/api/provider/job-postings/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const jobPostingId = parseInt(req.params.id);
+        const { providerEmail } = req.query;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        await pool.query(
+            `DELETE FROM provider_job_posting 
+             WHERE idjob_posting = ? AND jp_provider_email = ?`,
+            [jobPostingId, providerEmail]
+        );
+
+        return res.json({ ok: true, message: 'Job posting deleted successfully' });
+    } catch (err) {
+        console.error('Delete job posting failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get all active job postings for users to view
+app.get('/api/job-postings', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { status = 'active', search } = req.query;
+
+        // Initialize table if needed
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`provider_job_posting\` (
+                \`idjob_posting\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`jp_provider_email\` VARCHAR(255) NOT NULL,
+                \`jp_job_title\` VARCHAR(200) NOT NULL,
+                \`jp_description\` TEXT NOT NULL,
+                \`jp_deadline_date\` DATE NOT NULL,
+                \`jp_status\` ENUM('active', 'closed', 'expired') NOT NULL DEFAULT 'active',
+                \`jp_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`jp_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_posting\`),
+                INDEX \`idx_provider\` (\`jp_provider_email\`),
+                INDEX \`idx_status\` (\`jp_status\`),
+                INDEX \`idx_deadline\` (\`jp_deadline_date\`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // Update expired postings
+        await pool.query(
+            `UPDATE provider_job_posting 
+             SET jp_status = 'expired' 
+             WHERE jp_deadline_date < CURDATE() 
+             AND jp_status = 'active'`
+        );
+
+        let query = `
+            SELECT 
+                jp.idjob_posting as id,
+                jp.jp_job_title as jobTitle,
+                jp.jp_description as description,
+                jp.jp_deadline_date as deadlineDate,
+                jp.jp_status as status,
+                jp.jp_created_at as createdAt,
+                jp.jp_updated_at as updatedAt,
+                u.u_fname as providerFirstName,
+                u.u_lname as providerLastName,
+                u.u_email as providerEmail
+            FROM provider_job_posting jp
+            LEFT JOIN user u ON jp.jp_provider_email COLLATE utf8mb4_unicode_ci = u.u_email COLLATE utf8mb4_unicode_ci
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        if (status && status !== 'all') {
+            query += ` AND jp.jp_status = ?`;
+            params.push(status);
+        } else {
+            // For 'all', show active and closed, but not expired
+            query += ` AND jp.jp_status IN ('active', 'closed')`;
+        }
+
+        if (search) {
+            query += ` AND (jp.jp_job_title LIKE ? OR jp.jp_description LIKE ?)`;
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm);
+        }
+
+        query += ` ORDER BY jp.jp_created_at DESC`;
+
+        const [rows] = await pool.query(query, params);
+
+        return res.json({ ok: true, jobPostings: rows });
+    } catch (err) {
+        console.error('Get job postings failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// ============================================
+// JOB APPLICATIONS API
+// ============================================
+
+// Create job application table if it doesn't exist
+app.get('/api/job-applications/init-table', async (req, res) => {
+    try {
+        const pool = getPool();
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`job_application\` (
+                \`idjob_application\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`ja_job_posting_id\` INT(11) NOT NULL,
+                \`ja_user_email\` VARCHAR(255) NOT NULL,
+                \`ja_resume_file\` LONGBLOB NOT NULL,
+                \`ja_resume_file_name\` VARCHAR(255) NOT NULL,
+                \`ja_status\` ENUM('pending', 'reviewed', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+                \`ja_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`ja_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_application\`),
+                INDEX \`idx_job_posting\` (\`ja_job_posting_id\`),
+                INDEX \`idx_user\` (\`ja_user_email\`),
+                INDEX \`idx_status\` (\`ja_status\`),
+                FOREIGN KEY (\`ja_job_posting_id\`) REFERENCES \`provider_job_posting\`(\`idjob_posting\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        return res.json({ ok: true, message: 'Table created successfully' });
+    } catch (err) {
+        console.error('Init table failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Submit job application
+app.post('/api/job-applications', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { jobPostingId, userEmail, resumeFile, resumeFileName } = req.body;
+
+        if (!jobPostingId || !userEmail || !resumeFile || !resumeFileName) {
+            return res.status(400).json({ ok: false, error: 'All fields are required' });
+        }
+
+        // Validate file is PDF
+        if (!resumeFileName.toLowerCase().endsWith('.pdf')) {
+            return res.status(400).json({ ok: false, error: 'Resume must be a PDF file' });
+        }
+
+        // Initialize table if needed
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`job_application\` (
+                \`idjob_application\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`ja_job_posting_id\` INT(11) NOT NULL,
+                \`ja_user_email\` VARCHAR(255) NOT NULL,
+                \`ja_resume_file\` LONGBLOB NOT NULL,
+                \`ja_resume_file_name\` VARCHAR(255) NOT NULL,
+                \`ja_status\` ENUM('pending', 'reviewed', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+                \`ja_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`ja_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idjob_application\`),
+                INDEX \`idx_job_posting\` (\`ja_job_posting_id\`),
+                INDEX \`idx_user\` (\`ja_user_email\`),
+                INDEX \`idx_status\` (\`ja_status\`),
+                FOREIGN KEY (\`ja_job_posting_id\`) REFERENCES \`provider_job_posting\`(\`idjob_posting\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // Check if user already applied to this job posting
+        const [existing] = await pool.query(
+            `SELECT idjob_application FROM job_application 
+             WHERE ja_job_posting_id = ? AND ja_user_email = ?`,
+            [jobPostingId, userEmail]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({ ok: false, error: 'You have already applied to this job posting' });
+        }
+
+        // Convert base64 to buffer
+        const resumeBuffer = Buffer.from(resumeFile, 'base64');
+
+        // Insert application
+        await pool.query(
+            `INSERT INTO job_application 
+             (ja_job_posting_id, ja_user_email, ja_resume_file, ja_resume_file_name, ja_status) 
+             VALUES (?, ?, ?, ?, 'pending')`,
+            [jobPostingId, userEmail, resumeBuffer, resumeFileName]
+        );
+
+        return res.json({ ok: true, message: 'Application submitted successfully' });
+    } catch (err) {
+        console.error('Submit job application failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get job applications for a provider's job postings
+app.get('/api/provider/job-applications', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { providerEmail, jobPostingId } = req.query;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        // Add interview and rejection columns if they don't exist
+        try {
+            // Check if columns exist
+            const [columns] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'job_application' 
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_rejection_note')
+            `);
+            
+            const existingColumns = columns.map((col) => col.COLUMN_NAME);
+            
+            if (!existingColumns.includes('ja_interview_date')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_date DATE NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_time')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_rejection_note')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_rejection_note TEXT NULL`);
+            }
+        } catch (alterErr) {
+            // Columns might already exist, ignore error
+            console.log('Note: Interview/rejection columns check failed:', alterErr.message);
+        }
+
+        let query = `
+            SELECT 
+                ja.idjob_application as id,
+                ja.ja_job_posting_id as jobPostingId,
+                ja.ja_user_email as userEmail,
+                ja.ja_resume_file_name as resumeFileName,
+                ja.ja_status as status,
+                ja.ja_interview_date as interviewDate,
+                ja.ja_interview_time as interviewTime,
+                ja.ja_rejection_note as rejectionNote,
+                ja.ja_created_at as appliedAt,
+                jp.jp_job_title as jobTitle,
+                u.u_fname as applicantFirstName,
+                u.u_lname as applicantLastName,
+                u.u_email as applicantEmail
+            FROM job_application ja
+            INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+            LEFT JOIN user u ON ja.ja_user_email = u.u_email COLLATE utf8mb4_unicode_ci
+            WHERE jp.jp_provider_email = ?
+        `;
+
+        const params = [providerEmail];
+
+        if (jobPostingId) {
+            query += ` AND ja.ja_job_posting_id = ?`;
+            params.push(jobPostingId);
+        }
+
+        query += ` ORDER BY ja.ja_created_at DESC`;
+
+        const [rows] = await pool.query(query, params);
+
+        return res.json({ ok: true, applications: rows });
+    } catch (err) {
+        console.error('Get job applications failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Schedule interview for a job application
+app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res) => {
+    try {
+        const pool = getPool();
+        const applicationId = parseInt(req.params.id);
+        const { providerEmail, interviewDate, interviewTime } = req.body;
+
+        if (!providerEmail || !interviewDate || !interviewTime) {
+            return res.status(400).json({ ok: false, error: 'Provider email, interview date, and time are required' });
+        }
+
+        // Validate interview date is in the future
+        const interviewDateTime = new Date(`${interviewDate}T${interviewTime}`);
+        const now = new Date();
+        
+        if (interviewDateTime <= now) {
+            return res.status(400).json({ ok: false, error: 'Interview date and time must be in the future' });
+        }
+
+        // Add interview columns if they don't exist
+        try {
+            // Check if columns exist
+            const [columns] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'job_application' 
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time')
+            `);
+            
+            const existingColumns = columns.map((col) => col.COLUMN_NAME);
+            
+            if (!existingColumns.includes('ja_interview_date')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_date DATE NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_time')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+        } catch (alterErr) {
+            // Columns might already exist, ignore error
+            console.log('Note: Interview columns check failed:', alterErr.message);
+        }
+
+        // Verify the application belongs to a job posting by this provider
+        const [verify] = await pool.query(
+            `SELECT ja.idjob_application 
+             FROM job_application ja
+             INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+             WHERE ja.idjob_application = ? AND jp.jp_provider_email = ?`,
+            [applicationId, providerEmail]
+        );
+
+        if (verify.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Application not found or access denied' });
+        }
+
+        // Update application with interview schedule
+        await pool.query(
+            `UPDATE job_application 
+             SET ja_interview_date = ?, 
+                 ja_interview_time = ?,
+                 ja_status = 'reviewed'
+             WHERE idjob_application = ?`,
+            [interviewDate, interviewTime, applicationId]
+        );
+
+        return res.json({ ok: true, message: 'Interview scheduled successfully' });
+    } catch (err) {
+        console.error('Schedule interview failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Reject a job application with a note
+app.put('/api/provider/job-applications/:id/reject', async (req, res) => {
+    try {
+        const pool = getPool();
+        const applicationId = parseInt(req.params.id);
+        const { providerEmail, rejectionNote } = req.body;
+
+        if (!providerEmail || !rejectionNote || !rejectionNote.trim()) {
+            return res.status(400).json({ ok: false, error: 'Provider email and rejection note are required' });
+        }
+
+        // Add rejection_note column if it doesn't exist
+        try {
+            const [columns] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'job_application' 
+                AND COLUMN_NAME = 'ja_rejection_note'
+            `);
+            
+            if (columns.length === 0) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_rejection_note TEXT NULL`);
+            }
+        } catch (alterErr) {
+            console.log('Note: Rejection note column check failed:', alterErr.message);
+        }
+
+        // Verify the application belongs to a job posting by this provider
+        const [verify] = await pool.query(
+            `SELECT ja.idjob_application 
+             FROM job_application ja
+             INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+             WHERE ja.idjob_application = ? AND jp.jp_provider_email = ?`,
+            [applicationId, providerEmail]
+        );
+
+        if (verify.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Application not found or access denied' });
+        }
+
+        // Update application with rejection status and note
+        await pool.query(
+            `UPDATE job_application 
+             SET ja_status = 'rejected',
+                 ja_rejection_note = ?
+             WHERE idjob_application = ?`,
+            [rejectionNote.trim(), applicationId]
+        );
+
+        return res.json({ ok: true, message: 'Application rejected successfully' });
+    } catch (err) {
+        console.error('Reject application failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get job applications for a user
+app.get('/api/user/job-applications', async (req, res) => {
+    try {
+        const pool = getPool();
+        const { userEmail } = req.query;
+
+        if (!userEmail) {
+            return res.status(400).json({ ok: false, error: 'User email is required' });
+        }
+
+        // Add interview and rejection columns if they don't exist
+        try {
+            const [columns] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'job_application' 
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_rejection_note')
+            `);
+            
+            const existingColumns = columns.map((col) => col.COLUMN_NAME);
+            
+            if (!existingColumns.includes('ja_interview_date')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_date DATE NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_time')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_rejection_note')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_rejection_note TEXT NULL`);
+            }
+        } catch (alterErr) {
+            console.log('Note: Interview/rejection columns check failed:', alterErr.message);
+        }
+
+        const query = `
+            SELECT 
+                ja.idjob_application as id,
+                ja.ja_job_posting_id as jobPostingId,
+                ja.ja_user_email as userEmail,
+                ja.ja_resume_file_name as resumeFileName,
+                ja.ja_status as status,
+                ja.ja_interview_date as interviewDate,
+                ja.ja_interview_time as interviewTime,
+                ja.ja_rejection_note as rejectionNote,
+                ja.ja_created_at as appliedAt,
+                jp.jp_job_title as jobTitle,
+                jp.jp_description as jobDescription,
+                jp.jp_deadline_date as deadlineDate,
+                jp.jp_status as jobStatus,
+                u.u_fname as providerFirstName,
+                u.u_lname as providerLastName,
+                u.u_email as providerEmail
+            FROM job_application ja
+            INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+            LEFT JOIN user u ON jp.jp_provider_email = u.u_email COLLATE utf8mb4_unicode_ci
+            WHERE ja.ja_user_email = ?
+            ORDER BY ja.ja_created_at DESC
+        `;
+
+        const [rows] = await pool.query(query, [userEmail]);
+
+        return res.json({ ok: true, applications: rows });
+    } catch (err) {
+        console.error('Get user job applications failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Download resume for a job application
+app.get('/api/provider/job-applications/:id/resume', async (req, res) => {
+    try {
+        const pool = getPool();
+        const applicationId = parseInt(req.params.id);
+        const { providerEmail } = req.query;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        // Verify the application belongs to a job posting by this provider
+        const [verify] = await pool.query(
+            `SELECT ja.idjob_application, ja.ja_resume_file, ja.ja_resume_file_name
+             FROM job_application ja
+             INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+             WHERE ja.idjob_application = ? AND jp.jp_provider_email = ?`,
+            [applicationId, providerEmail]
+        );
+
+        if (verify.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Application not found or access denied' });
+        }
+
+        const resumeFile = verify[0].ja_resume_file;
+        const resumeFileName = verify[0].ja_resume_file_name;
+
+        // Set headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${resumeFileName}"`);
+        
+        // Send the PDF file
+        res.send(resumeFile);
+    } catch (err) {
+        console.error('Download resume failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// ============================================
+// PUSH NOTIFICATIONS API ENDPOINTS
+// ============================================
+
+// Register push notification token
+app.post('/api/notifications/register-token', async (req, res) => {
+    const { userId, userEmail, pushToken, platform } = req.body || {};
+    
+    if (!userId || !userEmail || !pushToken) {
+        return res.status(400).json({ ok: false, error: 'Missing required fields' });
+    }
+
+    try {
+        const pool = getPool();
+        
+        // Create device_tokens table if it doesn't exist
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`device_tokens\` (
+                \`id\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`user_id\` VARCHAR(255) NOT NULL,
+                \`user_email\` VARCHAR(255) NOT NULL,
+                \`push_token\` TEXT NOT NULL,
+                \`platform\` VARCHAR(50) NOT NULL,
+                \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`id\`),
+                UNIQUE KEY \`unique_user_token\` (\`user_id\`, \`push_token\`(255)),
+                INDEX \`idx_user_email\` (\`user_email\`),
+                INDEX \`idx_user_id\` (\`user_id\`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // Insert or update token
+        await pool.query(`
+            INSERT INTO \`device_tokens\` (user_id, user_email, push_token, platform)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                push_token = VALUES(push_token),
+                platform = VALUES(platform),
+                updated_at = CURRENT_TIMESTAMP
+        `, [userId, userEmail, pushToken, platform || 'unknown']);
+
+        console.log('✅ Push token registered for user:', userEmail);
+        return res.json({ ok: true, message: 'Token registered successfully' });
+    } catch (err) {
+        console.error('❌ Error registering push token:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Send push notification (internal function)
+async function sendPushNotification(userEmail, title, body, data = {}) {
+    try {
+        const pool = getPool();
+        
+        // Get all push tokens for the user
+        const [tokens] = await pool.query(
+            'SELECT push_token FROM `device_tokens` WHERE user_email = ?',
+            [userEmail]
+        );
+
+        if (!tokens || tokens.length === 0) {
+            console.log('⚠️ No push tokens found for user:', userEmail);
+            return { success: false, message: 'No push tokens found' };
+        }
+
+        // Send notification via Expo Push Notification Service
+        const messages = tokens.map((token) => ({
+            to: token.push_token,
+            sound: 'default',
+            title: title,
+            body: body,
+            data: data,
+            badge: 1,
+        }));
+
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messages),
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            console.log('✅ Push notification sent successfully:', result);
+            return { success: true, result };
+        } else {
+            console.error('❌ Failed to send push notification:', result);
+            return { success: false, error: result };
+        }
+    } catch (error) {
+        console.error('❌ Error sending push notification:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Make sendPushNotification available globally for use in other endpoints
+global.sendPushNotification = sendPushNotification;
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+    console.log(`❌ 404 - Route not found: ${req.method} ${req.path}`);
+    res.status(404).json({ 
+        ok: false, 
+        error: `Route not found: ${req.method} ${req.path}`,
+        availableRoutes: [
+            'POST /api/users/apply-provider',
+            'GET /api/health',
+            'POST /api/register',
+            'POST /api/notifications/register-token'
+        ]
+    });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
 	console.log(`✅ API server listening on http://localhost:${PORT}`);
 	console.log(`✅ Server accessible from network on port ${PORT}`);
 	console.log(`✅ For Android emulator: http://10.0.2.2:${PORT}`);
 	console.log(`✅ For physical devices: http://YOUR_IP:${PORT}`);
+	console.log(`✅ Registered route: POST /api/users/apply-provider`);
 });
 
 

@@ -2,7 +2,9 @@
 // Uses mysql2/promise and tests the connection on first import
 
 // Load environment variables
-require('dotenv').config();
+const path = require('path');
+// Load .env from root directory (parent of server)
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const mysql = require('mysql2/promise');
 

@@ -6,12 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isMobile = screenWidth < 768;
 
 interface AnalyticsViewProps {
   user?: User;
@@ -44,6 +46,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
   const [loading, setLoading] = useState(true);
   const [activeRoute, setActiveRoute] = useState('analytics');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     loadAnalytics();
@@ -74,6 +77,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
         onPress={() => {
           setActiveRoute(route);
           onNavigate?.(route);
+          if (isMobile) setSidebarVisible(false);
         }}
       >
         <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
@@ -81,6 +85,44 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
       </TouchableOpacity>
     );
   };
+
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {isMobile && (
+        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
+          <Text style={styles.closeSidebarIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+        </View>
+        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
+        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
+      </View>
+
+      <View style={styles.sidebarNav}>
+        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
+        <SidebarItem icon="🎯" label="Services" route="services" />
+        <SidebarItem icon="📅" label="Bookings" route="bookings" />
+        <SidebarItem icon="💼" label="Hiring" route="hiring" />
+        <SidebarItem icon="💬" label="Messages" route="messages" />
+        <SidebarItem icon="👤" label="Profile" route="profile" />
+        <SidebarItem icon="⚙️" label="Settings" route="settings" />
+      </View>
+
+      <TouchableOpacity 
+        style={styles.logoutButton} 
+        onPress={() => {
+          if (isMobile) setSidebarVisible(false);
+          onLogout?.();
+        }}
+      >
+        <Text style={styles.logoutIcon}>🚪</Text>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const StatCard = ({ title, value, subtitle, icon, color }: { 
     title: string; 
@@ -102,33 +144,33 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
   return (
     <View style={styles.container}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
+      {isMobile ? (
+        <Modal
+          visible={sidebarVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSidebarVisible(false)}
+        >
+          <View style={styles.sidebarOverlay}>
+            <View style={styles.mobileSidebar}>
+              <SidebarContent />
+            </View>
           </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="🎯" label="Services" route="services" />
-          <SidebarItem icon="📅" label="Bookings" route="bookings" />
-          <SidebarItem icon="📝" label="Proposals" route="proposals" />
-          <SidebarItem icon="💬" label="Messages" route="messages" />
-          <SidebarItem icon="👤" label="Profile" route="profile" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+      ) : (
+        <SidebarContent />
+      )}
 
       {/* Main */}
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
+        {isMobile && (
+          <TouchableOpacity
+            onPress={() => setSidebarVisible(true)}
+            style={styles.mobileMenuButton}
+          >
+            <Text style={styles.mobileMenuIcon}>≡</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>Analytics</Text>
@@ -232,12 +274,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
+const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     backgroundColor: '#EEF1F5',
   },
   sidebar: {
@@ -245,6 +287,74 @@ const styles = StyleSheet.create({
     backgroundColor: '#102A43',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    ...(isMobile && {
+      height: '100%',
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      zIndex: 1000,
+    }),
+  },
+  sidebarOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mobileSidebar: {
+    width: sidebarWidth,
+    height: '100%',
+    backgroundColor: '#102A43',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F3B57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeSidebarIcon: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  mobileMenuButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
+  mobileMenuIcon: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
   profileCard: {
     alignItems: 'center',
@@ -330,19 +440,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    padding: 20,
+    padding: isMobile ? 12 : 20,
+    paddingTop: isMobile ? 60 : 20,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: isMobile ? 16 : 24,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: '#64748B',
   },
   timeRangeContainer: {
@@ -383,15 +494,21 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: isMobile ? 12 : 16,
+    ...(isMobile && {
+      marginLeft: -6,
+      marginRight: -6,
+    }),
   },
   statCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
-    marginBottom: 12,
-    width: Math.min(180, (screenWidth - sidebarWidth - 80) / 4),
+    padding: isMobile ? 12 : 16,
+    marginRight: isMobile ? 6 : 12,
+    marginBottom: isMobile ? 8 : 12,
+    width: isMobile
+      ? (screenWidth - 48) / 2 // 2 cards per row on mobile
+      : Math.min(180, (screenWidth - (isMobile ? 0 : sidebarWidth) - 80) / 4), // 4 cards per row on desktop
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -405,35 +522,35 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
   statIcon: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
   },
   statValue: {
     marginTop: 8,
-    fontSize: 22,
+    fontSize: isMobile ? 18 : 22,
     fontWeight: '700',
     color: '#0F172A',
   },
   statSubtitle: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: '#64748B',
     marginTop: 4,
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: isMobile ? 12 : 16,
+    marginBottom: isMobile ? 12 : 16,
     elevation: 2,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: isMobile ? 13 : 14,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 12,
+    marginBottom: isMobile ? 10 : 12,
   },
   chartPlaceholder: {
     height: 200,

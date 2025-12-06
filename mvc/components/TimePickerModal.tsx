@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Dimensions,
 } from 'react-native';
 
 interface TimeSlot {
@@ -23,6 +24,7 @@ interface TimePickerModalProps {
   existingBookings?: Array<{ start: string; end: string; title?: string }>;
   initialStartTime?: string; // Optional: initial start time (HH:MM or HH:MM:SS)
   initialDuration?: number; // Optional: initial duration in minutes
+  hideDuration?: boolean; // Optional: hide duration selection (for catering services)
   onClose: () => void;
   onConfirm: (startTime: string, endTime: string) => void;
 }
@@ -34,13 +36,35 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   existingBookings = [],
   initialStartTime,
   initialDuration = 60,
+  hideDuration = false,
   onClose,
   onConfirm,
 }) => {
-  // Generate time options (every 30 minutes from 9 AM to 6 PM)
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const isTablet = screenWidth >= 768;
+  const isWeb = Platform.OS === 'web';
+  
+  const sheetHeight = isWeb
+    ? undefined
+    : Math.min(screenHeight * 0.92, screenHeight - 32);
+  const pickerMaxHeight = isWeb
+    ? isTablet ? 400 : 320
+    : Math.min(screenHeight * 0.4, isTablet ? 400 : 320);
+  
+  // Responsive font sizes - larger on web
+  const baseFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(16, screenWidth * 0.04));
+  const labelFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(16, screenWidth * 0.042));
+  const pickerItemFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(17, screenWidth * 0.045));
+  const endTimeFontSize = isWeb ? (isTablet ? 24 : 22) : (isTablet ? 22 : Math.max(20, screenWidth * 0.052));
+  
+  // Web-specific modal dimensions
+  const modalWidth = isWeb ? (isTablet ? 600 : Math.min(500, screenWidth * 0.9)) : '100%';
+  const modalMaxHeight = isWeb ? (isTablet ? 700 : Math.min(600, screenHeight * 0.9)) : undefined;
+
+  // Generate time options (every 30 minutes from 8 AM to 7 PM)
   const generateTimeOptions = (): string[] => {
     const options: string[] = [];
-    for (let hour = 9; hour < 18; hour++) {
+    for (let hour = 8; hour < 19; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
         options.push(timeStr);
@@ -74,30 +98,11 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   const durationOptions = generateDurationOptions();
 
   // Filter available start times based on available slots
+  // Always show all time options from 8 AM, but mark unavailable ones
   const getAvailableStartTimes = (): string[] => {
-    if (!availableSlots || availableSlots.length === 0) return timeOptions;
-    
-    const availableTimes = new Set<string>();
-    availableSlots.forEach(slot => {
-      if (slot.available) {
-        // Add all 30-minute intervals within this slot
-        const startParts = slot.start.split(':').map(Number);
-        const endParts = slot.end.split(':').map(Number);
-        const startMinutes = startParts[0] * 60 + startParts[1];
-        const endMinutes = endParts[0] * 60 + endParts[1];
-        
-        for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-          const hour = Math.floor(minutes / 60);
-          const min = minutes % 60;
-          const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:00`;
-          if (timeOptions.includes(timeStr)) {
-            availableTimes.add(timeStr);
-          }
-        }
-      }
-    });
-    
-    return availableTimes.size > 0 ? Array.from(availableTimes).sort() : timeOptions;
+    // Always return all time options from 8 AM to 7 PM
+    // The availability will be checked when user selects a time
+    return timeOptions;
   };
 
   // Initialize start time from prop or default
@@ -130,12 +135,16 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
   // Calculate end time whenever start time or duration changes
   useEffect(() => {
-    if (startTime && duration) {
+    if (startTime) {
+      // For catering (hideDuration), use default 1 hour duration
+      const effectiveDuration = hideDuration ? 60 : duration;
+      
+      if (effectiveDuration) {
       const startParts = startTime.split(':').map(Number);
       const startHour = startParts[0];
       const startMin = startParts[1];
       const startMinutes = startHour * 60 + startMin;
-      const endMinutes = startMinutes + duration;
+        const endMinutes = startMinutes + effectiveDuration;
       
       // Handle times that go past midnight (24 hours = 1440 minutes)
       const totalMinutesInDay = 24 * 60;
@@ -155,7 +164,8 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
       // Check for conflicts
       checkConflict(startTime, endTimeStr);
     }
-  }, [startTime, duration, existingBookings]);
+    }
+  }, [startTime, duration, hideDuration, existingBookings]);
 
   // Check for conflicts with existing bookings
   const checkConflict = (start: string, end: string) => {
@@ -225,11 +235,24 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[
+          styles.modalContent,
+          isWeb ? {
+            width: modalWidth,
+            maxHeight: modalMaxHeight,
+            borderRadius: 16,
+            alignSelf: 'center',
+          } : { height: sheetHeight }
+        ]}>
+          {!isWeb && <View style={styles.dragHandle} />}
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Select Time</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -237,20 +260,28 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Start Time Dropdown */}
             <View style={styles.section}>
-              <Text style={styles.label}>Start Time</Text>
-              <View style={styles.pickerContainer}>
-                <ScrollView style={styles.pickerScrollView} nestedScrollEnabled>
+              <Text style={[styles.label, { fontSize: labelFontSize }]}>Start Time</Text>
+              <View style={[styles.pickerContainer, { maxHeight: pickerMaxHeight }]}>
+                <ScrollView
+                  style={[styles.pickerScrollView, { maxHeight: pickerMaxHeight }]}
+                  nestedScrollEnabled
+                >
                   {availableStartTimes.map((time) => (
                     <TouchableOpacity
                       key={time}
                       style={[
                         styles.pickerItem,
+                        { 
+                          minHeight: isWeb ? (isTablet ? 60 : 52) : (isTablet ? 64 : 56),
+                        },
                         startTime === time && styles.pickerItemSelected
                       ]}
                       onPress={() => setStartTime(time)}
+                      activeOpacity={0.7}
                     >
                       <Text style={[
                         styles.pickerItemText,
+                        { fontSize: pickerItemFontSize },
                         startTime === time && styles.pickerItemTextSelected
                       ]}>
                         {formatTime(time)}
@@ -261,22 +292,31 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               </View>
             </View>
 
-            {/* Duration Dropdown */}
+            {/* Duration Dropdown - Hidden for catering */}
+            {!hideDuration && (
             <View style={styles.section}>
-              <Text style={styles.label}>Duration</Text>
-              <View style={styles.pickerContainer}>
-                <ScrollView style={styles.pickerScrollView} nestedScrollEnabled>
+                <Text style={[styles.label, { fontSize: labelFontSize }]}>Duration</Text>
+              <View style={[styles.pickerContainer, { maxHeight: pickerMaxHeight }]}>
+                <ScrollView
+                  style={[styles.pickerScrollView, { maxHeight: pickerMaxHeight }]}
+                  nestedScrollEnabled
+                >
                   {durationOptions.map((option) => (
                     <TouchableOpacity
                       key={option.minutes}
                       style={[
                         styles.pickerItem,
+                          { 
+                            minHeight: isWeb ? (isTablet ? 60 : 52) : (isTablet ? 64 : 56),
+                          },
                         duration === option.minutes && styles.pickerItemSelected
                       ]}
                       onPress={() => setDuration(option.minutes)}
+                        activeOpacity={0.7}
                     >
                       <Text style={[
                         styles.pickerItemText,
+                          { fontSize: pickerItemFontSize },
                         duration === option.minutes && styles.pickerItemTextSelected
                       ]}>
                         {option.label}
@@ -286,12 +326,13 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                 </ScrollView>
               </View>
             </View>
+            )}
 
             {/* End Time Display */}
             <View style={styles.section}>
-              <Text style={styles.label}>End Time</Text>
+              <Text style={[styles.label, { fontSize: labelFontSize }]}>End Time</Text>
               <View style={styles.endTimeDisplay}>
-                <Text style={styles.endTimeText}>
+                <Text style={[styles.endTimeText, { fontSize: endTimeFontSize }]}>
                   {endTime ? `${formatTime(endTime)}${endTimeIsNextDay ? ' (next day)' : ''}` : '--:-- --'}
                 </Text>
               </View>
@@ -338,21 +379,35 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+    alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+    padding: Platform.OS === 'web' ? 20 : 0,
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    borderTopLeftRadius: Platform.OS === 'web' ? 16 : 20,
+    borderTopRightRadius: Platform.OS === 'web' ? 16 : 20,
+    width: Platform.OS === 'web' ? 'auto' : '100%',
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
     } : {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.15,
       shadowRadius: 20,
       elevation: 10,
+    }),
+  },
+  dragHandle: {
+    width: 48,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+    ...(Platform.OS === 'web' && {
+      display: 'none',
     }),
   },
   header: {
@@ -364,7 +419,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E9ECEF',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2D3436',
   },
@@ -384,6 +439,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingBottom: 8,
   },
   section: {
     marginBottom: 24,
@@ -400,38 +456,50 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F8F9FA',
     overflow: 'hidden',
-    maxHeight: 200,
+    minHeight: Platform.OS === 'web' ? 240 : 240,
+    ...(Platform.OS === 'web' && {
+      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.06)',
+    }),
   },
   pickerScrollView: {
-    maxHeight: 200,
+    maxHeight: Platform.OS === 'web' ? 280 : 200,
+    ...(Platform.OS === 'web' && {
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#C1C1C1 #F8F9FA',
+    }),
   },
   pickerItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'web' ? 16 : 18,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E9ECEF',
+    minHeight: 56,
+    justifyContent: 'center',
   },
   pickerItemSelected: {
     backgroundColor: '#4285F4',
   },
   pickerItemText: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#2D3436',
+    fontWeight: '500',
   },
   pickerItemTextSelected: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
   endTimeDisplay: {
-    padding: 16,
+    padding: 20,
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     alignItems: 'center',
+    minHeight: 60,
+    justifyContent: 'center',
   },
   endTimeText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#4285F4',
   },
@@ -476,9 +544,19 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     backgroundColor: '#4285F4',
-    paddingVertical: 15,
+    paddingVertical: 20,
     borderRadius: 8,
     alignItems: 'center',
+    minHeight: 60,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(66, 133, 244, 0.3)',
+    } : {
+      shadowColor: '#4285F4',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 4,
+    }),
   },
   confirmButtonDisabled: {
     backgroundColor: '#CCCCCC',
@@ -486,8 +564,9 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
 

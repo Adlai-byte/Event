@@ -89,10 +89,12 @@ class AuthService {
       console.error('Login error:', error.code, error.message);
       
       // Handle specific login errors
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // Check if it's likely a wrong email or wrong password
+        // Firebase's invalid-credential can mean either email or password is wrong
         return {
           success: false,
-          error: 'Account not found. Please check your email address or register for a new account.'
+          error: 'Invalid email or password. Please check your credentials and try again.'
         };
       }
       
@@ -172,38 +174,28 @@ class AuthService {
         } catch (redirectError: any) {
           // No redirect result, continue with new auth flow
           console.log('No redirect result, starting new auth flow');
+          console.log('Redirect error (if any):', redirectError?.message || redirectError?.code);
+          
+          // If it's a specific error about no redirect, that's fine - continue
+          if (redirectError?.code === 'auth/no-auth-event') {
+            console.log('No auth event found, starting new flow');
+          }
         }
 
-        // Try popup first (better UX)
+        // Use redirect directly for web (more reliable, avoids COOP issues)
+        // Popup can be blocked by Cross-Origin-Opener-Policy or popup blockers
         try {
           const provider = new GoogleAuthProvider();
-          const result = await signInWithPopup(this.auth, provider);
-          return {
-            success: true,
-            user: result.user
-          };
-        } catch (popupError: any) {
-          // If popup fails (e.g., blocked by COOP policy or popup blocker), use redirect
-          console.log('Popup failed, falling back to redirect:', popupError.message);
+          await signInWithRedirect(this.auth, provider);
           
-          // Check if it's a COOP-related error or popup blocked
-          if (popupError.message?.includes('Cross-Origin-Opener-Policy') || 
-              popupError.code === 'auth/popup-blocked' ||
-              popupError.code === 'auth/popup-closed-by-user') {
-            
-            // Use redirect as fallback
-            const provider = new GoogleAuthProvider();
-            await signInWithRedirect(this.auth, provider);
-            
-            // The page will redirect, so return a pending state
-            return {
-              success: false,
-              error: 'Redirecting to Google sign-in...'
-            };
-          } else {
-            // Other popup errors - return the error
-            throw popupError;
-          }
+          // The page will redirect, so return a pending state
+          return {
+            success: false,
+            error: 'Redirecting to Google sign-in...'
+          };
+        } catch (redirectError: any) {
+          console.error('Google redirect error:', redirectError);
+          throw redirectError;
         }
       } else {
         // Mobile version - use React Native Google Sign-In
@@ -228,14 +220,16 @@ class AuthService {
       const result = await GoogleWebAuth.signInWithGoogleMobile();
       
       if (result.success && result.user) {
+        console.log('Google sign-in successful, user:', result.user.email);
         return {
           success: true,
           user: result.user
         };
       } else {
+        console.error('Google sign-in failed:', result.error);
         return {
           success: false,
-          error: result.error || 'Google sign-in failed'
+          error: result.error || 'Authentication not found. Please try logging in again.'
         };
       }
     } catch (error: any) {
@@ -319,6 +313,8 @@ class AuthService {
     switch (errorCode) {
       case 'auth/user-not-found':
         return 'No user found with this email address.';
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please check your credentials and try again.';
       case 'auth/wrong-password':
         return 'Invalid password.';
       case 'auth/email-already-in-use':

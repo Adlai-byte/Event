@@ -14,16 +14,23 @@ This means your Expo app cannot connect to your backend server.
 
 ### Option 1: Using Expo Go on Physical Device (Recommended Fix)
 
-When using Expo Go on a **physical device**, `localhost` won't work. You need to use your computer's IP address.
+When using Expo Go on a **physical device**, `localhost` won't work. As of the latest update, the app now tries to automatically use the same IP address that Expo uses to serve the bundle (the one you see in the `exp://` link).  
 
-1. **Find your computer's IP address:**
-   - **Windows**: Open Command Prompt and run `ipconfig`
-     - Look for "IPv4 Address" under your active network adapter
-     - Example: `192.168.1.100`
-   - **Mac/Linux**: Open Terminal and run `ifconfig` or `ip addr`
-     - Look for `inet` address (usually starts with `192.168.x.x` or `10.x.x.x`)
+1. **Let auto-detection do the work:**  
+   - Running `npm start` now executes `scripts/start-expo-with-ip.js`, which looks through your physical network adapters (Wi-Fi/Ethernet) and sets `EXPO_PUBLIC_API_BASE_URL` to their current IPv4 address.
+   - In the terminal you should see `🌐 Detected IPv4 (Wi-Fi): 192.168.x.x`, and inside the app you'll see `🌐 Using API base URL from environment: http://192.168.x.x:3001`.
+   - The script skips virtual adapters (VirtualBox/VMWare/Hyper-V) to avoid picking `192.168.56.x`.
+   - Each time your WiFi changes, stop Expo (`Ctrl+C`) and run `npm start` again to refresh the detected IP.
 
-2. **Set the environment variable:**
+2. **If auto-detection fails (no log or still seeing network errors):**
+   - **Find your computer's IP address:**
+     - **Windows**: Open Command Prompt and run `ipconfig`
+       - Look for "IPv4 Address" under your active network adapter
+       - Example: `192.168.1.100`
+     - **Mac/Linux**: Open Terminal and run `ifconfig` or `ip addr`
+       - Look for `inet` address (usually starts with `192.168.x.x` or `10.x.x.x`)
+
+3. **Override via environment variable (optional but guaranteed):**
    Create a `.env` file in your project root (or add to existing):
    ```
    EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP_ADDRESS:3001
@@ -32,8 +39,7 @@ When using Expo Go on a **physical device**, `localhost` won't work. You need to
    ```
    EXPO_PUBLIC_API_BASE_URL=http://192.168.1.100:3001
    ```
-
-3. **Restart Expo:**
+   Restart Expo afterwards:
    ```bash
    npm start -- --clear
    ```
@@ -73,7 +79,11 @@ If running on **web**:
    You should see a response (even if it's an error, it means the server is reachable)
 
 2. **Check the API base URL in your app:**
-   Look at the console logs - you should see:
+   Look at the console logs - you should see either:
+   ```
+   🌐 Using API base URL from dev server host: http://192.168.1.234:3001
+   ```
+   or
    ```
    🌐 Using API base URL from environment: http://192.168.1.100:3001
    ```
@@ -114,6 +124,10 @@ curl http://YOUR_IP:3001/api/health
 ```
 
 If this fails, the issue is with your server or network configuration, not the Expo app.
+
+
+
+
 
 
 

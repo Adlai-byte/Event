@@ -1,6 +1,10 @@
 // Database Seed Script
 // Populates the database with sample data for testing
 
+// Load environment variables from parent directory
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 

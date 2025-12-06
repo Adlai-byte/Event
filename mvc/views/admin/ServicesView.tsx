@@ -67,7 +67,10 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           }));
         },
         (error) => {
+          // Only log non-permission errors (permission denied is expected user behavior)
+          if (error.code !== 1) {
           console.log('Geolocation error:', error);
+          }
           const defaultLocation = { lat: 14.5995, lng: 120.9842 };
           setMapLocation(defaultLocation);
           setNewService(prev => ({
@@ -469,7 +472,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
     }
   };
 
-  const categories = ['all', 'venue', 'catering', 'photography', 'music', 'decoration', 'entertainment', 'planning'];
+  const categories = ['all', 'venue', 'catering', 'photography', 'music'];
   const filteredServices = services.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          s.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -495,7 +498,6 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           <SidebarItem icon="👤" label="Users" route="user" />
           <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
           <SidebarItem icon="📊" label="Analytics" route="analytics" />
-          <SidebarItem icon="⚙️" label="Settings" route="settings" />
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>

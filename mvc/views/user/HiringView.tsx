@@ -12,34 +12,64 @@ import {
   ActivityIndicator,
   Platform
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { HiringController } from '../../controllers/HiringController';
 import { HiringRequest, HiringStatus, Proposal, ProposalStatus, ExperienceLevel, ContractType } from '../../models/Hiring';
+import { getApiBaseUrl } from '../../services/api';
 
 const { width, height } = Dimensions.get('window');
 
 interface HiringViewProps {
   userId: string;
+  userEmail?: string;
   userType: 'client' | 'provider';
   onBack: () => void;
 }
 
-export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack }) => {
+interface Booking {
+  idbooking: number;
+  b_event_name: string;
+  b_event_date: string;
+  b_start_time: string;
+  b_end_time: string;
+  b_location: string;
+}
+
+export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userType, onBack }) => {
   const [hiringRequests, setHiringRequests] = useState<HiringRequest[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [jobPostings, setJobPostings] = useState<any[]>([]);
+  const [myApplications, setMyApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'requests' | 'proposals'>('requests');
+  const [activeTab, setActiveTab] = useState<'proposals' | 'jobPostings' | 'myApplications'>('jobPostings');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showProposalForm, setShowProposalForm] = useState(false);
+  const [showProposalsModal, setShowProposalsModal] = useState(false);
   const [selectedHiringRequest, setSelectedHiringRequest] = useState<HiringRequest | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [jobPostingSearch, setJobPostingSearch] = useState('');
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedJobPosting, setSelectedJobPosting] = useState<any>(null);
+  const [resumeFile, setResumeFile] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Create hiring request form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [serviceId, setServiceId] = useState('');
+  const [eventId, setEventId] = useState('');
   const [minBudget, setMinBudget] = useState('');
   const [maxBudget, setMaxBudget] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [address, setAddress] = useState('');
+  const [locationType, setLocationType] = useState<'remote' | 'on-site' | 'hybrid'>('on-site');
   const [requirements, setRequirements] = useState('');
   const [skills, setSkills] = useState('');
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>(ExperienceLevel.ANY);
@@ -56,8 +86,40 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
 
   const hiringController = new HiringController();
 
+  const getApplicationStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#f59e0b';
+      case 'reviewed': return '#3b82f6';
+      case 'accepted': return '#10b981';
+      case 'rejected': return '#ef4444';
+      default: return '#64748b';
+    }
+  };
+
+  const loadMyApplications = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(
+        `${getApiBaseUrl()}/api/user/job-applications?userEmail=${encodeURIComponent(userEmail)}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.ok && data.applications) {
+          setMyApplications(data.applications);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading my applications:', error);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    if (userType === 'client' && userEmail) {
+      loadBookings();
+    }
     
     // Subscribe to real-time updates
     const unsubscribeRequests = hiringController.subscribeToHiringRequests(
@@ -81,7 +143,15 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
       unsubscribeProposals();
       hiringController.cleanup();
     };
-  }, [userId, userType]);
+  }, [userId, userType, userEmail]);
+
+  useEffect(() => {
+    if (activeTab === 'jobPostings') {
+      loadJobPostings();
+    } else if (activeTab === 'myApplications' && userEmail) {
+      loadMyApplications();
+    }
+  }, [activeTab, userEmail]);
 
   const loadData = async () => {
     setLoading(true);
@@ -98,16 +168,245 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
       }
     }
 
-    const proposalsResult = await hiringController.getProviderProposals(userId);
-    if (proposalsResult.success && proposalsResult.proposals) {
-      setProposals(proposalsResult.proposals);
+    if (userType === 'provider') {
+      const proposalsResult = await hiringController.getProviderProposals(userId);
+      if (proposalsResult.success && proposalsResult.proposals) {
+        setProposals(proposalsResult.proposals);
+      }
     }
+
+    // Load provider job postings
+    await loadJobPostings();
 
     setLoading(false);
   };
 
+  const loadJobPostings = async () => {
+    try {
+      const url = `${getApiBaseUrl()}/api/job-postings?status=active${jobPostingSearch ? `&search=${encodeURIComponent(jobPostingSearch)}` : ''}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.ok && data.jobPostings) {
+        setJobPostings(data.jobPostings);
+      }
+    } catch (error) {
+      console.error('Error loading job postings:', error);
+    }
+  };
+
+  const handlePickResume = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const file = result.assets[0];
+        
+        // Validate file is PDF
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          Alert.alert('Invalid File', 'Please select a PDF file (.pdf)');
+          return;
+        }
+
+        // Check file size (25MB limit)
+        if (file.size && file.size > 25 * 1024 * 1024) {
+          Alert.alert('File Too Large', 'Resume file must be less than 25MB');
+          return;
+        }
+
+        setResumeFile(file);
+        setErrorMessage(null); // Clear error when new file is selected
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick resume file');
+    }
+  };
+
+  const handleSubmitApplication = async () => {
+    if (!selectedJobPosting || !resumeFile) {
+      Alert.alert('Validation Error', 'Please select a PDF resume file');
+      return;
+    }
+
+    // Validate file is PDF
+    if (!resumeFile.name.toLowerCase().endsWith('.pdf')) {
+      Alert.alert('Invalid File', 'Please select a PDF file (.pdf)');
+      return;
+    }
+
+    if (!userEmail) {
+      Alert.alert('Error', 'User email is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null); // Clear any previous errors
+
+    try {
+      let base64String = '';
+
+      if (Platform.OS === 'web') {
+        // Web: Use FileReader
+        const fileUri = resumeFile.uri;
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Data = reader.result as string;
+            base64String = base64Data.split(',')[1]; // Remove data:application/pdf;base64, prefix
+            resolve();
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        // Mobile: Use FileSystem to read the file as base64
+        base64String = await FileSystem.readAsStringAsync(resumeFile.uri, {
+          encoding: 'base64' as any,
+        });
+      }
+
+      const applicationData = {
+        jobPostingId: selectedJobPosting.id,
+        userEmail: userEmail,
+        resumeFile: base64String,
+        resumeFileName: resumeFile.name,
+      };
+
+      const apiResponse = await fetch(`${getApiBaseUrl()}/api/job-applications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(applicationData),
+      });
+
+      if (!apiResponse.ok) {
+        // Handle HTTP errors
+        if (apiResponse.status === 400) {
+          const errorData = await apiResponse.json().catch(() => ({ error: 'Invalid request' }));
+          const errorMsg = errorData.error || 'Please check your application details';
+          setErrorMessage(errorMsg);
+          Alert.alert('Validation Error', errorMsg);
+          setIsSubmitting(false);
+          return;
+        } else if (apiResponse.status === 409) {
+          const errorData = await apiResponse.json().catch(() => ({ error: 'Already applied' }));
+          const errorMsg = errorData.error || 'You have already applied to this job posting';
+          setErrorMessage(errorMsg);
+          Alert.alert('Already Applied', errorMsg);
+          setIsSubmitting(false);
+          return;
+        } else if (apiResponse.status === 500) {
+          const errorMsg = 'The server encountered an error. Please try again later.';
+          setErrorMessage(errorMsg);
+          Alert.alert('Server Error', errorMsg);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const data = await apiResponse.json();
+
+      if (data.ok) {
+        Alert.alert(
+          'Application Submitted Successfully! 🎉',
+          `Your application for "${selectedJobPosting.jobTitle}" has been submitted successfully. The provider will review your application and contact you if you're selected.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setShowApplyModal(false);
+                setResumeFile(null);
+                setSelectedJobPosting(null);
+                setIsSubmitting(false);
+                // Reload job postings to update application status
+                if (activeTab === 'jobPostings') {
+                  loadJobPostings();
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        // Handle specific error messages
+        let errorMessage = 'Failed to submit application. Please try again.';
+        
+        if (data.error) {
+          if (data.error.includes('already applied') || data.error.includes('duplicate')) {
+            errorMessage = 'You have already applied to this job posting.';
+          } else if (data.error.includes('PDF') || data.error.includes('pdf')) {
+            errorMessage = 'Please upload a valid PDF file.';
+          } else if (data.error.includes('required')) {
+            errorMessage = 'Please fill in all required fields.';
+          } else {
+            errorMessage = data.error;
+          }
+        }
+        
+        setErrorMessage(errorMessage);
+        Alert.alert('Submission Failed', errorMessage);
+        setIsSubmitting(false);
+      }
+    } catch (error: any) {
+      console.error('Error submitting application:', error);
+      
+      let errorMessage = 'Failed to submit application. Please check your internet connection and try again.';
+      
+      if (error.message) {
+        if (error.message.includes('Network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again.';
+        }
+      }
+      
+      setErrorMessage(errorMessage);
+      Alert.alert('Error', errorMessage);
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadBookings = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/user/bookings?email=${encodeURIComponent(userEmail)}`);
+      const data = await response.json();
+      
+      if (data.ok && data.rows) {
+        setBookings(data.rows.map((b: any) => ({
+          idbooking: b.idbooking,
+          b_event_name: b.b_event_name,
+          b_event_date: b.b_event_date,
+          b_start_time: b.b_start_time,
+          b_end_time: b.b_end_time,
+          b_location: b.b_location
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    }
+  };
+
+  const loadProposalsForRequest = async (hiringRequestId: string) => {
+    try {
+      const result = await hiringController.getHiringRequestProposals(hiringRequestId);
+      if (result.success && result.proposals) {
+        setProposals(result.proposals);
+        setShowProposalsModal(true);
+      }
+    } catch (error) {
+      console.error('Error loading proposals:', error);
+    }
+  };
+
   const handleCreateHiringRequest = async () => {
-    if (!title || !description || !serviceId || !minBudget || !maxBudget || !startDate || !endDate) {
+    if (!title || !description || !minBudget || !maxBudget || !startDate || !endDate || !city || !state) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -120,16 +419,23 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
       clientId: userId,
       title,
       description,
-      serviceId,
+      serviceId: serviceId || undefined,
+      eventId: eventId || undefined,
       budget: {
         min: parseFloat(minBudget),
         max: parseFloat(maxBudget),
-        currency: 'USD'
+        currency: 'PHP'
       },
       timeline: {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         isFlexible: false
+      },
+      location: {
+        type: locationType,
+        address: address || undefined,
+        city: city,
+        state: state
       },
       requirements: requirementsList,
       skillsRequired: skillsList,
@@ -144,6 +450,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
       Alert.alert('Success', 'Hiring request created successfully!');
       setShowCreateForm(false);
       resetCreateForm();
+      loadData();
     } else {
       Alert.alert('Error', result.error || 'Failed to create hiring request');
     }
@@ -247,15 +554,36 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
     setTitle('');
     setDescription('');
     setServiceId('');
+    setEventId('');
     setMinBudget('');
     setMaxBudget('');
     setStartDate('');
     setEndDate('');
+    setCity('');
+    setState('');
+    setAddress('');
+    setLocationType('on-site');
     setRequirements('');
     setSkills('');
     setExperienceLevel(ExperienceLevel.ANY);
     setContractType(ContractType.FIXED_PRICE);
   };
+
+  const filteredHiringRequests = hiringRequests.filter(request => {
+    if (filterStatus !== 'all' && request.status !== filterStatus) {
+      return false;
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        request.title.toLowerCase().includes(query) ||
+        request.description.toLowerCase().includes(query) ||
+        request.location.city.toLowerCase().includes(query) ||
+        request.location.state.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
 
   const resetProposalForm = () => {
     setProposalTitle('');
@@ -310,28 +638,32 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {userType === 'client' ? 'Hiring Requests' : 'Available Jobs'}
+          Job Postings
         </Text>
-        {userType === 'client' && (
-          <TouchableOpacity 
-            onPress={() => setShowCreateForm(true)}
-            style={styles.addButton}
-          >
-            <Text style={styles.addButtonText}>+ New</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
-          onPress={() => setActiveTab('requests')}
+          style={[styles.tab, activeTab === 'jobPostings' && styles.activeTab]}
+          onPress={() => {
+            setActiveTab('jobPostings');
+            loadJobPostings();
+          }}
         >
-          <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
-            {userType === 'client' ? 'My Requests' : 'Available Jobs'}
+          <Text style={[styles.tabText, activeTab === 'jobPostings' && styles.activeTabText]}>
+            Job Postings
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'myApplications' && styles.activeTab]}
+          onPress={() => setActiveTab('myApplications')}
+        >
+          <Text style={[styles.tabText, activeTab === 'myApplications' && styles.activeTabText]}>
+            My Applications
+          </Text>
+        </TouchableOpacity>
+        {userType === 'provider' && (
         <TouchableOpacity
           style={[styles.tab, activeTab === 'proposals' && styles.activeTab]}
           onPress={() => setActiveTab('proposals')}
@@ -340,83 +672,155 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
             My Proposals
           </Text>
         </TouchableOpacity>
+        )}
       </View>
+
+      {/* Filters and Search */}
+      {activeTab === 'jobPostings' && (
+        <View style={styles.filterContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search job postings..."
+            value={jobPostingSearch}
+            onChangeText={(text) => {
+              setJobPostingSearch(text);
+              // Debounce search
+              setTimeout(() => {
+                loadJobPostings();
+              }, 500);
+            }}
+          />
+        </View>
+      )}
 
       {/* Content */}
       <ScrollView style={styles.content}>
-        {activeTab === 'requests' ? (
-          // Hiring Requests
+        {activeTab === 'myApplications' ? (
+          // My Applications
           <>
-            {hiringRequests.map((request) => (
-              <View key={request.id} style={styles.requestCard}>
-                <View style={styles.requestHeader}>
-                  <Text style={styles.requestTitle}>{request.title}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-                    <Text style={styles.statusText}>{request.status.toUpperCase()}</Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.requestDescription}>{request.description}</Text>
-                
-                <View style={styles.requestDetails}>
-                  <Text style={styles.requestDetail}>
-                    Budget: {formatCurrency(request.budget.min)} - {formatCurrency(request.budget.max)}
-                  </Text>
-                  <Text style={styles.requestDetail}>
-                    Timeline: {formatDate(request.timeline.startDate)} - {formatDate(request.timeline.endDate)}
-                  </Text>
-                  <Text style={styles.requestDetail}>
-                    Experience: {request.experienceLevel}
-                  </Text>
-                  <Text style={styles.requestDetail}>
-                    Contract: {request.contractType.replace('_', ' ')}
-                  </Text>
-                </View>
-
-                {request.requirements.length > 0 && (
-                  <View style={styles.requirementsContainer}>
-                    <Text style={styles.requirementsTitle}>Requirements:</Text>
-                    {request.requirements.map((req, index) => (
-                      <Text key={index} style={styles.requirementItem}>• {req}</Text>
-                    ))}
-                  </View>
-                )}
-
-                {userType === 'provider' && request.status === HiringStatus.OPEN && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedHiringRequest(request);
-                      setShowProposalForm(true);
-                    }}
-                    style={styles.proposeButton}
-                  >
-                    <Text style={styles.proposeButtonText}>Submit Proposal</Text>
-                  </TouchableOpacity>
-                )}
-
-                {userType === 'client' && request.status === HiringStatus.DRAFT && (
-                  <TouchableOpacity
-                    onPress={() => handlePublishHiringRequest(request.id)}
-                    style={styles.publishButton}
-                  >
-                    <Text style={styles.publishButtonText}>Publish</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-
-            {hiringRequests.length === 0 && (
+            {myApplications.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  {userType === 'client' ? 'No hiring requests yet' : 'No available jobs'}
-                </Text>
+                <Text style={styles.emptyStateText}>📋</Text>
+                <Text style={styles.emptyStateText}>No applications yet</Text>
                 <Text style={styles.emptyStateSubtext}>
-                  {userType === 'client' 
-                    ? 'Create your first hiring request to get started'
-                    : 'Check back later for new opportunities'
-                  }
+                  Apply to job postings to see your applications here
                 </Text>
               </View>
+            ) : (
+              myApplications.map((app) => (
+                <View key={app.id} style={styles.applicationCard}>
+                  <View style={styles.applicationHeader}>
+                    <View style={styles.applicationHeaderLeft}>
+                      <Text style={styles.applicationJobTitle}>{app.jobTitle}</Text>
+                      <Text style={styles.applicationProvider}>
+                        {app.providerFirstName && app.providerLastName
+                          ? `${app.providerFirstName} ${app.providerLastName}`
+                          : 'Provider'}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: getApplicationStatusColor(app.status) + '20' }]}>
+                      <Text style={[styles.statusText, { color: getApplicationStatusColor(app.status) }]}>
+                        {app.status.toUpperCase()}
+                      </Text>
+                  </View>
+                </View>
+                
+                  <View style={styles.applicationDetails}>
+                    <Text style={styles.applicationDetailLabel}>Applied:</Text>
+                    <Text style={styles.applicationDetailValue}>
+                      {new Date(app.appliedAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                  </Text>
+                </View>
+
+                  {app.interviewDate && app.interviewTime && (
+                    <View style={styles.applicationDetails}>
+                      <Text style={styles.applicationDetailLabel}>Interview Scheduled:</Text>
+                      <Text style={styles.applicationDetailValue}>
+                        {new Date(app.interviewDate).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })} at {app.interviewTime}
+                      </Text>
+                  </View>
+                )}
+
+                  {app.rejectionNote && (
+                    <View style={styles.rejectionNoteContainer}>
+                      <Text style={styles.rejectionNoteLabel}>Rejection Note:</Text>
+                      <Text style={styles.rejectionNoteText}>{app.rejectionNote}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.applicationDescription}>
+                    <Text style={styles.applicationDescriptionText} numberOfLines={3}>
+                      {app.jobDescription}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </>
+        ) : activeTab === 'jobPostings' ? (
+          // Job Postings
+          <>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#6C63FF" />
+                <Text style={styles.loadingText}>Loading job postings...</Text>
+              </View>
+            ) : jobPostings.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>💼</Text>
+                <Text style={styles.emptyStateText}>No job postings available</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Check back later for new job opportunities
+                </Text>
+              </View>
+            ) : (
+              jobPostings.map((job) => (
+                <View key={job.id} style={styles.jobPostingCard}>
+                  <View style={styles.jobPostingHeader}>
+                    <View style={styles.jobPostingHeaderLeft}>
+                      <Text style={styles.jobPostingTitle}>{job.jobTitle}</Text>
+                      {job.providerFirstName && job.providerLastName && (
+                        <Text style={styles.jobPostingProvider}>
+                          by {job.providerFirstName} {job.providerLastName}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
+                      <Text style={[styles.statusText, { color: '#10b981' }]}>
+                        {job.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.jobPostingDescription}>{job.description}</Text>
+                  
+                  <View style={styles.jobPostingFooter}>
+                    <Text style={styles.jobPostingDeadline}>
+                      📅 Deadline: {new Date(job.deadlineDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </Text>
+                    <Text style={styles.jobPostingDate}>
+                      Posted: {new Date(job.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.applyButton}
+                    onPress={() => {
+                      setSelectedJobPosting(job);
+                      setShowApplyModal(true);
+                    }}
+                  >
+                    <Text style={styles.applyButtonText}>Apply Now</Text>
+                  </TouchableOpacity>
+              </View>
+              ))
             )}
           </>
         ) : (
@@ -508,13 +912,42 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
               numberOfLines={4}
             />
 
-            <Text style={styles.formLabel}>Service ID *</Text>
+            <Text style={styles.formLabel}>Service ID (Optional)</Text>
             <TextInput
               style={styles.formInput}
               value={serviceId}
               onChangeText={setServiceId}
               placeholder="Enter service ID"
             />
+
+            {userType === 'client' && bookings.length > 0 && (
+              <>
+                <Text style={styles.formLabel}>Link to Event (Optional)</Text>
+                <ScrollView style={styles.eventSelector} nestedScrollEnabled>
+                  <TouchableOpacity
+                    style={[styles.eventOption, !eventId && styles.eventOptionSelected]}
+                    onPress={() => setEventId('')}
+                  >
+                    <Text style={styles.eventOptionText}>None</Text>
+                  </TouchableOpacity>
+                  {bookings.map((booking) => (
+                    <TouchableOpacity
+                      key={booking.idbooking}
+                      style={[
+                        styles.eventOption,
+                        eventId === booking.idbooking.toString() && styles.eventOptionSelected
+                      ]}
+                      onPress={() => setEventId(booking.idbooking.toString())}
+                    >
+                      <Text style={styles.eventOptionText}>{booking.b_event_name}</Text>
+                      <Text style={styles.eventOptionDate}>
+                        {new Date(booking.b_event_date).toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
 
             <View style={styles.budgetContainer}>
               <View style={styles.budgetInput}>
@@ -559,6 +992,51 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
                 />
               </View>
             </View>
+
+            <Text style={styles.formLabel}>Location *</Text>
+            <View style={styles.locationTypeContainer}>
+              {(['remote', 'on-site', 'hybrid'] as const).map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.locationTypeButton,
+                    locationType === type && styles.locationTypeButtonActive
+                  ]}
+                  onPress={() => setLocationType(type)}
+                >
+                  <Text style={[
+                    styles.locationTypeText,
+                    locationType === type && styles.locationTypeTextActive
+                  ]}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.formLabel}>City *</Text>
+            <TextInput
+              style={styles.formInput}
+              value={city}
+              onChangeText={setCity}
+              placeholder="Enter city"
+            />
+
+            <Text style={styles.formLabel}>State/Province *</Text>
+            <TextInput
+              style={styles.formInput}
+              value={state}
+              onChangeText={setState}
+              placeholder="Enter state or province"
+            />
+
+            <Text style={styles.formLabel}>Address (Optional)</Text>
+            <TextInput
+              style={styles.formInput}
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Enter full address"
+            />
 
             <Text style={styles.formLabel}>Requirements (comma-separated)</Text>
             <TextInput
@@ -671,6 +1149,194 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userType, onBack
           </ScrollView>
         </View>
       </Modal>
+
+      {/* View Proposals Modal */}
+      <Modal
+        visible={showProposalsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowProposalsModal(false)}>
+              <Text style={styles.modalCloseButton}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              Proposals for {selectedHiringRequest?.title}
+            </Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <ScrollView style={styles.formContainer}>
+            {proposals.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No proposals yet</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Proposals will appear here when providers submit them
+                </Text>
+              </View>
+            ) : (
+              proposals.map((proposal) => (
+                <View key={proposal.id} style={styles.proposalCard}>
+                  <View style={styles.proposalHeader}>
+                    <Text style={styles.proposalTitle}>{proposal.title}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(proposal.status) }]}>
+                      <Text style={styles.statusText}>{proposal.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.proposalDescription}>{proposal.description}</Text>
+                  
+                  <View style={styles.proposalDetails}>
+                    <Text style={styles.proposalDetail}>
+                      Budget: {formatCurrency(proposal.proposedBudget)}
+                    </Text>
+                    <Text style={styles.proposalDetail}>
+                      Timeline: {formatDate(proposal.timeline.startDate)} - {formatDate(proposal.timeline.endDate)}
+                    </Text>
+                  </View>
+
+                  {proposal.deliverables.length > 0 && (
+                    <View style={styles.deliverablesContainer}>
+                      <Text style={styles.deliverablesTitle}>Deliverables:</Text>
+                      {proposal.deliverables.map((del, index) => (
+                        <Text key={index} style={styles.deliverableItem}>• {del}</Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {proposal.status === ProposalStatus.SUBMITTED && userType === 'client' && (
+                    <View style={styles.proposalActions}>
+                      <TouchableOpacity
+                        onPress={() => handleAcceptProposal(proposal.id, proposal.hiringRequestId)}
+                        style={styles.acceptButton}
+                      >
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleRejectProposal(proposal.id)}
+                        style={styles.rejectButton}
+                      >
+                        <Text style={styles.rejectButtonText}>Reject</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Apply to Job Modal */}
+      <Modal
+        visible={showApplyModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowApplyModal(false);
+          setResumeFile(null);
+          setSelectedJobPosting(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Apply to Job</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => {
+                  setShowApplyModal(false);
+                  setResumeFile(null);
+                  setSelectedJobPosting(null);
+                }}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedJobPosting && (
+              <View style={styles.jobInfoContainer}>
+                <Text style={styles.jobInfoTitle}>{selectedJobPosting.jobTitle}</Text>
+                <Text style={styles.jobInfoDescription}>{selectedJobPosting.description}</Text>
+                <Text style={styles.jobInfoDeadline}>
+                  Deadline: {new Date(selectedJobPosting.deadlineDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </Text>
+              </View>
+            )}
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Resume (PDF File) *</Text>
+                <Text style={styles.helperText}>Please upload your resume in PDF format</Text>
+                <TouchableOpacity
+                  style={styles.filePickerButton}
+                  onPress={handlePickResume}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.filePickerButtonText}>
+                    {resumeFile ? `📄 ${resumeFile.name}` : '📎 Select PDF Resume'}
+                  </Text>
+                </TouchableOpacity>
+                {resumeFile && (
+                  <TouchableOpacity
+                    style={styles.removeFileButton}
+                    onPress={() => {
+                      setResumeFile(null);
+                      setErrorMessage(null); // Clear error when file is removed
+                    }}
+                  >
+                    <Text style={styles.removeFileButtonText}>Remove File</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {/* Error Message Display */}
+              {errorMessage && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                  <TouchableOpacity
+                    onPress={() => setErrorMessage(null)}
+                    style={styles.errorCloseButton}
+                  >
+                    <Text style={styles.errorCloseText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowApplyModal(false);
+                  setResumeFile(null);
+                  setSelectedJobPosting(null);
+                  setErrorMessage(null);
+                }}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                onPress={handleSubmitApplication}
+                disabled={isSubmitting || !resumeFile}
+              >
+                {isSubmitting ? (
+                  <View style={styles.submitButtonContent}>
+                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.submitButtonText}>Submitting...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit Application</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -752,6 +1418,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   requestCard: {
     backgroundColor: '#FFFFFF',
@@ -855,6 +1523,239 @@ const styles = StyleSheet.create({
     elevation: 3,
     }),
   },
+  jobPostingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    } : {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    }),
+  },
+  jobPostingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  jobPostingHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  jobPostingTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2D3436',
+    marginBottom: 4,
+  },
+  jobPostingProvider: {
+    fontSize: 14,
+    color: '#636E72',
+  },
+  jobPostingDescription: {
+    fontSize: 14,
+    color: '#2D3436',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  jobPostingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+  },
+  jobPostingDeadline: {
+    fontSize: 12,
+    color: '#636E72',
+    fontWeight: '500',
+  },
+  jobPostingDate: {
+    fontSize: 12,
+    color: '#95A5A6',
+  },
+  applyButton: {
+    backgroundColor: '#6C63FF',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3436',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#636E72',
+  },
+  jobInfoContainer: {
+    padding: 20,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  jobInfoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2D3436',
+    marginBottom: 8,
+  },
+  jobInfoDescription: {
+    fontSize: 14,
+    color: '#636E72',
+    marginBottom: 8,
+  },
+  jobInfoDeadline: {
+    fontSize: 12,
+    color: '#636E72',
+    fontWeight: '500',
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 8,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#95A5A6',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  filePickerButton: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  filePickerButtonText: {
+    fontSize: 14,
+    color: '#636E72',
+  },
+  removeFileButton: {
+    marginTop: 8,
+    padding: 8,
+    alignItems: 'center',
+  },
+  removeFileButtonText: {
+    fontSize: 12,
+    color: '#E74C3C',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#F8F9FA',
+  },
+  cancelButtonText: {
+    color: '#636E72',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  submitButton: {
+    backgroundColor: '#6C63FF',
+  },
+  submitButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#95A5A6',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#991B1B',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  errorCloseButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  errorCloseText: {
+    color: '#991B1B',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   proposalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -933,25 +1834,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
   modalCloseButton: {
     fontSize: 16,
     color: '#6C63FF',
     fontWeight: '600',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D3436',
   },
   modalSaveButton: {
     fontSize: 16,
@@ -997,6 +1883,216 @@ const styles = StyleSheet.create({
   dateInput: {
     flex: 1,
     marginRight: 8,
+  },
+  filterContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  searchInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  filterScroll: {
+    flexDirection: 'row',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  filterChipActive: {
+    backgroundColor: '#6C63FF',
+    borderColor: '#6C63FF',
+  },
+  filterChipText: {
+    fontSize: 14,
+    color: '#636E72',
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  eventSelector: {
+    maxHeight: 150,
+    marginBottom: 16,
+  },
+  eventOption: {
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  eventOptionSelected: {
+    backgroundColor: '#E8E5FF',
+    borderColor: '#6C63FF',
+  },
+  eventOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3436',
+  },
+  eventOptionDate: {
+    fontSize: 14,
+    color: '#636E72',
+    marginTop: 4,
+  },
+  locationTypeContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 8,
+  },
+  locationTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    alignItems: 'center',
+  },
+  locationTypeButtonActive: {
+    backgroundColor: '#6C63FF',
+    borderColor: '#6C63FF',
+  },
+  locationTypeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#636E72',
+  },
+  locationTypeTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  viewProposalsButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  viewProposalsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  proposalActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  acceptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectButton: {
+    flex: 1,
+    backgroundColor: '#F44336',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rejectButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  applicationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    } : {
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    }),
+  },
+  applicationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  applicationHeaderLeft: {
+    flex: 1,
+  },
+  applicationJobTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  applicationProvider: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  applicationDetails: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  applicationDetailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    marginRight: 8,
+  },
+  applicationDetailValue: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  rejectionNoteContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  rejectionNoteLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginBottom: 4,
+  },
+  rejectionNoteText: {
+    fontSize: 14,
+    color: '#991B1B',
+    lineHeight: 20,
+  },
+  applicationDescription: {
+    marginTop: 8,
+  },
+  applicationDescriptionText: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
   },
 });
 

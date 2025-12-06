@@ -1,4 +1,4 @@
-import { HiringService } from '../services/HiringService';
+import { MySQLHiringService } from '../services/MySQLHiringService';
 import { MessagingService } from '../services/MessagingService';
 import { 
   HiringRequest, 
@@ -12,11 +12,11 @@ import {
 } from '../models/Hiring';
 
 export class HiringController {
-  private hiringService: HiringService;
+  private hiringService: MySQLHiringService;
   private messagingService: MessagingService;
 
   constructor() {
-    this.hiringService = HiringService.getInstance();
+    this.hiringService = MySQLHiringService.getInstance();
     this.messagingService = MessagingService.getInstance();
   }
 
