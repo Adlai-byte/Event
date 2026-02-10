@@ -8,20 +8,24 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Linking
+  Linking,
+  Platform
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 interface PaymentSetupViewProps {
   user: User;
-  onBack: () => void;
+  onNavigate?: (route: string) => void;
+  onLogout?: () => void;
 }
 
 export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
   user,
-  onBack
+  onNavigate,
+  onLogout,
 }) => {
   const [paymentLink, setPaymentLink] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -223,38 +227,38 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment Setup</Text>
-          <View style={styles.headerRight} />
-        </View>
+      <AppLayout
+        role="provider"
+        activeRoute="paymentSetup"
+        title="Payment Setup"
+        user={user}
+        onNavigate={(route) => onNavigate?.(route)}
+        onLogout={() => onLogout?.()}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C63FF" />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </View>
+      </AppLayout>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Setup</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView 
+    <AppLayout
+      role="provider"
+      activeRoute="paymentSetup"
+      title="Payment Setup"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
+      <ScrollView
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={styles.contentWrapper}>
+          <View style={styles.content}>
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -480,43 +484,14 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
+          </View>
+        </View>
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerRight: {
-    width: 60,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -531,8 +506,36 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? {
+      alignItems: 'center',
+      paddingVertical: 20,
+    } : {}),
+  },
+  content: {
+    ...(Platform.OS === 'web' ? {
+      width: '100%',
+      maxWidth: 800,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      marginHorizontal: 'auto',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      marginTop: 20,
+      marginBottom: 20,
+      padding: 20,
+    } : {}),
+  },
   scrollContent: {
+    ...(Platform.OS === 'web' ? {
+      padding: 0,
+    } : {
     padding: 20,
+    }),
   },
   infoCard: {
     backgroundColor: '#ffffff',
