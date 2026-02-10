@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -30,8 +31,6 @@ interface AnalyticsData {
 export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate, onLogout }) => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeRoute, setActiveRoute] = useState('analytics');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     loadAnalytics();
@@ -53,57 +52,6 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
       setLoading(false);
     }
   };
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-          if (isMobile) setSidebarVisible(false);
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-        <SidebarItem icon="👤" label="Users" route="user" />
-        <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-        <SidebarItem icon="📊" label="Analytics" route="analytics" />
-      </View>
-
-      <TouchableOpacity 
-        style={styles.logoutButton} 
-        onPress={() => {
-          if (isMobile) setSidebarVisible(false);
-          onLogout?.();
-        }}
-      >
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   const StatCard = ({ title, value, change, trend, glowColor }: { title: string; value: string; change?: string; trend?: 'up' | 'down'; glowColor?: string }) => (
     <View style={[styles.statCard, glowColor && { shadowColor: glowColor }]}>
@@ -119,40 +67,18 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
   );
 
   return (
-    <View style={styles.layout}>
-      {/* Sidebar */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <SidebarContent />
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="admin"
+      activeRoute="analytics"
+      title="Analytics"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity
-                onPress={() => setSidebarVisible(true)}
-                style={styles.mobileMenuButton}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-            <View>
           <Text style={styles.headerTitle}>Analytics & Reports</Text>
           <Text style={styles.headerSubtitle}>Comprehensive insights and metrics</Text>
-            </View>
-          </View>
         </View>
 
         {loading ? (
@@ -164,18 +90,18 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
           <>
             {/* Overview Stats */}
             <View style={styles.statsGrid}>
-              <StatCard 
-                title="Active Users" 
-                value={analytics.activeUsers.value.toLocaleString()} 
-                change={`${analytics.activeUsers.change}%`} 
-                trend={analytics.activeUsers.trend} 
+              <StatCard
+                title="Active Users"
+                value={analytics.activeUsers.value.toLocaleString()}
+                change={`${analytics.activeUsers.change}%`}
+                trend={analytics.activeUsers.trend}
                 glowColor="#4a55e1"
               />
-              <StatCard 
-                title="Total Bookings" 
-                value={analytics.totalBookings.value.toLocaleString()} 
-                change={`${analytics.totalBookings.change}%`} 
-                trend={analytics.totalBookings.trend} 
+              <StatCard
+                title="Total Bookings"
+                value={analytics.totalBookings.value.toLocaleString()}
+                change={`${analytics.totalBookings.change}%`}
+                trend={analytics.totalBookings.trend}
                 glowColor="#10b981"
               />
             </View>
@@ -249,165 +175,23 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
           </View>
         )}
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EEF1F5',
   },
   content: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
-    paddingBottom: isMobile ? 20 : 20,
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    ...(isMobile && {
-      height: '100%',
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 1000,
-    }),
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
   },
   header: {
-    flexDirection: isMobile ? 'column' : 'row',
-    alignItems: isMobile ? 'flex-start' : 'center',
-    justifyContent: 'space-between',
     marginBottom: isMobile ? 16 : 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
   },
   headerTitle: {
     fontSize: isMobile ? 20 : 24,
@@ -438,8 +222,8 @@ const styles = StyleSheet.create({
     marginRight: isMobile ? 6 : 12,
     marginBottom: isMobile ? 8 : 12,
     width: isMobile
-      ? (screenWidth - 48) / 2 // 2 cards per row on mobile
-      : (screenWidth - sidebarWidth - 80) / 3, // 3 cards per row on desktop
+      ? (screenWidth - 48) / 2
+      : (screenWidth - 300) / 3,
     elevation: 8,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -512,30 +296,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: isMobile ? 12 : 16,
   },
-  chartContainer: {
-    marginTop: 8,
-  },
-  chart: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 150,
-    justifyContent: 'space-around',
-  },
-  chartBarContainer: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  chartBar: {
-    width: 24,
-    backgroundColor: '#4a55e1',
-    borderRadius: 4,
-    marginBottom: 8,
-    minHeight: 4,
-  },
-  chartLabel: {
-    fontSize: 10,
-    color: '#64748B',
-  },
   growthContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -577,11 +337,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
   },
-  topServiceRevenue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#10b981',
-  },
   distributionContainer: {
     marginTop: 8,
   },
@@ -618,16 +373,6 @@ const styles = StyleSheet.create({
   distributionBarFill: {
     height: '100%',
     borderRadius: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIconActive: {
-    color: '#4a55e1',
-  },
-  sidebarLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -671,5 +416,3 @@ const styles = StyleSheet.create({
 });
 
 export default AnalyticsView;
-
-
