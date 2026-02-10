@@ -14,9 +14,16 @@ const routeTitleMap: Record<string, string> = {
   'provider-applications': 'Provider Applications',
 };
 
-const routeKeyMap: Record<string, string> = {
+// Sidebar key → URL segment
+const sidebarKeyToUrl: Record<string, string> = {
   user: 'users',
   providerApplications: 'provider-applications',
+};
+
+// URL segment → Sidebar key (reverse mapping for active state)
+const urlToSidebarKey: Record<string, string> = {
+  users: 'user',
+  'provider-applications': 'providerApplications',
 };
 
 export default function AdminLayout() {
@@ -40,12 +47,14 @@ export default function AdminLayout() {
     return <Redirect href="/" />;
   }
 
-  const segments = pathname.split('/');
-  const activeRoute = segments[segments.length - 1] || 'dashboard';
-  const title = routeTitleMap[activeRoute] || 'Dashboard';
+  const segments = pathname.split('/').filter(Boolean);
+  const urlSegment = segments[1] || 'dashboard';
+  // Map URL segment back to Sidebar nav key for active state highlight
+  const activeRoute = urlToSidebarKey[urlSegment] || urlSegment;
+  const title = routeTitleMap[urlSegment] || 'Dashboard';
 
   const handleNavigate = (route: string) => {
-    const mapped = routeKeyMap[route] || route;
+    const mapped = sidebarKeyToUrl[route] || route;
     router.push(`/admin/${mapped}` as any);
   };
 

@@ -45,8 +45,8 @@ export default function ProviderLayout() {
     return <Redirect href="/" />;
   }
 
-  const segments = pathname.split('/');
-  const activeRoute = segments[segments.length - 1] || 'dashboard';
+  const segments = pathname.split('/').filter(Boolean);
+  const activeRoute = segments[1] || 'dashboard';
   const title = routeTitleMap[activeRoute] || 'Dashboard';
 
   const handleNavigate = (route: string) => {
