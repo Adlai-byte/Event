@@ -1147,29 +1147,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '600',
   },
-  modalBody: {
-    padding: Platform.OS === 'web' ? 24 : 20,
-    maxHeight: Platform.OS === 'web' ? 400 : undefined,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: Platform.OS === 'web' ? 24 : 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-  },
-  modalButton: {
-    paddingVertical: Platform.OS === 'web' ? 12 : 10,
-    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
-    borderRadius: Platform.OS === 'web' ? 8 : 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } as any : {}),
-  },
   clientDetailsSection: {
     marginBottom: Platform.OS === 'web' ? 24 : 20,
     paddingBottom: Platform.OS === 'web' ? 20 : 16,

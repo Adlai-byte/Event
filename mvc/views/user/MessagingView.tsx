@@ -771,6 +771,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2D3436',
   },
+  backButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#4a55e1',
+    fontWeight: '600',
+  },
   messagesContainer: {
     flex: 1,
     backgroundColor: '#F8F9FA',
