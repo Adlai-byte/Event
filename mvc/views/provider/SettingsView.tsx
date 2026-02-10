@@ -6,23 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  TextInput,
-  Dimensions
 } from 'react-native';
 import { User } from '../../models/User';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { AppLayout } from '../../components/layout';
 
 interface SettingsViewProps {
   user: User;
-  onBack: () => void;
   onNavigate?: (route: string) => void;
+  onLogout?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   user,
-  onBack,
-  onNavigate
+  onNavigate,
+  onLogout,
 }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -32,18 +29,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showAvailability, setShowAvailability] = useState(true);
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView 
-        style={styles.scrollView} 
+    <AppLayout
+      role="provider"
+      activeRoute="settings"
+      title="Settings"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
@@ -197,42 +192,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: screenWidth < 768 ? 60 : 50,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerRight: {
-    width: 60,
-  },
   scrollView: {
     flex: 1,
   },
