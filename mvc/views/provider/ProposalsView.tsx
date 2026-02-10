@@ -9,14 +9,13 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Modal
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
-const sidebarWidth = 260;
 
 interface ProposalsViewProps {
   user?: User;
@@ -54,7 +53,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'my-proposals' | 'available-requests'>('my-proposals');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [activeRoute, setActiveRoute] = useState('proposals');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state for new proposal
   const [newProposal, setNewProposal] = useState({
@@ -159,58 +158,24 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
     }
   };
 
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-          onPress?.(); // Close sidebar on mobile
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const filteredProposals = proposals.filter(p => filterStatus === 'all' || p.status === filterStatus);
+  const filteredProposals = proposals.filter(p => {
+    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+    const matchesSearch = !searchQuery || 
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.hiringRequestTitle.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+  
+  const filteredHiringRequests = hiringRequests.filter(hr => {
+    const matchesSearch = !searchQuery || 
+      hr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hr.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hr.city.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+  
   const statusFilters = ['all', 'submitted', 'under_review', 'accepted', 'rejected', 'revised', 'withdrawn'];
 
   const getStatusColor = (status: string) => {
@@ -226,40 +191,15 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   };
 
   return (
-    <View style={styles.container}>
-      {/* Sidebar */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.sidebarOverlay}>
-            <View style={styles.mobileSidebar}>
-              <SidebarContent />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="provider"
+      activeRoute="proposals"
+      title="Proposals"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity 
-                style={styles.mobileMenuButton}
-                onPress={() => setSidebarVisible(true)}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.headerTitle}>Proposals</Text>
-          </View>
-        </View>
 
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
@@ -279,6 +219,17 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
         {activeTab === 'my-proposals' && (
           <>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search proposals by title, description, client, or hiring request..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
             {/* Status Filters */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
               {statusFilters.map(status => (
@@ -372,14 +323,25 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
         {activeTab === 'available-requests' && (
           <>
-            {hiringRequests.length === 0 ? (
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search hiring requests by title, description, or city..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
+            {filteredHiringRequests.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateIcon}>🔍</Text>
                 <Text style={styles.emptyStateText}>No available requests</Text>
                 <Text style={styles.emptyStateSubtext}>Check back later for new hiring requests</Text>
               </View>
             ) : (
-              hiringRequests.map((request) => (
+              filteredHiringRequests.map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <View style={styles.requestHeader}>
                     <Text style={styles.requestTitle}>{request.title}</Text>
@@ -484,176 +446,17 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
           </View>
         )}
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
-  sidebar: {
-    width: isMobile ? '80%' : sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    height: isMobile ? '100%' : undefined,
-  },
-  mobileSidebar: {
-    width: '80%',
-    height: '100%',
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarIconActive: {
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  sidebarLabelActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
   main: {
     flex: 1,
   },
   mainContent: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
-  },
-  header: {
-    marginBottom: isMobile ? 16 : 24,
-  },
-  headerTitle: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: '#1E293B',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -953,6 +756,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: '#F8FAFC',
+  },
+  searchContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1E293B',
   },
   textArea: {
     height: 100,
