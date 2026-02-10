@@ -7,17 +7,17 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-  Dimensions,
   Platform
 } from 'react-native';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { AppLayout } from '../../components/layout';
 
 interface SettingsViewProps {
-  onBack: () => void;
+  user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ user, onNavigate, onLogout }) => {
   const [settings, setSettings] = useState({
     notifications: true,
     emailNotifications: true,
@@ -124,23 +124,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
   );
 
   return (
+    <AppLayout role="user" activeRoute="settings" title="Settings" user={user} onNavigate={onNavigate} onLogout={onLogout}>
     <View style={styles.container}>
-      {/* Background Design */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundGradient} />
-      </View>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.headerRight} />
-      </View>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Notifications Section */}
         <View style={styles.section}>
@@ -376,6 +361,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
+    </AppLayout>
   );
 };
 
@@ -383,84 +369,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    position: 'relative',
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-  backgroundCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(108, 99, 255, 0.1)',
-    top: -50,
-    right: -50,
-  },
-  backgroundCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(108, 99, 255, 0.08)',
-    bottom: 200,
-    left: -30,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerRight: {
-    width: 60,
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: Platform.OS === 'web' ? 24 : 20,
+    marginBottom: Platform.OS === 'web' ? 32 : 24,
+    marginTop: Platform.OS === 'web' ? 24 : 20,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    paddingVertical: Platform.OS === 'web' ? 24 : 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D3436',
-    marginBottom: 12,
-    marginLeft: 4,
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    paddingBottom: Platform.OS === 'web' ? 12 : 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#4a55e1',
+    alignSelf: 'flex-start',
+    paddingRight: Platform.OS === 'web' ? 24 : 20,
+    marginLeft: 0,
+    letterSpacing: Platform.OS === 'web' ? -0.3 : -0.2,
   },
   sectionContent: {
     backgroundColor: '#ffffff',
