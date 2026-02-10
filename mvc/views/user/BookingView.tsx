@@ -14,9 +14,11 @@ import {
   AppState,
   Linking,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { getApiBaseUrl } from '../../services/api';
 import { getShadowStyle } from '../../utils/shadowStyles';
+import { AppLayout } from '../../components/layout';
 import { PaymentModal } from '../../components/PaymentModal';
 import { EditBookingModal } from '../../components/EditBookingModal';
 import { RatingModal } from '../../components/RatingModal';
@@ -24,7 +26,9 @@ import { RatingModal } from '../../components/RatingModal';
 interface BookingViewProps {
   userId: string;
   userEmail?: string;
-  onBack: () => void;
+  user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
   onNavigateToBookingDetails?: (bookingId: string) => void;
   onNavigateToEditEvent?: (eventId: string) => void;
   onNavigateToMessages?: (conversationId: string) => void;
@@ -58,10 +62,12 @@ interface Booking {
   isPaid?: boolean; // Payment status
 }
 
-export const BookingView: React.FC<BookingViewProps> = ({ 
-  userId, 
+export const BookingView: React.FC<BookingViewProps> = ({
+  userId,
   userEmail,
-  onBack,
+  user,
+  onNavigate,
+  onLogout,
   onNavigateToBookingDetails,
   onNavigateToEditEvent,
   onNavigateToMessages,
@@ -79,6 +85,9 @@ export const BookingView: React.FC<BookingViewProps> = ({
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingService, setRatingService] = useState<{ serviceId: number; serviceName: string } | null>(null);
   const [serviceRatings, setServiceRatings] = useState<Record<number, { rating: number; comment: string | null }>>({});
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
   const appState = useRef(AppState.currentState);
   const [appStateVisible, setAppStateVisible] = useState(appState.current);
 
@@ -144,12 +153,83 @@ export const BookingView: React.FC<BookingViewProps> = ({
             // Cancelled bookings can be in either upcoming or past based on date
             const isPast = (eventDate < today || b.b_status === 'completed') && b.b_status !== 'cancelled';
             
-            // Format date
-            const formattedDate = eventDate.toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            });
+            // Check if this is a multi-day booking (date range stored in notes)
+            let formattedDate = '';
+            let dateRangeInfo = null;
+            
+            if (b.b_notes) {
+              try {
+                dateRangeInfo = JSON.parse(b.b_notes);
+                if (dateRangeInfo.startDate && dateRangeInfo.endDate) {
+                  // Check if dates are consecutive
+                  const allDates = dateRangeInfo.allDates || [];
+                  const startDate = new Date(dateRangeInfo.startDate);
+                  const endDate = new Date(dateRangeInfo.endDate);
+                  
+                  // Calculate expected number of days if consecutive
+                  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  const isConsecutive = allDates.length === daysDiff;
+                  
+                  if (isConsecutive && allDates.length > 1) {
+                    // Consecutive dates - show as range
+                    const startFormatted = startDate.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                    const endFormatted = endDate.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                    formattedDate = `${startFormatted} - ${endFormatted}`;
+                  } else if (allDates.length > 1) {
+                    // Non-consecutive dates - show individual dates with "and"
+                    const formattedDates = allDates.map((dateStr: string) => {
+                      const date = new Date(dateStr);
+                      return date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      });
+                    });
+                    formattedDate = formattedDates.join(' and ');
+                  } else if (allDates.length === 1) {
+                    // Single date
+                    const date = new Date(allDates[0]);
+                    formattedDate = date.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                  } else {
+                    // Fallback to range format if allDates is not available
+                    const startFormatted = startDate.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                    const endFormatted = endDate.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                    formattedDate = `${startFormatted} - ${endFormatted}`;
+                  }
+                }
+              } catch (e) {
+                // Notes is not JSON, treat as regular notes
+              }
+            }
+            
+            // If not a date range, format single date
+            if (!formattedDate) {
+              formattedDate = eventDate.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              });
+            }
             
             // Format time
             const startTime = b.b_start_time ? new Date(`2000-01-01T${b.b_start_time}`).toLocaleTimeString('en-US', { 
@@ -185,6 +265,13 @@ export const BookingView: React.FC<BookingViewProps> = ({
               }
             }
             
+            // If status is 'completed' but not paid, change to 'cancelled'
+            let finalStatus = b.b_status || 'pending';
+            const isPaidValue = b.is_paid === 1 || b.is_paid === true;
+            if (finalStatus === 'completed' && !isPaidValue) {
+              finalStatus = 'cancelled';
+            }
+            
             return {
               id: b.idbooking.toString(),
               title: b.b_event_name || 'Untitled Event',
@@ -195,11 +282,11 @@ export const BookingView: React.FC<BookingViewProps> = ({
               endTime: b.b_end_time || '10:00:00',
               location: b.b_location || 'Location not specified',
               attendees: b.b_attendees || 0,
-              status: isPast ? (b.b_status === 'completed' ? 'completed' : 'past') : 'upcoming',
-              bookingStatus: b.b_status || 'pending', // Store actual database status
-              isPaid: b.is_paid === 1 || b.is_paid === true, // Payment status
+              status: isPast ? (finalStatus === 'completed' ? 'completed' : 'past') : 'upcoming',
+              bookingStatus: finalStatus, // Store actual database status (adjusted if needed)
+              isPaid: isPaidValue, // Payment status
               image: imageUrl || null,
-              description: b.b_notes || b.b_event_name || 'No description available.',
+              description: (dateRangeInfo ? null : b.b_notes) || b.b_event_name || 'No description available.',
               suppliers: Array.isArray(b.services) ? b.services : [],
               services: Array.isArray(b.serviceDetails) ? b.serviceDetails.map((s: any) => ({
                 serviceId: s.serviceId,
@@ -340,68 +427,20 @@ export const BookingView: React.FC<BookingViewProps> = ({
       return;
     }
     
-    // Use window.confirm on web for better compatibility
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Are you sure you want to cancel "${booking.title}"?`);
-      if (!confirmed) {
-        return;
-      }
-      
-      // Proceed with cancellation
-      (async () => {
-        try {
-          if (!userEmail) {
-            alert('Error: User email is required');
+    // Show custom cancel confirmation modal
+    setBookingToCancel(booking);
+    setCancelReason('');
+    setShowCancelModal(true);
+  }, []);
+
+  const handleConfirmCancel = useCallback(async () => {
+    if (!bookingToCancel || !userEmail) {
+      Alert.alert('Error', 'Unable to cancel booking. Please try again.');
             return;
           }
           
-          const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${booking.id}/status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              status: 'cancelled',
-              userEmail: userEmail,
-            }),
-          });
-          
-          const data = await resp.json();
-          
-          if (resp.ok && data.ok) {
-            alert('Booking cancelled successfully');
-            // Reload bookings to reflect the change
-            loadBookings();
-            // Close the modal if open
-            setShowEventDetails(false);
-          } else {
-            alert(data.error || 'Failed to cancel booking');
-          }
-        } catch (error) {
-          console.error('Error cancelling booking:', error);
-          alert('Failed to cancel booking. Please try again.');
-        }
-      })();
-      return;
-    }
-    
-    // Use Alert.alert for mobile
-    Alert.alert(
-      'Cancel Event',
-      `Are you sure you want to cancel "${booking.title}"?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (!userEmail) {
-                Alert.alert('Error', 'User email is required');
-                return;
-              }
-              
-              const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${booking.id}/status`, {
+    try {
+      const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingToCancel.id}/status`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -409,6 +448,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 body: JSON.stringify({
                   status: 'cancelled',
                   userEmail: userEmail,
+          cancellation_reason: cancelReason.trim() || undefined,
                 }),
               });
               
@@ -418,8 +458,11 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 Alert.alert('Success', 'Booking cancelled successfully');
                 // Reload bookings to reflect the change
                 loadBookings();
-                // Close the modal if open
+        // Close modals
                 setShowEventDetails(false);
+        setShowCancelModal(false);
+        setBookingToCancel(null);
+        setCancelReason('');
               } else {
                 Alert.alert('Error', data.error || 'Failed to cancel booking');
               }
@@ -427,11 +470,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
               console.error('Error cancelling booking:', error);
               Alert.alert('Error', 'Failed to cancel booking. Please try again.');
             }
-          }
-        }
-      ]
-    );
-  }, [userEmail, loadBookings]);
+  }, [bookingToCancel, userEmail, cancelReason, loadBookings]);
 
   const handlePay = useCallback((booking: Booking) => {
     setPaymentBooking(booking);
@@ -563,20 +602,16 @@ export const BookingView: React.FC<BookingViewProps> = ({
   }
 
   return (
-    <View style={styles.container}>
-      {/* Web: Centered Card Container */}
-      {Platform.OS === 'web' ? (
-        <View style={styles.webCardContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Bookings</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      {/* Filter Buttons */}
+    <AppLayout
+      role="user"
+      activeRoute="bookings"
+      title="Bookings"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <ScrollView 
           horizontal 
@@ -673,118 +708,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
           />
         )}
       </View>
-        </View>
-      ) : (
-        /* Mobile: Full Screen */
-        <>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Your Bookings</Text>
-            <View style={styles.placeholder} />
-      </View>
-
-          {/* Filter Buttons */}
-          <View style={styles.filterContainer}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterScrollContent}
-            >
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'all' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('all')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'all' && styles.filterButtonTextActive]}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'paid' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('paid')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'paid' && styles.filterButtonTextActive]}>
-                  Paid
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'cancelled' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('cancelled')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'cancelled' && styles.filterButtonTextActive]}>
-                  Cancelled
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'completed' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('completed')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'completed' && styles.filterButtonTextActive]}>
-                  Completed
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-
-          {/* List View */}
-          <View style={styles.content}>
-            {filteredBookings.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>📅</Text>
-                <Text style={styles.emptyStateText}>
-                  {activeFilter === 'all' 
-                    ? 'No bookings yet' 
-                    : `No ${activeFilter} bookings`}
-                </Text>
-                <Text style={styles.emptyStateSubtext}>
-                  {activeFilter === 'all'
-                    ? 'Your upcoming and past bookings will appear here'
-                    : `You don't have any ${activeFilter} bookings at the moment`}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={orderedBookings}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item, index }) => {
-                  const sectionTitle = getSectionTitle(item);
-                  const prevItem = index > 0 ? orderedBookings[index - 1] : null;
-                  const prevSectionTitle = prevItem ? getSectionTitle(prevItem) : null;
-                  const showSectionHeader = sectionTitle !== prevSectionTitle;
-                  const isPastSection = sectionTitle === 'Past' || sectionTitle === 'Completed';
-                  
-                  return (
-                    <View>
-                      {showSectionHeader && (
-                        <Text style={styles.sectionTitle}>
-                          {sectionTitle}
-                        </Text>
-                      )}
-                      <BookingCard
-                        booking={item}
-                        onViewDetails={() => handleViewDetails(item)}
-                        onEdit={() => handleEditEvent(item.id)}
-                        onCancel={() => handleCancelEvent(item)}
-                        onPay={() => handlePay(item)}
-                        isPast={isPastSection}
-                      />
-                    </View>
-                  );
-                }}
-                contentContainerStyle={styles.listContent}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                updateCellsBatchingPeriod={50}
-                initialNumToRender={10}
-                windowSize={10}
-              />
-            )}
-          </View>
-        </>
-      )}
 
       {/* Event Details Modal */}
       <Modal
@@ -883,7 +806,76 @@ export const BookingView: React.FC<BookingViewProps> = ({
           }}
         />
       )}
-    </View>
+
+      {/* Cancel Booking Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowCancelModal(false);
+          setCancelReason('');
+          setBookingToCancel(null);
+        }}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalContent}>
+            <View style={styles.cancelModalHeader}>
+              <Text style={styles.cancelModalTitle}>Cancel Booking</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setBookingToCancel(null);
+                }}
+                style={styles.cancelModalCloseButton}
+              >
+                <Text style={styles.cancelModalCloseIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.cancelModalBody}>
+              <Text style={styles.cancelModalMessage}>
+                Are you sure you want to cancel "{bookingToCancel?.title}"?
+              </Text>
+              <Text style={styles.cancelModalSubMessage}>
+                (Optional) Please provide a reason for cancellation:
+              </Text>
+              <TextInput
+                style={styles.cancelReasonInput}
+                placeholder="Enter cancellation reason (optional)..."
+                placeholderTextColor="#94a3b8"
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+            <View style={styles.cancelModalFooter}>
+              <TouchableOpacity
+                style={[styles.cancelModalButton, styles.cancelModalBackButton]}
+                onPress={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setBookingToCancel(null);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelModalBackButtonText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelModalButton, styles.cancelModalConfirmButton]}
+                onPress={handleConfirmCancel}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelModalConfirmButtonText}>Cancel Booking</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      </View>
+    </AppLayout>
   );
 };
 
@@ -896,8 +888,6 @@ const BookingCard: React.FC<{
   onPay?: () => void;
   isPast?: boolean;
 }> = React.memo(({ booking, onViewDetails, onEdit, onCancel, onPay, isPast = false }) => {
-  const showPayButton = booking.bookingStatus === 'confirmed' && !booking.isPaid;
-  
   const [imageError, setImageError] = useState(false);
   
   // Check if booking is in the past (more accurate check using dateStr)
@@ -905,7 +895,10 @@ const BookingCard: React.FC<{
   today.setHours(0, 0, 0, 0);
   const eventDate = booking.dateStr ? new Date(booking.dateStr) : new Date(booking.date);
   eventDate.setHours(0, 0, 0, 0);
-  const isBookingPast = eventDate < today;
+  const bookingIsPast = eventDate < today;
+  
+  // Show pay button only if confirmed, not paid, and not in the past
+  const showPayButton = booking.bookingStatus === 'confirmed' && !booking.isPaid && !bookingIsPast;
   
   return (
     <View style={styles.bookingCard}>
@@ -938,7 +931,7 @@ const BookingCard: React.FC<{
                 <Text style={styles.paidBadgeText}>PAID</Text>
               </View>
             )}
-            {booking.bookingStatus === 'completed' && (
+            {booking.bookingStatus === 'completed' && booking.isPaid && (
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>COMPLETED</Text>
               </View>
@@ -987,7 +980,6 @@ const EventDetailsModal: React.FC<{
   serviceRatings?: Record<number, { rating: number; comment: string | null }>;
   onRateService?: (serviceId: number, serviceName: string) => void;
 }> = ({ booking, onClose, onEdit, onCancel, onPay, onMessageProvider, userEmail, serviceRatings = {}, onRateService }) => {
-  const showPayButton = booking.bookingStatus === 'confirmed' && !booking.isPaid;
   const [imageError, setImageError] = useState(false);
   
   // Check if booking is in the past
@@ -996,6 +988,9 @@ const EventDetailsModal: React.FC<{
   const eventDate = new Date(booking.dateStr || booking.date);
   eventDate.setHours(0, 0, 0, 0);
   const isPast = eventDate < today;
+  
+  // Show pay button only if confirmed, not paid, and not in the past
+  const showPayButton = booking.bookingStatus === 'confirmed' && !booking.isPaid && !isPast;
   
   const handleDownloadInvoice = async () => {
     if (!userEmail) {
@@ -1084,11 +1079,6 @@ const EventDetailsModal: React.FC<{
               {booking.isPaid && booking.bookingStatus !== 'cancelled' && (
                 <View style={styles.paidBadge}>
                   <Text style={styles.paidBadgeText}>PAID</Text>
-                </View>
-              )}
-              {booking.bookingStatus === 'completed' && !booking.isPaid && (
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>COMPLETED</Text>
                 </View>
               )}
             </View>
@@ -1204,7 +1194,7 @@ const EventDetailsModal: React.FC<{
             </View>
           </TouchableOpacity>
         )}
-        {!booking.isPaid && !isPast && booking.bookingStatus !== 'completed' && (
+        {!booking.isPaid && !isPast && booking.bookingStatus !== 'completed' && booking.bookingStatus !== 'cancelled' && (
           <>
             <TouchableOpacity 
               style={[styles.editButton, (showPayButton || booking.bookingStatus === 'confirmed') && styles.editButtonWithOther]} 
@@ -1406,7 +1396,7 @@ const EventDetailsModal: React.FC<{
                 </View>
               </TouchableOpacity>
             )}
-            {!booking.isPaid && !isPast && booking.bookingStatus !== 'completed' && (
+            {!booking.isPaid && !isPast && booking.bookingStatus !== 'completed' && booking.bookingStatus !== 'cancelled' && (
               <>
                 <TouchableOpacity 
                   style={[styles.editButton, (showPayButton || booking.bookingStatus === 'confirmed') && styles.editButtonWithOther]} 
@@ -1447,20 +1437,14 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       justifyContent: 'center',
       alignItems: 'center',
-      paddingTop: 20,
+      paddingTop: 30,
       paddingBottom: 20,
-    } : {}),
+    } : {
+      paddingTop: 20,
+    }),
   },
-  webCardContainer: {
-    width: Platform.OS === 'web' ? '90%' : '100%',
-    maxWidth: Platform.OS === 'web' ? 1200 : '100%',
-    height: Platform.OS === 'web' ? (screenHeight * 0.9) : '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: Platform.OS === 'web' ? 16 : 0,
-    overflow: 'hidden',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
-    } : {}),
+  placeholder: {
+    width: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -1473,36 +1457,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#636E72',
     fontWeight: '500',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Platform.OS === 'web' ? 32 : 20,
-    paddingVertical: Platform.OS === 'web' ? 20 : 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-    } : {}),
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: Platform.OS === 'web' ? 24 : 18,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.3,
-  },
-  placeholder: {
-    width: 40,
   },
   filterContainer: {
     backgroundColor: '#FFFFFF',
@@ -1557,15 +1511,22 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   section: {
-    marginTop: 24,
+    marginTop: Platform.OS === 'web' ? 32 : 24,
+    marginBottom: Platform.OS === 'web' ? 24 : 20,
+    paddingHorizontal: Platform.OS === 'web' ? 32 : 20,
   },
   sectionTitle: {
-    fontSize: Platform.OS === 'web' ? 22 : 20,
+    fontSize: Platform.OS === 'web' ? 24 : 22,
     fontWeight: '800',
     color: '#111827',
     marginBottom: Platform.OS === 'web' ? 20 : 16,
-    marginTop: Platform.OS === 'web' ? 8 : 0,
-    letterSpacing: -0.3,
+    marginTop: Platform.OS === 'web' ? 16 : 12,
+    paddingBottom: Platform.OS === 'web' ? 12 : 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#4a55e1',
+    alignSelf: 'flex-start',
+    paddingRight: Platform.OS === 'web' ? 24 : 20,
+    letterSpacing: -0.4,
   },
   bookingCard: {
     backgroundColor: '#FFFFFF',
@@ -2195,6 +2156,124 @@ const styles = StyleSheet.create({
     fontSize: isMobile ? 14 : 15,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  cancelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 20 : 16,
+  },
+  cancelModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    maxWidth: 600,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 10,
+    }),
+  },
+  cancelModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 24 : 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  cancelModalTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  cancelModalCloseButton: {
+    padding: 4,
+  },
+  cancelModalCloseIcon: {
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
+  cancelModalBody: {
+    padding: Platform.OS === 'web' ? 24 : 20,
+  },
+  cancelModalMessage: {
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 16 : 12,
+    lineHeight: Platform.OS === 'web' ? 24 : 22,
+    fontWeight: '600',
+  },
+  cancelModalSubMessage: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#64748B',
+    marginBottom: Platform.OS === 'web' ? 12 : 10,
+  },
+  cancelReasonInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: Platform.OS === 'web' ? 12 : 10,
+    padding: Platform.OS === 'web' ? 16 : 14,
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#1E293B',
+    minHeight: Platform.OS === 'web' ? 120 : 100,
+    textAlignVertical: 'top',
+    ...(Platform.OS === 'web' ? {
+      resize: 'vertical' as any,
+    } : {}),
+  },
+  cancelModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Platform.OS === 'web' ? 12 : 10,
+    padding: Platform.OS === 'web' ? 24 : 20,
+    paddingTop: Platform.OS === 'web' ? 0 : 0,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  cancelModalButton: {
+    paddingVertical: Platform.OS === 'web' ? 12 : 10,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    borderRadius: Platform.OS === 'web' ? 10 : 8,
+    minWidth: Platform.OS === 'web' ? 100 : 80,
+    alignItems: 'center',
+  },
+  cancelModalBackButton: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cancelModalBackButtonText: {
+    color: '#64748B',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '600',
+  },
+  cancelModalConfirmButton: {
+    backgroundColor: '#ef4444',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+    } : {
+      shadowColor: '#ef4444',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
+  },
+  cancelModalConfirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '700',
   },
 });
 

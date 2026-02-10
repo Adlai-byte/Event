@@ -1160,7 +1160,16 @@ function App(): React.JSX.Element {
           <BookingView
             userId={authState.user?.uid || ''}
             userEmail={authState.user?.email || undefined}
-            onBack={() => setMainView('dashboard')}
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+            }}
+            onLogout={handleLogoutVoid}
             onNavigateToBookingDetails={(bookingId: string) => {
               // Handle navigation to booking details if needed
             }}
