@@ -22,7 +22,7 @@ interface AuthContextValue {
   logoutVoid: () => Promise<void>;
   clearError: () => void;
   sendVerificationEmail: () => Promise<{ success: boolean; error?: string }>;
-  checkEmailVerification: () => Promise<{ success: boolean; verified?: boolean; error?: string }>;
+  checkEmailVerification: () => Promise<{ success: boolean; verified: boolean; error?: string }>;
   updateUserEmail: (newEmail: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   refreshUser: () => Promise<boolean>;
   authController: AuthController | null;
