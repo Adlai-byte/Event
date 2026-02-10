@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
   Dimensions,
   Image,
@@ -17,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../models/User';
 import { AuthState } from '../../models/AuthState';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -27,9 +27,7 @@ interface ProfileViewProps {
   onLogout: () => Promise<boolean>;
   onNavigateToPersonalInfo?: () => void;
   onNavigateToHelpCenter?: () => void;
-  onNavigateToSettings?: () => void;
-  onNavigateToPaymentMethods?: () => void;
-  onBack: () => void;
+  onNavigate: (route: string) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -38,13 +36,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLogout,
   onNavigateToPersonalInfo,
   onNavigateToHelpCenter,
-  onNavigateToSettings,
-  onNavigateToPaymentMethods,
-  onBack
+  onNavigate
 }) => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
   const [showApplyProviderModal, setShowApplyProviderModal] = useState(false);
   const [businessDocument, setBusinessDocument] = useState<string | null>(null);
   const [validIdDocument, setValidIdDocument] = useState<string | null>(null);
@@ -100,27 +93,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleNotificationToggle = (value: boolean): void => {
-    setNotificationsEnabled(value);
-    if (!value) {
-      setEmailNotifications(false);
-      setPushNotifications(false);
-    }
-  };
-
-  const handleEmailNotificationToggle = (value: boolean): void => {
-    setEmailNotifications(value);
-    if (value && !notificationsEnabled) {
-      setNotificationsEnabled(true);
-    }
-  };
-
-  const handlePushNotificationToggle = (value: boolean): void => {
-    setPushNotifications(value);
-    if (value && !notificationsEnabled) {
-      setNotificationsEnabled(true);
-    }
-  };
 
   const handleApplyProviderPress = (): void => {
     // Check if user is already a provider
@@ -322,26 +294,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const renderProfileSection = () => (
-    <View style={styles.profileSection}>
-      <View style={styles.avatarContainer}>
+    <View style={styles.modernProfileSection}>
+      <View style={styles.modernAvatarContainer}>
         {getProfileImageUri() ? (
           <Image
             source={{ uri: getProfileImageUri()! }}
-            style={styles.avatarImage}
+            style={styles.modernAvatarImage}
             resizeMode="cover"
           />
         ) : (
-          <Text style={styles.avatarText}>{user.getInitials()}</Text>
-        )}
+          <View style={styles.modernAvatarPlaceholder}>
+            <Text style={styles.modernAvatarText}>{user.getInitials()}</Text>
       </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.getFullName()}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
+        )}
         {user.emailVerified && (
-          <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedText}>✓ Verified</Text>
+          <View style={styles.modernVerifiedBadge}>
+            <Text style={styles.modernVerifiedIcon}>✓</Text>
           </View>
         )}
+      </View>
+      <View style={styles.modernUserInfo}>
+        <Text style={styles.modernUserName}>{user.getFullName()}</Text>
+        <View style={styles.modernUserEmailContainer}>
+          <Text style={styles.modernUserEmailIcon}>📧</Text>
+          <Text style={styles.modernUserEmail}>{user.email}</Text>
+        </View>
       </View>
     </View>
   );
@@ -354,76 +331,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     showArrow: boolean = true,
     rightElement?: React.ReactNode
   ) => (
-    <TouchableOpacity style={styles.menuButton} onPress={onPress}>
-      <View style={styles.menuButtonLeft}>
-        <Text style={styles.menuIcon}>{icon}</Text>
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle}>{subtitle}</Text>
+    <TouchableOpacity 
+      style={styles.modernMenuButton} 
+      onPress={onPress}
+      activeOpacity={0.7}
+      {...(Platform.OS === 'web' ? {
+        onMouseEnter: (e: any) => {
+          e.currentTarget.style.backgroundColor = '#F8FAFC';
+        },
+        onMouseLeave: (e: any) => {
+          e.currentTarget.style.backgroundColor = '#FFFFFF';
+        },
+      } : {})}
+    >
+      <View style={styles.modernMenuButtonLeft}>
+        <View style={styles.modernMenuIconContainer}>
+          <Text style={styles.modernMenuIcon}>{icon}</Text>
         </View>
+        <View style={styles.modernMenuTextContainer}>
+          <Text style={styles.modernMenuTitle}>{title}</Text>
+          <Text style={styles.modernMenuSubtitle}>{subtitle}</Text>
       </View>
-      <View style={styles.menuButtonRight}>
-        {rightElement || (showArrow && <Text style={styles.arrowIcon}>›</Text>)}
+      </View>
+      <View style={styles.modernMenuButtonRight}>
+        {rightElement || (showArrow && <Text style={styles.modernArrowIcon}>›</Text>)}
       </View>
     </TouchableOpacity>
   );
 
-  const renderNotificationSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Notifications</Text>
-      
-      {renderMenuButton(
-        '🔔',
-        'Notifications',
-        'Manage your notification preferences',
-        () => {},
-        true,
-        <Switch
-          value={notificationsEnabled}
-          onValueChange={handleNotificationToggle}
-          trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-          thumbColor={notificationsEnabled ? '#FFFFFF' : '#FFFFFF'}
-        />
-      )}
-
-      {notificationsEnabled && (
-        <>
-          {renderMenuButton(
-            '📧',
-            'Email Notifications',
-            'Receive notifications via email',
-            () => {},
-            true,
-            <Switch
-              value={emailNotifications}
-              onValueChange={handleEmailNotificationToggle}
-              trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-              thumbColor={emailNotifications ? '#FFFFFF' : '#FFFFFF'}
-            />
-          )}
-
-          {renderMenuButton(
-            '📱',
-            'Push Notifications',
-            'Receive push notifications on your device',
-            () => {},
-            true,
-            <Switch
-              value={pushNotifications}
-              onValueChange={handlePushNotificationToggle}
-              trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-              thumbColor={pushNotifications ? '#FFFFFF' : '#FFFFFF'}
-            />
-          )}
-        </>
-      )}
-    </View>
-  );
 
   const renderAccountSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Account</Text>
-      
+    <View style={styles.modernSection}>
+      <Text style={styles.modernSectionTitle}>Account</Text>
+      <View style={styles.modernSectionCard}>
       {renderMenuButton(
         '👤',
         'Personal Information',
@@ -431,110 +371,87 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         onNavigateToPersonalInfo || (() => {})
       )}
 
-      {renderMenuButton(
-        '⚙️',
-        'Settings',
-        'App preferences and configuration',
-        onNavigateToSettings || (() => {})
-      )}
-
-      {renderMenuButton(
-        '💳',
-        'Payment Methods',
-        'Manage your payment information',
-        onNavigateToPaymentMethods || (() => {})
-      )}
-
       {user.role !== 'provider' && user.role !== 'admin' && (
         <>
           {providerStatus === 'pending' && (
-            <View style={styles.pendingNotice}>
-              <Text style={styles.pendingIcon}>⏳</Text>
-              <View style={styles.pendingTextContainer}>
-                <Text style={styles.pendingTitle}>Application Pending</Text>
-                <Text style={styles.pendingSubtitle}>Your application is under review. Please wait for admin approval.</Text>
+              <View style={styles.modernPendingNotice}>
+                <View style={styles.modernPendingIconContainer}>
+                  <Text style={styles.modernPendingIcon}>⏳</Text>
+                </View>
+                <View style={styles.modernPendingTextContainer}>
+                  <Text style={styles.modernPendingTitle}>Application Pending</Text>
+                  <Text style={styles.modernPendingSubtitle}>Your application is under review. Please wait for admin approval.</Text>
               </View>
             </View>
           )}
           
           {providerStatus === 'rejected' && rejectionReason && (
             <TouchableOpacity 
-              style={styles.rejectionNotice}
+                style={styles.modernRejectionNotice}
               onPress={() => setShowRejectionModal(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.rejectionIcon}>⚠️</Text>
-              <View style={styles.rejectionTextContainer}>
-                <Text style={styles.rejectionTitle}>Application Rejected</Text>
-                <Text style={styles.rejectionSubtitle}>Tap to view rejection reason</Text>
+                <View style={styles.modernRejectionIconContainer}>
+                  <Text style={styles.modernRejectionIcon}>⚠️</Text>
               </View>
-              <Text style={styles.arrowIcon}>›</Text>
+                <View style={styles.modernRejectionTextContainer}>
+                  <Text style={styles.modernRejectionTitle}>Application Rejected</Text>
+                  <Text style={styles.modernRejectionSubtitle}>Tap to view rejection reason</Text>
+                </View>
+                <Text style={styles.modernArrowIcon}>›</Text>
             </TouchableOpacity>
           )}
           
           {providerStatus !== 'pending' && providerStatus !== 'rejected' && (
             <TouchableOpacity 
-              style={styles.applyProviderButton}
+                style={styles.modernApplyProviderButton}
               onPress={handleApplyProviderPress}
               activeOpacity={0.7}
             >
-              <Text style={styles.applyProviderIcon}>🚀</Text>
-              <View style={styles.applyProviderTextContainer}>
-                <Text style={styles.applyProviderTitle}>Apply as Provider</Text>
-                <Text style={styles.applyProviderSubtitle}>Submit your documents to become a provider</Text>
+                <View style={styles.modernApplyProviderIconContainer}>
+                  <Text style={styles.modernApplyProviderIcon}>🚀</Text>
               </View>
-              <Text style={styles.arrowIcon}>›</Text>
+                <View style={styles.modernApplyProviderTextContainer}>
+                  <Text style={styles.modernApplyProviderTitle}>Apply as Provider</Text>
+                  <Text style={styles.modernApplyProviderSubtitle}>Submit your documents to become a provider</Text>
+                </View>
+                <Text style={styles.modernArrowIcon}>›</Text>
             </TouchableOpacity>
           )}
         </>
       )}
+      </View>
     </View>
   );
 
   const renderSupportSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Support</Text>
-      
+    <View style={styles.modernSection}>
+      <Text style={styles.modernSectionTitle}>Support</Text>
+      <View style={styles.modernSectionCard}>
       {renderMenuButton(
-        '❓',
-        'Help Center',
-        'Get help and find answers',
+        '💡',
+        'Tips',
+        'Get helpful tips and guidance',
         onNavigateToHelpCenter || (() => {})
       )}
+      </View>
     </View>
   );
 
 
   return (
+    <AppLayout role="user" activeRoute="profile" title="Profile" user={user} onNavigate={onNavigate} onLogout={onLogout}>
     <View style={styles.container}>
-      {/* Background Design */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundCircle3} />
-        <View style={styles.backgroundGradient} />
-      </View>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerRight} />
-      </View>
-
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1 }}
       >
+        <View style={styles.contentWrapper}>
+          <View style={styles.content}>
         {/* Profile Section */}
         {renderProfileSection()}
-
-        {/* Notifications Section */}
-        {renderNotificationSection()}
 
         {/* Account Section */}
         {renderAccountSection()}
@@ -543,21 +460,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {renderSupportSection()}
 
         {/* Logout Button */}
-        <View style={styles.section}>
+            <View style={styles.modernSection}>
           <TouchableOpacity 
-            style={styles.logoutButton}
+                style={styles.modernLogoutButton}
             onPress={() => {
               console.log('=== LOGOUT BUTTON TOUCHED ===');
               handleLogout();
             }}
-            activeOpacity={0.7}
+                activeOpacity={0.8}
           >
-            <Text style={styles.logoutButtonText}>Logout</Text>
+                <Text style={styles.modernLogoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </View>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
+          </View>
+        </View>
       </ScrollView>
 
       {/* Apply as Provider Modal */}
@@ -737,6 +656,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </View>
         </Modal>
     </View>
+    </AppLayout>
   );
 };
 
@@ -744,83 +664,111 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    position: 'relative',
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-    pointerEvents: 'none',
-  },
-  backgroundCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(108, 99, 255, 0.1)',
-    top: -50,
-    right: -50,
-  },
-  backgroundCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(108, 99, 255, 0.08)',
-    bottom: 200,
-    left: -30,
-  },
-  backgroundCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(108, 99, 255, 0.06)',
-    top: '60%',
-    right: 20,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 50 : 50,
-    paddingBottom: isMobile ? 12 : 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: isMobile ? 14 : 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerRight: {
-    width: 60,
   },
   scrollView: {
     flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? {
+      alignItems: 'center',
+      paddingVertical: 20,
+    } : {}),
+  },
+  content: {
+    ...(Platform.OS === 'web' ? {
+      width: '100%',
+      maxWidth: 800,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 20,
+      padding: 24,
+      marginHorizontal: 'auto',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    } : {
+      width: '100%',
+    }),
+  },
+  modernProfileSection: {
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
+    margin: Platform.OS === 'web' ? 0 : isMobile ? 12 : 20,
+    marginBottom: Platform.OS === 'web' ? 24 : isMobile ? 12 : 20,
+    borderRadius: Platform.OS === 'web' ? 0 : 20,
+    padding: Platform.OS === 'web' ? 0 : isMobile ? 20 : 24,
+    flexDirection: Platform.OS === 'web' ? 'row' : isMobile ? 'column' : 'row',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {} : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
+  },
+  modernAvatarContainer: {
+    position: 'relative',
+    marginRight: Platform.OS === 'web' ? 24 : isMobile ? 0 : 20,
+    marginBottom: Platform.OS === 'web' ? 0 : isMobile ? 16 : 0,
+  },
+  modernAvatarPlaceholder: {
+    width: Platform.OS === 'web' ? 100 : isMobile ? 80 : 90,
+    height: Platform.OS === 'web' ? 100 : isMobile ? 80 : 90,
+    borderRadius: Platform.OS === 'web' ? 50 : isMobile ? 40 : 45,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  modernAvatarText: {
+    fontSize: Platform.OS === 'web' ? 40 : 32,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modernAvatarImage: {
+    width: Platform.OS === 'web' ? 100 : isMobile ? 80 : 90,
+    height: Platform.OS === 'web' ? 100 : isMobile ? 80 : 90,
+    borderRadius: Platform.OS === 'web' ? 50 : isMobile ? 40 : 45,
+  },
+  modernVerifiedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: Platform.OS === 'web' ? 32 : 28,
+    height: Platform.OS === 'web' ? 32 : 28,
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    backgroundColor: '#10B981',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modernVerifiedIcon: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  modernUserInfo: {
+    flex: 1,
+    alignItems: Platform.OS === 'web' ? 'flex-start' : isMobile ? 'center' : 'flex-start',
+  },
+  modernUserName: {
+    fontSize: Platform.OS === 'web' ? 28 : isMobile ? 22 : 24,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 8 : 6,
+    letterSpacing: Platform.OS === 'web' ? -0.5 : 0,
+  },
+  modernUserEmailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modernUserEmailIcon: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    marginRight: 6,
+  },
+  modernUserEmail: {
+    fontSize: Platform.OS === 'web' ? 16 : isMobile ? 14 : 15,
+    color: '#64748B',
+    fontWeight: '500',
   },
   profileSection: {
     backgroundColor: '#ffffff',
@@ -888,16 +836,117 @@ const styles = StyleSheet.create({
     color: '#34C759',
     fontWeight: '600',
   },
+  modernSection: {
+    marginHorizontal: Platform.OS === 'web' ? 0 : isMobile ? 16 : 24,
+    marginBottom: Platform.OS === 'web' ? 32 : isMobile ? 24 : 32,
+    marginTop: Platform.OS === 'web' ? 24 : isMobile ? 16 : 24,
+  },
+  modernSectionTitle: {
+    fontSize: Platform.OS === 'web' ? 24 : isMobile ? 20 : 22,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    paddingBottom: Platform.OS === 'web' ? 12 : 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#4a55e1',
+    alignSelf: 'flex-start',
+    paddingRight: Platform.OS === 'web' ? 24 : 20,
+    marginLeft: Platform.OS === 'web' ? 0 : 0,
+    letterSpacing: Platform.OS === 'web' ? -0.4 : -0.2,
+  },
+  modernSectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    padding: Platform.OS === 'web' ? 4 : 8,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    }),
+  },
   section: {
-    marginHorizontal: isMobile ? 12 : 20,
-    marginBottom: isMobile ? 16 : 20,
+    marginHorizontal: isMobile ? 16 : 24,
+    marginBottom: isMobile ? 24 : 32,
+    marginTop: isMobile ? 16 : 24,
+    paddingHorizontal: isMobile ? 20 : 24,
+    paddingVertical: isMobile ? 20 : 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
   },
   sectionTitle: {
-    fontSize: isMobile ? 16 : 18,
-    fontWeight: 'bold',
-    color: '#2D3436',
-    marginBottom: 12,
-    marginLeft: 4,
+    fontSize: isMobile ? 20 : 24,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    paddingBottom: Platform.OS === 'web' ? 12 : 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#4a55e1',
+    alignSelf: 'flex-start',
+    paddingRight: Platform.OS === 'web' ? 24 : 20,
+    letterSpacing: Platform.OS === 'web' ? -0.3 : -0.2,
+  },
+  modernApplyProviderButton: {
+    backgroundColor: '#6366F1',
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    padding: Platform.OS === 'web' ? 20 : 16,
+    marginTop: Platform.OS === 'web' ? 8 : 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: '#4F46E5',
+        boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
+        transform: 'translateY(-1px)',
+      },
+    } : {
+      shadowColor: '#6366F1',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    }),
+  },
+  modernApplyProviderIconContainer: {
+    width: Platform.OS === 'web' ? 48 : 44,
+    height: Platform.OS === 'web' ? 48 : 44,
+    borderRadius: Platform.OS === 'web' ? 24 : 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Platform.OS === 'web' ? 16 : 14,
+  },
+  modernApplyProviderIcon: {
+    fontSize: Platform.OS === 'web' ? 24 : 22,
+  },
+  modernApplyProviderTextContainer: {
+    flex: 1,
+  },
+  modernApplyProviderTitle: {
+    fontSize: Platform.OS === 'web' ? 18 : isMobile ? 15 : 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: Platform.OS === 'web' ? 4 : 2,
+  },
+  modernApplyProviderSubtitle: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   applyProviderButton: {
     backgroundColor: '#6C63FF',
@@ -933,6 +982,58 @@ const styles = StyleSheet.create({
   applyProviderSubtitle: {
     fontSize: 14,
     color: '#E0E0FF',
+  },
+  modernMenuButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    padding: Platform.OS === 'web' ? 18 : isMobile ? 14 : 16,
+    marginBottom: Platform.OS === 'web' ? 4 : 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {}),
+  },
+  modernMenuButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modernMenuIconContainer: {
+    width: Platform.OS === 'web' ? 48 : 44,
+    height: Platform.OS === 'web' ? 48 : 44,
+    borderRadius: Platform.OS === 'web' ? 24 : 22,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Platform.OS === 'web' ? 16 : 14,
+  },
+  modernMenuIcon: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+  },
+  modernMenuTextContainer: {
+    flex: 1,
+  },
+  modernMenuTitle: {
+    fontSize: Platform.OS === 'web' ? 17 : isMobile ? 15 : 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 4 : 2,
+  },
+  modernMenuSubtitle: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#64748B',
+    lineHeight: Platform.OS === 'web' ? 20 : 18,
+  },
+  modernMenuButtonRight: {
+    marginLeft: 12,
+  },
+  modernArrowIcon: {
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    color: '#CBD5E1',
+    fontWeight: 'bold',
   },
   menuButton: {
     backgroundColor: '#ffffff',
@@ -983,6 +1084,34 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#A4B0BE',
     fontWeight: 'bold',
+  },
+  modernLogoutButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    padding: Platform.OS === 'web' ? 18 : 16,
+    alignItems: 'center',
+    marginTop: Platform.OS === 'web' ? 0 : 20,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: '#DC2626',
+        boxShadow: '0 6px 16px rgba(239, 68, 68, 0.4)',
+      },
+    } : {
+      shadowColor: '#EF4444',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    }),
+  },
+  modernLogoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 17 : 16,
+    fontWeight: '600',
+    letterSpacing: Platform.OS === 'web' ? 0.3 : 0,
   },
   logoutButton: {
     backgroundColor: '#FF3B30',
@@ -1075,11 +1204,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   documentPreviewContainer: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  documentPreviewContainer: {
     marginBottom: 12,
+    alignItems: 'center',
   },
   documentPreview: {
     width: '100%',
@@ -1152,6 +1278,52 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modernRejectionNotice: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    padding: Platform.OS === 'web' ? 18 : 16,
+    marginTop: Platform.OS === 'web' ? 8 : 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 1px 3px rgba(245, 158, 11, 0.1)',
+      ':hover': {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#FCD34D',
+      },
+    } : {}),
+  },
+  modernRejectionIconContainer: {
+    width: Platform.OS === 'web' ? 44 : 40,
+    height: Platform.OS === 'web' ? 44 : 40,
+    borderRadius: Platform.OS === 'web' ? 22 : 20,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Platform.OS === 'web' ? 16 : 14,
+  },
+  modernRejectionIcon: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+  },
+  modernRejectionTextContainer: {
+    flex: 1,
+  },
+  modernRejectionTitle: {
+    fontSize: Platform.OS === 'web' ? 17 : isMobile ? 15 : 16,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: Platform.OS === 'web' ? 4 : 2,
+  },
+  modernRejectionSubtitle: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#B45309',
+    lineHeight: Platform.OS === 'web' ? 20 : 18,
   },
   rejectionNotice: {
     backgroundColor: '#FFF3CD',
@@ -1271,6 +1443,45 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  modernPendingNotice: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    padding: Platform.OS === 'web' ? 18 : 16,
+    marginTop: Platform.OS === 'web' ? 8 : 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(59, 130, 246, 0.1)',
+    } : {}),
+  },
+  modernPendingIconContainer: {
+    width: Platform.OS === 'web' ? 44 : 40,
+    height: Platform.OS === 'web' ? 44 : 40,
+    borderRadius: Platform.OS === 'web' ? 22 : 20,
+    backgroundColor: '#DBEAFE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Platform.OS === 'web' ? 16 : 14,
+  },
+  modernPendingIcon: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+  },
+  modernPendingTextContainer: {
+    flex: 1,
+  },
+  modernPendingTitle: {
+    fontSize: Platform.OS === 'web' ? 17 : isMobile ? 15 : 16,
+    fontWeight: '600',
+    color: '#1E40AF',
+    marginBottom: Platform.OS === 'web' ? 4 : 2,
+  },
+  modernPendingSubtitle: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#3B82F6',
+    lineHeight: Platform.OS === 'web' ? 20 : 18,
   },
   pendingNotice: {
     backgroundColor: '#E3F2FD',
