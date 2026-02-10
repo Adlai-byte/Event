@@ -13,11 +13,17 @@ import {
 } from 'react-native';
 import { getApiBaseUrl } from '../../services/api';
 import { getShadowStyle } from '../../utils/shadowStyles';
+import { ServicePackage } from '../../models/Package';
+import { PackageCard } from '../../components/PackageCard';
+import { AppLayout } from '../../components/layout';
 
 interface ServiceDetailsViewProps {
   serviceId: string;
-  onBack: () => void;
   onBookNow?: (serviceId: string) => void;
+  onNavigateToProviderProfile?: (providerEmail: string) => void;
+  user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
 }
 
 interface Service {
@@ -36,22 +42,89 @@ interface Service {
   s_rating: number | string | null;
   s_review_count: number | string | null;
   provider_name: string;
+  provider_email?: string;
   primary_image?: string | null;
 }
 
 export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
   serviceId,
-  onBack,
   onBookNow,
+  onNavigateToProviderProfile,
+  user,
+  onNavigate,
+  onLogout,
 }) => {
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [imageError, setImageError] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [packages, setPackages] = useState<ServicePackage[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
 
   useEffect(() => {
-    loadServiceDetails();
+    if (serviceId) {
+      loadServiceDetails();
+      loadReviews();
+      loadPackages();
+    }
   }, [serviceId]);
+
+  const loadPackages = async () => {
+    if (!serviceId) return;
+
+    try {
+      setLoadingPackages(true);
+      const resp = await fetch(`${getApiBaseUrl()}/api/services/${serviceId}/packages`);
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.ok && Array.isArray(data.packages)) {
+          const mappedPackages: ServicePackage[] = data.packages
+            .filter((p: any) => p.sp_is_active)
+            .map((p: any) => ({
+              id: p.idpackage,
+              serviceId: p.sp_service_id,
+              name: p.sp_name,
+              description: p.sp_description,
+              minPax: p.sp_min_pax,
+              maxPax: p.sp_max_pax,
+              basePrice: p.sp_base_price ? parseFloat(p.sp_base_price) : undefined,
+              priceType: p.sp_price_type,
+              discountPercent: parseFloat(p.sp_discount_percent) || 0,
+              calculatedPrice: p.calculated_price,
+              isActive: !!p.sp_is_active,
+              displayOrder: p.sp_display_order || 0,
+              categories: (p.categories || []).map((c: any) => ({
+                id: c.idcategory,
+                packageId: c.pc_package_id,
+                name: c.pc_name,
+                description: c.pc_description,
+                displayOrder: c.pc_display_order || 0,
+                items: (c.items || []).map((i: any) => ({
+                  id: i.iditem,
+                  categoryId: i.pi_category_id,
+                  name: i.pi_name,
+                  description: i.pi_description,
+                  quantity: i.pi_quantity || 1,
+                  unit: i.pi_unit || 'pc',
+                  unitPrice: parseFloat(i.pi_unit_price) || 0,
+                  isOptional: !!i.pi_is_optional,
+                  displayOrder: i.pi_display_order || 0,
+                })),
+              })),
+            }));
+          setPackages(mappedPackages);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading packages:', error);
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
 
   const loadServiceDetails = async () => {
     try {
@@ -82,7 +155,7 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
           }
         } else {
           Alert.alert('Error', 'Service not found');
-          onBack();
+          onNavigate('dashboard');
         }
       } else {
         Alert.alert('Error', 'Failed to load service details');
@@ -97,10 +170,105 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
     }
   };
 
+  const loadReviews = async () => {
+    if (!serviceId) {
+      console.log('No serviceId provided for loading reviews');
+      return;
+    }
+    
+    try {
+      setLoadingReviews(true);
+      const serviceIdNum = typeof serviceId === 'string' ? parseInt(serviceId, 10) : serviceId;
+      console.log('Loading reviews for serviceId:', serviceId, 'parsed as:', serviceIdNum);
+      const url = `${getApiBaseUrl()}/api/services/${serviceIdNum}/reviews`;
+      console.log('Fetching from URL:', url);
+      const resp = await fetch(url);
+      
+      console.log('Response status:', resp.status);
+      if (resp.ok) {
+        const data = await resp.json();
+        console.log('Reviews API response:', JSON.stringify(data, null, 2));
+        if (data.ok && Array.isArray(data.reviews)) {
+          console.log('Loaded reviews:', data.reviews.length, 'reviews');
+          console.log('Reviews data:', data.reviews);
+          setReviews(data.reviews);
+        } else {
+          console.log('No reviews in response or error:', data);
+          setReviews([]);
+        }
+      } else {
+        const errorText = await resp.text();
+        console.error('Failed to load reviews, status:', resp.status, 'error:', errorText);
+        setReviews([]);
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
   const formatPrice = (price: number | string | null | undefined): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : (price || 0);
     if (isNaN(numPrice)) return '₱0.00';
     return `₱${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatDuration = (minutes: number | string | null | undefined): string => {
+    const numMinutes = typeof minutes === 'string' ? parseInt(minutes, 10) : (minutes || 0);
+    if (isNaN(numMinutes) || numMinutes <= 0) return 'N/A';
+    
+    const MINUTES_PER_HOUR = 60;
+    const MINUTES_PER_DAY = 1440; // 24 hours * 60 minutes
+    
+    // Handle days (24 hours = 1 day)
+    if (numMinutes >= MINUTES_PER_DAY) {
+      const days = Math.floor(numMinutes / MINUTES_PER_DAY);
+      const remainingMinutes = numMinutes % MINUTES_PER_DAY;
+      
+      if (remainingMinutes === 0) {
+        // Exactly divisible by 1440 (24 hours)
+        return days === 1 ? '1 day' : `${days} days`;
+      }
+      
+      // Has days and remaining time
+      const hours = Math.floor(remainingMinutes / MINUTES_PER_HOUR);
+      const mins = remainingMinutes % MINUTES_PER_HOUR;
+      
+      let result = days === 1 ? '1 day' : `${days} days`;
+      if (hours > 0) {
+        result += ` ${hours}hr`;
+      }
+      if (mins > 0) {
+        result += ` ${mins}min`;
+      }
+      return result;
+    }
+    
+    // If exactly 60 minutes, show as 1hr
+    if (numMinutes === 60) {
+      return '1hr';
+    }
+    
+    // If divisible by 60, show as hours
+    if (numMinutes % 60 === 0) {
+      const hours = numMinutes / 60;
+      return `${hours}hr`;
+    }
+    
+    // If more than 60, show as hours and minutes
+    if (numMinutes > 60) {
+      const hours = Math.floor(numMinutes / 60);
+      const mins = numMinutes % 60;
+      if (mins === 0) {
+        return `${hours}hr`;
+      }
+      return `${hours}hr ${mins}min`;
+    }
+    
+    // Less than 60, show as minutes
+    return `${numMinutes}min`;
   };
 
   const getCategoryIcon = (category: string): string => {
@@ -126,27 +294,22 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>Loading service details...</Text>
-      </View>
+      <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C63FF" />
+          <Text style={styles.loadingText}>Loading service details...</Text>
+        </View>
+      </AppLayout>
     );
   }
 
   if (!service) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Service Details</Text>
-          <View style={styles.placeholder} />
-        </View>
+      <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>Service not found</Text>
         </View>
-      </View>
+      </AppLayout>
     );
   }
 
@@ -159,6 +322,7 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
   const isMobileWeb = isWeb && screenWidth < 768;
 
   return (
+    <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
     <View style={styles.container}>
       {/* Background Decorative Elements */}
       <View style={styles.backgroundContainer}>
@@ -174,18 +338,8 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
       {/* Web: Centered Card Container */}
       {isWeb ? (
         <View style={styles.webCardContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-              <Text style={styles.backButtonIcon}>←</Text>
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Service Details</Text>
-            <View style={styles.placeholder} />
-          </View>
-
-          <ScrollView 
-            style={styles.content} 
+          <ScrollView
+            style={styles.content}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
           >
@@ -221,9 +375,18 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             <View style={styles.serviceHeaderLeft}>
               <Text style={styles.serviceName}>{service.s_name}</Text>
               <View style={styles.serviceMetaRow}>
-                <View style={styles.providerBadge}>
+                <TouchableOpacity 
+                  style={styles.providerBadge}
+                  onPress={() => {
+                    if (service.provider_email && onNavigateToProviderProfile) {
+                      onNavigateToProviderProfile(service.provider_email);
+                    }
+                  }}
+                  disabled={!service.provider_email || !onNavigateToProviderProfile}
+                  activeOpacity={service.provider_email && onNavigateToProviderProfile ? 0.7 : 1}
+                >
                   <Text style={styles.providerBadgeText}>{service.provider_name}</Text>
-                </View>
+                </TouchableOpacity>
                 {rating > 0 && !isNaN(rating) && (
                   <View style={styles.ratingBadge}>
                     <Text style={styles.ratingStar}>⭐</Text>
@@ -253,6 +416,25 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             </View>
           </View>
 
+          {/* Available Packages */}
+          {packages.length > 0 && (
+            <View style={styles.packagesCard}>
+              <Text style={styles.cardTitle}>Available Packages</Text>
+              <Text style={styles.packagesSubtitle}>
+                Select a package for better value or book individual services
+              </Text>
+              {packages.map(pkg => (
+                <PackageCard
+                  key={pkg.id}
+                  pkg={pkg}
+                  isSelected={selectedPackage?.id === pkg.id}
+                  onSelect={(p) => setSelectedPackage(selectedPackage?.id === p.id ? null : p)}
+                  showSelectButton={true}
+                />
+              ))}
+            </View>
+          )}
+
           {/* Description */}
           {service.s_description && (
             <View style={styles.descriptionCard}>
@@ -270,7 +452,7 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
                   <Text style={styles.detailIcon}>⏱️</Text>
                   <View style={styles.detailContent}>
                     <Text style={styles.detailLabel}>Duration</Text>
-                    <Text style={styles.detailValue}>{service.s_duration} min</Text>
+                    <Text style={styles.detailValue}>{formatDuration(service.s_duration)}</Text>
                   </View>
                 </View>
               )}
@@ -281,18 +463,6 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
                   <View style={styles.detailContent}>
                     <Text style={styles.detailLabel}>Capacity</Text>
                     <Text style={styles.detailValue}>{service.s_max_capacity} people</Text>
-                  </View>
-                </View>
-              )}
-
-              {service.s_location_type && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailIcon}>📍</Text>
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Location</Text>
-                    <Text style={styles.detailValue}>
-                      {service.s_location_type.charAt(0).toUpperCase() + service.s_location_type.slice(1)}
-                    </Text>
                   </View>
                 </View>
               )}
@@ -340,38 +510,102 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
               </ScrollView>
             </View>
           )}
+
+              {/* Reviews Section - Always visible */}
+              <View style={styles.reviewsCard}>
+                <Text style={styles.cardTitle}>⭐ Reviews & Feedback {reviews.length > 0 ? `(${reviews.length})` : ''}</Text>
+                {loadingReviews ? (
+                  <View style={styles.reviewsLoading}>
+                    <ActivityIndicator size="small" color="#4a55e1" />
+                    <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
+                  </View>
+                ) : reviews.length > 0 ? (
+                  <View style={styles.reviewsList}>
+                    {reviews.map((review) => (
+                      <View key={review.id} style={styles.reviewItem}>
+                        <View style={styles.reviewHeader}>
+                          <View style={styles.reviewUserInfo}>
+                            {review.userProfilePicture ? (
+                              <Image
+                                source={{
+                                  uri: review.userProfilePicture.startsWith('/uploads/')
+                                    ? `${getApiBaseUrl()}${review.userProfilePicture}`
+                                    : review.userProfilePicture
+                                }}
+                                style={styles.reviewAvatar}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={styles.reviewAvatarPlaceholder}>
+                                <Text style={styles.reviewAvatarText}>
+                                  {review.userName.charAt(0).toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
+                            <View style={styles.reviewUserDetails}>
+                              <Text style={styles.reviewUserName}>{review.userName}</Text>
+                              <Text style={styles.reviewDate}>
+                                {new Date(review.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.reviewRating}>
+                            <Text style={styles.reviewRatingText}>
+                              {'⭐'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                            </Text>
+                          </View>
+                        </View>
+                        {review.comment && (
+                          <Text style={styles.reviewComment}>{review.comment}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.reviewsEmpty}>
+                    <Text style={styles.reviewsEmptyIcon}>💬</Text>
+                    <Text style={styles.reviewsEmptyText}>No reviews yet. Be the first to review this service!</Text>
+                  </View>
+                )}
+              </View>
           </View>
           </ScrollView>
 
-          {/* Book Now Button - Modern CTA */}
-          {onBookNow && (
-            <View style={styles.footer}>
-              <TouchableOpacity
-                style={styles.modernBookButton}
-                onPress={() => onBookNow(serviceId)}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.modernBookButtonIcon}>📅</Text>
-                <Text style={styles.modernBookButtonText}>Book Now</Text>
-              </TouchableOpacity>
+          {/* Action Buttons - View Profile & Book Now */}
+          <View style={styles.footer}>
+            <View style={styles.footerButtons}>
+              {service?.provider_email && onNavigateToProviderProfile && (
+                <TouchableOpacity
+                  style={styles.viewProfileButton}
+                  onPress={() => onNavigateToProviderProfile(service.provider_email!)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.viewProfileButtonIcon}>👤</Text>
+                  <Text style={styles.viewProfileButtonText}>View Profile</Text>
+                </TouchableOpacity>
+              )}
+              {onBookNow && (
+                <TouchableOpacity
+                  style={[styles.modernBookButton, !(service?.provider_email && onNavigateToProviderProfile) && styles.modernBookButtonFull]}
+                  onPress={() => onBookNow(serviceId)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.modernBookButtonIcon}>📅</Text>
+                  <Text style={styles.modernBookButtonText}>Book Now</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
+          </View>
         </View>
       ) : (
         <>
           {/* Mobile: Full Screen Layout */}
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-              <Text style={styles.backButtonIcon}>←</Text>
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Service Details</Text>
-            <View style={styles.placeholder} />
-          </View>
-
-          <ScrollView 
-            style={styles.content} 
+          <ScrollView
+            style={styles.content}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
           >
@@ -406,10 +640,19 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
               <View style={styles.serviceHeader}>
                 <View style={styles.serviceHeaderLeft}>
                   <Text style={styles.serviceName}>{service.s_name}</Text>
-                  <View style={styles.serviceMetaRow}>
-                    <View style={styles.providerBadge}>
+                    <View style={styles.serviceMetaRow}>
+                    <TouchableOpacity 
+                      style={styles.providerBadge}
+                      onPress={() => {
+                        if (service.provider_email && onNavigateToProviderProfile) {
+                          onNavigateToProviderProfile(service.provider_email);
+                        }
+                      }}
+                      disabled={!service.provider_email || !onNavigateToProviderProfile}
+                      activeOpacity={service.provider_email && onNavigateToProviderProfile ? 0.7 : 1}
+                    >
                       <Text style={styles.providerBadgeText}>{service.provider_name}</Text>
-                    </View>
+                    </TouchableOpacity>
                     {rating > 0 && !isNaN(rating) && (
                       <View style={styles.ratingBadge}>
                         <Text style={styles.ratingStar}>⭐</Text>
@@ -439,6 +682,25 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
                 </View>
               </View>
 
+              {/* Available Packages (Mobile) */}
+              {packages.length > 0 && (
+                <View style={styles.packagesCard}>
+                  <Text style={styles.cardTitle}>Available Packages</Text>
+                  <Text style={styles.packagesSubtitle}>
+                    Select a package for better value
+                  </Text>
+                  {packages.map(pkg => (
+                    <PackageCard
+                      key={pkg.id}
+                      pkg={pkg}
+                      isSelected={selectedPackage?.id === pkg.id}
+                      onSelect={(p) => setSelectedPackage(selectedPackage?.id === p.id ? null : p)}
+                      showSelectButton={true}
+                    />
+                  ))}
+                </View>
+              )}
+
               {/* Description */}
               {service.s_description && (
                 <View style={styles.descriptionCard}>
@@ -467,18 +729,6 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
                       <View style={styles.detailContent}>
                         <Text style={styles.detailLabel}>Capacity</Text>
                         <Text style={styles.detailValue}>{service.s_max_capacity} people</Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {service.s_location_type && (
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailIcon}>📍</Text>
-                      <View style={styles.detailContent}>
-                        <Text style={styles.detailLabel}>Location</Text>
-                        <Text style={styles.detailValue}>
-                          {service.s_location_type.charAt(0).toUpperCase() + service.s_location_type.slice(1)}
-                        </Text>
                       </View>
                     </View>
                   )}
@@ -526,25 +776,100 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
                   </ScrollView>
                 </View>
               )}
+
+              {/* Reviews Section - Always visible */}
+              <View style={styles.reviewsCard}>
+                <Text style={styles.cardTitle}>⭐ Reviews & Feedback {reviews.length > 0 ? `(${reviews.length})` : ''}</Text>
+                {loadingReviews ? (
+                  <View style={styles.reviewsLoading}>
+                    <ActivityIndicator size="small" color="#4a55e1" />
+                    <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
+                  </View>
+                ) : reviews.length > 0 ? (
+                  <View style={styles.reviewsList}>
+                    {reviews.map((review) => (
+                      <View key={review.id} style={styles.reviewItem}>
+                        <View style={styles.reviewHeader}>
+                          <View style={styles.reviewUserInfo}>
+                            {review.userProfilePicture ? (
+                              <Image
+                                source={{
+                                  uri: review.userProfilePicture.startsWith('/uploads/')
+                                    ? `${getApiBaseUrl()}${review.userProfilePicture}`
+                                    : review.userProfilePicture
+                                }}
+                                style={styles.reviewAvatar}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={styles.reviewAvatarPlaceholder}>
+                                <Text style={styles.reviewAvatarText}>
+                                  {review.userName.charAt(0).toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
+                            <View style={styles.reviewUserDetails}>
+                              <Text style={styles.reviewUserName}>{review.userName}</Text>
+                              <Text style={styles.reviewDate}>
+                                {new Date(review.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.reviewRating}>
+                            <Text style={styles.reviewRatingText}>
+                              {'⭐'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                            </Text>
+                          </View>
+                        </View>
+                        {review.comment && (
+                          <Text style={styles.reviewComment}>{review.comment}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.reviewsEmpty}>
+                    <Text style={styles.reviewsEmptyIcon}>💬</Text>
+                    <Text style={styles.reviewsEmptyText}>No reviews yet. Be the first to review this service!</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </ScrollView>
 
-          {/* Book Now Button - Modern CTA */}
-          {onBookNow && (
-            <View style={styles.footer}>
-              <TouchableOpacity
-                style={styles.modernBookButton}
-                onPress={() => onBookNow(serviceId)}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.modernBookButtonIcon}>📅</Text>
-                <Text style={styles.modernBookButtonText}>Book Now</Text>
-              </TouchableOpacity>
+          {/* Action Buttons - View Profile & Book Now */}
+          <View style={styles.footer}>
+            <View style={styles.footerButtons}>
+              {service?.provider_email && onNavigateToProviderProfile && (
+                <TouchableOpacity
+                  style={styles.viewProfileButton}
+                  onPress={() => onNavigateToProviderProfile(service.provider_email!)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.viewProfileButtonIcon}>👤</Text>
+                  <Text style={styles.viewProfileButtonText}>View Profile</Text>
+                </TouchableOpacity>
+              )}
+              {onBookNow && (
+                <TouchableOpacity
+                  style={[styles.modernBookButton, !(service?.provider_email && onNavigateToProviderProfile) && styles.modernBookButtonFull]}
+                  onPress={() => onBookNow(serviceId)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.modernBookButtonIcon}>📅</Text>
+                  <Text style={styles.modernBookButtonText}>Book Now</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
+          </View>
         </>
       )}
     </View>
+    </AppLayout>
   );
 };
 
@@ -637,57 +962,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#636E72',
     fontWeight: '500',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 32) : 20,
-    paddingVertical: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 20) : 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-    position: 'relative',
-    zIndex: 10,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: screenWidth < 768 ? '0 1px 3px rgba(0, 0, 0, 0.05)' : '0 2px 8px rgba(0, 0, 0, 0.06)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Platform.OS === 'web' ? 10 : 8,
-    borderRadius: Platform.OS === 'web' ? 10 : 8,
-    ...(Platform.OS === 'web' ? {
-      transition: 'all 0.2s ease',
-      cursor: 'pointer',
-    } : {}),
-  },
-  backButtonIcon: {
-    fontSize: Platform.OS === 'web' ? 20 : 18,
-    color: '#4f46e5',
-    marginRight: 4,
-    fontWeight: '700',
-  },
-  backButtonText: {
-    fontSize: Platform.OS === 'web' ? 16 : 15,
-    color: '#4f46e5',
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: Platform.OS === 'web' ? (screenWidth < 768 ? 18 : 22) : 20,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-  },
-  placeholder: {
-    width: 40,
   },
   content: {
     flex: 1,
@@ -1053,13 +1327,124 @@ const styles = StyleSheet.create({
     width: Platform.OS === 'web' ? 240 : 200,
     height: Platform.OS === 'web' ? 180 : 150,
   },
+  reviewsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: Platform.OS === 'web' ? (screenWidth < 768 ? 12 : 16) : 16,
+    padding: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 24) : 24,
+    marginBottom: Platform.OS === 'web' ? (screenWidth < 768 ? 24 : 32) : 32,
+    marginTop: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 20) : 20,
+    marginHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 32) : 20,
+    minHeight: 120,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+      borderWidth: 1,
+      borderColor: '#f1f5f9',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    }),
+  },
+  reviewsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  reviewsLoadingText: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#64748b',
+  },
+  reviewsList: {
+    marginTop: 16,
+    gap: Platform.OS === 'web' ? 20 : 16,
+  },
+  reviewItem: {
+    paddingBottom: Platform.OS === 'web' ? 20 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  reviewAvatar: {
+    width: Platform.OS === 'web' ? 48 : 40,
+    height: Platform.OS === 'web' ? 48 : 40,
+    borderRadius: Platform.OS === 'web' ? 24 : 20,
+    marginRight: 12,
+  },
+  reviewAvatarPlaceholder: {
+    width: Platform.OS === 'web' ? 48 : 40,
+    height: Platform.OS === 'web' ? 48 : 40,
+    borderRadius: Platform.OS === 'web' ? 24 : 20,
+    backgroundColor: '#4a55e1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reviewAvatarText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    fontWeight: '700',
+  },
+  reviewUserDetails: {
+    flex: 1,
+  },
+  reviewUserName: {
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  reviewDate: {
+    fontSize: Platform.OS === 'web' ? 13 : 12,
+    color: '#64748b',
+  },
+  reviewRating: {
+    marginLeft: 12,
+  },
+  reviewRatingText: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+  },
+  reviewComment: {
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#334155',
+    lineHeight: Platform.OS === 'web' ? 24 : 22,
+  },
+  reviewsEmpty: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewsEmptyIcon: {
+    fontSize: Platform.OS === 'web' ? 48 : 40,
+    marginBottom: 12,
+  },
+  reviewsEmptyText: {
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#64748b',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
   footer: {
-    paddingHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 32) : 20,
-    paddingTop: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 20) : 20,
-    paddingBottom: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 24) : (isMobile ? 20 : 24),
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E9ECEF',
+    paddingHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 32) : 20,
+    paddingTop: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 20) : 20,
+    paddingBottom: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 24) : (isMobile ? 20 : 24),
     position: 'relative',
     zIndex: 10,
     ...(Platform.OS === 'web' ? {
@@ -1072,7 +1457,13 @@ const styles = StyleSheet.create({
       elevation: 8,
     }),
   },
+  footerButtons: {
+    flexDirection: 'row',
+    gap: Platform.OS === 'web' ? (screenWidth < 768 ? 12 : 16) : 12,
+    alignItems: 'stretch',
+  },
   modernBookButton: {
+    flex: 1,
     backgroundColor: '#4f46e5',
     paddingVertical: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 18) : 16,
     paddingHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 32) : 20,
@@ -1083,9 +1474,6 @@ const styles = StyleSheet.create({
     minHeight: Platform.OS === 'web' ? (screenWidth < 768 ? 56 : 60) : 56,
     gap: 12,
     ...(Platform.OS === 'web' ? {
-      maxWidth: screenWidth < 768 ? '100%' : 400,
-      alignSelf: 'center',
-      width: '100%',
       boxShadow: screenWidth < 768 ? '0 4px 12px rgba(79, 70, 229, 0.3)' : '0 8px 24px rgba(79, 70, 229, 0.4), 0 4px 8px rgba(79, 70, 229, 0.3)',
       transition: 'all 0.3s ease',
       cursor: 'pointer',
@@ -1096,6 +1484,45 @@ const styles = StyleSheet.create({
       shadowRadius: 16,
       elevation: 8,
     }),
+  },
+  modernBookButtonFull: {
+    ...(Platform.OS === 'web' ? {
+      maxWidth: screenWidth < 768 ? '100%' : 400,
+      alignSelf: 'center',
+      width: '100%',
+    } : {}),
+  },
+  viewProfileButton: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    paddingVertical: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 18) : 16,
+    paddingHorizontal: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 32) : 20,
+    borderRadius: Platform.OS === 'web' ? (screenWidth < 768 ? 14 : 16) : 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    minHeight: Platform.OS === 'web' ? (screenWidth < 768 ? 56 : 60) : 56,
+    gap: 12,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: screenWidth < 768 ? '0 4px 12px rgba(16, 185, 129, 0.3)' : '0 8px 24px rgba(16, 185, 129, 0.4), 0 4px 8px rgba(16, 185, 129, 0.3)',
+      transition: 'all 0.3s ease',
+      cursor: 'pointer',
+    } : {
+      shadowColor: '#10b981',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 16,
+      elevation: 8,
+    }),
+  },
+  viewProfileButtonIcon: {
+    fontSize: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 24) : 22,
+  },
+  viewProfileButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? (screenWidth < 768 ? 16 : 20) : 18,
+    fontWeight: '800',
+    letterSpacing: Platform.OS === 'web' ? (screenWidth < 768 ? 0.3 : 0.5) : 0.3,
   },
   modernBookButtonIcon: {
     fontSize: Platform.OS === 'web' ? (screenWidth < 768 ? 20 : 24) : 22,
@@ -1139,6 +1566,28 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 16,
     color: '#636E72',
+  },
+  // Package styles
+  packagesCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: isMobile ? 16 : 20,
+    marginBottom: 16,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 3,
+        }),
+  },
+  packagesSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 16,
+    marginTop: -4,
   },
 });
 
