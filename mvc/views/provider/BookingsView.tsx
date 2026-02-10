@@ -10,14 +10,15 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
-  Modal
+  Modal,
+  TextInput,
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
-const sidebarWidth = 260;
 
 interface BookingsViewProps {
   user?: User;
@@ -29,6 +30,9 @@ interface Booking {
   id: string;
   eventName: string;
   clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
   date: string;
   time: string;
   location: string;
@@ -45,7 +49,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [activeRoute, setActiveRoute] = useState('bookings');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showClientDetailsModal, setShowClientDetailsModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [bookingToUpdate, setBookingToUpdate] = useState<string | null>(null);
 
   useEffect(() => {
     loadBookings();
@@ -102,14 +112,23 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
               console.log(`Booking ${b.idbooking}: payment_method=${b.payment_method}, payment_status=${b.payment_status}, hasPendingCash=${hasPendingCash}`);
             }
             
+            // If status is 'completed' but not paid, change to 'cancelled'
+            let finalStatus = b.b_status;
+            if (b.b_status === 'completed' && b.is_paid !== 1) {
+              finalStatus = 'cancelled';
+            }
+            
             return {
             id: b.idbooking.toString(),
             eventName: b.b_event_name,
             clientName: b.client_name || 'Unknown Client',
+            clientEmail: b.client_email || null,
+            clientPhone: b.client_phone || null,
+            clientAddress: b.client_address || null,
             date: formatDate(b.b_event_date),
             time: `${formatTime(b.b_start_time)} - ${formatTime(b.b_end_time)}`,
             location: b.b_location,
-            status: b.b_status,
+            status: finalStatus,
             totalCost: parseFloat(b.b_total_cost) || 0,
               serviceName: b.service_name || 'Service',
             paymentMethod: b.payment_method || null,
@@ -135,13 +154,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
     }
   };
 
-  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
+  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string, reason?: string) => {
     try {
-      console.log(`Updating booking ${bookingId} to status: ${newStatus}`);
+      console.log(`Updating booking ${bookingId} to status: ${newStatus}${reason ? ` with reason: ${reason}` : ''}`);
+      const requestBody: any = { status: newStatus };
+      if (reason) {
+        requestBody.cancellation_reason = reason;
+      }
+      
       const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify(requestBody)
       });
       
       console.log('Response status:', resp.status);
@@ -152,7 +176,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
         if (data.ok) {
           // Reload bookings to get fresh data
           await loadBookings();
-          Alert.alert('Success', `Booking ${newStatus === 'cancelled' ? 'cancelled' : 'status updated'} successfully`);
+          Alert.alert('Success', `Booking ${newStatus === 'cancelled' ? 'cancelled' : 'confirmed'} successfully`);
         } else {
           Alert.alert('Error', data.error || 'Failed to update booking status');
         }
@@ -164,6 +188,36 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
     } catch (error) {
       console.error('Error updating booking status:', error);
       Alert.alert('Error', `Failed to update booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleConfirmClick = (bookingId: string) => {
+    setBookingToUpdate(bookingId);
+    setShowConfirmModal(true);
+  };
+
+  const handleCancelClick = (bookingId: string) => {
+    setBookingToUpdate(bookingId);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmBooking = async () => {
+    if (bookingToUpdate) {
+      setShowConfirmModal(false);
+      await handleUpdateBookingStatus(bookingToUpdate, 'confirmed');
+      setBookingToUpdate(null);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (bookingToUpdate && cancelReason.trim()) {
+      setShowCancelModal(false);
+      await handleUpdateBookingStatus(bookingToUpdate, 'cancelled', cancelReason.trim());
+      setBookingToUpdate(null);
+      setCancelReason('');
+    } else {
+      Alert.alert('Required', 'Please provide a reason for cancellation');
     }
   };
 
@@ -215,58 +269,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
     }
   };
 
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-          onPress?.(); // Close sidebar on mobile
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const filteredBookings = bookings.filter(b => filterStatus === 'all' || b.status === filterStatus);
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
+    const matchesSearch = !searchQuery || 
+      b.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
   const statusFilters = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
 
   const getStatusColor = (status: string) => {
@@ -280,49 +292,37 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
   };
 
   return (
-    <View style={styles.container}>
-      {/* Sidebar */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.sidebarOverlay}>
-            <View style={styles.mobileSidebar}>
-              <SidebarContent />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="provider"
+      activeRoute="bookings"
+      title="Bookings"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity 
-                style={styles.mobileMenuButton}
-                onPress={() => setSidebarVisible(true)}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Bookings</Text>
             <Text style={styles.headerSubtitle}>Manage your service bookings</Text>
-            </View>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.refreshButton}
             onPress={loadBookings}
             disabled={loading}
           >
             <Text style={styles.refreshButtonText}>{loading ? '⟳' : '↻'}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search bookings by event name, client, location, date, or service..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94A3B8"
+          />
         </View>
 
         {/* Status Filters */}
@@ -414,34 +414,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                             <>
                               <TouchableOpacity 
                                 style={[styles.tableActionButton, styles.confirmButton]}
-                                onPress={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                                onPress={() => handleConfirmClick(booking.id)}
                               >
                                 <Text style={styles.tableActionButtonText}>Confirm</Text>
                               </TouchableOpacity>
                               <TouchableOpacity 
                                 style={[styles.tableActionButton, styles.cancelButton]}
-                                onPress={async () => {
-                                  if (Platform.OS === 'web') {
-                                    const confirmed = window.confirm('Are you sure you want to cancel this booking?');
-                                    if (confirmed) {
-                                      await handleUpdateBookingStatus(booking.id, 'cancelled');
-                                    }
-                                  } else {
-                                    Alert.alert(
-                                      'Cancel Booking',
-                                      'Are you sure you want to cancel this booking?',
-                                      [
-                                        { text: 'No', style: 'cancel' },
-                                        { 
-                                          text: 'Yes', 
-                                          style: 'destructive',
-                                          onPress: async () => await handleUpdateBookingStatus(booking.id, 'cancelled')
-                                        }
-                                      ],
-                                      { cancelable: true }
-                                    );
-                                  }
-                                }}
+                                onPress={() => handleCancelClick(booking.id)}
                                 activeOpacity={0.7}
                               >
                                 <Text style={styles.tableActionButtonText}>Cancel</Text>
@@ -486,7 +465,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                             </>
                           )}
                           {booking.status === 'completed' && (
-                            <Text style={styles.tableCellText}>-</Text>
+                            <>
+                              {booking.isPaid ? (
+                                <TouchableOpacity 
+                                  style={[styles.tableActionButton, styles.invoiceButton]}
+                                  onPress={() => handleDownloadInvoice(booking.id)}
+                                >
+                                  <Text style={styles.tableActionButtonText}>📄 Invoice</Text>
+                                </TouchableOpacity>
+                              ) : (
+                                <Text style={styles.tableCellText}>-</Text>
+                              )}
+                            </>
                           )}
                           {booking.status === 'confirmed' && booking.isPaid && (
                             <TouchableOpacity 
@@ -550,38 +540,26 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                       </View>
                     </View>
                     <View style={[styles.tableCell, styles.tableCellActions, { flex: 1.5 }]}>
+                      <TouchableOpacity 
+                        style={[styles.tableActionButton, styles.viewDetailsButton]}
+                        onPress={() => {
+                          setSelectedBooking(booking);
+                          setShowClientDetailsModal(true);
+                        }}
+                      >
+                        <Text style={styles.tableActionButtonText}>👁️ Details</Text>
+                      </TouchableOpacity>
                       {booking.status === 'pending' && (
                         <>
                           <TouchableOpacity 
                             style={[styles.tableActionButton, styles.confirmButton]}
-                            onPress={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                            onPress={() => handleConfirmClick(booking.id)}
                           >
                             <Text style={styles.tableActionButtonText}>Confirm</Text>
                           </TouchableOpacity>
                           <TouchableOpacity 
                             style={[styles.tableActionButton, styles.cancelButton]}
-                            onPress={async () => {
-                              if (Platform.OS === 'web') {
-                                const confirmed = window.confirm('Are you sure you want to cancel this booking?');
-                                if (confirmed) {
-                                  await handleUpdateBookingStatus(booking.id, 'cancelled');
-                                }
-                              } else {
-                                Alert.alert(
-                                  'Cancel Booking',
-                                  'Are you sure you want to cancel this booking?',
-                                  [
-                                    { text: 'No', style: 'cancel' },
-                                    { 
-                                      text: 'Yes', 
-                                      style: 'destructive',
-                                      onPress: async () => await handleUpdateBookingStatus(booking.id, 'cancelled')
-                                    }
-                                  ],
-                                  { cancelable: true }
-                                );
-                              }
-                            }}
+                            onPress={() => handleCancelClick(booking.id)}
                             activeOpacity={0.7}
                           >
                             <Text style={styles.tableActionButtonText}>Cancel</Text>
@@ -626,7 +604,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                           </>
                       )}
                       {booking.status === 'completed' && (
-                        <Text style={styles.tableCellText}>-</Text>
+                        <>
+                          {booking.isPaid ? (
+                            <TouchableOpacity 
+                              style={[styles.tableActionButton, styles.invoiceButton]}
+                              onPress={() => handleDownloadInvoice(booking.id)}
+                            >
+                              <Text style={styles.tableActionButtonText}>📄 Invoice</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text style={styles.tableCellText}>-</Text>
+                          )}
+                        </>
                       )}
                         {booking.status === 'confirmed' && booking.isPaid && (
                           <TouchableOpacity 
@@ -648,190 +637,252 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
           </>
         )}
       </ScrollView>
-    </View>
+
+      {/* Client Details Modal */}
+      <Modal
+        visible={showClientDetailsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowClientDetailsModal(false);
+          setSelectedBooking(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.clientDetailsModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Client Details</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => {
+                  setShowClientDetailsModal(false);
+                  setSelectedBooking(null);
+                }}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedBooking && (
+              <ScrollView style={styles.modalBody}>
+                {/* Booking Info */}
+                <View style={styles.clientDetailsSection}>
+                  <Text style={styles.clientDetailsSectionTitle}>Booking Information</Text>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Event:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.eventName}</Text>
+                  </View>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Service:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.serviceName}</Text>
+                  </View>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Date:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.date}</Text>
+                  </View>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Time:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.time}</Text>
+                  </View>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Location:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.location}</Text>
+                  </View>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Total:</Text>
+                    <Text style={styles.clientDetailsValue}>₱{selectedBooking.totalCost.toLocaleString()}</Text>
+                  </View>
+                </View>
+
+                {/* Client Contact Info */}
+                <View style={styles.clientDetailsSection}>
+                  <Text style={styles.clientDetailsSectionTitle}>Client Contact Information</Text>
+                  <View style={styles.clientDetailsRow}>
+                    <Text style={styles.clientDetailsLabel}>Name:</Text>
+                    <Text style={styles.clientDetailsValue}>{selectedBooking.clientName}</Text>
+                  </View>
+                  {selectedBooking.clientEmail && (
+                    <View style={styles.clientDetailsRow}>
+                      <Text style={styles.clientDetailsLabel}>📧 Email:</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            window.location.href = `mailto:${selectedBooking.clientEmail}`;
+                          } else {
+                            Linking.openURL(`mailto:${selectedBooking.clientEmail}`);
+                          }
+                        }}
+                      >
+                        <Text style={[styles.clientDetailsValue, styles.clientDetailsLink]}>
+                          {selectedBooking.clientEmail}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {selectedBooking.clientPhone && (
+                    <View style={styles.clientDetailsRow}>
+                      <Text style={styles.clientDetailsLabel}>📞 Phone:</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            window.location.href = `tel:${selectedBooking.clientPhone}`;
+                          } else {
+                            Linking.openURL(`tel:${selectedBooking.clientPhone}`);
+                          }
+                        }}
+                      >
+                        <Text style={[styles.clientDetailsValue, styles.clientDetailsLink]}>
+                          {selectedBooking.clientPhone}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {selectedBooking.clientAddress && (
+                    <View style={styles.clientDetailsRow}>
+                      <Text style={styles.clientDetailsLabel}>📍 Address:</Text>
+                      <Text style={[styles.clientDetailsValue, { flex: 1 }]}>
+                        {selectedBooking.clientAddress}
+                      </Text>
+                    </View>
+                  )}
+                  {!selectedBooking.clientEmail && !selectedBooking.clientPhone && !selectedBooking.clientAddress && (
+                    <Text style={[styles.clientDetailsValue, { color: '#94A3B8', fontStyle: 'italic' }]}>
+                      No contact information available
+                    </Text>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.closeModalButton]}
+                onPress={() => {
+                  setShowClientDetailsModal(false);
+                  setSelectedBooking(null);
+                }}
+              >
+                <Text style={styles.closeModalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Confirm Booking Modal */}
+      <Modal
+        visible={showConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Confirm Booking</Text>
+              <TouchableOpacity onPress={() => setShowConfirmModal(false)}>
+                <Text style={styles.closeModalIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to confirm this booking? This action cannot be undone.
+              </Text>
+            </View>
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelModalButton]}
+                onPress={() => setShowConfirmModal(false)}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmModalButton]}
+                onPress={handleConfirmBooking}
+              >
+                <Text style={styles.confirmModalButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Booking Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.cancelModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancel Booking</Text>
+              <TouchableOpacity onPress={() => {
+                setShowCancelModal(false);
+                setCancelReason('');
+              }}>
+                <Text style={styles.closeModalIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalMessage}>
+                Please provide a reason for cancelling this booking:
+              </Text>
+              <TextInput
+                style={styles.cancelReasonInput}
+                placeholder="Enter cancellation reason..."
+                placeholderTextColor="#94a3b8"
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelModalButton]}
+                onPress={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitCancelButton]}
+                onPress={handleCancelBooking}
+                disabled={!cancelReason.trim()}
+              >
+                <Text style={[styles.submitCancelButtonText, !cancelReason.trim() && styles.disabledButtonText]}>
+                  Cancel Booking
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
-  sidebar: {
-    width: isMobile ? '80%' : sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    height: isMobile ? '100%' : undefined,
-  },
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  mobileSidebar: {
-    width: '80%',
-    height: '100%',
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarIconActive: {
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  sidebarLabelActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
   main: {
     flex: 1,
   },
   mainContent: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
   },
   header: {
     marginBottom: isMobile ? 12 : 20,
-    flexDirection: isMobile ? 'column' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: isMobile ? 'flex-start' : 'flex-start',
-    gap: isMobile ? 12 : 0,
+    alignItems: 'flex-start',
   },
   headerTextContainer: {
     flex: 1,
-  },
-  headerTitle: {
-    fontSize: isMobile ? 18 : 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: isMobile ? 12 : 14,
@@ -1025,9 +1076,252 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 4,
   },
+  searchContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1E293B',
+  },
   emptyStateSubtext: {
     fontSize: 14,
     color: '#64748B',
+  },
+  viewDetailsButton: {
+    backgroundColor: '#6366F1',
+    marginRight: 8,
+  },
+  clientDetailsModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    maxWidth: 600,
+    maxHeight: Platform.OS === 'web' ? '90%' : '100%',
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    } as any : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 10,
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 24 : 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  modalTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } as any : {}),
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: Platform.OS === 'web' ? 24 : 20,
+    maxHeight: Platform.OS === 'web' ? 400 : undefined,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: Platform.OS === 'web' ? 24 : 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  modalButton: {
+    paddingVertical: Platform.OS === 'web' ? 12 : 10,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    borderRadius: Platform.OS === 'web' ? 8 : 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } as any : {}),
+  },
+  clientDetailsSection: {
+    marginBottom: Platform.OS === 'web' ? 24 : 20,
+    paddingBottom: Platform.OS === 'web' ? 20 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  clientDetailsSectionTitle: {
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 16 : 12,
+  },
+  clientDetailsRow: {
+    flexDirection: 'row',
+    marginBottom: Platform.OS === 'web' ? 12 : 10,
+    alignItems: 'flex-start',
+  },
+  clientDetailsLabel: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontWeight: '600',
+    color: '#64748B',
+    width: Platform.OS === 'web' ? 100 : 90,
+    marginRight: Platform.OS === 'web' ? 12 : 8,
+  },
+  clientDetailsValue: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#1E293B',
+    flex: 1,
+  },
+  clientDetailsLink: {
+    color: '#6366F1',
+    ...(Platform.OS === 'web' ? {
+      textDecorationLine: 'underline',
+      cursor: 'pointer',
+    } as any : {}),
+  },
+  closeModalButton: {
+    backgroundColor: '#F1F5F9',
+  },
+  closeModalButtonText: {
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 20 : 16,
+  },
+  confirmModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    maxWidth: 500,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 10,
+    }),
+  },
+  cancelModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    maxWidth: 600,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 10,
+    }),
+  },
+  modalBody: {
+    padding: Platform.OS === 'web' ? 24 : 20,
+  },
+  modalMessage: {
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 16 : 12,
+    lineHeight: Platform.OS === 'web' ? 24 : 22,
+  },
+  cancelReasonInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: Platform.OS === 'web' ? 12 : 10,
+    padding: Platform.OS === 'web' ? 16 : 14,
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#1E293B',
+    minHeight: Platform.OS === 'web' ? 120 : 100,
+    textAlignVertical: 'top',
+    ...(Platform.OS === 'web' ? {
+      resize: 'vertical' as any,
+    } : {}),
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Platform.OS === 'web' ? 12 : 10,
+    padding: Platform.OS === 'web' ? 24 : 20,
+    paddingTop: Platform.OS === 'web' ? 0 : 0,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  modalButton: {
+    paddingVertical: Platform.OS === 'web' ? 12 : 10,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    borderRadius: Platform.OS === 'web' ? 10 : 8,
+    minWidth: Platform.OS === 'web' ? 100 : 80,
+    alignItems: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cancelModalButtonText: {
+    color: '#64748B',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '600',
+  },
+  confirmModalButton: {
+    backgroundColor: '#10b981',
+  },
+  confirmModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '600',
+  },
+  submitCancelButton: {
+    backgroundColor: '#ef4444',
+  },
+  submitCancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '600',
+  },
+  disabledButtonText: {
+    color: '#94a3b8',
+  },
+  closeModalIcon: {
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    color: '#64748B',
+    fontWeight: 'bold',
   },
 });
 
