@@ -16,10 +16,10 @@ import {
 } from 'react-native';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
-const sidebarWidth = 260;
 
 interface HiringViewProps {
   user?: User;
@@ -45,6 +45,7 @@ interface JobApplication {
   status: 'pending' | 'reviewed' | 'accepted' | 'rejected';
   interviewDate: string | null;
   interviewTime: string | null;
+  interviewDescription: string | null;
   rejectionNote: string | null;
   appliedAt: string;
   jobTitle: string;
@@ -57,13 +58,12 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeRoute, setActiveRoute] = useState('hiring');
   const [activeTab, setActiveTab] = useState<'postings' | 'applications'>('postings');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -72,9 +72,19 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
   const [jobTitle, setJobTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
+  const [jobType, setJobType] = useState<'full_time' | 'part_time'>('full_time');
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewTime, setInterviewTime] = useState('');
+  const [interviewDescription, setInterviewDescription] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDeadlineDatePicker, setShowDeadlineDatePicker] = useState(false);
   const [rejectionNote, setRejectionNote] = useState('');
+  const [hireNote, setHireNote] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorTooltip, setShowErrorTooltip] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showSuccessTooltip, setShowSuccessTooltip] = useState(false);
   const [isPostingJob, setIsPostingJob] = useState(false);
   const [postJobError, setPostJobError] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -198,7 +208,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
             providerEmail: user.email,
             jobTitle: jobTitle.trim(),
             description: description.trim(),
-            deadlineDate: deadlineDate
+            deadlineDate: deadlineDate,
+            jobType: jobType
           }),
           signal: controller.signal
         });
@@ -450,6 +461,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
     setJobTitle('');
     setDescription('');
     setDeadlineDate('');
+    setJobType('full_time');
     setEditingJob(null);
   };
 
@@ -462,14 +474,30 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
       setInterviewDate('');
       setInterviewTime('');
     }
+    setInterviewDescription((application as any).interviewDescription || '');
     setShowInterviewModal(true);
   };
 
   const handleSubmitInterview = async () => {
     if (!user?.email || !selectedApplication) return;
     
-    if (!interviewDate || !interviewTime) {
-      Alert.alert('Validation Error', 'Please select both date and time for the interview');
+    // Clear previous tooltips
+    setErrorMessage(null);
+    setShowErrorTooltip(false);
+    setSuccessMessage(null);
+    setShowSuccessTooltip(false);
+    
+    if (!interviewDate || !interviewTime || !interviewDescription.trim()) {
+      const errorMsg = 'Please fill in all required fields: date, time, and description';
+      if (Platform.OS === 'web') {
+        setErrorMessage(errorMsg);
+        setShowErrorTooltip(true);
+        setTimeout(() => {
+          setShowErrorTooltip(false);
+        }, 5000);
+      } else {
+        Alert.alert('Validation Error', errorMsg);
+      }
       return;
     }
 
@@ -482,7 +510,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           body: JSON.stringify({
             providerEmail: user.email,
             interviewDate: interviewDate,
-            interviewTime: interviewTime
+            interviewTime: interviewTime,
+            interviewDescription: interviewDescription
           })
         }
       );
@@ -490,18 +519,210 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
       const data = await response.json();
       
       if (data.ok) {
-        Alert.alert('Success', 'Interview scheduled successfully');
-        setShowInterviewModal(false);
-        setSelectedApplication(null);
-        setInterviewDate('');
-        setInterviewTime('');
-        loadApplications();
+        const successMsg = selectedApplication?.interviewDate ? 'Interview rescheduled successfully' : 'Interview scheduled successfully';
+        if (Platform.OS === 'web') {
+          setSuccessMessage(successMsg);
+          setShowSuccessTooltip(true);
+          setTimeout(() => {
+            setShowSuccessTooltip(false);
+            setShowInterviewModal(false);
+            setSelectedApplication(null);
+            setInterviewDate('');
+            setInterviewTime('');
+            setInterviewDescription('');
+            loadApplications();
+          }, 2000);
+        } else {
+          Alert.alert('Success', successMsg);
+          setShowInterviewModal(false);
+          setSelectedApplication(null);
+          setInterviewDate('');
+          setInterviewTime('');
+          loadApplications();
+        }
       } else {
-        Alert.alert('Error', data.error || 'Failed to schedule interview');
+        const errorMsg = data.error || 'Failed to schedule interview';
+        if (Platform.OS === 'web') {
+          setErrorMessage(errorMsg);
+          setShowErrorTooltip(true);
+          setTimeout(() => {
+            setShowErrorTooltip(false);
+          }, 5000);
+        } else {
+          Alert.alert('Error', errorMsg);
+        }
       }
     } catch (error) {
       console.error('Failed to schedule interview:', error);
-      Alert.alert('Error', 'Failed to schedule interview');
+      const errorMsg = 'Failed to schedule interview. Please try again.';
+      if (Platform.OS === 'web') {
+        setErrorMessage(errorMsg);
+        setShowErrorTooltip(true);
+        setTimeout(() => {
+          setShowErrorTooltip(false);
+        }, 5000);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    }
+  };
+
+  // Check if interview time has passed
+  const isInterviewTimePassed = (application: JobApplication): boolean => {
+    if (!application.interviewDate || !application.interviewTime) {
+      return false;
+    }
+    
+    try {
+      // Parse date (YYYY-MM-DD format)
+      const dateStr = String(application.interviewDate).trim();
+      const dateParts = dateStr.split('-');
+      if (dateParts.length !== 3) {
+        console.warn('Invalid date format:', dateStr);
+        return false;
+      }
+      
+      const interviewYear = parseInt(dateParts[0]);
+      const interviewMonth = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+      const interviewDay = parseInt(dateParts[2]);
+      
+      // Parse time (HH:MM:SS or HH:MM format)
+      const timeStr = String(application.interviewTime).trim();
+      const timeParts = timeStr.split(':');
+      
+      if (timeParts.length < 2) {
+        console.warn('Invalid time format:', timeStr);
+        return false;
+      }
+      
+      const interviewHour = parseInt(timeParts[0]);
+      const interviewMinute = parseInt(timeParts[1]);
+      const interviewSecond = timeParts.length > 2 ? parseInt(timeParts[2]) : 0;
+      
+      // Create interview date object using local time
+      const interviewDateTime = new Date(
+        interviewYear,
+        interviewMonth,
+        interviewDay,
+        interviewHour,
+        interviewMinute,
+        interviewSecond
+      );
+      
+      // Get current date/time
+      const now = new Date();
+      
+      // Compare
+      const hasPassed = interviewDateTime < now;
+      
+      // Debug logging (only on web or when needed)
+      if (Platform.OS === 'web' || hasPassed) {
+        console.log('Interview time check:', {
+          interviewDate: application.interviewDate,
+          interviewTime: application.interviewTime,
+          interviewDateTime: interviewDateTime.toLocaleString(),
+          now: now.toLocaleString(),
+          hasPassed: hasPassed,
+          interviewTimestamp: interviewDateTime.getTime(),
+          nowTimestamp: now.getTime()
+        });
+      }
+      
+      return hasPassed;
+    } catch (error) {
+      console.error('Error checking interview time:', error, {
+        interviewDate: application.interviewDate,
+        interviewTime: application.interviewTime
+      });
+      return false;
+    }
+  };
+
+  const handleHireApplication = (application: JobApplication) => {
+    if (!user?.email) return;
+    setSelectedApplication(application);
+    setHireNote('');
+    setShowHireModal(true);
+  };
+
+  const handleSubmitHire = async () => {
+    if (!user?.email || !selectedApplication) return;
+    
+    if (!hireNote.trim()) {
+      const errorMsg = 'Please provide a hiring note';
+      if (Platform.OS === 'web') {
+        setErrorMessage(errorMsg);
+        setShowErrorTooltip(true);
+        setTimeout(() => {
+          setShowErrorTooltip(false);
+          setErrorMessage(null);
+        }, 5000);
+      } else {
+        Alert.alert('Validation Error', errorMsg);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${getApiBaseUrl()}/api/provider/job-applications/${selectedApplication.id}/accept`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            providerEmail: user.email,
+            hireNote: hireNote.trim()
+          })
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.ok) {
+        if (Platform.OS === 'web') {
+          setSuccessMessage('Applicant hired successfully!');
+          setShowSuccessTooltip(true);
+          setTimeout(() => {
+            setShowSuccessTooltip(false);
+            setSuccessMessage(null);
+            setShowHireModal(false);
+            setSelectedApplication(null);
+            setHireNote('');
+            loadApplications();
+          }, 2000);
+        } else {
+          Alert.alert('Success', 'Applicant hired successfully!');
+          setShowHireModal(false);
+          setSelectedApplication(null);
+          setHireNote('');
+          loadApplications();
+        }
+      } else {
+        const errorMsg = data.error || 'Failed to hire applicant';
+        if (Platform.OS === 'web') {
+          setErrorMessage(errorMsg);
+          setShowErrorTooltip(true);
+          setTimeout(() => {
+            setShowErrorTooltip(false);
+            setErrorMessage(null);
+          }, 5000);
+        } else {
+          Alert.alert('Error', errorMsg);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to hire applicant:', error);
+      const errorMsg = 'Failed to hire applicant. Please try again.';
+      if (Platform.OS === 'web') {
+        setErrorMessage(errorMsg);
+        setShowErrorTooltip(true);
+        setTimeout(() => {
+          setShowErrorTooltip(false);
+          setErrorMessage(null);
+        }, 5000);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
     }
   };
 
@@ -607,100 +828,43 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
     }
   };
 
+  // Get current step index for progress bar (0 = Applied, 1 = Under Review, 2 = Accepted/Rejected)
+  const getCurrentStep = (status: string): number => {
+    switch (status) {
+      case 'pending': return 0;
+      case 'reviewed': return 1;
+      case 'accepted': return 2;
+      case 'rejected': return 2;
+      default: return 0;
+    }
+  };
+
+  // Render progress bar component
+  const renderProgressBar = (status: string) => {
+    // Progress bar removed - return null
+    return null;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]}
-        onPress={() => {
-          onPress?.();
-          setActiveRoute(route);
-          onNavigate?.(route);
-        }}
-      >
-        <Text style={styles.sidebarIcon}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      <View style={styles.profileCard}>
-        {isMobile && (
-          <TouchableOpacity 
-            style={styles.closeSidebarButton}
-            onPress={() => setSidebarVisible(false)}
-          >
-            <Text style={styles.closeSidebarIcon}>✕</Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
-    <View style={styles.layout}>
-      {/* Sidebar - Desktop always visible, Mobile in modal */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.sidebarOverlay}>
-            <View style={styles.mobileSidebar}>
-              <SidebarContent />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main Content */}
+    <AppLayout
+      role="provider"
+      activeRoute="hiring"
+      title="Hiring"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
       <ScrollView style={styles.mainContent} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity
-                style={styles.mobileMenuButton}
-                onPress={() => setSidebarVisible(true)}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Job Postings</Text>
-              <Text style={styles.headerSubtitle}>Post and manage job openings</Text>
-            </View>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Job Postings</Text>
+            <Text style={styles.headerSubtitle}>Post and manage job openings</Text>
           </View>
           <TouchableOpacity
             style={styles.postButton}
@@ -780,6 +944,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                     <View style={styles.tableHeader}>
                       <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Job Title</Text>
                       <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
+                      <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Job Type</Text>
                       <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Deadline</Text>
                       <Text style={[styles.tableHeaderCell, { flex: 0.8 }]}>Status</Text>
                       <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Actions</Text>
@@ -793,6 +958,13 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                         </View>
                         <View style={[styles.tableCell, { flex: 2.5 }]}>
                           <Text style={styles.tableCellText} numberOfLines={3}>{job.description}</Text>
+                        </View>
+                        <View style={[styles.tableCell, { flex: 1 }]}>
+                          <Text style={styles.tableCellText}>
+                            {((job as any).jobType === 'full_time' || !(job as any).jobType) ? 'Full Time' : 
+                             (job as any).jobType === 'part_time' ? 'Part Time' : 
+                             String((job as any).jobType || 'Full Time')}
+                          </Text>
                         </View>
                         <View style={[styles.tableCell, { flex: 1.2 }]}>
                           <Text style={styles.tableCellText}>{formatDate(job.deadlineDate)}</Text>
@@ -950,10 +1122,17 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                         </View>
                         <View style={[styles.tableCell, { flex: 1.2 }]}>
                           {app.interviewDate && app.interviewTime ? (
-                            <Text style={styles.tableCellText} numberOfLines={2}>
-                              {formatDate(app.interviewDate)}{'\n'}
-                              {app.interviewTime}
-                            </Text>
+                            <View>
+                              <Text style={styles.tableCellText} numberOfLines={1}>
+                                {formatDate(app.interviewDate)}{'\n'}
+                                {app.interviewTime}
+                              </Text>
+                              {(app as any).interviewDescription && (
+                                <Text style={[styles.tableCellText, { fontSize: 11, color: '#64748B', marginTop: 4 }]} numberOfLines={2}>
+                                  📝 {(app as any).interviewDescription}
+                                </Text>
+                              )}
+                            </View>
                           ) : (
                             <Text style={[styles.tableCellText, { color: '#94A3B8' }]}>Not scheduled</Text>
                           )}
@@ -965,21 +1144,31 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                           >
                             <Text style={styles.tableActionButtonText}>📄 Resume</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.scheduleButton]}
-                            onPress={() => handleScheduleInterview(app)}
-                          >
-                            <Text style={styles.tableActionButtonText}>
-                              {app.interviewDate ? '✏️ Reschedule' : '📅 Schedule'}
-                            </Text>
-                          </TouchableOpacity>
-                          {app.status !== 'rejected' && (
-                            <TouchableOpacity
-                              style={[styles.tableActionButton, styles.rejectButton]}
-                              onPress={() => handleRejectApplication(app)}
-                            >
-                              <Text style={styles.tableActionButtonText}>❌ Reject</Text>
-                            </TouchableOpacity>
+                          {app.status !== 'accepted' && app.status !== 'rejected' && (
+                            <>
+                              <TouchableOpacity
+                                style={[styles.tableActionButton, styles.scheduleButton]}
+                                onPress={() => handleScheduleInterview(app)}
+                              >
+                                <Text style={styles.tableActionButtonText}>
+                                  {app.interviewDate ? '✏️ Reschedule' : '📅 Schedule'}
+                                </Text>
+                              </TouchableOpacity>
+                              {isInterviewTimePassed(app) && (
+                                <TouchableOpacity
+                                  style={[styles.tableActionButton, styles.hireButton]}
+                                  onPress={() => handleHireApplication(app)}
+                                >
+                                  <Text style={styles.tableActionButtonText}>✅ Hire</Text>
+                                </TouchableOpacity>
+                              )}
+                              <TouchableOpacity
+                                style={[styles.tableActionButton, styles.rejectButton]}
+                                onPress={() => handleRejectApplication(app)}
+                              >
+                                <Text style={styles.tableActionButtonText}>❌ Reject</Text>
+                              </TouchableOpacity>
+                            </>
                           )}
                         </View>
                       </View>
@@ -1023,17 +1212,25 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                             {app.status.toUpperCase()}
                           </Text>
                         </View>
+                        {renderProgressBar(app.status)}
                       </View>
-                      <View style={[styles.tableCell, { flex: 1.2 }]}>
-                        {app.interviewDate && app.interviewTime ? (
-                          <Text style={styles.tableCellText} numberOfLines={2}>
-                            {formatDate(app.interviewDate)}{'\n'}
-                            {app.interviewTime}
-                          </Text>
-                        ) : (
-                          <Text style={[styles.tableCellText, { color: '#94A3B8' }]}>Not scheduled</Text>
-                        )}
-                      </View>
+                        <View style={[styles.tableCell, { flex: 1.2 }]}>
+                          {app.interviewDate && app.interviewTime ? (
+                            <View>
+                              <Text style={styles.tableCellText} numberOfLines={1}>
+                                {formatDate(app.interviewDate)}{'\n'}
+                                {app.interviewTime}
+                              </Text>
+                              {(app as any).interviewDescription && (
+                                <Text style={[styles.tableCellText, { fontSize: 11, color: '#64748B', marginTop: 4 }]} numberOfLines={2}>
+                                  📝 {(app as any).interviewDescription}
+                                </Text>
+                              )}
+                            </View>
+                          ) : (
+                            <Text style={[styles.tableCellText, { color: '#94A3B8' }]}>Not scheduled</Text>
+                          )}
+                        </View>
                       <View style={[styles.tableCell, styles.tableCellActions, { flex: 2 }]}>
                         <TouchableOpacity
                           style={[styles.tableActionButton, styles.downloadButton]}
@@ -1041,21 +1238,49 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                         >
                           <Text style={styles.tableActionButtonText}>📄 Resume</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.tableActionButton, styles.scheduleButton]}
-                          onPress={() => handleScheduleInterview(app)}
-                        >
-                          <Text style={styles.tableActionButtonText}>
-                            {app.interviewDate ? '✏️ Reschedule' : '📅 Schedule'}
-                          </Text>
-                        </TouchableOpacity>
-                        {app.status !== 'rejected' && (
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.rejectButton]}
-                            onPress={() => handleRejectApplication(app)}
-                          >
-                            <Text style={styles.tableActionButtonText}>❌ Reject</Text>
-                          </TouchableOpacity>
+                        {app.status !== 'accepted' && app.status !== 'rejected' && (
+                          <>
+                            <TouchableOpacity
+                              style={[
+                                styles.tableActionButton, 
+                                styles.scheduleButton,
+                                (app.status !== 'pending' && app.status !== 'reviewed') && styles.tableActionButtonDisabled
+                              ]}
+                              onPress={() => handleScheduleInterview(app)}
+                              disabled={app.status !== 'pending' && app.status !== 'reviewed'}
+                            >
+                              <Text style={[
+                                styles.tableActionButtonText,
+                                (app.status !== 'pending' && app.status !== 'reviewed') && styles.tableActionButtonTextDisabled
+                              ]}>
+                                {app.interviewDate ? '✏️ Reschedule' : '📅 Schedule'}
+                              </Text>
+                            </TouchableOpacity>
+                            {app.status === 'reviewed' && isInterviewTimePassed(app) && (
+                              <TouchableOpacity
+                                style={[styles.tableActionButton, styles.hireButton]}
+                                onPress={() => handleHireApplication(app)}
+                              >
+                                <Text style={styles.tableActionButtonText}>✅ Hire</Text>
+                              </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                              style={[
+                                styles.tableActionButton, 
+                                styles.rejectButton,
+                                (app.status !== 'pending' && app.status !== 'reviewed') && styles.tableActionButtonDisabled
+                              ]}
+                              onPress={() => handleRejectApplication(app)}
+                              disabled={app.status !== 'pending' && app.status !== 'reviewed'}
+                            >
+                              <Text style={[
+                                styles.tableActionButtonText,
+                                (app.status !== 'pending' && app.status !== 'reviewed') && styles.tableActionButtonTextDisabled
+                              ]}>
+                                ❌ Reject
+                              </Text>
+                            </TouchableOpacity>
+                          </>
                         )}
                       </View>
                     </View>
@@ -1176,18 +1401,102 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
               </View>
 
               <View style={styles.formGroup}>
+                <Text style={styles.label}>Job Type *</Text>
+                <View style={styles.jobTypeContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.jobTypeOption,
+                      jobType === 'full_time' && styles.jobTypeOptionSelected
+                    ]}
+                    onPress={() => {
+                      setJobType('full_time');
+                      setPostJobError(null);
+                    }}
+                    disabled={isPostingJob}
+                  >
+                    <View style={[
+                      styles.jobTypeRadio,
+                      jobType === 'full_time' && styles.jobTypeRadioSelected
+                    ]}>
+                      {jobType === 'full_time' && <View style={styles.jobTypeRadioInner} />}
+                    </View>
+                    <Text style={[
+                      styles.jobTypeLabel,
+                      jobType === 'full_time' && styles.jobTypeLabelSelected
+                    ]}>Full Time</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.jobTypeOption,
+                      jobType === 'part_time' && styles.jobTypeOptionSelected
+                    ]}
+                    onPress={() => {
+                      setJobType('part_time');
+                      setPostJobError(null);
+                    }}
+                    disabled={isPostingJob}
+                  >
+                    <View style={[
+                      styles.jobTypeRadio,
+                      jobType === 'part_time' && styles.jobTypeRadioSelected
+                    ]}>
+                      {jobType === 'part_time' && <View style={styles.jobTypeRadioInner} />}
+                    </View>
+                    <Text style={[
+                      styles.jobTypeLabel,
+                      jobType === 'part_time' && styles.jobTypeLabelSelected
+                    ]}>Part Time</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
                 <Text style={styles.label}>Deadline Date *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={deadlineDate}
-                  onChangeText={(text) => {
-                    setDeadlineDate(text);
-                    setPostJobError(null);
-                  }}
-                  editable={!isPostingJob}
-                />
-                <Text style={styles.helperText}>Format: YYYY-MM-DD (e.g., 2025-12-31)</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.deadlineInputWrapper}>
+                    {/* @ts-ignore - HTML input for web date picker */}
+                    <input
+                      type="date"
+                      value={deadlineDate || ''}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e: any) => {
+                        setDeadlineDate(e.target.value || '');
+                        setPostJobError(null);
+                      }}
+                      disabled={isPostingJob}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        fontSize: 16,
+                        border: '2px solid #E2E8F0',
+                        borderRadius: 12,
+                        backgroundColor: '#FFFFFF',
+                        outline: 'none',
+                        cursor: isPostingJob ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.deadlinePickerButton, isPostingJob && styles.deadlinePickerButtonDisabled]}
+                    onPress={() => !isPostingJob && setShowDeadlineDatePicker(true)}
+                    disabled={isPostingJob}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.deadlinePickerButtonLeft}>
+                      <Text style={styles.deadlinePickerIcon}>📅</Text>
+                      <Text style={deadlineDate ? styles.deadlinePickerText : styles.deadlinePickerPlaceholder}>
+                        {deadlineDate ? (() => {
+                          const d = new Date(deadlineDate);
+                          return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                        })() : 'Select deadline date'}
+                      </Text>
+                    </View>
+                    <Text style={styles.deadlinePickerArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               
               {/* Error Message Display */}
@@ -1217,9 +1526,9 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.submitButton, (isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate) && styles.submitButtonDisabled]}
+                style={[styles.modalButton, styles.submitButton, (isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate || !jobType) && styles.submitButtonDisabled]}
                 onPress={handlePostJob}
-                disabled={isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate}
+                disabled={isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate || !jobType}
               >
                 {isPostingJob ? (
                   <View style={styles.submitButtonContent}>
@@ -1287,13 +1596,46 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Deadline Date *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={deadlineDate}
-                  onChangeText={setDeadlineDate}
-                />
-                <Text style={styles.helperText}>Format: YYYY-MM-DD (e.g., 2025-12-31)</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.deadlineInputWrapper}>
+                    {/* @ts-ignore - HTML input for web date picker */}
+                    <input
+                      type="date"
+                      value={deadlineDate || ''}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e: any) => setDeadlineDate(e.target.value || '')}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        fontSize: 16,
+                        border: '2px solid #E2E8F0',
+                        borderRadius: 12,
+                        backgroundColor: '#FFFFFF',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.deadlinePickerButton}
+                    onPress={() => setShowDeadlineDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.deadlinePickerButtonLeft}>
+                      <Text style={styles.deadlinePickerIcon}>📅</Text>
+                      <Text style={deadlineDate ? styles.deadlinePickerText : styles.deadlinePickerPlaceholder}>
+                        {deadlineDate ? (() => {
+                          const d = new Date(deadlineDate);
+                          return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                        })() : 'Select deadline date'}
+                      </Text>
+                    </View>
+                    <Text style={styles.deadlinePickerArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ScrollView>
 
@@ -1318,6 +1660,70 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
         </View>
       </Modal>
 
+      {/* Deadline Date Picker Modal (Mobile) */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showDeadlineDatePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowDeadlineDatePicker(false)}
+        >
+          <View style={styles.pickerModalOverlay}>
+            <View style={styles.pickerModalContent}>
+              <View style={styles.pickerModalHeader}>
+                <Text style={styles.pickerModalTitle}>Select Deadline Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDeadlineDatePicker(false)}
+                  style={styles.pickerModalCloseButton}
+                >
+                  <Text style={styles.pickerModalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.pickerModalBody}>
+                {(() => {
+                  const dates: string[] = [];
+                  const today = new Date();
+                  for (let i = 1; i <= 90; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    dates.push(date.toISOString().split('T')[0]);
+                  }
+                  return dates.map((date) => {
+                    const dateObj = new Date(date);
+                    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                    const year = dateObj.getFullYear();
+                    const isSelected = deadlineDate === date;
+                    return (
+                      <TouchableOpacity
+                        key={date}
+                        style={[
+                          styles.pickerModalItem,
+                          isSelected && styles.pickerModalItemSelected
+                        ]}
+                        onPress={() => {
+                          setDeadlineDate(date);
+                          setShowDeadlineDatePicker(false);
+                          setPostJobError(null);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerModalItemText,
+                          isSelected && styles.pickerModalItemTextSelected
+                        ]}>
+                          {dayName}, {month} {day}, {year}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* Schedule Interview Modal */}
       <Modal
         visible={showInterviewModal}
@@ -1328,6 +1734,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           setSelectedApplication(null);
           setInterviewDate('');
           setInterviewTime('');
+          setInterviewDescription('');
         }}
       >
         <View style={styles.modalOverlay}>
@@ -1343,6 +1750,442 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                   setSelectedApplication(null);
                   setInterviewDate('');
                   setInterviewTime('');
+                  setInterviewDescription('');
+                }}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedApplication && (
+              <View style={styles.modernJobInfoContainer}>
+                <View style={styles.modernJobInfoHeader}>
+                  <View style={styles.modernJobInfoIconContainer}>
+                    <Text style={styles.modernJobInfoIcon}>💼</Text>
+                  </View>
+                  <View style={styles.modernJobInfoContent}>
+                    <Text style={styles.modernJobInfoTitle}>{selectedApplication.jobTitle}</Text>
+                    <Text style={styles.modernJobInfoDescription}>
+                      Applicant: {selectedApplication.applicantFirstName && selectedApplication.applicantLastName 
+                        ? `${selectedApplication.applicantFirstName} ${selectedApplication.applicantLastName}`
+                        : selectedApplication.applicantEmail}
+                    </Text>
+                  </View>
+                </View>
+                {selectedApplication.interviewDate && selectedApplication.interviewTime && (
+                  <View style={styles.modernCurrentInterviewContainer}>
+                    <Text style={styles.modernCurrentInterviewLabel}>Current Interview</Text>
+                    <Text style={styles.modernCurrentInterviewText}>
+                      {formatDate(selectedApplication.interviewDate)} at {selectedApplication.interviewTime}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.modernFormGroup}>
+                <Text style={styles.modernLabel}>
+                  <Text style={styles.modernLabelText}>Interview Date</Text>
+                  <Text style={styles.modernLabelRequired}> *</Text>
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.modernWebInputContainer}>
+                    <View style={styles.modernWebInputIconWrapper}>
+                      <View style={styles.modernPickerIconContainer}>
+                        <Text style={styles.modernPickerIcon}>📅</Text>
+                      </View>
+                      {/* @ts-ignore - React Native Web supports HTML input elements */}
+                      <input
+                        type="date"
+                        value={interviewDate}
+                        onChange={(e: any) => setInterviewDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        style={{
+                          flex: 1,
+                          padding: '14px 16px',
+                          fontSize: '16px',
+                          border: '2px solid #E2E8F0',
+                          borderRadius: '12px',
+                          backgroundColor: '#FFFFFF',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontFamily: 'inherit',
+                          backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+                        }}
+                        onFocus={(e: any) => {
+                          e.target.style.borderColor = '#8B5CF6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                          e.target.style.backgroundImage = 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)';
+                        }}
+                        onBlur={(e: any) => {
+                          e.target.style.borderColor = '#E2E8F0';
+                          e.target.style.boxShadow = 'none';
+                          e.target.style.backgroundImage = 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)';
+                        }}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.modernPickerButton}
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.modernPickerButtonLeft}>
+                      <View style={styles.modernPickerIconContainer}>
+                        <Text style={styles.modernPickerIcon}>📅</Text>
+                      </View>
+                      <Text style={interviewDate ? styles.modernPickerButtonText : styles.modernPickerButtonPlaceholder}>
+                        {interviewDate ? (() => {
+                          const date = new Date(interviewDate);
+                          return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                        })() : 'Select Date'}
+                      </Text>
+                    </View>
+                    <Text style={styles.modernPickerArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.modernFormGroup}>
+                <Text style={styles.modernLabel}>
+                  <Text style={styles.modernLabelText}>Interview Time</Text>
+                  <Text style={styles.modernLabelRequired}> *</Text>
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.modernWebInputContainer}>
+                    <View style={styles.modernWebInputIconWrapper}>
+                      <View style={styles.modernPickerIconContainer}>
+                        <Text style={styles.modernPickerIcon}>🕐</Text>
+                      </View>
+                      {/* @ts-ignore - React Native Web supports HTML input elements */}
+                      <input
+                        type="time"
+                        value={interviewTime}
+                        onChange={(e: any) => setInterviewTime(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '14px 16px',
+                          fontSize: '16px',
+                          border: '2px solid #E2E8F0',
+                          borderRadius: '12px',
+                          backgroundColor: '#FFFFFF',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontFamily: 'inherit',
+                          backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+                        }}
+                        onFocus={(e: any) => {
+                          e.target.style.borderColor = '#8B5CF6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                          e.target.style.backgroundImage = 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)';
+                        }}
+                        onBlur={(e: any) => {
+                          e.target.style.borderColor = '#E2E8F0';
+                          e.target.style.boxShadow = 'none';
+                          e.target.style.backgroundImage = 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)';
+                        }}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.modernPickerButton}
+                    onPress={() => setShowTimePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.modernPickerButtonLeft}>
+                      <View style={styles.modernPickerIconContainer}>
+                        <Text style={styles.modernPickerIcon}>🕐</Text>
+                      </View>
+                      <Text style={interviewTime ? styles.modernPickerButtonText : styles.modernPickerButtonPlaceholder}>
+                        {interviewTime ? (() => {
+                          const [hours, minutes] = interviewTime.split(':');
+                          const hour = parseInt(hours);
+                          const ampm = hour >= 12 ? 'PM' : 'AM';
+                          const displayHour = hour % 12 || 12;
+                          return `${displayHour}:${minutes} ${ampm}`;
+                        })() : 'Select Time'}
+                      </Text>
+                    </View>
+                    <Text style={styles.modernPickerArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.modernFormGroup}>
+                <Text style={styles.modernLabel}>
+                  <Text style={styles.modernLabelText}>Description / Instructions</Text>
+                  <Text style={styles.modernLabelRequired}> *</Text>
+                </Text>
+                {Platform.OS === 'web' ? (
+                  // @ts-ignore - React Native Web supports HTML textarea elements
+                  <textarea
+                    value={interviewDescription}
+                    onChange={(e: any) => setInterviewDescription(e.target.value)}
+                    placeholder="Enter what the applicant needs to do or prepare for the interview..."
+                    style={{
+                      width: '100%',
+                      minHeight: 120,
+                      padding: '16px',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: '#E2E8F0',
+                      borderRadius: '12px',
+                      fontSize: '16px',
+                      color: '#1E293B',
+                      backgroundColor: '#FFFFFF',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    } as any}
+                    onFocus={(e: any) => {
+                      e.target.style.borderColor = '#8B5CF6';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                    }}
+                    onBlur={(e: any) => {
+                      e.target.style.borderColor = '#E2E8F0';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    style={[styles.modernInput, styles.modernTextArea]}
+                    placeholder="Enter what the applicant needs to do or prepare for the interview..."
+                    value={interviewDescription}
+                    onChangeText={setInterviewDescription}
+                    multiline
+                    numberOfLines={5}
+                    textAlignVertical="top"
+                    placeholderTextColor="#94A3B8"
+                  />
+                )}
+                <Text style={styles.modernHelperText}>
+                  Describe what the applicant should prepare or what will happen during the interview
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modernModalFooter}>
+              <TouchableOpacity
+                style={styles.modernCancelButton}
+                onPress={() => {
+                  setShowInterviewModal(false);
+                  setSelectedApplication(null);
+                  setInterviewDate('');
+                  setInterviewTime('');
+                  setInterviewDescription('');
+                  setErrorMessage(null);
+                  setShowErrorTooltip(false);
+                  setSuccessMessage(null);
+                  setShowSuccessTooltip(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modernCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modernSubmitButton}
+                onPress={handleSubmitInterview}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modernSubmitButtonText}>
+                  {selectedApplication?.interviewDate ? 'Reschedule Interview' : 'Schedule Interview'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+          {/* Success Tooltip (Web) */}
+          {Platform.OS === 'web' && showSuccessTooltip && successMessage && (
+            <View style={styles.successTooltip}>
+              <View style={styles.successTooltipContent}>
+                <Text style={styles.successTooltipIcon}>✓</Text>
+                <Text style={styles.successTooltipText}>{successMessage}</Text>
+                <TouchableOpacity 
+                  style={styles.successTooltipClose}
+                  onPress={() => {
+                    setShowSuccessTooltip(false);
+                    setSuccessMessage(null);
+                  }}
+                >
+                  <Text style={styles.successTooltipCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Error Tooltip (Web) */}
+          {Platform.OS === 'web' && showErrorTooltip && errorMessage && (
+            <View style={styles.errorTooltip}>
+              <View style={styles.errorTooltipContent}>
+                <Text style={styles.errorTooltipIcon}>⚠️</Text>
+                <Text style={styles.errorTooltipText}>{errorMessage}</Text>
+                <TouchableOpacity 
+                  style={styles.errorTooltipClose}
+                  onPress={() => {
+                    setShowErrorTooltip(false);
+                    setErrorMessage(null);
+                  }}
+                >
+                  <Text style={styles.errorTooltipCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+      </Modal>
+
+      {/* Date Picker Modal (Mobile) */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showDatePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.pickerModalOverlay}>
+            <View style={styles.pickerModalContent}>
+              <View style={styles.pickerModalHeader}>
+                <Text style={styles.pickerModalTitle}>Select Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.pickerModalCloseButton}
+                >
+                  <Text style={styles.pickerModalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.pickerModalBody}>
+                {(() => {
+                  const dates: string[] = [];
+                  const today = new Date();
+                  for (let i = 0; i < 90; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    dates.push(date.toISOString().split('T')[0]);
+                  }
+                  return dates.map((date) => {
+                    const dateObj = new Date(date);
+                    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                    const year = dateObj.getFullYear();
+                    const isSelected = interviewDate === date;
+                    return (
+                      <TouchableOpacity
+                        key={date}
+                        style={[
+                          styles.pickerModalItem,
+                          isSelected && styles.pickerModalItemSelected
+                        ]}
+                        onPress={() => {
+                          setInterviewDate(date);
+                          setShowDatePicker(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerModalItemText,
+                          isSelected && styles.pickerModalItemTextSelected
+                        ]}>
+                          {dayName}, {month} {day}, {year}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Time Picker Modal (Mobile) */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showTimePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowTimePicker(false)}
+        >
+          <View style={styles.pickerModalOverlay}>
+            <View style={styles.pickerModalContent}>
+              <View style={styles.pickerModalHeader}>
+                <Text style={styles.pickerModalTitle}>Select Time</Text>
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(false)}
+                  style={styles.pickerModalCloseButton}
+                >
+                  <Text style={styles.pickerModalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.pickerModalBody}>
+                {(() => {
+                  const times: string[] = [];
+                  for (let hour = 8; hour < 20; hour++) {
+                    for (let minute = 0; minute < 60; minute += 30) {
+                      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                      times.push(timeStr);
+                    }
+                  }
+                  return times.map((time) => {
+                    const [hours, minutes] = time.split(':');
+                    const hour = parseInt(hours);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    const displayHour = hour % 12 || 12;
+                    const displayTime = `${displayHour}:${minutes} ${ampm}`;
+                    const isSelected = interviewTime === time;
+                    return (
+                      <TouchableOpacity
+                        key={time}
+                        style={[
+                          styles.pickerModalItem,
+                          isSelected && styles.pickerModalItemSelected
+                        ]}
+                        onPress={() => {
+                          setInterviewTime(time);
+                          setShowTimePicker(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.pickerModalItemText,
+                          isSelected && styles.pickerModalItemTextSelected
+                        ]}>
+                          {displayTime}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Hire Application Modal */}
+      <Modal
+        visible={showHireModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowHireModal(false);
+          setSelectedApplication(null);
+          setHireNote('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Hire Applicant</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => {
+                  setShowHireModal(false);
+                  setSelectedApplication(null);
+                  setHireNote('');
                 }}
               >
                 <Text style={styles.closeButtonText}>✕</Text>
@@ -1357,35 +2200,24 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                     ? `${selectedApplication.applicantFirstName} ${selectedApplication.applicantLastName}`
                     : selectedApplication.applicantEmail}
                 </Text>
-                {selectedApplication.interviewDate && selectedApplication.interviewTime && (
-                  <Text style={styles.jobInfoDeadline}>
-                    Current Interview: {formatDate(selectedApplication.interviewDate)} at {selectedApplication.interviewTime}
-                  </Text>
-                )}
               </View>
             )}
 
             <ScrollView style={styles.modalBody}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Interview Date *</Text>
+                <Text style={styles.label}>Hiring Note *</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={interviewDate}
-                  onChangeText={setInterviewDate}
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Please provide a note for hiring this applicant..."
+                  value={hireNote}
+                  onChangeText={setHireNote}
+                  multiline={true}
+                  numberOfLines={5}
+                  maxLength={500}
                 />
-                <Text style={styles.helperText}>Format: YYYY-MM-DD (e.g., 2025-12-15)</Text>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Interview Time *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="HH:MM (24-hour format)"
-                  value={interviewTime}
-                  onChangeText={setInterviewTime}
-                />
-                <Text style={styles.helperText}>Format: HH:MM (e.g., 14:30 for 2:30 PM)</Text>
+                <Text style={styles.helperText}>
+                  {hireNote.length}/500 characters
+                </Text>
               </View>
             </ScrollView>
 
@@ -1393,21 +2225,18 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
-                  setShowInterviewModal(false);
+                  setShowHireModal(false);
                   setSelectedApplication(null);
-                  setInterviewDate('');
-                  setInterviewTime('');
+                  setHireNote('');
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.submitButton]}
-                onPress={handleSubmitInterview}
+                style={[styles.modalButton, styles.hireButtonModal]}
+                onPress={handleSubmitHire}
               >
-                <Text style={styles.submitButtonText}>
-                  {selectedApplication?.interviewDate ? 'Reschedule' : 'Schedule Interview'}
-                </Text>
+                <Text style={[styles.submitButtonText, { color: '#FFFFFF' }]}>Hire Applicant</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1491,114 +2320,16 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           </View>
         </View>
       </Modal>
-    </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#F8FAFC',
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#1F3B57',
-    padding: 20,
-    height: '100%',
-  },
-  profileCard: {
-    alignItems: 'center',
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2D4A6B',
-    marginBottom: 20,
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    padding: 8,
-  },
-  closeSidebarIcon: {
-    fontSize: 24,
-    color: '#fff',
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#4a55e1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#4a55e1',
-  },
-  sidebarIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  sidebarLabel: {
-    color: '#9FB3C8',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  sidebarLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 'auto',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#2D4A6B',
-  },
-  logoutIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   mainContent: {
     flex: 1,
   },
   content: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
   },
   header: {
@@ -1606,14 +2337,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: isMobile ? 16 : 24,
-    paddingHorizontal: isMobile ? 0 : 0,
     width: '100%',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
   },
   headerTitleContainer: {
     flex: 1,
@@ -1627,25 +2351,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: isMobile ? 14 : 16,
     color: '#64748B',
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
   },
   postButton: {
     backgroundColor: '#4a55e1',
@@ -1808,6 +2513,71 @@ const styles = StyleSheet.create({
     color: '#64748B',
     lineHeight: 20,
   },
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Platform.OS === 'web' ? 8 : 6,
+    paddingVertical: Platform.OS === 'web' ? 4 : 2,
+  },
+  progressStep: {
+    alignItems: 'center',
+    minWidth: Platform.OS === 'web' ? 60 : 50,
+  },
+  progressStepCircle: {
+    width: Platform.OS === 'web' ? 32 : 28,
+    height: Platform.OS === 'web' ? 32 : 28,
+    borderRadius: Platform.OS === 'web' ? 16 : 14,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+  },
+  progressStepCircleCompleted: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  progressStepCircleCurrent: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.2)',
+    } as any : {
+      shadowColor: '#3B82F6',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
+    }),
+  },
+  progressStepCircleRejected: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  progressStepIcon: {
+    fontSize: Platform.OS === 'web' ? 14 : 12,
+  },
+  progressStepLabel: {
+    fontSize: Platform.OS === 'web' ? 9 : 8,
+    color: '#94A3B8',
+    marginTop: Platform.OS === 'web' ? 4 : 2,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  progressStepLabelActive: {
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  progressBarLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: Platform.OS === 'web' ? 4 : 2,
+    marginTop: Platform.OS === 'web' ? -16 : -14,
+  },
+  progressBarLineCompleted: {
+    backgroundColor: '#3B82F6',
+  },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingVertical: 4,
@@ -1829,6 +2599,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#F1F5F9',
   },
+  tableActionButtonDisabled: {
+    backgroundColor: '#E2E8F0',
+    opacity: 0.5,
+  },
+  tableActionButtonTextDisabled: {
+    color: '#94A3B8',
+  },
   editButton: {
     backgroundColor: '#DBEAFE',
   },
@@ -1844,6 +2621,9 @@ const styles = StyleSheet.create({
   scheduleButton: {
     backgroundColor: '#D1FAE5',
   },
+  hireButton: {
+    backgroundColor: '#10B981',
+  },
   rejectButton: {
     backgroundColor: '#FEE2E2',
   },
@@ -1852,63 +2632,74 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1E293B',
   },
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Platform.OS === 'web' ? 20 : 0,
-  },
-  mobileSidebar: {
-    width: sidebarWidth,
-    height: '100%',
-    backgroundColor: '#1F3B57',
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(4px)',
+    } as any : {}),
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
     width: Platform.OS === 'web' ? '90%' : '100%',
     maxWidth: 600,
     maxHeight: Platform.OS === 'web' ? '90%' : '100%',
+    overflow: 'hidden',
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)',
-    } : {}),
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    } as any : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 24,
+      elevation: 10,
+    }),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1E293B',
+    letterSpacing: -0.3,
   },
   closeButton: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } as any : {}),
   },
   closeButtonText: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#64748B',
+    fontWeight: '600',
   },
   jobInfoContainer: {
     padding: 20,
     backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+  },
+  modalBody: {
+    padding: 24,
+    maxHeight: Platform.OS === 'web' ? 400 : undefined,
   },
   jobInfoTitle: {
     fontSize: 18,
@@ -1925,10 +2716,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: 400,
   },
   formGroup: {
     marginBottom: 20,
@@ -1956,6 +2743,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     marginTop: 4,
+  },
+  jobTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  jobTypeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {}),
+  },
+  jobTypeOptionSelected: {
+    borderColor: '#8B5CF6',
+    backgroundColor: '#F3F4F6',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.2)',
+    } : {
+      shadowColor: '#8B5CF6',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    }),
+  },
+  jobTypeRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  jobTypeRadioSelected: {
+    borderColor: '#8B5CF6',
+    backgroundColor: '#8B5CF6',
+  },
+  jobTypeRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  jobTypeLabel: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  jobTypeLabelSelected: {
+    color: '#8B5CF6',
+    fontWeight: '600',
   },
   modalFooter: {
     flexDirection: 'row',
@@ -2028,6 +2877,9 @@ const styles = StyleSheet.create({
   },
   rejectButtonModal: {
     backgroundColor: '#EF4444',
+  },
+  hireButtonModal: {
+    backgroundColor: '#10B981',
   },
   successToast: {
     position: 'absolute',
@@ -2108,6 +2960,499 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    minHeight: 48,
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  pickerButtonPlaceholder: {
+    fontSize: 16,
+    color: '#95A5A6',
+  },
+  pickerButtonIcon: {
+    fontSize: 20,
+  },
+  modernJobInfoContainer: {
+    padding: 20,
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 4,
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+      borderLeftWidth: 4,
+      borderLeftColor: '#8B5CF6',
+      paddingLeft: 24,
+    } as any : {}),
+  },
+  modernJobInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  modernJobInfoIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#EDE9FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)',
+      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.2)',
+      transform: 'scale(1)',
+      transition: 'all 0.3s ease',
+    } as any : {}),
+  },
+  modernJobInfoIconContainerWeb: {
+    ...(Platform.OS === 'web' ? {
+      ':hover': {
+        transform: 'scale(1.05)',
+        boxShadow: '0 6px 16px rgba(139, 92, 246, 0.3)',
+      },
+    } as any : {}),
+  },
+  modernJobInfoTitleWeb: {
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    } as any : {}),
+  },
+  modernJobInfoDescriptionWeb: {
+    ...(Platform.OS === 'web' ? {
+      color: '#475569',
+      fontWeight: '500',
+    } as any : {}),
+  },
+  modernJobInfoIcon: {
+    fontSize: 24,
+  },
+  modernJobInfoContent: {
+    flex: 1,
+  },
+  modernJobInfoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  modernJobInfoDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+  },
+  modernCurrentInterviewContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#8B5CF6',
+  },
+  modernCurrentInterviewContainerWeb: {
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.1)',
+      borderLeftWidth: 4,
+      padding: 16,
+    } as any : {}),
+  },
+  modernCurrentInterviewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  modernCurrentInterviewText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  modernFormGroup: {
+    marginBottom: 20,
+  },
+  modernLabel: {
+    marginBottom: 8,
+  },
+  modernLabelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  modernLabelRequired: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  modernWebInputWrapper: {
+    width: '100%',
+  },
+  modernWebInputContainer: {
+    width: '100%',
+    position: 'relative',
+  },
+  modernWebInputIconWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    ...(Platform.OS === 'web' ? {
+      display: 'flex',
+      gap: '12px',
+    } as any : {}),
+  },
+  modernPickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    minHeight: 56,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {}),
+  },
+  modernPickerButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modernPickerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modernPickerIcon: {
+    fontSize: 20,
+  },
+  modernPickerButtonText: {
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  modernPickerButtonPlaceholder: {
+    fontSize: 16,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  modernPickerArrow: {
+    fontSize: 24,
+    color: '#94A3B8',
+    fontWeight: '300',
+  },
+  deadlineInputWrapper: {
+    width: '100%',
+  },
+  deadlinePickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    minHeight: 52,
+  },
+  deadlinePickerButtonDisabled: {
+    opacity: 0.6,
+  },
+  deadlinePickerButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  deadlinePickerIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  deadlinePickerText: {
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  deadlinePickerPlaceholder: {
+    fontSize: 16,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  deadlinePickerArrow: {
+    fontSize: 24,
+    color: '#94A3B8',
+    fontWeight: '300',
+  },
+  modernInput: {
+    width: '100%',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    fontSize: 16,
+    color: '#1E293B',
+    backgroundColor: '#FFFFFF',
+    ...(Platform.OS === 'web' ? {
+      outlineWidth: 0,
+      outlineStyle: 'none',
+      outlineColor: 'transparent',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    } as any : {}),
+  },
+  modernTextArea: {
+    minHeight: 120,
+    paddingTop: 16,
+    paddingBottom: 16,
+    textAlignVertical: 'top',
+  },
+  modernHelperText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  modernModalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 12,
+  },
+  modernCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    } : {}),
+  },
+  modernCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  modernSubmitButton: {
+    flex: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#8B5CF6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+    } : {
+      shadowColor: '#8B5CF6',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    }),
+  },
+  modernSubmitButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  pickerModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3436',
+  },
+  pickerModalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f2f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerModalCloseText: {
+    fontSize: 18,
+    color: '#636E72',
+    fontWeight: 'bold',
+  },
+  pickerModalBody: {
+    maxHeight: 400,
+  },
+  pickerModalItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  pickerModalItemSelected: {
+    backgroundColor: '#E3F2FD',
+  },
+  pickerModalItemText: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  pickerModalItemTextSelected: {
+    color: '#1976D2',
+    fontWeight: '600',
+  },
+  webInputWrapper: {
+    width: '100%',
+  },
+  successTooltip: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 60,
+    left: 20,
+    right: 20,
+    zIndex: 10000,
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      pointerEvents: 'none',
+    } : {}),
+  },
+  successTooltipContent: {
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 300,
+    maxWidth: 600,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    }),
+  },
+  successTooltipIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginRight: 12,
+  },
+  successTooltipText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  successTooltipClose: {
+    padding: 4,
+    marginLeft: 12,
+  },
+  successTooltipCloseText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  errorTooltip: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 60,
+    left: 20,
+    right: 20,
+    zIndex: 10000,
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      pointerEvents: 'none',
+    } : {}),
+  },
+  errorTooltipContent: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 300,
+    maxWidth: 600,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.4)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    }),
+  },
+  errorTooltipIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  errorTooltipText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  errorTooltipClose: {
+    padding: 4,
+    marginLeft: 12,
+  },
+  errorTooltipCloseText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 
