@@ -11,16 +11,15 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
-  Modal
 } from 'react-native';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
+import { AppLayout } from '../../components/layout';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const isMobile = width < 768;
-const sidebarWidth = 260;
 
 interface MessagingViewProps {
   userId: string;
@@ -38,7 +37,6 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeRoute, setActiveRoute] = useState('messages');
 
   const messagingService = MySQLMessagingService.getInstance();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -52,7 +50,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
     loadConversations();
     loadUnreadCount();
-    
+
     const unsubscribeConversations = messagingService.subscribeToUserConversations(
       userEmail,
       (updatedConversations) => {
@@ -174,57 +172,6 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
     }
   };
 
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const SidebarItem = ({ icon, label, route, onPress }: { icon: string; label: string; route: string; onPress?: () => void }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-          onPress?.(); // Close sidebar on mobile
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || 'provider@example.com'}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="🎯" label="Services" route="services" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="📅" label="Bookings" route="bookings" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💼" label="Hiring" route="hiring" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="💬" label="Messages" route="messages" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="👤" label="Profile" route="profile" onPress={() => setSidebarVisible(false)} />
-        <SidebarItem icon="⚙️" label="Settings" route="settings" onPress={() => setSidebarVisible(false)} />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   const renderMessage = (message: Message) => {
     const isOwnMessage = userEmail && message.senderEmail === userEmail;
     const isSystemMessage = message.messageType === MessageType.SYSTEM;
@@ -323,48 +270,37 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
   if (loading && conversations.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>Loading conversations...</Text>
-      </View>
+      <AppLayout
+        role="provider"
+        activeRoute="messages"
+        title="Messages"
+        user={user}
+        onNavigate={(route) => onNavigate?.(route)}
+        onLogout={() => onLogout?.()}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C63FF" />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
+        </View>
+      </AppLayout>
     );
   }
-  
-  return (
-    <View style={styles.container}>
-      {!selectedConversation ? (
-        // Conversations List with Sidebar
-        <View style={styles.layout}>
-          {isMobile ? (
-            <Modal
-              visible={sidebarVisible}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setSidebarVisible(false)}
-            >
-              <View style={styles.sidebarOverlay}>
-                <View style={styles.mobileSidebar}>
-                  <SidebarContent />
-                </View>
-              </View>
-            </Modal>
-          ) : (
-            <SidebarContent />
-          )}
 
+  return (
+    <AppLayout
+      role="provider"
+      activeRoute="messages"
+      title="Messages"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
+      <View style={styles.container}>
+        {!selectedConversation ? (
+          // Conversations List
           <View style={styles.conversationsContainer}>
             <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                {isMobile && (
-                  <TouchableOpacity 
-                    style={styles.mobileMenuButton}
-                    onPress={() => setSidebarVisible(true)}
-                  >
-                    <Text style={styles.mobileMenuIcon}>≡</Text>
-                  </TouchableOpacity>
-                )}
               <Text style={styles.headerTitle}>Messages</Text>
-              </View>
               {unreadCount > 0 && (
                 <View style={styles.unreadHeaderBadge}>
                   <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
@@ -374,7 +310,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
             <ScrollView style={styles.conversationsList}>
               {conversations.map(renderConversationItem)}
-              
+
               {conversations.length === 0 && (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyStateText}>No conversations yet</Text>
@@ -385,61 +321,61 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
               )}
             </ScrollView>
           </View>
-        </View>
-      ) : (
-        // Chat View
-        <KeyboardAvoidingView 
-          style={styles.chatContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.chatHeader}>
-            <TouchableOpacity 
-              onPress={() => setSelectedConversation(null)}
-              style={styles.backButton}
-            >
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.chatTitle}>
-              {getOtherParticipantName()}
-            </Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.messagesContainer}
-            contentContainerStyle={styles.messagesContent}
+        ) : (
+          // Chat View
+          <KeyboardAvoidingView
+            style={styles.chatContainer}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            {messages.map(renderMessage)}
-          </ScrollView>
+            <View style={styles.chatHeader}>
+              <TouchableOpacity
+                onPress={() => setSelectedConversation(null)}
+                style={styles.backButton}
+              >
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
+              <Text style={styles.chatTitle}>
+                {getOtherParticipantName()}
+              </Text>
+              <View style={{ width: 60 }} />
+            </View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.messageInput}
-              value={messageText}
-              onChangeText={setMessageText}
-              placeholder="Type a message..."
-              multiline
-              maxLength={1000}
-            />
-            <TouchableOpacity
-              onPress={handleSendMessage}
-              style={[
-                styles.sendButton,
-                (!messageText.trim() || sending) && styles.sendButtonDisabled
-              ]}
-              disabled={!messageText.trim() || sending}
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.messagesContainer}
+              contentContainerStyle={styles.messagesContent}
             >
-              {sending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.sendButtonText}>Send</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      )}
-    </View>
+              {messages.map(renderMessage)}
+            </ScrollView>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.messageInput}
+                value={messageText}
+                onChangeText={setMessageText}
+                placeholder="Type a message..."
+                multiline
+                maxLength={1000}
+              />
+              <TouchableOpacity
+                onPress={handleSendMessage}
+                style={[
+                  styles.sendButton,
+                  (!messageText.trim() || sending) && styles.sendButtonDisabled
+                ]}
+                disabled={!messageText.trim() || sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>Send</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        )}
+      </View>
+    </AppLayout>
   );
 };
 
@@ -447,162 +383,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-  },
-  layout: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
-  sidebar: {
-    width: isMobile ? '80%' : sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    height: isMobile ? '100%' : undefined,
-  },
-  mobileSidebar: {
-    width: '80%',
-    height: '100%',
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarIconActive: {
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  sidebarLabelActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -617,8 +397,6 @@ const styles = StyleSheet.create({
   },
   conversationsContainer: {
     flex: 1,
-    paddingTop: isMobile ? 60 : 0,
-    paddingBottom: isMobile ? 20 : 0,
   },
   header: {
     flexDirection: 'row',
