@@ -7,17 +7,16 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
-  Modal
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 interface DashboardViewProps {
   user?: User;
-  onMenu?: () => void;
   onNavigate?: (route: string) => void;
   onLogout?: () => void | Promise<void>;
 }
@@ -32,7 +31,7 @@ interface DashboardStats {
   monthlyBookings?: Array<{ month: string; bookings: number }>;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNavigate, onLogout }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, onLogout }) => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
@@ -42,12 +41,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     pendingBookings: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activeRoute, setActiveRoute] = useState('dashboard');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     loadDashboardStats();
-  }, []);
+  }, [user]);
 
   const loadDashboardStats = async () => {
     try {
@@ -89,96 +86,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     </View>
   );
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-          if (isMobile) setSidebarVisible(false); // Close sidebar on mobile after navigation
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SidebarContent = () => (
-      <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-          </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || 'admin@gmail.com'}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="👤" label="Users" route="user" />
-          <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-          <SidebarItem icon="📊" label="Analytics" route="analytics" />
-        </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => {
-        if (isMobile) setSidebarVisible(false);
-        onLogout?.();
-      }}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-  );
-
   return (
-    <View style={styles.container}>
-      {/* Sidebar */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <SidebarContent />
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="admin"
+      activeRoute="dashboard"
+      title="Dashboard"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity
-                onPress={() => setSidebarVisible(true)}
-                style={styles.mobileMenuButton}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-          <View>
-            <Text style={styles.headerTitle}>Admin Dashboard</Text>
-            <Text style={styles.headerSubtitle}>Welcome back, {user?.getFullName() || 'Admin'}</Text>
-          </View>
-          </View>
-          {!isMobile && (
-          <TouchableOpacity onPress={onMenu} style={styles.menuButton}>
-            <Text style={styles.menuIcon}>≡</Text>
-          </TouchableOpacity>
-          )}
+        {/* Welcome */}
+        <View style={styles.welcomeSection}>
+          <Text style={styles.headerTitle}>Admin Dashboard</Text>
+          <Text style={styles.headerSubtitle}>Welcome back, {user?.getFullName() || 'Admin'}</Text>
         </View>
 
         {loading ? (
@@ -190,24 +111,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
           <>
             {/* Top Metrics */}
             <View style={styles.metricsRow}>
-              <MetricCard 
-                title="Total Users" 
-                value={stats.totalUsers.toString()} 
-                icon="👥" 
+              <MetricCard
+                title="Total Users"
+                value={stats.totalUsers.toString()}
+                icon="👥"
                 color="#4a55e1"
                 subtitle={`${stats.activeUsers} active`}
               />
-              <MetricCard 
-                title="Services" 
-                value={stats.totalServices.toString()} 
-                icon="🎯" 
+              <MetricCard
+                title="Services"
+                value={stats.totalServices.toString()}
+                icon="🎯"
                 color="#10b981"
                 subtitle={`${stats.activeServices} active`}
               />
-              <MetricCard 
-                title="Bookings" 
-                value={stats.totalBookings.toString()} 
-                icon="📅" 
+              <MetricCard
+                title="Bookings"
+                value={stats.totalBookings.toString()}
+                icon="📅"
                 color="#f59e0b"
                 subtitle={`${stats.pendingBookings} pending`}
               />
@@ -217,7 +138,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             <View style={[styles.row, isMobile && styles.rowMobile]}>
               <View style={[styles.cardLarge, styles.cardGlowBlue]}>
                 <View style={[styles.glowOverlay, { backgroundColor: '#4a55e1' }]} />
-                <View style={styles.cardHeader}> 
+                <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
                   <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')}>
                     <Text style={styles.ctaText}>View Details</Text>
@@ -231,7 +152,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                       (() => {
                         const maxBookings = Math.max(...stats.monthlyBookings.map(m => m.bookings), 1);
                         return stats.monthlyBookings.map((monthData, i) => {
-                          const barHeight = maxBookings > 0 
+                          const barHeight = maxBookings > 0
                             ? Math.max((monthData.bookings / maxBookings) * (isMobile ? 80 : 100), 4)
                             : 4;
                           return (
@@ -326,175 +247,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
           </>
         )}
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    ...(isMobile && {
-      height: '100%',
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 1000,
-    }),
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarIconActive: {
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  sidebarLabelActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
   main: {
     flex: 1,
   },
   mainContent: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
   },
-  header: {
-    flexDirection: isMobile ? 'column' : 'row',
-    alignItems: isMobile ? 'flex-start' : 'center',
-    justifyContent: 'space-between',
+  welcomeSection: {
     marginBottom: isMobile ? 16 : 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: isMobile ? 20 : 24,
@@ -516,19 +285,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
   },
-  menuButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-  },
-  menuIcon: {
-    fontSize: 16,
-    color: '#64748B',
-  },
   metricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -545,8 +301,8 @@ const styles = StyleSheet.create({
     marginRight: isMobile ? 6 : 12,
     marginBottom: isMobile ? 8 : 12,
     width: isMobile
-      ? (screenWidth - 48) / 2 // 2 cards per row on mobile
-      : Math.min(180, (screenWidth - (isMobile ? 0 : sidebarWidth) - 80) / 4), // 4 cards per row on desktop
+      ? (screenWidth - 48) / 2
+      : Math.min(180, (screenWidth - 300) / 4),
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -718,8 +474,8 @@ const styles = StyleSheet.create({
   },
   quickActionBtn: {
     width: isMobile
-      ? (screenWidth - 48) / 2 // 2 per row on mobile
-      : (screenWidth - sidebarWidth - 80) / 4, // 4 per row on desktop
+      ? (screenWidth - 48) / 2
+      : (screenWidth - 300) / 4,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
     padding: isMobile ? 12 : 16,
@@ -776,5 +532,3 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardView;
-
-
