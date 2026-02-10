@@ -17,6 +17,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { HiringController } from '../../controllers/HiringController';
 import { HiringRequest, HiringStatus, Proposal, ProposalStatus, ExperienceLevel, ContractType } from '../../models/Hiring';
 import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,7 +25,9 @@ interface HiringViewProps {
   userId: string;
   userEmail?: string;
   userType: 'client' | 'provider';
-  onBack: () => void;
+  user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
 }
 
 interface Booking {
@@ -36,7 +39,7 @@ interface Booking {
   b_location: string;
 }
 
-export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userType, onBack }) => {
+export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userType, user, onNavigate, onLogout }) => {
   const [hiringRequests, setHiringRequests] = useState<HiringRequest[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [jobPostings, setJobPostings] = useState<any[]>([]);
@@ -96,6 +99,17 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
     }
   };
 
+  // Check if user has already applied to a job posting
+  const hasAppliedToJob = (jobId: number): boolean => {
+    return myApplications.some(app => app.jobPostingId === jobId);
+  };
+
+  // Get application status for a job posting
+  const getApplicationStatusForJob = (jobId: number): string | null => {
+    const application = myApplications.find(app => app.jobPostingId === jobId);
+    return application ? application.status : null;
+  };
+
   const loadMyApplications = async () => {
     if (!userEmail) return;
     
@@ -117,6 +131,9 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
 
   useEffect(() => {
     loadData();
+    if (userEmail) {
+      loadMyApplications();
+    }
     if (userType === 'client' && userEmail) {
       loadBookings();
     }
@@ -188,6 +205,13 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
       const data = await response.json();
       
       if (data.ok && data.jobPostings) {
+        // Log location data for debugging
+        console.log('Job postings with location:', data.jobPostings.map((j: any) => ({
+          id: j.id,
+          title: j.jobTitle,
+          provider: `${j.providerFirstName} ${j.providerLastName}`,
+          location: j.location
+        })));
         setJobPostings(data.jobPostings);
       }
     } catch (error) {
@@ -285,6 +309,25 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
         body: JSON.stringify(applicationData),
       });
 
+      if (apiResponse.ok) {
+        const apiData = await apiResponse.json();
+        if (apiData.ok) {
+          Alert.alert('Success', 'Application submitted successfully!');
+          setShowApplyModal(false);
+          setResumeFile(null);
+          setSelectedJobPosting(null);
+          setErrorMessage(null);
+          // Reload applications to show the applied badge
+          if (userEmail) {
+            loadMyApplications();
+          }
+          return;
+        } else {
+          setErrorMessage(apiData.error || 'Failed to submit application');
+          return;
+        }
+      }
+
       if (!apiResponse.ok) {
         // Handle HTTP errors
         if (apiResponse.status === 400) {
@@ -313,6 +356,10 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
       const data = await apiResponse.json();
 
       if (data.ok) {
+        // Reload applications to show the applied badge
+        if (userEmail) {
+          loadMyApplications();
+        }
         Alert.alert(
           'Application Submitted Successfully! 🎉',
           `Your application for "${selectedJobPosting.jobTitle}" has been submitted successfully. The provider will review your application and contact you if you're selected.`,
@@ -623,64 +670,60 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
 
   if (loading && hiringRequests.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      <AppLayout role="user" activeRoute="hiring" title="Hiring" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C63FF" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </AppLayout>
     );
   }
 
   return (
+    <AppLayout role="user" activeRoute="hiring" title="Hiring" user={user} onNavigate={onNavigate} onLogout={onLogout}>
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          Job Postings
-        </Text>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
+      {/* Modern Tabs */}
+      <View style={styles.modernTabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'jobPostings' && styles.activeTab]}
+          style={[styles.modernTab, activeTab === 'jobPostings' && styles.modernActiveTab]}
           onPress={() => {
             setActiveTab('jobPostings');
             loadJobPostings();
           }}
         >
-          <Text style={[styles.tabText, activeTab === 'jobPostings' && styles.activeTabText]}>
+          <Text style={[styles.modernTabText, activeTab === 'jobPostings' && styles.modernActiveTabText]}>
             Job Postings
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'myApplications' && styles.activeTab]}
+          style={[styles.modernTab, activeTab === 'myApplications' && styles.modernActiveTab]}
           onPress={() => setActiveTab('myApplications')}
         >
-          <Text style={[styles.tabText, activeTab === 'myApplications' && styles.activeTabText]}>
+          <Text style={[styles.modernTabText, activeTab === 'myApplications' && styles.modernActiveTabText]}>
             My Applications
           </Text>
         </TouchableOpacity>
         {userType === 'provider' && (
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'proposals' && styles.activeTab]}
+            style={[styles.modernTab, activeTab === 'proposals' && styles.modernActiveTab]}
           onPress={() => setActiveTab('proposals')}
         >
-          <Text style={[styles.tabText, activeTab === 'proposals' && styles.activeTabText]}>
+            <Text style={[styles.modernTabText, activeTab === 'proposals' && styles.modernActiveTabText]}>
             My Proposals
           </Text>
         </TouchableOpacity>
         )}
       </View>
 
-      {/* Filters and Search */}
+      {/* Modern Search Bar */}
       {activeTab === 'jobPostings' && (
-        <View style={styles.filterContainer}>
+        <View style={styles.modernSearchContainer}>
+          <View style={styles.modernSearchWrapper}>
+            <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+              style={styles.modernSearchInput}
             placeholder="Search job postings..."
+              placeholderTextColor="#94a3b8"
             value={jobPostingSearch}
             onChangeText={(text) => {
               setJobPostingSearch(text);
@@ -689,7 +732,21 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                 loadJobPostings();
               }, 500);
             }}
-          />
+              onSubmitEditing={() => loadJobPostings()}
+              returnKeyType="search"
+            />
+            {jobPostingSearch.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setJobPostingSearch('');
+                  loadJobPostings();
+                }}
+                style={styles.clearSearchButton}
+              >
+                <Text style={styles.clearSearchText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -699,128 +756,260 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
           // My Applications
           <>
             {myApplications.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>📋</Text>
-                <Text style={styles.emptyStateText}>No applications yet</Text>
-                <Text style={styles.emptyStateSubtext}>
+              <View style={styles.modernEmptyState}>
+                <View style={styles.modernEmptyIconContainer}>
+                  <Text style={styles.modernEmptyIcon}>📋</Text>
+                </View>
+                <Text style={styles.modernEmptyTitle}>No applications yet</Text>
+                <Text style={styles.modernEmptySubtext}>
                   Apply to job postings to see your applications here
                 </Text>
               </View>
             ) : (
-              myApplications.map((app) => (
-                <View key={app.id} style={styles.applicationCard}>
-                  <View style={styles.applicationHeader}>
-                    <View style={styles.applicationHeaderLeft}>
-                      <Text style={styles.applicationJobTitle}>{app.jobTitle}</Text>
-                      <Text style={styles.applicationProvider}>
+              <View style={styles.applicationsGrid}>
+                {myApplications.map((app) => (
+                  <View key={app.id} style={styles.modernApplicationCard}>
+                    <View style={styles.modernApplicationHeader}>
+                      <View style={styles.modernApplicationHeaderLeft}>
+                        <Text style={styles.modernApplicationJobTitle}>{app.jobTitle}</Text>
+                        <View style={styles.modernApplicationProviderContainer}>
+                          <Text style={styles.modernApplicationProviderIcon}>👤</Text>
+                          <Text style={styles.modernApplicationProvider}>
                         {app.providerFirstName && app.providerLastName
                           ? `${app.providerFirstName} ${app.providerLastName}`
                           : 'Provider'}
                       </Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: getApplicationStatusColor(app.status) + '20' }]}>
-                      <Text style={[styles.statusText, { color: getApplicationStatusColor(app.status) }]}>
+                      </View>
+                      <View style={[styles.modernApplicationStatusBadge, { 
+                        backgroundColor: getApplicationStatusColor(app.status) === '#10b981' ? '#ECFDF5' :
+                                         getApplicationStatusColor(app.status) === '#f59e0b' ? '#FFFBEB' :
+                                         getApplicationStatusColor(app.status) === '#ef4444' ? '#FEE2E2' :
+                                         getApplicationStatusColor(app.status) === '#3b82f6' ? '#EFF6FF' : '#F1F5F9',
+                        borderColor: getApplicationStatusColor(app.status) === '#10b981' ? '#D1FAE5' :
+                                    getApplicationStatusColor(app.status) === '#f59e0b' ? '#FDE68A' :
+                                    getApplicationStatusColor(app.status) === '#ef4444' ? '#FECACA' :
+                                    getApplicationStatusColor(app.status) === '#3b82f6' ? '#DBEAFE' : '#E2E8F0'
+                      }]}>
+                        <View style={[styles.modernApplicationStatusDot, { 
+                          backgroundColor: getApplicationStatusColor(app.status) 
+                        }]} />
+                        <Text style={[styles.modernApplicationStatusText, { 
+                          color: getApplicationStatusColor(app.status) 
+                        }]}>
                         {app.status.toUpperCase()}
                       </Text>
                   </View>
                 </View>
                 
-                  <View style={styles.applicationDetails}>
-                    <Text style={styles.applicationDetailLabel}>Applied:</Text>
-                    <Text style={styles.applicationDetailValue}>
+                    <View style={styles.modernApplicationInfoGrid}>
+                      <View style={styles.modernApplicationInfoItem}>
+                        <Text style={styles.modernApplicationInfoIcon}>📅</Text>
+                        <View style={styles.modernApplicationInfoTextContainer}>
+                          <Text style={styles.modernApplicationInfoLabel}>Applied</Text>
+                          <Text style={styles.modernApplicationInfoValue}>
                       {new Date(app.appliedAt).toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'short', 
                         day: 'numeric' 
                       })}
                   </Text>
+                        </View>
                 </View>
 
                   {app.interviewDate && app.interviewTime && (
-                    <View style={styles.applicationDetails}>
-                      <Text style={styles.applicationDetailLabel}>Interview Scheduled:</Text>
-                      <Text style={styles.applicationDetailValue}>
+                        <View style={styles.modernApplicationInfoItem}>
+                          <Text style={styles.modernApplicationInfoIcon}>🎯</Text>
+                          <View style={styles.modernApplicationInfoTextContainer}>
+                            <Text style={styles.modernApplicationInfoLabel}>Interview</Text>
+                            <Text style={styles.modernApplicationInfoValue}>
                         {new Date(app.interviewDate).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
                           month: 'short', 
                           day: 'numeric' 
                         })} at {app.interviewTime}
                       </Text>
+                            {(app as any).interviewDescription && (
+                              <Text style={[styles.modernApplicationInfoValue, { 
+                                fontSize: 12, 
+                                color: '#64748B', 
+                                marginTop: 6,
+                                fontStyle: 'italic'
+                              }]} numberOfLines={3}>
+                                📝 {(app as any).interviewDescription}
+                              </Text>
+                            )}
+                          </View>
                   </View>
                 )}
+                    </View>
 
                   {app.rejectionNote && (
-                    <View style={styles.rejectionNoteContainer}>
-                      <Text style={styles.rejectionNoteLabel}>Rejection Note:</Text>
-                      <Text style={styles.rejectionNoteText}>{app.rejectionNote}</Text>
+                      <View style={styles.modernRejectionNoteContainer}>
+                        <View style={styles.modernRejectionNoteHeader}>
+                          <Text style={styles.modernRejectionNoteIcon}>⚠️</Text>
+                          <Text style={styles.modernRejectionNoteLabel}>Rejection Note</Text>
+                        </View>
+                        <Text style={styles.modernRejectionNoteText}>{app.rejectionNote}</Text>
                     </View>
                   )}
 
-                  <View style={styles.applicationDescription}>
-                    <Text style={styles.applicationDescriptionText} numberOfLines={3}>
+                    <View style={styles.modernApplicationDescription}>
+                      <Text style={styles.modernApplicationDescriptionText} numberOfLines={3}>
                       {app.jobDescription}
                     </Text>
                   </View>
                 </View>
-              ))
+                ))}
+              </View>
             )}
           </>
         ) : activeTab === 'jobPostings' ? (
           // Job Postings
           <>
             {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6C63FF" />
-                <Text style={styles.loadingText}>Loading job postings...</Text>
+              <View style={styles.modernLoadingContainer}>
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text style={styles.modernLoadingText}>Loading job postings...</Text>
               </View>
             ) : jobPostings.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>💼</Text>
-                <Text style={styles.emptyStateText}>No job postings available</Text>
-                <Text style={styles.emptyStateSubtext}>
+              <View style={styles.modernEmptyState}>
+                <View style={styles.modernEmptyIconContainer}>
+                  <Text style={styles.modernEmptyIcon}>💼</Text>
+                </View>
+                <Text style={styles.modernEmptyTitle}>No job postings available</Text>
+                <Text style={styles.modernEmptySubtext}>
                   Check back later for new job opportunities
                 </Text>
               </View>
             ) : (
-              jobPostings.map((job) => (
-                <View key={job.id} style={styles.jobPostingCard}>
-                  <View style={styles.jobPostingHeader}>
-                    <View style={styles.jobPostingHeaderLeft}>
-                      <Text style={styles.jobPostingTitle}>{job.jobTitle}</Text>
-                      {job.providerFirstName && job.providerLastName && (
-                        <Text style={styles.jobPostingProvider}>
-                          by {job.providerFirstName} {job.providerLastName}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
-                      <Text style={[styles.statusText, { color: '#10b981' }]}>
-                        {job.status.toUpperCase()}
+              <View style={styles.jobPostingsGrid}>
+                {jobPostings.map((job) => {
+                  const hasApplied = hasAppliedToJob(job.id);
+                  const applicationStatus = getApplicationStatusForJob(job.id);
+                  
+                  return (
+                    <View key={job.id} style={[
+                      styles.modernJobCard,
+                      hasApplied && styles.modernJobCardApplied
+                    ]}>
+                      <View style={styles.modernJobCardHeader}>
+                        <View style={styles.modernJobCardHeaderLeft}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.modernJobTitle}>{job.jobTitle}</Text>
+                            {hasApplied && (
+                              <View style={[
+                                styles.appliedBadge,
+                                { backgroundColor: getApplicationStatusColor(applicationStatus || 'pending') + '20' }
+                              ]}>
+                                <Text style={[
+                                  styles.appliedBadgeText,
+                                  { color: getApplicationStatusColor(applicationStatus || 'pending') }
+                                ]}>
+                                  {applicationStatus ? applicationStatus.toUpperCase() : 'APPLIED'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          {job.providerFirstName && job.providerLastName && (
+                            <View style={styles.modernJobProviderContainer}>
+                              <Text style={styles.modernJobProviderIcon}>👤</Text>
+                              <Text style={styles.modernJobProvider}>
+                                {job.providerFirstName} {job.providerLastName}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.modernStatusBadge}>
+                          <View style={styles.modernStatusDot} />
+                          <Text style={styles.modernStatusText}>
+                            {job.status.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <Text style={styles.modernJobDescription} numberOfLines={3}>
+                        {job.description}
                       </Text>
+                      
+                      <View style={styles.modernJobCardFooter}>
+                        <View style={styles.modernJobInfoItem}>
+                          <Text style={styles.modernJobInfoIcon}>📅</Text>
+                          <View style={styles.modernJobInfoTextContainer}>
+                            <Text style={styles.modernJobInfoLabel}>Deadline</Text>
+                            <Text style={styles.modernJobInfoValue}>
+                              {new Date(job.deadlineDate).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.modernJobInfoItem}>
+                          <Text style={styles.modernJobInfoIcon}>📆</Text>
+                          <View style={styles.modernJobInfoTextContainer}>
+                            <Text style={styles.modernJobInfoLabel}>Posted</Text>
+                            <Text style={styles.modernJobInfoValue}>
+                              {new Date(job.createdAt).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </Text>
+                          </View>
+                        </View>
+                        {((job as any).jobType && String((job as any).jobType).trim() !== '' && String((job as any).jobType).trim() !== 'null') ? (
+                          <View style={styles.modernJobInfoItem}>
+                            <Text style={styles.modernJobInfoIcon}>⏰</Text>
+                            <View style={styles.modernJobInfoTextContainer}>
+                              <Text style={styles.modernJobInfoLabel}>Job Type</Text>
+                              <Text style={styles.modernJobInfoValue}>
+                                {String((job as any).jobType).trim() === 'full_time' ? 'Full Time' : 
+                                 String((job as any).jobType).trim() === 'part_time' ? 'Part Time' : 
+                                 String((job as any).jobType).trim()}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                        {((job as any).location && String((job as any).location).trim() !== '' && String((job as any).location).trim() !== 'null') ? (
+                          <View style={[styles.modernJobInfoItem, styles.modernJobInfoItemLocation]}>
+                            <Text style={styles.modernJobInfoIcon}>📍</Text>
+                            <View style={styles.modernJobInfoTextContainer}>
+                              <Text style={styles.modernJobInfoLabel}>Location</Text>
+                              <Text style={styles.modernJobInfoValue} numberOfLines={3}>
+                                {String((job as any).location).trim()}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                      
+                      <TouchableOpacity
+                        style={[
+                          styles.modernApplyButton,
+                          hasApplied && styles.modernApplyButtonDisabled
+                        ]}
+                        onPress={() => {
+                          if (!hasApplied) {
+                            setSelectedJobPosting(job);
+                            setShowApplyModal(true);
+                          }
+                        }}
+                        activeOpacity={hasApplied ? 1 : 0.8}
+                        disabled={hasApplied}
+                      >
+                        <Text style={[
+                          styles.modernApplyButtonText,
+                          hasApplied && styles.modernApplyButtonTextDisabled
+                        ]}>
+                          {hasApplied ? 'Already Applied' : 'Apply Now'}
+                        </Text>
+                        {!hasApplied && <Text style={styles.modernApplyButtonIcon}>→</Text>}
+                      </TouchableOpacity>
                     </View>
-                  </View>
-                  
-                  <Text style={styles.jobPostingDescription}>{job.description}</Text>
-                  
-                  <View style={styles.jobPostingFooter}>
-                    <Text style={styles.jobPostingDeadline}>
-                      📅 Deadline: {new Date(job.deadlineDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </Text>
-                    <Text style={styles.jobPostingDate}>
-                      Posted: {new Date(job.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.applyButton}
-                    onPress={() => {
-                      setSelectedJobPosting(job);
-                      setShowApplyModal(true);
-                    }}
-                  >
-                    <Text style={styles.applyButtonText}>Apply Now</Text>
-                  </TouchableOpacity>
+                  );
+                })}
               </View>
-              ))
             )}
           </>
         ) : (
@@ -1338,6 +1527,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
         </View>
       </Modal>
     </View>
+    </AppLayout>
   );
 };
 
@@ -1367,19 +1557,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E9ECEF',
   },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
   addButton: {
     backgroundColor: '#6C63FF',
     paddingHorizontal: 16,
@@ -1389,6 +1566,44 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  modernTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 20,
+    maxWidth: Platform.OS === 'web' ? 1400 : '100%',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  modernTab: {
+    paddingVertical: Platform.OS === 'web' ? 18 : 16,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    marginRight: Platform.OS === 'web' ? 8 : 0,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+      ':hover': {
+        backgroundColor: '#F8FAFC',
+      },
+    } : {}),
+  },
+  modernActiveTab: {
+    borderBottomColor: '#6366F1',
+    backgroundColor: Platform.OS === 'web' ? '#F8FAFC' : 'transparent',
+  },
+  modernTabText: {
+    fontSize: Platform.OS === 'web' ? 15 : 16,
+    color: '#64748B',
+    fontWeight: '500',
+    letterSpacing: Platform.OS === 'web' ? 0.3 : 0,
+  },
+  modernActiveTabText: {
+    color: '#6366F1',
     fontWeight: '600',
   },
   tabContainer: {
@@ -1417,9 +1632,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+    padding: Platform.OS === 'web' ? 0 : 20,
+    paddingTop: Platform.OS === 'web' ? 0 : 10,
+    paddingBottom: Platform.OS === 'web' ? 0 : 10,
+    backgroundColor: '#F8FAFC',
   },
   requestCard: {
     backgroundColor: '#FFFFFF',
@@ -1522,6 +1738,220 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     }),
+  },
+  jobPostingsGrid: {
+    ...(Platform.OS === 'web' ? {
+      display: 'grid' as any,
+      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+      gap: '24px',
+      padding: 24,
+    } as any : {
+      padding: 20,
+    }),
+    maxWidth: Platform.OS === 'web' ? 1400 : '100%',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  modernJobCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    padding: Platform.OS === 'web' ? 24 : 20,
+    marginBottom: Platform.OS === 'web' ? 0 : 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+      transition: 'all 0.3s ease',
+      cursor: 'default' as any,
+      ':hover': {
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
+        transform: 'translateY(-2px)',
+        borderColor: '#C7D2FE',
+      },
+    } as any : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
+  },
+  modernJobCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Platform.OS === 'web' ? 16 : 14,
+  },
+  modernJobCardHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  modernJobTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 8 : 6,
+    letterSpacing: Platform.OS === 'web' ? -0.3 : 0,
+    lineHeight: Platform.OS === 'web' ? 28 : 26,
+  },
+  modernJobProviderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modernJobProviderIcon: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    marginRight: 6,
+  },
+  modernJobProvider: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  modernStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 6 : 5,
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  modernStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  modernStatusText: {
+    fontSize: Platform.OS === 'web' ? 12 : 11,
+    color: '#059669',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  modernJobDescription: {
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#475569',
+    lineHeight: Platform.OS === 'web' ? 24 : 22,
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    minHeight: Platform.OS === 'web' ? 72 : 66,
+  },
+  modernJobCardFooter: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: Platform.OS === 'web' ? 18 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    marginBottom: Platform.OS === 'web' ? 20 : 16,
+    gap: Platform.OS === 'web' ? 16 : 12,
+  },
+  modernJobInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    minWidth: Platform.OS === 'web' ? '30%' : '100%',
+  },
+  modernJobInfoItemLocation: {
+    minWidth: Platform.OS === 'web' ? '30%' : '100%',
+  },
+  modernJobInfoIcon: {
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    marginRight: Platform.OS === 'web' ? 10 : 8,
+  },
+  modernJobInfoTextContainer: {
+    flex: 1,
+  },
+  modernJobInfoLabel: {
+    fontSize: Platform.OS === 'web' ? 11 : 10,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modernJobInfoValue: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  modernApplyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366F1',
+    paddingVertical: Platform.OS === 'web' ? 14 : 12,
+    borderRadius: Platform.OS === 'web' ? 12 : 10,
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+      boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)',
+      ':hover': {
+        backgroundColor: '#4F46E5',
+        boxShadow: '0 6px 12px -1px rgba(99, 102, 241, 0.4)',
+        transform: 'translateY(-1px)',
+      },
+      ':active': {
+        transform: 'translateY(0)',
+      },
+    } : {
+      shadowColor: '#6366F1',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
+  },
+  modernApplyButtonText: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    fontWeight: '600',
+    marginRight: Platform.OS === 'web' ? 8 : 6,
+    letterSpacing: 0.3,
+  },
+  modernApplyButtonIcon: {
+    color: '#FFFFFF',
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    fontWeight: '600',
+  },
+  modernJobCardApplied: {
+    opacity: 0.85,
+    borderColor: '#CBD5E1',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+    } : {}),
+  },
+  appliedBadge: {
+    paddingHorizontal: Platform.OS === 'web' ? 10 : 8,
+    paddingVertical: Platform.OS === 'web' ? 4 : 3,
+    borderRadius: Platform.OS === 'web' ? 12 : 10,
+    borderWidth: 1,
+  },
+  appliedBadgeText: {
+    fontSize: Platform.OS === 'web' ? 11 : 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  modernApplyButtonDisabled: {
+    backgroundColor: '#94A3B8',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'not-allowed' as any,
+      boxShadow: 'none',
+      ':hover': {
+        backgroundColor: '#94A3B8',
+        boxShadow: 'none',
+        transform: 'none',
+      },
+    } : {
+      shadowOpacity: 0,
+      elevation: 0,
+    }),
+  },
+  modernApplyButtonTextDisabled: {
+    color: '#F1F5F9',
   },
   jobPostingCard: {
     backgroundColor: '#FFFFFF',
@@ -1813,6 +2243,52 @@ const styles = StyleSheet.create({
     color: '#636E72',
     fontStyle: 'italic',
   },
+  modernEmptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Platform.OS === 'web' ? 120 : 80,
+    paddingHorizontal: 20,
+  },
+  modernEmptyIconContainer: {
+    width: Platform.OS === 'web' ? 120 : 100,
+    height: Platform.OS === 'web' ? 120 : 100,
+    borderRadius: Platform.OS === 'web' ? 60 : 50,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'web' ? 24 : 20,
+  },
+  modernEmptyIcon: {
+    fontSize: Platform.OS === 'web' ? 60 : 50,
+  },
+  modernEmptyTitle: {
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 12 : 8,
+    textAlign: 'center',
+  },
+  modernEmptySubtext: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    color: '#64748B',
+    textAlign: 'center',
+    maxWidth: Platform.OS === 'web' ? 400 : 300,
+    lineHeight: Platform.OS === 'web' ? 24 : 20,
+  },
+  modernLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Platform.OS === 'web' ? 120 : 80,
+    backgroundColor: '#F8FAFC',
+  },
+  modernLoadingText: {
+    marginTop: Platform.OS === 'web' ? 20 : 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#6366F1',
+    fontWeight: '500',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -1883,6 +2359,69 @@ const styles = StyleSheet.create({
   dateInput: {
     flex: 1,
     marginRight: 8,
+  },
+  modernSearchContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: Platform.OS === 'web' ? 24 : 20,
+    paddingHorizontal: Platform.OS === 'web' ? 40 : 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    maxWidth: Platform.OS === 'web' ? 1400 : '100%',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  modernSearchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
+    paddingVertical: Platform.OS === 'web' ? 4 : 4,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      transition: 'all 0.2s ease',
+      ':focus-within': {
+        borderColor: '#6366F1',
+        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
+      },
+    } : {}),
+  },
+  searchIcon: {
+    fontSize: Platform.OS === 'web' ? 20 : 18,
+    marginRight: Platform.OS === 'web' ? 12 : 10,
+    color: '#64748B',
+  },
+  modernSearchInput: {
+    flex: 1,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
+    color: '#1E293B',
+    paddingVertical: Platform.OS === 'web' ? 14 : 12,
+    fontWeight: '500',
+    backgroundColor: 'transparent',
+  },
+  clearSearchButton: {
+    padding: Platform.OS === 'web' ? 6 : 4,
+    marginLeft: Platform.OS === 'web' ? 8 : 6,
+    borderRadius: 20,
+    backgroundColor: '#E2E8F0',
+    width: Platform.OS === 'web' ? 28 : 24,
+    height: Platform.OS === 'web' ? 28 : 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: '#CBD5E1',
+      },
+    } : {}),
+  },
+  clearSearchText: {
+    fontSize: Platform.OS === 'web' ? 14 : 12,
+    color: '#64748B',
+    fontWeight: '600',
   },
   filterContainer: {
     backgroundColor: '#FFFFFF',
@@ -2019,6 +2558,172 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  applicationsGrid: {
+    ...(Platform.OS === 'web' ? {
+      display: 'grid' as any,
+      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+      gap: '24px',
+      padding: 24,
+    } as any : {
+      padding: 20,
+    }),
+    maxWidth: Platform.OS === 'web' ? 1400 : '100%',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  modernApplicationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    padding: Platform.OS === 'web' ? 24 : 20,
+    marginBottom: Platform.OS === 'web' ? 0 : 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+      transition: 'all 0.3s ease',
+      cursor: 'default' as any,
+      ':hover': {
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
+        transform: 'translateY(-2px)',
+        borderColor: '#C7D2FE',
+      },
+    } as any : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
+  },
+  modernApplicationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Platform.OS === 'web' ? 18 : 16,
+  },
+  modernApplicationHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  modernApplicationJobTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: Platform.OS === 'web' ? 8 : 6,
+    letterSpacing: Platform.OS === 'web' ? -0.3 : 0,
+    lineHeight: Platform.OS === 'web' ? 28 : 26,
+  },
+  modernApplicationProviderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modernApplicationProviderIcon: {
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+    marginRight: 6,
+  },
+  modernApplicationProvider: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  modernApplicationStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 6 : 5,
+    borderRadius: Platform.OS === 'web' ? 20 : 16,
+    borderWidth: 1,
+  },
+  modernApplicationStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  modernApplicationStatusText: {
+    fontSize: Platform.OS === 'web' ? 12 : 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  modernApplicationInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Platform.OS === 'web' ? 16 : 12,
+    marginBottom: Platform.OS === 'web' ? 18 : 16,
+    paddingBottom: Platform.OS === 'web' ? 18 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modernApplicationInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      width: 'calc(50% - 8px)' as any,
+      flexShrink: 0,
+    } : {
+      flex: 1,
+    }),
+    minWidth: Platform.OS === 'web' ? 180 : '100%',
+  },
+  modernApplicationInfoIcon: {
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    marginRight: Platform.OS === 'web' ? 10 : 8,
+  },
+  modernApplicationInfoTextContainer: {
+    flex: 1,
+  },
+  modernApplicationInfoLabel: {
+    fontSize: Platform.OS === 'web' ? 11 : 10,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modernApplicationInfoValue: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  modernRejectionNoteContainer: {
+    backgroundColor: '#FEF2F2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+    borderRadius: Platform.OS === 'web' ? 12 : 10,
+    padding: Platform.OS === 'web' ? 16 : 14,
+    marginBottom: Platform.OS === 'web' ? 18 : 16,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.1)',
+    } : {}),
+  },
+  modernRejectionNoteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'web' ? 8 : 6,
+  },
+  modernRejectionNoteIcon: {
+    fontSize: Platform.OS === 'web' ? 18 : 16,
+    marginRight: Platform.OS === 'web' ? 8 : 6,
+  },
+  modernRejectionNoteLabel: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  modernRejectionNoteText: {
+    fontSize: Platform.OS === 'web' ? 14 : 13,
+    color: '#991B1B',
+    lineHeight: Platform.OS === 'web' ? 22 : 20,
+  },
+  modernApplicationDescription: {
+    marginTop: Platform.OS === 'web' ? 4 : 0,
+  },
+  modernApplicationDescriptionText: {
+    fontSize: Platform.OS === 'web' ? 15 : 14,
+    color: '#475569',
+    lineHeight: Platform.OS === 'web' ? 24 : 22,
   },
   applicationCard: {
     backgroundColor: '#FFFFFF',
