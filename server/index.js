@@ -1,4 +1,4 @@
-// Load environment variables
+﻿// Load environment variables
 const path = require('path');
 // Load .env from root directory (parent of server)
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -13,6 +13,7 @@ const { generateInvoicePDF } = require('./services/invoice');
 const adminRoutes = require('./routes/admin');
 const analyticsRoutes = require('./routes/analytics');
 const notificationsRoutes = require('./routes/notifications');
+const messagingRoutes = require('./routes/messaging');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,9 +26,9 @@ const uploadsDir = process.env.UPLOADS_DIR
 
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
-    console.log('✅ Created uploads/images directory:', uploadsDir);
+    console.log('âœ… Created uploads/images directory:', uploadsDir);
 } else {
-    console.log('✅ Uploads directory exists:', uploadsDir);
+    console.log('âœ… Uploads directory exists:', uploadsDir);
 }
 
 // Helper function to save base64 image to file
@@ -93,40 +94,40 @@ function saveProviderDocument(base64String, userId, documentType) {
 // Helper function to save profile picture
 function saveProfilePicture(base64String, userId) {
     try {
-        console.log('📸 Starting profile picture save for user:', userId);
-        console.log('📁 Uploads directory:', uploadsDir);
-        console.log('📁 __dirname:', __dirname);
-        console.log('📁 Directory exists:', fs.existsSync(uploadsDir));
+        console.log('ðŸ“¸ Starting profile picture save for user:', userId);
+        console.log('ðŸ“ Uploads directory:', uploadsDir);
+        console.log('ðŸ“ __dirname:', __dirname);
+        console.log('ðŸ“ Directory exists:', fs.existsSync(uploadsDir));
         
         // Ensure directory exists and is writable
         if (!fs.existsSync(uploadsDir)) {
-            console.log('📁 Creating uploads directory:', uploadsDir);
+            console.log('ðŸ“ Creating uploads directory:', uploadsDir);
             fs.mkdirSync(uploadsDir, { recursive: true });
-            console.log('✅ Created uploads directory');
+            console.log('âœ… Created uploads directory');
         }
         
         // Verify directory is writable
         try {
             fs.accessSync(uploadsDir, fs.constants.W_OK);
-            console.log('✅ Uploads directory is writable');
+            console.log('âœ… Uploads directory is writable');
         } catch (accessError) {
-            console.error('❌ Uploads directory is NOT writable!');
-            console.error('❌ Directory path:', uploadsDir);
+            console.error('âŒ Uploads directory is NOT writable!');
+            console.error('âŒ Directory path:', uploadsDir);
             throw new Error(`Uploads directory is not writable: ${accessError.message}`);
         }
         
         // Extract image format and data
         const matches = base64String.match(/^data:image\/(\w+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
-            console.error('❌ Invalid base64 image format');
+            console.error('âŒ Invalid base64 image format');
             throw new Error('Invalid base64 image format');
         }
         
         const imageFormat = matches[1]; // jpeg, png, etc.
         const imageData = matches[2]; // base64 data without prefix
         
-        console.log('📸 Image format:', imageFormat);
-        console.log('📸 Image data length:', imageData.length);
+        console.log('ðŸ“¸ Image format:', imageFormat);
+        console.log('ðŸ“¸ Image data length:', imageData.length);
         
         // Generate unique filename
         const timestamp = Date.now();
@@ -134,25 +135,25 @@ function saveProfilePicture(base64String, userId) {
         const filename = `profile_${userId}_${timestamp}_${randomStr}.${imageFormat}`;
         const filepath = path.join(uploadsDir, filename);
         
-        console.log('📸 Filename:', filename);
-        console.log('📸 Full file path:', filepath);
+        console.log('ðŸ“¸ Filename:', filename);
+        console.log('ðŸ“¸ Full file path:', filepath);
         
         // Convert base64 to buffer and save
         const buffer = Buffer.from(imageData, 'base64');
-        console.log('📸 Buffer size:', buffer.length, 'bytes');
+        console.log('ðŸ“¸ Buffer size:', buffer.length, 'bytes');
         
         // Write file with explicit error handling and ensure it's flushed to disk
         try {
-            console.log('📸 Attempting to write file...');
-            console.log('📸 File path:', filepath);
-            console.log('📸 Buffer length:', buffer.length, 'bytes');
+            console.log('ðŸ“¸ Attempting to write file...');
+            console.log('ðŸ“¸ File path:', filepath);
+            console.log('ðŸ“¸ Buffer length:', buffer.length, 'bytes');
             
             // Ensure parent directory exists
             const parentDir = path.dirname(filepath);
             if (!fs.existsSync(parentDir)) {
-                console.log('📁 Creating parent directory:', parentDir);
+                console.log('ðŸ“ Creating parent directory:', parentDir);
                 fs.mkdirSync(parentDir, { recursive: true });
-                console.log('✅ Parent directory created');
+                console.log('âœ… Parent directory created');
             }
             
             // Write file using writeFileSync with explicit options
@@ -167,13 +168,13 @@ function saveProfilePicture(base64String, userId) {
                 const fd = fs.openSync(filepath, 'r+');
                 fs.fsyncSync(fd);
                 fs.closeSync(fd);
-                console.log('✅ File synced to disk');
+                console.log('âœ… File synced to disk');
             } catch (syncError) {
-                console.warn('⚠️  Could not sync file (non-critical):', syncError.message);
+                console.warn('âš ï¸  Could not sync file (non-critical):', syncError.message);
                 // Continue anyway - file should still be written
             }
             
-            console.log('✅ File write operation completed');
+            console.log('âœ… File write operation completed');
             
             // Verify the file was written (with retries for Windows file system)
             let retries = 10;
@@ -195,52 +196,52 @@ function saveProfilePicture(base64String, userId) {
             }
             
             if (!fileExists || !fileStats) {
-                console.error('❌ File verification failed after retries');
-                console.error('❌ Expected path:', filepath);
-                console.error('❌ File exists:', fs.existsSync(filepath));
+                console.error('âŒ File verification failed after retries');
+                console.error('âŒ Expected path:', filepath);
+                console.error('âŒ File exists:', fs.existsSync(filepath));
                 if (fs.existsSync(filepath)) {
                     const actualStats = fs.statSync(filepath);
-                    console.error('❌ Actual file size:', actualStats.size);
-                    console.error('❌ Expected file size:', buffer.length);
+                    console.error('âŒ Actual file size:', actualStats.size);
+                    console.error('âŒ Expected file size:', buffer.length);
                 }
                 throw new Error('File was not created or verified on disk');
             }
             
-            console.log('✅ File write verified - size matches buffer:', fileStats.size, 'bytes');
+            console.log('âœ… File write verified - size matches buffer:', fileStats.size, 'bytes');
         } catch (writeError) {
-            console.error('❌ Write error code:', writeError.code);
-            console.error('❌ Write error message:', writeError.message);
-            console.error('❌ Write error path:', filepath);
-            console.error('❌ Write error stack:', writeError.stack);
+            console.error('âŒ Write error code:', writeError.code);
+            console.error('âŒ Write error message:', writeError.message);
+            console.error('âŒ Write error path:', filepath);
+            console.error('âŒ Write error stack:', writeError.stack);
             throw writeError;
         }
         
         // Final verification - ensure file exists and is readable
-        console.log('📸 Final verification - checking file exists and is readable...');
+        console.log('ðŸ“¸ Final verification - checking file exists and is readable...');
         if (!fs.existsSync(filepath)) {
-            console.error('❌ CRITICAL: File does not exist after write and verification!');
-            console.error('❌ File path:', filepath);
-            console.error('❌ Directory exists:', fs.existsSync(path.dirname(filepath)));
-            console.error('❌ Files in directory:', fs.existsSync(path.dirname(filepath)) ? fs.readdirSync(path.dirname(filepath)).slice(0, 5) : 'N/A');
+            console.error('âŒ CRITICAL: File does not exist after write and verification!');
+            console.error('âŒ File path:', filepath);
+            console.error('âŒ Directory exists:', fs.existsSync(path.dirname(filepath)));
+            console.error('âŒ Files in directory:', fs.existsSync(path.dirname(filepath)) ? fs.readdirSync(path.dirname(filepath)).slice(0, 5) : 'N/A');
             throw new Error('File was not created on disk');
         }
         
         // Verify file is readable and has correct size
         try {
             const finalStats = fs.statSync(filepath);
-            console.log('✅ Final verification - file exists');
-            console.log('✅ File size:', finalStats.size, 'bytes');
-            console.log('✅ Expected size:', buffer.length, 'bytes');
+            console.log('âœ… Final verification - file exists');
+            console.log('âœ… File size:', finalStats.size, 'bytes');
+            console.log('âœ… Expected size:', buffer.length, 'bytes');
             
             if (finalStats.size === 0) {
-                console.error('❌ CRITICAL: File exists but is empty (0 bytes)!');
+                console.error('âŒ CRITICAL: File exists but is empty (0 bytes)!');
                 throw new Error('File was created but is empty');
             }
             
             if (finalStats.size !== buffer.length) {
-                console.error('❌ CRITICAL: File size mismatch in final verification!');
-                console.error('❌ Expected:', buffer.length, 'bytes');
-                console.error('❌ Actual:', finalStats.size, 'bytes');
+                console.error('âŒ CRITICAL: File size mismatch in final verification!');
+                console.error('âŒ Expected:', buffer.length, 'bytes');
+                console.error('âŒ Actual:', finalStats.size, 'bytes');
                 throw new Error(`File size mismatch: expected ${buffer.length} bytes, got ${finalStats.size} bytes`);
                 }
             
@@ -249,20 +250,20 @@ function saveProfilePicture(base64String, userId) {
             if (testRead.length !== buffer.length) {
                 throw new Error('File read size does not match expected size');
             }
-            console.log('✅ File is readable and size matches');
+            console.log('âœ… File is readable and size matches');
         } catch (verifyError) {
-            console.error('❌ Final verification failed:', verifyError.message);
+            console.error('âŒ Final verification failed:', verifyError.message);
             throw verifyError;
         }
         
         // Return the URL path (relative to /uploads)
         const urlPath = `/uploads/images/${filename}`;
-        console.log('✅ Profile picture saved successfully to:', filepath);
-        console.log('✅ Profile picture URL path:', urlPath);
+        console.log('âœ… Profile picture saved successfully to:', filepath);
+        console.log('âœ… Profile picture URL path:', urlPath);
         return urlPath;
     } catch (error) {
-        console.error('❌ Error saving profile picture:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error('âŒ Error saving profile picture:', error);
+        console.error('âŒ Error stack:', error.stack);
         throw error;
     }
 }
@@ -308,7 +309,7 @@ app.use(express.static('server/public'));
 
 // Serve uploaded images with proper headers
 // Use the same uploadsDir variable that's used for saving files
-console.log('📁 Configuring static file serving from:', uploadsDir);
+console.log('ðŸ“ Configuring static file serving from:', uploadsDir);
 app.use('/uploads/images', express.static(uploadsDir, {
     setHeaders: (res, filePath) => {
         // Set CORS headers for images
@@ -336,6 +337,7 @@ app.use('/uploads', express.static(uploadsRootDir));
 app.use('/api/admin', adminRoutes);
 app.use('/api', analyticsRoutes);
 app.use('/api', notificationsRoutes);
+app.use('/api', messagingRoutes);
 
 // Root - helpful message instead of "Cannot GET /"
 app.get('/', (_req, res) => {
@@ -501,21 +503,21 @@ app.post('/api/users', async (req, res) => {
 // Apply as provider endpoint - now creates pending application with documents
 // IMPORTANT: This route must come BEFORE /api/users/:id/block to avoid route conflicts
 app.post('/api/users/apply-provider', async (req, res) => {
-    console.log('📥 POST /api/users/apply-provider - Request received');
-    console.log('📍 Request URL:', req.url);
-    console.log('📍 Request method:', req.method);
-    console.log('📍 Request headers:', JSON.stringify(req.headers));
-    console.log('📋 Request body type:', typeof req.body);
-    console.log('📋 Request body keys:', req.body ? Object.keys(req.body) : 'NO BODY');
-    console.log('📧 Email:', req.body?.email ? 'Present' : 'Missing');
-    console.log('📄 Business doc:', req.body?.businessDocument ? 'Present (' + (req.body?.businessDocument?.length || 0) + ' chars)' : 'Missing');
-    console.log('🆔 Valid ID doc:', req.body?.validIdDocument ? 'Present (' + (req.body?.validIdDocument?.length || 0) + ' chars)' : 'Missing');
+    console.log('ðŸ“¥ POST /api/users/apply-provider - Request received');
+    console.log('ðŸ“ Request URL:', req.url);
+    console.log('ðŸ“ Request method:', req.method);
+    console.log('ðŸ“ Request headers:', JSON.stringify(req.headers));
+    console.log('ðŸ“‹ Request body type:', typeof req.body);
+    console.log('ðŸ“‹ Request body keys:', req.body ? Object.keys(req.body) : 'NO BODY');
+    console.log('ðŸ“§ Email:', req.body?.email ? 'Present' : 'Missing');
+    console.log('ðŸ“„ Business doc:', req.body?.businessDocument ? 'Present (' + (req.body?.businessDocument?.length || 0) + ' chars)' : 'Missing');
+    console.log('ðŸ†” Valid ID doc:', req.body?.validIdDocument ? 'Present (' + (req.body?.validIdDocument?.length || 0) + ' chars)' : 'Missing');
     
     // Ensure response is always sent - use timeout as backup
     let responseSent = false;
     const responseTimeout = setTimeout(() => {
         if (!responseSent) {
-            console.error('⚠️ Response timeout - forcing response');
+            console.error('âš ï¸ Response timeout - forcing response');
             responseSent = true;
             res.status(500).json({ ok: false, error: 'Request timeout' });
         }
@@ -527,9 +529,9 @@ app.post('/api/users/apply-provider', async (req, res) => {
             responseSent = true;
             try {
                 res.status(status).json(data);
-                console.log('📤 Response sent:', status, data.ok ? 'OK' : 'ERROR', data.error || data.message || '');
+                console.log('ðŸ“¤ Response sent:', status, data.ok ? 'OK' : 'ERROR', data.error || data.message || '');
             } catch (sendErr) {
-                console.error('❌ Error sending response:', sendErr);
+                console.error('âŒ Error sending response:', sendErr);
             }
         }
     };
@@ -537,7 +539,7 @@ app.post('/api/users/apply-provider', async (req, res) => {
     try {
         // Check if body was parsed
         if (!req.body || typeof req.body !== 'object') {
-            console.error('❌ Request body not parsed correctly');
+            console.error('âŒ Request body not parsed correctly');
             return sendResponse(400, { ok: false, error: 'Invalid request body. Please ensure Content-Type is application/json.' });
         }
         
@@ -545,63 +547,63 @@ app.post('/api/users/apply-provider', async (req, res) => {
         
         // Validate required fields
         if (!email) {
-            console.log('❌ Missing email');
+            console.log('âŒ Missing email');
             return sendResponse(400, { ok: false, error: 'Email is required' });
         }
         
         if (!businessDocument) {
-            console.log('❌ Missing business document');
+            console.log('âŒ Missing business document');
             return sendResponse(400, { ok: false, error: 'Business document is required' });
         }
         
         if (!validIdDocument) {
-            console.log('❌ Missing valid ID document');
+            console.log('âŒ Missing valid ID document');
             return sendResponse(400, { ok: false, error: 'Valid ID document is required' });
         }
         
         // Validate base64 format
         if (!businessDocument.startsWith('data:image/')) {
-            console.log('❌ Invalid business document format');
+            console.log('âŒ Invalid business document format');
             return sendResponse(400, { ok: false, error: 'Business document must be a valid image file' });
         }
         
         if (!validIdDocument.startsWith('data:image/')) {
-            console.log('❌ Invalid valid ID document format');
+            console.log('âŒ Invalid valid ID document format');
             return sendResponse(400, { ok: false, error: 'Valid ID document must be a valid image file' });
         }
         
         const pool = getPool();
         
         // Check if user exists
-        console.log('🔍 Looking up user with email:', email);
+        console.log('ðŸ” Looking up user with email:', email);
         const [userRows] = await pool.query(
             'SELECT iduser, u_email, u_role, u_provider_status FROM `user` WHERE u_email = ?',
             [email]
         );
         
         if (userRows.length === 0) {
-            console.log('❌ User not found for email:', email);
+            console.log('âŒ User not found for email:', email);
             return sendResponse(404, { ok: false, error: 'User not found' });
         }
         
         const user = userRows[0];
-        console.log('✅ User found:', user.iduser, user.u_email, 'Role:', user.u_role, 'Status:', user.u_provider_status);
+        console.log('âœ… User found:', user.iduser, user.u_email, 'Role:', user.u_role, 'Status:', user.u_provider_status);
         
         // Check if user is already a provider
         if (user.u_role === 'provider') {
-            console.log('❌ User is already a provider');
+            console.log('âŒ User is already a provider');
             return sendResponse(400, { ok: false, error: 'User is already a provider' });
         }
         
         // Check if user is an admin
         if (user.u_role === 'admin') {
-            console.log('❌ Admin cannot apply as provider');
+            console.log('âŒ Admin cannot apply as provider');
             return sendResponse(400, { ok: false, error: 'Admin users cannot apply as provider' });
         }
         
         // Check if already has pending application
         if (user.u_provider_status === 'pending') {
-            console.log('❌ User already has pending application');
+            console.log('âŒ User already has pending application');
             return sendResponse(400, { ok: false, error: 'You already have a pending provider application' });
         }
         
@@ -609,27 +611,27 @@ app.post('/api/users/apply-provider', async (req, res) => {
         // This allows users to reapply after rejection
         
         // Ensure columns exist before proceeding
-        console.log('🔧 Checking/creating database columns...');
+        console.log('ðŸ”§ Checking/creating database columns...');
         try {
             await pool.query('SELECT u_provider_status, u_business_document, u_valid_id_document FROM `user` LIMIT 1');
         } catch (checkErr) {
             if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
-                console.log('⚠️ Missing columns detected, creating them...');
+                console.log('âš ï¸ Missing columns detected, creating them...');
                 try {
                     if (checkErr.message.includes('u_provider_status')) {
                         await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_status ENUM(\'pending\', \'approved\', \'rejected\') DEFAULT NULL');
-                        console.log('✅ Added u_provider_status column');
+                        console.log('âœ… Added u_provider_status column');
                     }
                     if (checkErr.message.includes('u_business_document')) {
                         await pool.query('ALTER TABLE `user` ADD COLUMN u_business_document VARCHAR(500) DEFAULT NULL');
-                        console.log('✅ Added u_business_document column');
+                        console.log('âœ… Added u_business_document column');
                     }
                     if (checkErr.message.includes('u_valid_id_document')) {
                         await pool.query('ALTER TABLE `user` ADD COLUMN u_valid_id_document VARCHAR(500) DEFAULT NULL');
-                        console.log('✅ Added u_valid_id_document column');
+                        console.log('âœ… Added u_valid_id_document column');
                     }
                 } catch (alterErr) {
-                    console.error('❌ Failed to add columns:', alterErr);
+                    console.error('âŒ Failed to add columns:', alterErr);
                     return sendResponse(500, { ok: false, error: 'Database setup error. Please contact support.' });
                 }
             } else {
@@ -638,18 +640,18 @@ app.post('/api/users/apply-provider', async (req, res) => {
         }
         
         // Save documents to files
-        console.log('💾 Saving documents...');
+        console.log('ðŸ’¾ Saving documents...');
         let businessDocPath = null;
         let validIdDocPath = null;
         
         try {
             businessDocPath = saveProviderDocument(businessDocument, user.iduser, 'business');
-            console.log('✅ Business document saved:', businessDocPath);
+            console.log('âœ… Business document saved:', businessDocPath);
             
             validIdDocPath = saveProviderDocument(validIdDocument, user.iduser, 'id');
-            console.log('✅ Valid ID document saved:', validIdDocPath);
+            console.log('âœ… Valid ID document saved:', validIdDocPath);
         } catch (docErr) {
-            console.error('❌ Error saving documents:', docErr);
+            console.error('âŒ Error saving documents:', docErr);
             console.error('Document error details:', docErr.message, docErr.stack);
             return sendResponse(500, { ok: false, error: 'Failed to save documents: ' + docErr.message });
         }
@@ -659,18 +661,18 @@ app.post('/api/users/apply-provider', async (req, res) => {
             await pool.query('SELECT u_provider_applied_at FROM `user` LIMIT 1');
         } catch (checkErr) {
             if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
-                console.log('⚠️ Missing u_provider_applied_at column, creating it...');
+                console.log('âš ï¸ Missing u_provider_applied_at column, creating it...');
                 try {
                     await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_applied_at TIMESTAMP NULL DEFAULT NULL');
-                    console.log('✅ Added u_provider_applied_at column');
+                    console.log('âœ… Added u_provider_applied_at column');
                 } catch (alterErr) {
-                    console.error('❌ Failed to add u_provider_applied_at column:', alterErr);
+                    console.error('âŒ Failed to add u_provider_applied_at column:', alterErr);
                 }
             }
         }
         
         // Update user record with application date (always update date on new application)
-        console.log('💾 Updating user record with new application date...');
+        console.log('ðŸ’¾ Updating user record with new application date...');
         const updateResult = await pool.query(
             'UPDATE `user` SET u_provider_status = ?, u_business_document = ?, u_valid_id_document = ?, u_provider_applied_at = NOW(), u_rejection_reason = NULL WHERE iduser = ?',
             ['pending', businessDocPath, validIdDocPath, user.iduser]
@@ -683,13 +685,13 @@ app.post('/api/users/apply-provider', async (req, res) => {
         );
         
         if (verifyRows.length > 0) {
-            console.log(`✅ Application date updated to: ${verifyRows[0].u_provider_applied_at || 'NULL (check column exists!)'}`);
+            console.log(`âœ… Application date updated to: ${verifyRows[0].u_provider_applied_at || 'NULL (check column exists!)'}`);
             if (!verifyRows[0].u_provider_applied_at) {
-                console.error('⚠️ WARNING: u_provider_applied_at is NULL after update! Column may not exist.');
+                console.error('âš ï¸ WARNING: u_provider_applied_at is NULL after update! Column may not exist.');
             }
         }
         
-        console.log(`✅ User ${email} applied as provider (pending approval) with documents`);
+        console.log(`âœ… User ${email} applied as provider (pending approval) with documents`);
         
         // Create notifications for all admin users about new provider application
         try {
@@ -735,7 +737,7 @@ app.post('/api/users/apply-provider', async (req, res) => {
                         ]
                     );
                     
-                    console.log(`✅ Notification created for admin user ID ${admin.iduser}`);
+                    console.log(`âœ… Notification created for admin user ID ${admin.iduser}`);
                     
                     // Send push notification to admin
                     try {
@@ -750,17 +752,17 @@ app.post('/api/users/apply-provider', async (req, res) => {
                                     email: email,
                                 }
                             );
-                            console.log(`✅ Push notification sent to admin ${admin.u_email}`);
+                            console.log(`âœ… Push notification sent to admin ${admin.u_email}`);
                         }
                     } catch (pushErr) {
-                        console.error(`⚠️ Failed to send push notification to admin ${admin.u_email} (non-critical):`, pushErr);
+                        console.error(`âš ï¸ Failed to send push notification to admin ${admin.u_email} (non-critical):`, pushErr);
                     }
                 } catch (notifErr) {
-                    console.error(`⚠️ Failed to create notification for admin ${admin.iduser} (non-critical):`, notifErr);
+                    console.error(`âš ï¸ Failed to create notification for admin ${admin.iduser} (non-critical):`, notifErr);
                 }
             }
         } catch (notifErr) {
-            console.error('⚠️ Failed to create notifications for admins (non-critical):', notifErr);
+            console.error('âš ï¸ Failed to create notifications for admins (non-critical):', notifErr);
         }
         
         return sendResponse(200, { 
@@ -770,7 +772,7 @@ app.post('/api/users/apply-provider', async (req, res) => {
         });
         
     } catch (err) {
-        console.error('❌ Error in apply-provider route:', err);
+        console.error('âŒ Error in apply-provider route:', err);
         console.error('Error name:', err.name);
         console.error('Error message:', err.message);
         console.error('Error code:', err.code);
@@ -842,25 +844,25 @@ app.put('/api/users/:id', async (req, res) => {
         // Handle profile picture upload if provided
         let profilePicturePath = existing[0].u_profile_picture || null;
         let profilePictureSaveSuccessful = false; // Flag to track if save was successful
-        console.log('📸 Profile picture received:', profilePicture ? (profilePicture.substring(0, 50) + '...') : 'null');
-        console.log('📸 Profile picture type:', typeof profilePicture);
-        console.log('📸 Profile picture length:', profilePicture ? profilePicture.length : 0);
+        console.log('ðŸ“¸ Profile picture received:', profilePicture ? (profilePicture.substring(0, 50) + '...') : 'null');
+        console.log('ðŸ“¸ Profile picture type:', typeof profilePicture);
+        console.log('ðŸ“¸ Profile picture length:', profilePicture ? profilePicture.length : 0);
         
         if (profilePicture && typeof profilePicture === 'string') {
-            console.log('📸 Processing profile picture...');
+            console.log('ðŸ“¸ Processing profile picture...');
             try {
                 // If it's a base64 string, save it to file
                 if (profilePicture.startsWith('data:image')) {
-                    console.log('📸 Detected base64 image, saving to file...');
+                    console.log('ðŸ“¸ Detected base64 image, saving to file...');
                     // Delete old profile picture if it exists (only after new one is confirmed saved)
                     const oldProfilePicturePath = profilePicturePath;
                     
                     // Save new profile picture
-                    console.log('📸 Calling saveProfilePicture function...');
-                    console.log('📸 Profile picture data preview:', profilePicture.substring(0, 100));
+                    console.log('ðŸ“¸ Calling saveProfilePicture function...');
+                    console.log('ðŸ“¸ Profile picture data preview:', profilePicture.substring(0, 100));
                     try {
                         profilePicturePath = saveProfilePicture(profilePicture, id);
-                        console.log('✅ Profile picture saved successfully:', profilePicturePath);
+                        console.log('âœ… Profile picture saved successfully:', profilePicturePath);
                         
                         // Double-check file exists
                         // Extract filename from path (handle both /uploads/images/filename and just filename)
@@ -871,15 +873,15 @@ app.put('/api/users/:id', async (req, res) => {
                             filename = filename.replace('/uploads/', '');
                         }
                         const savedFilePath = path.join(uploadsDir, filename);
-                        console.log('🔍 Checking file at:', savedFilePath);
-                        console.log('🔍 Uploads dir:', uploadsDir);
-                        console.log('🔍 __dirname:', __dirname);
-                        console.log('🔍 Extracted filename:', filename);
+                        console.log('ðŸ” Checking file at:', savedFilePath);
+                        console.log('ðŸ” Uploads dir:', uploadsDir);
+                        console.log('ðŸ” __dirname:', __dirname);
+                        console.log('ðŸ” Extracted filename:', filename);
                         
                         if (fs.existsSync(savedFilePath)) {
                             const stats = fs.statSync(savedFilePath);
-                            console.log('✅ File confirmed on disk:', savedFilePath);
-                            console.log('✅ File size on disk:', stats.size, 'bytes');
+                            console.log('âœ… File confirmed on disk:', savedFilePath);
+                            console.log('âœ… File size on disk:', stats.size, 'bytes');
                             
                             // Only mark as successful if file exists and has content
                             if (stats.size > 0) {
@@ -888,47 +890,47 @@ app.put('/api/users/:id', async (req, res) => {
                                 // Now delete old profile picture if it exists
                                 if (oldProfilePicturePath && oldProfilePicturePath.startsWith('/uploads/')) {
                                     const oldFilePath = path.join(__dirname, oldProfilePicturePath.replace('/uploads/', 'uploads/'));
-                                    console.log('🗑️  Checking old profile picture:', oldFilePath);
+                                    console.log('ðŸ—‘ï¸  Checking old profile picture:', oldFilePath);
                                     if (fs.existsSync(oldFilePath)) {
                                         try {
                                             fs.unlinkSync(oldFilePath);
-                                            console.log('🗑️  Deleted old profile picture:', oldFilePath);
+                                            console.log('ðŸ—‘ï¸  Deleted old profile picture:', oldFilePath);
                                         } catch (deleteErr) {
-                                            console.warn('⚠️  Could not delete old profile picture:', deleteErr.message);
+                                            console.warn('âš ï¸  Could not delete old profile picture:', deleteErr.message);
                                         }
                                     } else {
-                                        console.log('ℹ️  Old profile picture not found (already deleted or never existed)');
+                                        console.log('â„¹ï¸  Old profile picture not found (already deleted or never existed)');
                                     }
                                 }
                             } else {
-                                console.error('❌ CRITICAL: File exists but is empty (0 bytes)!');
+                                console.error('âŒ CRITICAL: File exists but is empty (0 bytes)!');
                                 profilePicturePath = existing[0].u_profile_picture || null;
                                 throw new Error('File was created but is empty');
                             }
                         } else {
-                            console.error('❌ CRITICAL: File not found after save!');
-                            console.error('❌ Expected path:', savedFilePath);
-                            console.error('❌ Uploads directory exists:', fs.existsSync(uploadsDir));
-                            console.error('❌ Files in uploads directory:', fs.existsSync(uploadsDir) ? fs.readdirSync(uploadsDir).slice(0, 5) : 'N/A');
+                            console.error('âŒ CRITICAL: File not found after save!');
+                            console.error('âŒ Expected path:', savedFilePath);
+                            console.error('âŒ Uploads directory exists:', fs.existsSync(uploadsDir));
+                            console.error('âŒ Files in uploads directory:', fs.existsSync(uploadsDir) ? fs.readdirSync(uploadsDir).slice(0, 5) : 'N/A');
                             // Don't update database with invalid path - keep old picture or set to null
-                            console.error('⚠️  WARNING: File save failed, NOT updating database with invalid path');
+                            console.error('âš ï¸  WARNING: File save failed, NOT updating database with invalid path');
                             profilePicturePath = existing[0].u_profile_picture || null;
                             throw new Error('File was not created on disk after save operation');
                         }
                     } catch (saveError) {
-                        console.error('❌ Failed to save profile picture:', saveError);
-                        console.error('❌ Error details:', saveError.message);
-                        console.error('❌ Error stack:', saveError.stack);
-                        console.error('❌ Error code:', saveError.code);
-                        console.error('❌ Error syscall:', saveError.syscall);
-                        console.error('❌ Error errno:', saveError.errno);
+                        console.error('âŒ Failed to save profile picture:', saveError);
+                        console.error('âŒ Error details:', saveError.message);
+                        console.error('âŒ Error stack:', saveError.stack);
+                        console.error('âŒ Error code:', saveError.code);
+                        console.error('âŒ Error syscall:', saveError.syscall);
+                        console.error('âŒ Error errno:', saveError.errno);
                         // Don't fail the entire request, but log the error
-                        console.error('⚠️  WARNING: Profile picture save failed, keeping old picture');
+                        console.error('âš ï¸  WARNING: Profile picture save failed, keeping old picture');
                         profilePicturePath = existing[0].u_profile_picture || null;
                         profilePictureSaveSuccessful = false;
                         
                         // Log additional diagnostic info
-                        console.error('🔍 Diagnostic info:');
+                        console.error('ðŸ” Diagnostic info:');
                         console.error('  - Uploads dir:', uploadsDir);
                         console.error('  - __dirname:', __dirname);
                         console.error('  - Directory exists:', fs.existsSync(uploadsDir));
@@ -946,24 +948,24 @@ app.put('/api/users/:id', async (req, res) => {
                     }
                 } else if (profilePicture.startsWith('/uploads/')) {
                     // Already a file path, use it as is
-                    console.log('📸 Profile picture is already a file path:', profilePicture);
+                    console.log('ðŸ“¸ Profile picture is already a file path:', profilePicture);
                     profilePicturePath = profilePicture;
                 } else if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
                     // External URL, store as is
-                    console.log('📸 Profile picture is external URL:', profilePicture);
+                    console.log('ðŸ“¸ Profile picture is external URL:', profilePicture);
                     profilePicturePath = profilePicture;
                 } else {
-                    console.warn('⚠️  Unknown profile picture format:', profilePicture.substring(0, 50));
+                    console.warn('âš ï¸  Unknown profile picture format:', profilePicture.substring(0, 50));
                 }
             } catch (imageErr) {
-                console.error('❌ CRITICAL: Failed to process profile picture:', imageErr);
-                console.error('❌ Error message:', imageErr.message);
-                console.error('❌ Error stack:', imageErr.stack);
+                console.error('âŒ CRITICAL: Failed to process profile picture:', imageErr);
+                console.error('âŒ Error message:', imageErr.message);
+                console.error('âŒ Error stack:', imageErr.stack);
                 // Re-throw to prevent database update with invalid path
                 throw imageErr;
             }
         } else {
-            console.log('ℹ️  No profile picture provided or invalid format');
+            console.log('â„¹ï¸  No profile picture provided or invalid format');
         }
         
         // Helper function to check if column exists and add it if needed
@@ -979,7 +981,7 @@ app.put('/api/users/:id', async (req, res) => {
                 
                 if (columns.length === 0) {
                     await pool.query(`ALTER TABLE \`user\` ADD COLUMN \`${columnName}\` ${columnDefinition}`);
-                    console.log(`✅ Added column: ${columnName}`);
+                    console.log(`âœ… Added column: ${columnName}`);
                     return true;
                 }
                 return true;
@@ -1037,16 +1039,16 @@ app.put('/api/users/:id', async (req, res) => {
             await ensureColumnExists('u_profile_picture', 'VARCHAR(500) DEFAULT NULL');
             updateFields.push('u_profile_picture = ?');
             params.push(profilePicturePath);
-                    console.log('✅ Will update database with profile picture path:', profilePicturePath);
+                    console.log('âœ… Will update database with profile picture path:', profilePicturePath);
                 } else {
-                    console.warn('⚠️  NOT updating database - profile picture save failed, keeping old picture');
+                    console.warn('âš ï¸  NOT updating database - profile picture save failed, keeping old picture');
                 }
             } else {
                 // Profile picture is already a path/URL, safe to update
                 await ensureColumnExists('u_profile_picture', 'VARCHAR(500) DEFAULT NULL');
                 updateFields.push('u_profile_picture = ?');
                 params.push(profilePicturePath);
-                console.log('✅ Will update database with profile picture path:', profilePicturePath);
+                console.log('âœ… Will update database with profile picture path:', profilePicturePath);
             }
         }
         
@@ -1064,7 +1066,7 @@ app.put('/api/users/:id', async (req, res) => {
         const response = { ok: true };
         if (profilePicturePath) {
             response.profilePicture = profilePicturePath;
-            console.log('📸 Returning profile picture path:', profilePicturePath);
+            console.log('ðŸ“¸ Returning profile picture path:', profilePicturePath);
         }
         return res.json(response);
     } catch (err) {
@@ -1084,7 +1086,7 @@ app.post('/api/test-save-image', (req, res) => {
             return res.status(400).json({ ok: false, error: 'base64Data and userId required' });
         }
         
-        console.log('🧪 Test: Saving test image...');
+        console.log('ðŸ§ª Test: Saving test image...');
         const result = saveProfilePicture(base64Data, userId);
         
         // Verify file exists
@@ -1101,7 +1103,7 @@ app.post('/api/test-save-image', (req, res) => {
             __dirname: __dirname
         });
     } catch (error) {
-        console.error('🧪 Test save failed:', error);
+        console.error('ðŸ§ª Test save failed:', error);
         return res.status(500).json({
             ok: false,
             error: error.message,
@@ -1115,12 +1117,12 @@ app.get('/api/test-image/:filename', (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(uploadsDir, filename);
     
-    console.log('🔍 Testing image file:', filename);
-    console.log('🔍 Looking in:', filePath);
-    console.log('🔍 Uploads directory:', uploadsDir);
-    console.log('🔍 __dirname:', __dirname);
-    console.log('🔍 Directory exists:', fs.existsSync(uploadsDir));
-    console.log('🔍 File exists:', fs.existsSync(filePath));
+    console.log('ðŸ” Testing image file:', filename);
+    console.log('ðŸ” Looking in:', filePath);
+    console.log('ðŸ” Uploads directory:', uploadsDir);
+    console.log('ðŸ” __dirname:', __dirname);
+    console.log('ðŸ” Directory exists:', fs.existsSync(uploadsDir));
+    console.log('ðŸ” File exists:', fs.existsSync(filePath));
     
     if (fs.existsSync(filePath)) {
         const stats = fs.statSync(filePath);
@@ -1163,8 +1165,8 @@ app.get('/api/image/:filename', (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(uploadsDir, filename);
     
-    console.log('🖼️  Direct image request:', filename);
-    console.log('🖼️  File path:', filePath);
+    console.log('ðŸ–¼ï¸  Direct image request:', filename);
+    console.log('ðŸ–¼ï¸  File path:', filePath);
     
     if (fs.existsSync(filePath)) {
         // Determine content type
@@ -1258,14 +1260,14 @@ app.post('/api/register', async (req, res) => {
 				lastError = insertErr;
 				// If error is "Data too long for column", try to fix the column size
 				if (insertErr && insertErr.code === 'ER_DATA_TOO_LONG' && insertErr.message && insertErr.message.includes('u_password') && insertAttempts === 0) {
-					console.warn('⚠️ Password column too small, attempting to fix...');
+					console.warn('âš ï¸ Password column too small, attempting to fix...');
 					try {
 						await pool.query('ALTER TABLE `user` MODIFY COLUMN `u_password` VARCHAR(255) DEFAULT NULL');
-						console.log('✅ Password column size updated to VARCHAR(255)');
+						console.log('âœ… Password column size updated to VARCHAR(255)');
 						insertAttempts++;
 						continue; // Retry the insert
 					} catch (alterErr) {
-						console.error('❌ Failed to update password column:', alterErr);
+						console.error('âŒ Failed to update password column:', alterErr);
 						// Don't throw here, let it fall through to re-throw original error
 					}
 				}
@@ -1284,7 +1286,7 @@ app.post('/api/register', async (req, res) => {
 		throw new Error('Registration failed after multiple attempts');
 	} catch (err) {
 		console.error('========================================');
-		console.error('❌ REGISTER INSERT FAILED');
+		console.error('âŒ REGISTER INSERT FAILED');
 		console.error('========================================');
 		console.error('Error Code:', err.code);
 		console.error('Error Message:', err.message);
@@ -1358,7 +1360,7 @@ app.get('/api/services', async (req, res) => {
             `);
             hasPerDayPrice = perDayCheck.length > 0;
         } catch (colErr) {
-            console.log('⚠️ Could not check for pricing columns, using defaults');
+            console.log('âš ï¸ Could not check for pricing columns, using defaults');
         }
         
         let query = `
@@ -1553,7 +1555,7 @@ app.get('/api/services/:id', async (req, res) => {
             `);
             hasPerDayPrice = perDayCheck.length > 0;
         } catch (colErr) {
-            console.log('⚠️ Could not check for pricing columns, using defaults');
+            console.log('âš ï¸ Could not check for pricing columns, using defaults');
         }
         
         const [rows] = await pool.query(`
@@ -1834,7 +1836,7 @@ app.post('/api/services', async (req, res) => {
         const pool = getPool();
         
         console.log('========================================');
-        console.log('📥 RECEIVED SERVICE CREATION REQUEST:');
+        console.log('ðŸ“¥ RECEIVED SERVICE CREATION REQUEST:');
         console.log('========================================');
         console.log('Provider ID (from request):', providerId);
         console.log('Provider Email:', providerEmail);
@@ -1861,7 +1863,7 @@ app.post('/api/services', async (req, res) => {
             const [userCheck] = await pool.query('SELECT iduser FROM `user` WHERE iduser = ?', [parseInt(providerId)]);
             if (userCheck.length > 0) {
                 dbUserId = userCheck[0].iduser;
-                console.log('✓ Found user by ID:', dbUserId);
+                console.log('âœ“ Found user by ID:', dbUserId);
             }
         }
         
@@ -1871,15 +1873,15 @@ app.post('/api/services', async (req, res) => {
             const [userByEmail] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [providerEmail]);
             if (userByEmail.length > 0) {
                 dbUserId = userByEmail[0].iduser;
-                console.log('✓ Found user by email. Database ID:', dbUserId);
+                console.log('âœ“ Found user by email. Database ID:', dbUserId);
             } else {
-                console.log('✗ User not found by email:', providerEmail);
+                console.log('âœ— User not found by email:', providerEmail);
             }
         }
         
         // If still not found and providerId is a string (Firebase UID), try to find by email from user object
         if (!dbUserId) {
-            console.log('✗ ERROR: Provider not found in database');
+            console.log('âœ— ERROR: Provider not found in database');
             return res.status(400).json({ ok: false, error: 'Provider not found in database. Please ensure the user is registered in the system.' });
         }
         
@@ -1905,7 +1907,7 @@ app.post('/api/services', async (req, res) => {
             `);
             if (hourlyPriceCheck.length === 0) {
                 await pool.query(`ALTER TABLE service ADD COLUMN s_hourly_price DECIMAL(10,2) NULL AFTER s_base_price`);
-                console.log('✅ Added s_hourly_price column');
+                console.log('âœ… Added s_hourly_price column');
             }
         } catch (alterErr) {
             if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
@@ -1923,7 +1925,7 @@ app.post('/api/services', async (req, res) => {
             `);
             if (perDayPriceCheck.length === 0) {
                 await pool.query(`ALTER TABLE service ADD COLUMN s_per_day_price DECIMAL(10,2) NULL AFTER s_hourly_price`);
-                console.log('✅ Added s_per_day_price column');
+                console.log('âœ… Added s_per_day_price column');
             }
         } catch (alterErr) {
             if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
@@ -1953,7 +1955,7 @@ app.post('/api/services', async (req, res) => {
         ];
 
         console.log('========================================');
-        console.log('💾 INSERTING INTO DATABASE:');
+        console.log('ðŸ’¾ INSERTING INTO DATABASE:');
         console.log('========================================');
         console.log('SQL: INSERT INTO service');
         console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price');
@@ -1982,7 +1984,7 @@ app.post('/api/services', async (req, res) => {
         `, insertData);
         
         console.log('========================================');
-        console.log('✅ SERVICE CREATED SUCCESSFULLY!');
+        console.log('âœ… SERVICE CREATED SUCCESSFULLY!');
         console.log('========================================');
         console.log('New Service ID:', result.insertId);
         console.log('Provider Database ID:', dbUserId);
@@ -2000,9 +2002,9 @@ app.post('/api/services', async (req, res) => {
                     (si_service_id, si_image_url, si_is_primary, si_order)
                     VALUES (?, ?, 1, 0)
                 `, [result.insertId, imagePath]);
-                console.log('✅ Service image saved successfully:', imagePath);
+                console.log('âœ… Service image saved successfully:', imagePath);
             } catch (imageErr) {
-                console.error('⚠️  Failed to save service image:', imageErr);
+                console.error('âš ï¸  Failed to save service image:', imageErr);
                 // Don't fail the entire request if image save fails
             }
         }
@@ -2010,7 +2012,7 @@ app.post('/api/services', async (req, res) => {
         return res.json({ ok: true, id: result.insertId, message: 'Service created successfully' });
     } catch (err) {
         console.log('========================================');
-        console.log('❌ CREATE SERVICE FAILED:');
+        console.log('âŒ CREATE SERVICE FAILED:');
         console.log('========================================');
         console.error('Error Code:', err.code);
         console.error('Error Message:', err.message);
@@ -2188,7 +2190,7 @@ app.put('/api/services/:id', async (req, res) => {
         // Handle image update if provided
         if (image && typeof image === 'string' && image.startsWith('data:image')) {
             try {
-                console.log('📸 Processing image update for service:', id);
+                console.log('ðŸ“¸ Processing image update for service:', id);
                 
                 // Get existing image to delete old file
                 const [existingImages] = await pool.query(
@@ -2205,20 +2207,20 @@ app.put('/api/services/:id', async (req, res) => {
                         if (fs.existsSync(oldFilePath)) {
                             try {
                                 fs.unlinkSync(oldFilePath);
-                                console.log('🗑️  Deleted old image file:', oldFilePath);
+                                console.log('ðŸ—‘ï¸  Deleted old image file:', oldFilePath);
                             } catch (deleteErr) {
-                                console.warn('⚠️  Could not delete old image file:', deleteErr.message);
+                                console.warn('âš ï¸  Could not delete old image file:', deleteErr.message);
                             }
                         } else {
-                            console.log('ℹ️  Old image file not found (may have been deleted):', oldFilePath);
+                            console.log('â„¹ï¸  Old image file not found (may have been deleted):', oldFilePath);
                         }
                     }
                 }
                 
                 // Save new image to file
-                console.log('💾 Saving new image to file...');
+                console.log('ðŸ’¾ Saving new image to file...');
                 const imagePath = saveBase64Image(image, id);
-                console.log('✅ Image saved to:', imagePath);
+                console.log('âœ… Image saved to:', imagePath);
                 
                 // Update or insert image record
                 const [imageExists] = await pool.query(
@@ -2232,7 +2234,7 @@ app.put('/api/services/:id', async (req, res) => {
                         'UPDATE service_image SET si_image_url = ? WHERE si_service_id = ? AND si_is_primary = 1',
                         [imagePath, id]
                     );
-                    console.log('✅ Updated existing image record');
+                    console.log('âœ… Updated existing image record');
                 } else {
                     // Insert new image
                     await pool.query(`
@@ -2240,18 +2242,18 @@ app.put('/api/services/:id', async (req, res) => {
                         (si_service_id, si_image_url, si_is_primary, si_order)
                         VALUES (?, ?, 1, 0)
                     `, [id, imagePath]);
-                    console.log('✅ Inserted new image record');
+                    console.log('âœ… Inserted new image record');
                 }
                 
-                console.log('✅ Service image updated successfully:', imagePath);
+                console.log('âœ… Service image updated successfully:', imagePath);
             } catch (imageErr) {
-                console.error('❌ Failed to update service image:', imageErr);
+                console.error('âŒ Failed to update service image:', imageErr);
                 console.error('Error details:', imageErr.message);
                 console.error('Stack:', imageErr.stack);
                 // Don't fail the entire request if image update fails
             }
         } else if (image) {
-            console.log('ℹ️  Image provided but not in base64 format, skipping image update');
+            console.log('â„¹ï¸  Image provided but not in base64 format, skipping image update');
         }
 
         return res.json({ ok: true, message: 'Service updated successfully' });
@@ -3472,420 +3474,7 @@ app.delete('/api/user/payment-methods/:id', async (req, res) => {
     }
 });
 
-app.get('/api/user/messages/count', async (req, res) => {
-    const email = req.query.email;
-    if (!email) {
-        return res.status(400).json({ ok: false, error: 'Email required' });
-    }
-    try {
-        const pool = getPool();
-        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [email]);
-        if (userRows.length === 0) {
-            return res.json({ ok: true, count: 0 });
-        }
-        const userId = userRows[0].iduser;
-        const [countRows] = await pool.query(`
-            SELECT COUNT(*) as count 
-            FROM message m
-            INNER JOIN conversation_participant cp ON m.m_conversation_id = cp.cp_conversation_id
-            WHERE cp.cp_user_id = ? AND m.m_sender_id != ? AND m.m_is_read = 0
-        `, [userId, userId]);
-        return res.json({ ok: true, count: countRows[0].count || 0 });
-    } catch (err) {
-        console.error('Get messages count failed:', err.code, err.message);
-        return res.json({ ok: true, count: 0 }); // Return 0 on error to not break UI
-    }
-});
-
-// Get or create conversation for a booking
-app.post('/api/bookings/:id/conversation', async (req, res) => {
-    const bookingId = Number(req.params.id);
-    const { userEmail } = req.body || {};
-    
-    if (!Number.isFinite(bookingId) || !userEmail) {
-        return res.status(400).json({ ok: false, error: 'Invalid request' });
-    }
-    
-    try {
-        const pool = getPool();
-        
-        // Get user ID
-        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
-        }
-        const userId = userRows[0].iduser;
-        
-        // Get booking and verify it belongs to user
-        const [bookingRows] = await pool.query(
-            'SELECT b_client_id, b_status FROM booking WHERE idbooking = ?',
-            [bookingId]
-        );
-        if (bookingRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'Booking not found' });
-        }
-        const booking = bookingRows[0];
-        
-        if (booking.b_client_id !== userId) {
-            return res.status(403).json({ ok: false, error: 'You do not have permission to access this booking' });
-        }
-        
-        // Check if booking is confirmed
-        if (booking.b_status !== 'confirmed') {
-            return res.status(400).json({ ok: false, error: 'Booking must be confirmed to start messaging' });
-        }
-        
-        // Get provider ID from booking services
-        const [serviceRows] = await pool.query(`
-            SELECT DISTINCT s.s_provider_id
-            FROM booking_service bs
-            INNER JOIN service s ON bs.bs_service_id = s.idservice
-            WHERE bs.bs_booking_id = ?
-            LIMIT 1
-        `, [bookingId]);
-        
-        if (serviceRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'No services found for this booking' });
-        }
-        const providerId = serviceRows[0].s_provider_id;
-        
-        // Check if conversation already exists for this booking
-        const [existingConv] = await pool.query(
-            'SELECT idconversation FROM conversation WHERE c_booking_id = ?',
-            [bookingId]
-        );
-        
-        let conversationId;
-        if (existingConv.length > 0) {
-            conversationId = existingConv[0].idconversation;
-        } else {
-            // Create new conversation
-            const [convResult] = await pool.query(`
-                INSERT INTO conversation (c_booking_id, c_subject, c_priority, c_is_active)
-                VALUES (?, ?, 'medium', 1)
-            `, [bookingId, `Booking #${bookingId}`]);
-            conversationId = convResult.insertId;
-            
-            // Add participants (user and provider)
-            await pool.query(`
-                INSERT INTO conversation_participant (cp_conversation_id, cp_user_id, cp_unread_count)
-                VALUES (?, ?, 0), (?, ?, 0)
-            `, [conversationId, userId, conversationId, providerId]);
-        }
-        
-        // Get conversation details
-        const [convDetails] = await pool.query(`
-            SELECT c.*, 
-                   GROUP_CONCAT(cp.cp_user_id) as participant_ids
-            FROM conversation c
-            LEFT JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
-            WHERE c.idconversation = ?
-            GROUP BY c.idconversation
-        `, [conversationId]);
-        
-        return res.json({ ok: true, conversation: convDetails[0] });
-    } catch (err) {
-        console.error('Get or create booking conversation failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// Get provider ID from booking
-app.get('/api/bookings/:id/provider', async (req, res) => {
-    const bookingId = Number(req.params.id);
-    
-    if (!Number.isFinite(bookingId)) {
-        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
-    }
-    
-    try {
-        const pool = getPool();
-        const [rows] = await pool.query(`
-            SELECT DISTINCT s.s_provider_id, u.u_email as provider_email,
-                   CONCAT(u.u_fname, ' ', u.u_lname) as provider_name
-            FROM booking_service bs
-            INNER JOIN service s ON bs.bs_service_id = s.idservice
-            INNER JOIN user u ON s.s_provider_id = u.iduser
-            WHERE bs.bs_booking_id = ?
-            LIMIT 1
-        `, [bookingId]);
-        
-        if (rows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'Provider not found for this booking' });
-        }
-        
-        return res.json({ ok: true, provider: rows[0] });
-    } catch (err) {
-        console.error('Get booking provider failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// ============================================
-// MESSAGING API ENDPOINTS
-// ============================================
-
-// Get user conversations
-app.get('/api/user/conversations', async (req, res) => {
-    const email = req.query.email;
-    if (!email) {
-        return res.status(400).json({ ok: false, error: 'Email required' });
-    }
-    try {
-        const pool = getPool();
-        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [email]);
-        if (userRows.length === 0) {
-            return res.json({ ok: true, conversations: [] });
-        }
-        const userId = userRows[0].iduser;
-        
-        const [conversations] = await pool.query(`
-            SELECT c.*, 
-                   (SELECT m.m_content FROM message m 
-                    WHERE m.m_conversation_id = c.idconversation 
-                    ORDER BY m.m_created_at DESC LIMIT 1) as last_message,
-                   (SELECT m.m_created_at FROM message m 
-                    WHERE m.m_conversation_id = c.idconversation 
-                    ORDER BY m.m_created_at DESC LIMIT 1) as last_message_time,
-                   (SELECT COUNT(*) FROM message m 
-                    INNER JOIN conversation_participant cp ON m.m_conversation_id = cp.cp_conversation_id
-                    WHERE cp.cp_user_id = ? AND m.m_sender_id != ? AND m.m_is_read = 0 
-                    AND m.m_conversation_id = c.idconversation) as unread_count,
-                   cp.cp_unread_count as participant_unread_count
-            FROM conversation c
-            INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
-            WHERE cp.cp_user_id = ?
-            GROUP BY c.idconversation
-            ORDER BY c.c_updated_at DESC
-        `, [userId, userId, userId]);
-        
-        // Get other participant info for each conversation
-        for (const conv of conversations) {
-            // For system conversations, set a special other_participant
-            if (conv.c_subject === 'System Notifications' && !conv.c_service_id && !conv.c_booking_id && !conv.c_hiring_request_id) {
-                conv.other_participant = {
-                    cp_user_id: 0,
-                    u_email: 'system@event.com',
-                    name: 'System'
-                };
-            } else {
-            const [participants] = await pool.query(`
-                SELECT cp.cp_user_id, u.u_email, CONCAT(u.u_fname, ' ', u.u_lname) as name
-                FROM conversation_participant cp
-                INNER JOIN user u ON cp.cp_user_id = u.iduser
-                WHERE cp.cp_conversation_id = ? AND cp.cp_user_id != ?
-            `, [conv.idconversation, userId]);
-            conv.other_participant = participants[0] || null;
-            }
-        }
-        
-        return res.json({ ok: true, conversations });
-    } catch (err) {
-        console.error('Get conversations failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// Get conversation messages
-app.get('/api/conversations/:id/messages', async (req, res) => {
-    const conversationId = Number(req.params.id);
-    if (!Number.isFinite(conversationId)) {
-        return res.status(400).json({ ok: false, error: 'Invalid conversation ID' });
-    }
-    try {
-        const pool = getPool();
-        const [messages] = await pool.query(`
-            SELECT m.*, 
-                   CONCAT(u.u_fname, ' ', u.u_lname) as sender_name,
-                   u.u_email as sender_email
-            FROM message m
-            INNER JOIN user u ON m.m_sender_id = u.iduser
-            WHERE m.m_conversation_id = ?
-            ORDER BY m.m_created_at ASC
-        `, [conversationId]);
-        
-        return res.json({ ok: true, messages });
-    } catch (err) {
-        console.error('Get messages failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// Send message
-app.post('/api/conversations/:id/messages', async (req, res) => {
-    const conversationId = Number(req.params.id);
-    const { userEmail, content } = req.body || {};
-    
-    if (!Number.isFinite(conversationId) || !userEmail || !content) {
-        return res.status(400).json({ ok: false, error: 'Invalid request' });
-    }
-    
-    try {
-        const pool = getPool();
-        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
-        }
-        const userId = userRows[0].iduser;
-        
-        // Verify user is participant in conversation
-        const [participantRows] = await pool.query(
-            'SELECT cp_user_id FROM conversation_participant WHERE cp_conversation_id = ? AND cp_user_id = ?',
-            [conversationId, userId]
-        );
-        if (participantRows.length === 0) {
-            return res.status(403).json({ ok: false, error: 'You are not a participant in this conversation' });
-        }
-        
-        // Get other participant
-        const [otherParticipantRows] = await pool.query(
-            'SELECT cp_user_id FROM conversation_participant WHERE cp_conversation_id = ? AND cp_user_id != ?',
-            [conversationId, userId]
-        );
-        if (otherParticipantRows.length === 0) {
-            return res.status(400).json({ ok: false, error: 'No other participant found' });
-        }
-        
-        // Insert message
-        const [result] = await pool.query(`
-            INSERT INTO message (m_conversation_id, m_sender_id, m_content, m_message_type, m_is_read)
-            VALUES (?, ?, ?, 'text', 0)
-        `, [conversationId, userId, content.trim()]);
-        
-        // Update conversation updated_at
-        await pool.query(
-            'UPDATE conversation SET c_updated_at = NOW() WHERE idconversation = ?',
-            [conversationId]
-        );
-        
-        // Increment unread count for other participant
-        await pool.query(`
-            UPDATE conversation_participant 
-            SET cp_unread_count = cp_unread_count + 1 
-            WHERE cp_conversation_id = ? AND cp_user_id = ?
-        `, [conversationId, otherParticipantRows[0].cp_user_id]);
-        
-        // Get the created message
-        const [messageRows] = await pool.query(`
-            SELECT m.*, 
-                   CONCAT(u.u_fname, ' ', u.u_lname) as sender_name,
-                   u.u_email as sender_email
-            FROM message m
-            INNER JOIN user u ON m.m_sender_id = u.iduser
-            WHERE m.idmessage = ?
-        `, [result.insertId]);
-        
-        // Send push notification and create notification entry for other participant
-        const [otherUserRows] = await pool.query(
-            'SELECT iduser, u_email FROM `user` WHERE iduser = ?',
-            [otherParticipantRows[0].cp_user_id]
-        );
-        if (otherUserRows.length > 0) {
-            const otherUserId = otherUserRows[0].iduser;
-            const otherUserEmail = otherUserRows[0].u_email;
-            const senderName = messageRows[0].sender_name || 'Someone';
-            const messagePreview = content.trim().length > 50 
-                ? content.trim().substring(0, 50) + '...' 
-                : content.trim();
-            
-            // Create notification entry for the message
-            try {
-                // Ensure notification table exists
-                await pool.query(`
-                    CREATE TABLE IF NOT EXISTS \`notification\` (
-                        \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
-                        \`n_user_id\` INT(11) NOT NULL,
-                        \`n_title\` VARCHAR(255) NOT NULL,
-                        \`n_message\` TEXT NOT NULL,
-                        \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
-                        \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
-                        \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (\`idnotification\`),
-                        INDEX \`idx_user\` (\`n_user_id\`),
-                        INDEX \`idx_read\` (\`n_is_read\`),
-                        INDEX \`idx_created\` (\`n_created_at\`),
-                        FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-                `);
-                
-                const notificationTitle = `New message from ${senderName}`;
-                const notificationMessage = messagePreview;
-                
-                // Create notification entry
-                await pool.query(
-                    'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
-                    [
-                        otherUserId,
-                        notificationTitle,
-                        notificationMessage,
-                        'new_message',
-                        0
-                    ]
-                );
-                
-                console.log(`✅ Notification created for user ID ${otherUserId}`);
-            } catch (notifErr) {
-                console.error('⚠️ Failed to create notification for message (non-critical):', notifErr);
-            }
-            
-            // Send push notification
-            sendPushNotification(
-                otherUserEmail,
-                `New message from ${senderName}`,
-                messagePreview,
-                {
-                    type: 'message',
-                    conversationId: conversationId.toString(),
-                    senderId: userId.toString(),
-                }
-            ).catch(err => console.error('Failed to send push notification:', err));
-        }
-        
-        return res.json({ ok: true, message: messageRows[0] });
-    } catch (err) {
-        console.error('Send message failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// Mark messages as read
-app.post('/api/conversations/:id/read', async (req, res) => {
-    const conversationId = Number(req.params.id);
-    const { userEmail } = req.body || {};
-    
-    if (!Number.isFinite(conversationId) || !userEmail) {
-        return res.status(400).json({ ok: false, error: 'Invalid request' });
-    }
-    
-    try {
-        const pool = getPool();
-        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
-        }
-        const userId = userRows[0].iduser;
-        
-        // Mark all messages in conversation as read for this user
-        await pool.query(`
-            UPDATE message m
-            INNER JOIN conversation_participant cp ON m.m_conversation_id = cp.cp_conversation_id
-            SET m.m_is_read = 1
-            WHERE m.m_conversation_id = ? AND m.m_sender_id != ? AND m.m_is_read = 0
-        `, [conversationId, userId]);
-        
-        // Reset unread count
-        await pool.query(`
-            UPDATE conversation_participant 
-            SET cp_unread_count = 0 
-            WHERE cp_conversation_id = ? AND cp_user_id = ?
-        `, [conversationId, userId]);
-        
-        return res.json({ ok: true });
-    } catch (err) {
-        console.error('Mark messages as read failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
+// Messaging routes moved to ./routes/messaging.js
 
 // ============================================
 // PAYMENT PROCESSING API ENDPOINT
@@ -4012,7 +3601,7 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
                     providerEmail: providerWithCredentials.u_email,
                     providerName: `${providerWithCredentials.u_fname || ''} ${providerWithCredentials.u_lname || ''}`.trim(),
                 };
-                console.log('✅ Using provider PayMongo credentials:', {
+                console.log('âœ… Using provider PayMongo credentials:', {
                     providerName: providerCredentials.providerName,
                     providerEmail: providerCredentials.providerEmail,
                     mode: providerCredentials.mode,
@@ -4021,7 +3610,7 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
             } else {
                 // Provider found but no payment setup - return error
                 const providerName = `${providerWithCredentials.u_fname || ''} ${providerWithCredentials.u_lname || ''}`.trim() || providerWithCredentials.u_email;
-                console.log('❌ Provider found but no PayMongo credentials configured:', {
+                console.log('âŒ Provider found but no PayMongo credentials configured:', {
                     providerEmail: providerWithCredentials.u_email,
                     providerName: providerName,
                 });
@@ -4031,7 +3620,7 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
                 });
             }
         } else {
-            console.log('⚠️  No provider found for booking');
+            console.log('âš ï¸  No provider found for booking');
             return res.status(400).json({ 
                 ok: false, 
                 error: 'Provider not yet set up his payment' 
@@ -4268,7 +3857,7 @@ app.post('/api/bookings/:bookingId/pay-cash', async (req, res) => {
             connection.release();
         }
         
-        console.log(`✓ Cash payment recorded for booking ${bookingId} (Payment ID: ${paymentId})`);
+        console.log(`âœ“ Cash payment recorded for booking ${bookingId} (Payment ID: ${paymentId})`);
         
         return res.json({ 
             ok: true, 
@@ -4382,7 +3971,7 @@ app.get('/api/payments/paymongo/success', async (req, res) => {
                 </head>
                 <body>
                     <div class="container">
-                        <div class="success-icon">✓</div>
+                        <div class="success-icon">âœ“</div>
                         <h1>Payment Successful!</h1>
                         <p>Your payment has been processed successfully.</p>
                         <p class="loading">Redirecting to homepage...</p>
@@ -4502,7 +4091,7 @@ app.get('/api/payments/paymongo/failed', async (req, res) => {
             </head>
             <body>
                 <div class="container">
-                    <div class="error-icon">✕</div>
+                    <div class="error-icon">âœ•</div>
                     <h1>Payment Failed</h1>
                     <p>Your payment could not be processed.</p>
                     <p>Please try again or contact support if the problem persists.</p>
@@ -4761,7 +4350,7 @@ app.post('/api/provider/bookings/:bookingId/mark-payment-paid', async (req, res)
             });
         }
         
-        console.log(`✓ Cash payment marked as paid for booking ${bookingId} by provider ${providerEmail}`);
+        console.log(`âœ“ Cash payment marked as paid for booking ${bookingId} by provider ${providerEmail}`);
         
         // Get payment details for invoice
         const [paymentRows] = await pool.query(
@@ -5324,7 +4913,7 @@ app.post('/api/bookings', async (req, res) => {
                     ]
                 );
                 
-                console.log(`✅ Notification created for provider user ID ${providerUserId}`);
+                console.log(`âœ… Notification created for provider user ID ${providerUserId}`);
                 
                 // Send push notification to provider
                 try {
@@ -5339,13 +4928,13 @@ app.post('/api/bookings', async (req, res) => {
                                 serviceId: serviceId.toString(),
                             }
                         );
-                        console.log(`✅ Push notification sent to provider ${providerEmail}`);
+                        console.log(`âœ… Push notification sent to provider ${providerEmail}`);
                     }
                 } catch (pushErr) {
-                    console.error('⚠️ Failed to send push notification to provider (non-critical):', pushErr);
+                    console.error('âš ï¸ Failed to send push notification to provider (non-critical):', pushErr);
                 }
             } catch (notifErr) {
-                console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+                console.error('âš ï¸ Failed to create notification for provider (non-critical):', notifErr);
             }
         }
         
@@ -5509,10 +5098,10 @@ app.get('/api/bookings/:bookingId/services/:serviceId/rating', async (req, res) 
 app.get('/api/services/:serviceId/reviews', async (req, res) => {
     const serviceId = Number(req.params.serviceId);
     
-    console.log('📝 Getting reviews for serviceId:', serviceId);
+    console.log('ðŸ“ Getting reviews for serviceId:', serviceId);
     
     if (!Number.isFinite(serviceId)) {
-        console.error('❌ Invalid service ID:', req.params.serviceId);
+        console.error('âŒ Invalid service ID:', req.params.serviceId);
         return res.status(400).json({ ok: false, error: 'Invalid service ID' });
     }
     
@@ -5537,7 +5126,7 @@ app.get('/api/services/:serviceId/reviews', async (req, res) => {
             ORDER BY sr.sr_created_at DESC
         `, [serviceId]);
         
-        console.log(`✅ Found ${reviewRows.length} reviews for service ${serviceId}`);
+        console.log(`âœ… Found ${reviewRows.length} reviews for service ${serviceId}`);
         
         const reviews = reviewRows.map((row) => ({
             id: row.idreview,
@@ -5550,10 +5139,10 @@ app.get('/api/services/:serviceId/reviews', async (req, res) => {
             userProfilePicture: row.u_profile_picture || null
         }));
         
-        console.log('📋 Returning reviews:', reviews.length);
+        console.log('ðŸ“‹ Returning reviews:', reviews.length);
         return res.json({ ok: true, reviews });
     } catch (err) {
-        console.error('❌ Get service reviews failed:', err.code, err.message);
+        console.error('âŒ Get service reviews failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
     }
 });
@@ -5681,9 +5270,9 @@ app.post('/api/bookings/:id/status', async (req, res) => {
                                 0
                             ]
                         );
-                        console.log(`✅ Notification created for client user ID ${booking.client_user_id}`);
+                        console.log(`âœ… Notification created for client user ID ${booking.client_user_id}`);
                     } catch (notifErr) {
-                        console.error('⚠️ Failed to create notification for client (non-critical):', notifErr);
+                        console.error('âš ï¸ Failed to create notification for client (non-critical):', notifErr);
                     }
                 }
                 
@@ -5700,9 +5289,9 @@ app.post('/api/bookings/:id/status', async (req, res) => {
                                 0
                             ]
                         );
-                        console.log(`✅ Notification created for provider user ID ${booking.provider_user_id}`);
+                        console.log(`âœ… Notification created for provider user ID ${booking.provider_user_id}`);
                     } catch (notifErr) {
-                        console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+                        console.error('âš ï¸ Failed to create notification for provider (non-critical):', notifErr);
                     }
                 }
                 
@@ -5750,9 +5339,9 @@ app.post('/api/bookings/:id/status', async (req, res) => {
                                 0
                             ]
                         );
-                        console.log(`✅ Notification created for client user ID ${booking.client_user_id}`);
+                        console.log(`âœ… Notification created for client user ID ${booking.client_user_id}`);
                     } catch (notifErr) {
-                        console.error('⚠️ Failed to create notification for client (non-critical):', notifErr);
+                        console.error('âš ï¸ Failed to create notification for client (non-critical):', notifErr);
                     }
                 }
                 
@@ -5769,9 +5358,9 @@ app.post('/api/bookings/:id/status', async (req, res) => {
                                 0
                             ]
                         );
-                        console.log(`✅ Notification created for provider user ID ${booking.provider_user_id}`);
+                        console.log(`âœ… Notification created for provider user ID ${booking.provider_user_id}`);
                     } catch (notifErr) {
-                        console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+                        console.error('âš ï¸ Failed to create notification for provider (non-critical):', notifErr);
                     }
                 }
                 
@@ -7482,17 +7071,17 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
                     const oldFormattedTime = `${oldDisplayHour}:${oldMinutes} ${oldAmpm}`;
                     
                     notificationMessage = `Your interview for "${jobTitle}" has been rescheduled.\n\n`;
-                    notificationMessage += `📅 Previous: ${oldFormattedDate} at ${oldFormattedTime}\n`;
-                    notificationMessage += `📅 New Date: ${formattedDate}\n`;
-                    notificationMessage += `🕐 New Time: ${formattedTime}\n`;
+                    notificationMessage += `ðŸ“… Previous: ${oldFormattedDate} at ${oldFormattedTime}\n`;
+                    notificationMessage += `ðŸ“… New Date: ${formattedDate}\n`;
+                    notificationMessage += `ðŸ• New Time: ${formattedTime}\n`;
                 } else {
                     notificationMessage = `You have been scheduled for an interview for "${jobTitle}".\n\n`;
-                    notificationMessage += `📅 Date: ${formattedDate}\n`;
-                    notificationMessage += `🕐 Time: ${formattedTime}\n`;
+                    notificationMessage += `ðŸ“… Date: ${formattedDate}\n`;
+                    notificationMessage += `ðŸ• Time: ${formattedTime}\n`;
                 }
                 
                 if (interviewDescription && interviewDescription.trim()) {
-                    notificationMessage += `\n📝 Instructions:\n${interviewDescription.trim()}`;
+                    notificationMessage += `\nðŸ“ Instructions:\n${interviewDescription.trim()}`;
                 }
 
                 // Create notification entry
@@ -7507,7 +7096,7 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
                     ]
                 );
 
-                console.log(`✅ Notification created for applicant user ID ${applicantUserId}`);
+                console.log(`âœ… Notification created for applicant user ID ${applicantUserId}`);
 
                 // Send push notification to the applicant
                 try {
@@ -7535,14 +7124,14 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
                                 jobTitle: jobTitle
                             }
                         );
-                        console.log(`✅ Push notification sent to applicant ${applicantEmail}`);
+                        console.log(`âœ… Push notification sent to applicant ${applicantEmail}`);
                     }
                 } catch (pushErr) {
-                    console.error('⚠️ Failed to send push notification (non-critical):', pushErr);
+                    console.error('âš ï¸ Failed to send push notification (non-critical):', pushErr);
                     // Don't fail the interview scheduling if push notification fails
                 }
             } catch (notifErr) {
-                console.error('⚠️ Failed to create notification (non-critical):', notifErr);
+                console.error('âš ï¸ Failed to create notification (non-critical):', notifErr);
                 // Don't fail the interview scheduling if notification fails
             }
         }
@@ -8056,7 +7645,7 @@ app.get('/api/provider/services', async (req, res) => {
             `);
             hasPerDayPrice = perDayCheck.length > 0;
         } catch (colErr) {
-            console.log('⚠️ Could not check for pricing columns, using defaults');
+            console.log('âš ï¸ Could not check for pricing columns, using defaults');
         }
         
         // Get provider's active services
@@ -8107,7 +7696,7 @@ app.get('/api/provider/services', async (req, res) => {
 
 // 404 handler for undefined routes
 app.use((req, res) => {
-    console.log(`❌ 404 - Route not found: ${req.method} ${req.path}`);
+    console.log(`âŒ 404 - Route not found: ${req.method} ${req.path}`);
     res.status(404).json({ 
         ok: false, 
         error: `Route not found: ${req.method} ${req.path}`,
@@ -8123,11 +7712,11 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-	console.log(`✅ API server listening on http://localhost:${PORT}`);
-	console.log(`✅ Server accessible from network on port ${PORT}`);
-	console.log(`✅ For Android emulator: http://10.0.2.2:${PORT}`);
-	console.log(`✅ For physical devices: http://YOUR_IP:${PORT}`);
-	console.log(`✅ Registered route: POST /api/users/apply-provider`);
+	console.log(`âœ… API server listening on http://localhost:${PORT}`);
+	console.log(`âœ… Server accessible from network on port ${PORT}`);
+	console.log(`âœ… For Android emulator: http://10.0.2.2:${PORT}`);
+	console.log(`âœ… For physical devices: http://YOUR_IP:${PORT}`);
+	console.log(`âœ… Registered route: POST /api/users/apply-provider`);
 });
 
 
