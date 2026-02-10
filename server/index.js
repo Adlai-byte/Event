@@ -10,6 +10,7 @@ const fs = require('fs');
 const { getPool } = require('./db');
 const { createInstaPayPayment, createGCashPayment, createPaymentLink, createCheckoutSession, parsePaymentStatus } = require('./services/paymongo');
 const { generateInvoicePDF } = require('./services/invoice');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -329,6 +330,9 @@ app.use('/uploads/images', express.static(uploadsDir, {
 const uploadsRootDir = path.dirname(uploadsDir);
 app.use('/uploads', express.static(uploadsRootDir));
 
+// Mount route modules
+app.use('/api/admin', adminRoutes);
+
 // Root - helpful message instead of "Cannot GET /"
 app.get('/', (_req, res) => {
     return res.type('text').send('Event API is running. Try GET /api/health or POST /api/register');
@@ -357,8 +361,8 @@ app.get('/api/users/by-email', async (req, res) => {
     if (!email) return res.status(400).json({ ok: false, error: 'Email required' });
     try {
         const pool = getPool();
-        // Try to include profile picture, but handle if column doesn't exist
-        let query = "SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role";
+        // Try to include all user fields including profile picture, but handle if column doesn't exist
+        let query = "SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role, u_phone, u_date_of_birth, u_address, u_city, u_state, u_zip_code";
         try {
             // Try to add profile picture column
             query += ", u_profile_picture";
@@ -381,6 +385,12 @@ app.get('/api/users/by-email', async (req, res) => {
             middleName: row.u_mname || null,
             lastName: row.u_lname || null,
             suffix: row.u_suffix || null,
+            phone: row.u_phone || null,
+            dateOfBirth: row.u_date_of_birth || null,
+            address: row.u_address || null,
+            city: row.u_city || null,
+            state: row.u_state || null,
+            zipCode: row.u_zip_code || null,
             hasPassword: row.u_password !== null && row.u_password !== '',
             blocked: Number(row.u_disabled) === 1, 
             role: row.u_role || 'user',
@@ -391,7 +401,7 @@ app.get('/api/users/by-email', async (req, res) => {
         if (err && err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('u_profile_picture')) {
             try {
                 const pool = getPool();
-                const [rows] = await pool.query("SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role FROM `user` WHERE u_email = ? LIMIT 1", [email]);
+                const [rows] = await pool.query("SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role, u_phone, u_date_of_birth, u_address, u_city, u_state, u_zip_code FROM `user` WHERE u_email = ? LIMIT 1", [email]);
                 if (!Array.isArray(rows) || rows.length === 0) {
                     return res.json({ ok: true, exists: false });
                 }
@@ -405,6 +415,12 @@ app.get('/api/users/by-email', async (req, res) => {
                     middleName: row.u_mname || null,
                     lastName: row.u_lname || null,
                     suffix: row.u_suffix || null,
+                    phone: row.u_phone || null,
+                    dateOfBirth: row.u_date_of_birth || null,
+                    address: row.u_address || null,
+                    city: row.u_city || null,
+                    state: row.u_state || null,
+                    zipCode: row.u_zip_code || null,
                     hasPassword: row.u_password !== null && row.u_password !== '',
                     blocked: Number(row.u_disabled) === 1, 
                     role: row.u_role || 'user',
@@ -670,6 +686,78 @@ app.post('/api/users/apply-provider', async (req, res) => {
         }
         
         console.log(`✅ User ${email} applied as provider (pending approval) with documents`);
+        
+        // Create notifications for all admin users about new provider application
+        try {
+            // Ensure notification table exists
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS \`notification\` (
+                    \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                    \`n_user_id\` INT(11) NOT NULL,
+                    \`n_title\` VARCHAR(255) NOT NULL,
+                    \`n_message\` TEXT NOT NULL,
+                    \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                    \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                    \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (\`idnotification\`),
+                    INDEX \`idx_user\` (\`n_user_id\`),
+                    INDEX \`idx_read\` (\`n_is_read\`),
+                    INDEX \`idx_created\` (\`n_created_at\`),
+                    FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            `);
+            
+            // Get all admin users
+            const [adminRows] = await pool.query(
+                'SELECT iduser, u_email, u_fname, u_lname FROM `user` WHERE u_role = ?',
+                ['admin']
+            );
+            
+            const applicantName = `${user.u_fname || ''} ${user.u_lname || ''}`.trim() || email;
+            const notificationTitle = 'New Provider Application';
+            const notificationMessage = `${applicantName} (${email}) has submitted a new provider application and is waiting for approval.`;
+            
+            // Create notification for each admin
+            for (const admin of adminRows) {
+                try {
+                    await pool.query(
+                        'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                        [
+                            admin.iduser,
+                            notificationTitle,
+                            notificationMessage,
+                            'new_provider_application',
+                            0
+                        ]
+                    );
+                    
+                    console.log(`✅ Notification created for admin user ID ${admin.iduser}`);
+                    
+                    // Send push notification to admin
+                    try {
+                        if (global.sendPushNotification && admin.u_email) {
+                            await global.sendPushNotification(
+                                admin.u_email,
+                                notificationTitle,
+                                `${applicantName} submitted a provider application`,
+                                {
+                                    type: 'new_provider_application',
+                                    userId: user.iduser.toString(),
+                                    email: email,
+                                }
+                            );
+                            console.log(`✅ Push notification sent to admin ${admin.u_email}`);
+                        }
+                    } catch (pushErr) {
+                        console.error(`⚠️ Failed to send push notification to admin ${admin.u_email} (non-critical):`, pushErr);
+                    }
+                } catch (notifErr) {
+                    console.error(`⚠️ Failed to create notification for admin ${admin.iduser} (non-critical):`, notifErr);
+                }
+            }
+        } catch (notifErr) {
+            console.error('⚠️ Failed to create notifications for admins (non-critical):', notifErr);
+        }
         
         return sendResponse(200, { 
             ok: true, 
@@ -1091,227 +1179,7 @@ app.get('/api/image/:filename', (req, res) => {
     }
 });
 
-// Get provider applications (for admin)
-app.get('/api/admin/provider-applications', async (req, res) => {
-    try {
-        const pool = getPool();
-        // Check if column exists, if not return empty array
-        try {
-            const [rows] = await pool.query(`
-                SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document, 
-                       COALESCE(u_provider_applied_at, u_created_at) as applied_at
-                FROM \`user\`
-                WHERE u_provider_status IN ('pending', 'approved', 'rejected') OR u_role = 'provider'
-                ORDER BY COALESCE(u_provider_applied_at, u_created_at) DESC
-            `);
-            return res.json({ ok: true, rows });
-        } catch (queryErr) {
-            // If column doesn't exist, try to add it
-            if (queryErr.code === 'ER_BAD_FIELD_ERROR') {
-                try {
-                    if (queryErr.message.includes('u_provider_status')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_status ENUM(\'pending\', \'approved\', \'rejected\') DEFAULT NULL');
-                    }
-                    if (queryErr.message.includes('u_business_document')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_business_document VARCHAR(500) DEFAULT NULL');
-                    }
-                    if (queryErr.message.includes('u_valid_id_document')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_valid_id_document VARCHAR(500) DEFAULT NULL');
-                    }
-                    if (queryErr.message.includes('u_provider_applied_at')) {
-                        await pool.query('ALTER TABLE `user` ADD COLUMN u_provider_applied_at TIMESTAMP NULL DEFAULT NULL');
-                        console.log('✅ Added u_provider_applied_at column in admin query');
-                    }
-                    // Query again
-                    const [rows] = await pool.query(`
-                        SELECT iduser, u_fname, u_lname, u_email, u_provider_status, u_role, u_business_document, u_valid_id_document,
-                               COALESCE(u_provider_applied_at, u_created_at) as applied_at
-                        FROM \`user\`
-                        WHERE u_provider_status IN ('pending', 'approved', 'rejected') OR u_role = 'provider'
-                        ORDER BY COALESCE(u_provider_applied_at, u_created_at) DESC
-                    `);
-                    return res.json({ ok: true, rows });
-                } catch (alterErr) {
-                    console.error('Failed to add columns:', alterErr);
-                }
-            }
-            throw queryErr;
-        }
-    } catch (err) {
-        console.error('Get provider applications failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// Approve provider application
-app.post('/api/admin/provider-applications/:id/approve', async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) {
-        return res.status(400).json({ ok: false, error: 'Invalid user ID' });
-    }
-    try {
-        const pool = getPool();
-        
-        // Check if user exists
-        const [userRows] = await pool.query(
-            'SELECT iduser, u_email, u_role, u_provider_status FROM `user` WHERE iduser = ?',
-            [id]
-        );
-        
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
-        }
-        
-        const user = userRows[0];
-        
-        // Check if already a provider
-        if (user.u_role === 'provider') {
-            return res.status(400).json({ ok: false, error: 'User is already a provider' });
-        }
-        
-        // Update user role to provider and set status to approved
-        await pool.query(
-            'UPDATE `user` SET u_role = ?, u_provider_status = ? WHERE iduser = ?',
-            ['provider', 'approved', id]
-        );
-        
-        console.log(`✓ Provider application approved for user ID ${id} (${user.u_email})`);
-        return res.json({ ok: true, message: 'Provider application approved' });
-    } catch (err) {
-        console.error('Approve provider failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
-    }
-});
-
-// Reject provider application
-app.post('/api/admin/provider-applications/:id/reject', async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) {
-        return res.status(400).json({ ok: false, error: 'Invalid user ID' });
-    }
-    
-    const { rejectionReason } = req.body || {};
-    
-    if (!rejectionReason || rejectionReason.trim().length === 0) {
-        return res.status(400).json({ ok: false, error: 'Rejection reason is required' });
-    }
-    
-    try {
-        const pool = getPool();
-        
-        // Check if user exists
-        const [userRows] = await pool.query(
-            'SELECT iduser, u_email, u_provider_status FROM `user` WHERE iduser = ?',
-            [id]
-        );
-        
-        if (userRows.length === 0) {
-            return res.status(404).json({ ok: false, error: 'User not found' });
-        }
-        
-        const user = userRows[0];
-        
-        // Ensure rejection_reason column exists
-        try {
-            await pool.query('SELECT u_rejection_reason FROM `user` LIMIT 1');
-        } catch (checkErr) {
-            if (checkErr.code === 'ER_BAD_FIELD_ERROR') {
-                console.log('⚠️ Missing u_rejection_reason column, creating it...');
-                try {
-                    await pool.query('ALTER TABLE `user` ADD COLUMN u_rejection_reason TEXT DEFAULT NULL');
-                    console.log('✅ Added u_rejection_reason column');
-                } catch (alterErr) {
-                    console.error('❌ Failed to add u_rejection_reason column:', alterErr);
-                }
-            }
-        }
-        
-        // Update provider status to rejected with reason
-        await pool.query(
-            'UPDATE `user` SET u_provider_status = ?, u_rejection_reason = ? WHERE iduser = ?',
-            ['rejected', rejectionReason.trim(), id]
-        );
-        
-        // Create a system notification message for the user
-        try {
-            // Create a unique system conversation for this user (or find existing one)
-            // Use a pattern that includes user ID to make it unique per user
-            const systemSubject = `System Notifications - User ${id}`;
-            
-            let [convRows] = await pool.query(
-                `SELECT c.idconversation 
-                 FROM conversation c
-                 INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
-                 WHERE c.c_subject LIKE ? 
-                 AND c.c_service_id IS NULL 
-                 AND c.c_booking_id IS NULL 
-                 AND c.c_hiring_request_id IS NULL
-                 AND cp.cp_user_id = ?
-                 LIMIT 1`,
-                ['System Notifications%', id]
-            );
-            
-            let conversationId;
-            if (convRows.length === 0) {
-                // Create system conversation with user-specific subject
-                const [insertResult] = await pool.query(
-                    'INSERT INTO `conversation` (c_subject, c_priority, c_is_active) VALUES (?, ?, ?)',
-                    ['System Notifications', 'medium', 1]
-                );
-                conversationId = insertResult.insertId;
-                
-                // Add user as participant
-                await pool.query(
-                    'INSERT INTO `conversation_participant` (cp_conversation_id, cp_user_id, cp_unread_count) VALUES (?, ?, ?)',
-                    [conversationId, id, 0]
-                );
-                
-                console.log(`✅ Created system conversation ${conversationId} for user ${id}`);
-            } else {
-                conversationId = convRows[0].idconversation;
-                console.log(`✅ Using existing system conversation ${conversationId} for user ${id}`);
-            }
-            
-            // Create system message with rejection notification
-            const systemMessage = `Your provider application has been rejected.\n\nReason: ${rejectionReason.trim()}\n\nYou can reapply at any time by submitting a new application.`;
-            
-            // Get admin user ID (first admin user) for sender
-            const [adminRows] = await pool.query(
-                'SELECT iduser FROM `user` WHERE u_role = ? LIMIT 1',
-                ['admin']
-            );
-            const adminId = adminRows.length > 0 ? adminRows[0].iduser : null;
-            
-            await pool.query(
-                'INSERT INTO `message` (m_conversation_id, m_sender_id, m_content, m_message_type, m_is_read, m_action_required) VALUES (?, ?, ?, ?, ?, ?)',
-                [conversationId, adminId || id, systemMessage, 'system', 0, 0]
-            );
-            
-            // Update unread count for the user
-            await pool.query(
-                'UPDATE `conversation_participant` SET cp_unread_count = cp_unread_count + 1 WHERE cp_conversation_id = ? AND cp_user_id = ?',
-                [conversationId, id]
-            );
-            
-            // Update conversation updated_at to make it appear at the top
-            await pool.query(
-                'UPDATE `conversation` SET c_updated_at = NOW() WHERE idconversation = ?',
-                [conversationId]
-            );
-            
-            console.log(`✅ System notification created for user ID ${id} in conversation ${conversationId}`);
-        } catch (notifErr) {
-            console.error('⚠️ Failed to create notification (non-critical):', notifErr);
-            // Don't fail the rejection if notification fails
-        }
-        
-        console.log(`✓ Provider application rejected for user ID ${id} (${user.u_email}) with reason`);
-        return res.json({ ok: true, message: 'Provider application rejected' });
-    } catch (err) {
-        console.error('Reject provider failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
-    }
-});
+// Admin routes (provider-applications, analytics) moved to ./routes/admin.js
 
 // Register endpoint: inserts into MySQL `event.user`
 app.post('/api/register', async (req, res) => {
@@ -1450,18 +1318,50 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/services', async (req, res) => {
     try {
         const pool = getPool();
-        const category = req.query.category;
-        const search = req.query.search;
+        // Handle query parameters that might be arrays (if duplicate params in URL) - take first value
+        const category = Array.isArray(req.query.category) ? req.query.category[0] : req.query.category;
+        const search = Array.isArray(req.query.search) ? req.query.search[0] : req.query.search;
         const featured = req.query.featured === 'true';
-        const city = req.query.city;
-        const providerId = req.query.providerId; // Firebase UID
-        const providerEmail = req.query.providerEmail;
-        const userLat = req.query.latitude ? parseFloat(req.query.latitude) : null;
-        const userLng = req.query.longitude ? parseFloat(req.query.longitude) : null;
-        const radiusKm = req.query.radius ? parseFloat(req.query.radius) : 100; // Default 100km
+        const city = Array.isArray(req.query.city) ? req.query.city[0] : req.query.city;
+        const providerId = Array.isArray(req.query.providerId) ? req.query.providerId[0] : req.query.providerId; // Firebase UID
+        const providerEmail = Array.isArray(req.query.providerEmail) ? req.query.providerEmail[0] : req.query.providerEmail;
+        const userLat = req.query.latitude ? parseFloat(Array.isArray(req.query.latitude) ? req.query.latitude[0] : req.query.latitude) : null;
+        const userLng = req.query.longitude ? parseFloat(Array.isArray(req.query.longitude) ? req.query.longitude[0] : req.query.longitude) : null;
+        const radiusKm = req.query.radius ? parseFloat(Array.isArray(req.query.radius) ? req.query.radius[0] : req.query.radius) : 100; // Default 100km
+        const minPrice = req.query.minPrice ? parseFloat(Array.isArray(req.query.minPrice) ? req.query.minPrice[0] : req.query.minPrice) : null;
+        const maxPrice = req.query.maxPrice ? parseFloat(Array.isArray(req.query.maxPrice) ? req.query.maxPrice[0] : req.query.maxPrice) : null;
+        const minRating = req.query.minRating ? parseFloat(Array.isArray(req.query.minRating) ? req.query.minRating[0] : req.query.minRating) : null;
+        
+        // Check if hourly_price and per_day_price columns exist
+        let hasHourlyPrice = false;
+        let hasPerDayPrice = false;
+        try {
+            const [hourlyCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_hourly_price'
+            `);
+            hasHourlyPrice = hourlyCheck.length > 0;
+            
+            const [perDayCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_per_day_price'
+            `);
+            hasPerDayPrice = perDayCheck.length > 0;
+        } catch (colErr) {
+            console.log('⚠️ Could not check for pricing columns, using defaults');
+        }
         
         let query = `
-            SELECT s.*, u.u_fname, u.u_lname, 
+            SELECT s.*, 
+                   ${hasHourlyPrice ? 'COALESCE(s.s_hourly_price, s.s_base_price)' : 's.s_base_price'} as s_hourly_price,
+                   ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
+                   u.u_fname, u.u_lname, u.u_email as provider_email,
                    CONCAT(u.u_fname, ' ', u.u_lname) as provider_name,
                    si.si_image_url as primary_image
             FROM service s
@@ -1499,13 +1399,30 @@ app.get('/api/services', async (req, res) => {
         }
         
         if (search) {
-            query += ` AND (s.s_name LIKE ? OR s.s_description LIKE ?)`;
-            params.push(`%${search}%`, `%${search}%`);
+            query += ` AND (s.s_name LIKE ? OR s.s_description LIKE ? OR u.u_fname LIKE ? OR u.u_lname LIKE ? OR CONCAT(u.u_fname, ' ', u.u_lname) LIKE ? OR u.u_email LIKE ?)`;
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
         }
         
         if (city) {
-            query += ` AND s.s_city LIKE ?`;
-            params.push(`%${city}%`);
+            // Search in city, state, and address fields to find location matches
+            // This allows finding "mati" whether it's in city name, state, or full address
+            query += ` AND (s.s_city LIKE ? OR s.s_state LIKE ? OR s.s_address LIKE ?)`;
+            params.push(`%${city}%`, `%${city}%`, `%${city}%`);
+        }
+        
+        if (minPrice !== null && !isNaN(minPrice)) {
+            query += ` AND s.s_base_price >= ?`;
+            params.push(minPrice);
+        }
+        
+        if (maxPrice !== null && !isNaN(maxPrice)) {
+            query += ` AND s.s_base_price <= ?`;
+            params.push(maxPrice);
+        }
+        
+        if (minRating !== null && !isNaN(minRating)) {
+            query += ` AND s.s_rating >= ?`;
+            params.push(minRating);
         }
         
         if (featured) {
@@ -1529,8 +1446,11 @@ app.get('/api/services', async (req, res) => {
         
         // Filter by distance if user location is provided
         let filteredRows = rows;
-        if (userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng)) {
+        if (userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng) && 
+            userLat >= -90 && userLat <= 90 && userLng >= -180 && userLng <= 180) {
+            try {
             filteredRows = rows.filter(service => {
+                    try {
                 const address = service.s_address || '';
                 let serviceLat = null;
                 let serviceLng = null;
@@ -1548,7 +1468,8 @@ app.get('/api/services', async (req, res) => {
                 }
                 
                 // If service has coordinates, calculate distance
-                if (serviceLat !== null && serviceLng !== null && !isNaN(serviceLat) && !isNaN(serviceLng)) {
+                        if (serviceLat !== null && serviceLng !== null && !isNaN(serviceLat) && !isNaN(serviceLng) &&
+                            serviceLat >= -90 && serviceLat <= 90 && serviceLng >= -180 && serviceLng <= 180) {
                     // Haversine formula to calculate distance in kilometers
                     const R = 6371; // Earth's radius in km
                     const dLat = (serviceLat - userLat) * Math.PI / 180;
@@ -1568,6 +1489,11 @@ app.get('/api/services', async (req, res) => {
                 
                 // If service doesn't have coordinates, include it (for backward compatibility)
                 return true;
+                    } catch (filterErr) {
+                        console.error('Error filtering service by distance:', filterErr);
+                        // Include service if distance calculation fails
+                        return true;
+                    }
             });
             
             // Sort by distance if location filtering is active
@@ -1576,12 +1502,19 @@ app.get('/api/services', async (req, res) => {
                 const distB = b.distance_km || 999999;
                 return distA - distB;
             });
+            } catch (distanceErr) {
+                console.error('Error in distance filtering:', distanceErr);
+                // If distance filtering fails, return all rows without distance filtering
+                filteredRows = rows;
+            }
         }
         
         return res.json({ ok: true, rows: filteredRows });
     } catch (err) {
         console.error('List services failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
+        console.error('Error stack:', err.stack);
+        console.error('Request query:', req.query);
+        return res.status(500).json({ ok: false, error: err.message || 'Database error', details: process.env.NODE_ENV === 'development' ? err.stack : undefined });
     }
 });
 
@@ -1593,8 +1526,37 @@ app.get('/api/services/:id', async (req, res) => {
     }
     try {
         const pool = getPool();
+        
+        // Check if hourly_price and per_day_price columns exist
+        let hasHourlyPrice = false;
+        let hasPerDayPrice = false;
+        try {
+            const [hourlyCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_hourly_price'
+            `);
+            hasHourlyPrice = hourlyCheck.length > 0;
+            
+            const [perDayCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_per_day_price'
+            `);
+            hasPerDayPrice = perDayCheck.length > 0;
+        } catch (colErr) {
+            console.log('⚠️ Could not check for pricing columns, using defaults');
+        }
+        
         const [rows] = await pool.query(`
-            SELECT s.*, u.u_fname, u.u_lname,
+            SELECT s.*, 
+                   ${hasHourlyPrice ? 'COALESCE(s.s_hourly_price, s.s_base_price)' : 's.s_base_price'} as s_hourly_price,
+                   ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
+                   u.u_fname, u.u_lname, u.u_email as provider_email,
                    CONCAT(u.u_fname, ' ', u.u_lname) as provider_name
             FROM service s
             LEFT JOIN user u ON s.s_provider_id = u.iduser
@@ -1677,14 +1639,24 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
             const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
             
             // Check for existing bookings on this date for this specific service
+            // This includes both single-day bookings and multi-day bookings that include this date
             const [bookings] = await pool.query(`
                 SELECT b_start_time, b_end_time, b.b_event_name, b.b_status
                 FROM booking b
                 INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
                 WHERE bs.bs_service_id = ? 
-                AND b.b_event_date = ?
                 AND b.b_status IN ('pending', 'confirmed')
-            `, [id, date]);
+                AND (
+                    b.b_event_date = ?
+                    OR (
+                        b.b_notes IS NOT NULL 
+                        AND b.b_notes != ''
+                        AND JSON_VALID(b.b_notes)
+                        AND JSON_EXTRACT(b.b_notes, '$.allDates') IS NOT NULL
+                        AND JSON_CONTAINS(JSON_EXTRACT(b.b_notes, '$.allDates'), JSON_QUOTE(?))
+                    )
+                )
+            `, [id, date, date]);
             
             console.log(`[Available Slots] Service ID: ${id}, Date: ${date}, Found ${bookings.length} existing bookings:`, bookings);
             
@@ -1710,7 +1682,8 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
                     const endTime = new Date(current.getTime() + 30 * 60000);
                     const endTimeStr = endTime.toTimeString().slice(0, 5);
                     
-                    // Check if this slot conflicts with existing bookings (including 30-minute gap requirement)
+                    // Check if this slot conflicts with existing bookings
+                    // Only mark as unavailable if it directly overlaps with a booking
                     const isBooked = bookings.some(booking => {
                         // Normalize time format to HH:MM:SS
                         const bookingStartStr = booking.b_start_time.toString();
@@ -1724,47 +1697,18 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
                         
                         // Standard interval overlap check: two intervals overlap if
                         // slotStart < bookingEnd AND slotEnd > bookingStart
+                        // This means the slot and booking share any time in common
                         const overlaps = (current < bookingEnd) && (endTime > bookingStart);
                         
-                        // 30-minute gap requirement check
-                        // If existing booking ends at 12:00, new booking must start at 12:30 or later
-                        // This means: slotStart must be >= bookingEnd + 30 minutes
-                        // Gap violation: slot starts less than 30 min after booking ends
-                        const gapAfterBooking = new Date(bookingEnd.getTime() + 30 * 60000); // bookingEnd + 30 min
-                        const gapViolationAfter = current < gapAfterBooking;
-                        
-                        // If existing booking starts at 12:30, new booking must end at 12:00 or earlier
-                        // This means: slotEnd must be <= bookingStart - 30 minutes
-                        // Gap violation: slot ends less than 30 min before booking starts
-                        const gapBeforeBooking = new Date(bookingStart.getTime() - 30 * 60000); // bookingStart - 30 min
-                        const gapViolationBefore = endTime > gapBeforeBooking;
-                        
-                        // Additional check: if slot starts exactly when booking ends, it's a violation
-                        // (e.g., booking ends at 12:00, slot starts at 12:00 - needs 30-min gap)
-                        const startsAtBookingEnd = current.getTime() === bookingEnd.getTime();
-                        const endsAtBookingStart = endTime.getTime() === bookingStart.getTime();
-                        
-                        const hasConflict = overlaps || gapViolationAfter || gapViolationBefore || startsAtBookingEnd || endsAtBookingStart;
-                        
-                        if (hasConflict) {
-                        if (overlaps) {
-                            console.log(`[Slot Conflict] Slot ${timeStr}-${endTimeStr} overlaps with booking ${bookingStartTime}-${bookingEndTime}`);
-                            } else if (gapViolationAfter) {
-                                console.log(`[Gap Violation] Slot ${timeStr}-${endTimeStr} starts too soon after booking ${bookingStartTime}-${bookingEndTime} (needs 30-min gap)`);
-                            } else if (gapViolationBefore) {
-                                console.log(`[Gap Violation] Slot ${timeStr}-${endTimeStr} ends too close before booking ${bookingStartTime}-${bookingEndTime} (needs 30-min gap)`);
-                            }
-                        }
-                        
-                        return hasConflict;
+                        return overlaps;
                     });
                     
-                    // Only add slot if it's available (not booked)
-                    if (endTime <= end && !isBooked) {
+                    // Add ALL slots (both available and unavailable) so frontend can display them properly
+                    if (endTime <= end) {
                         allSlots.push({
                             start: timeStr,
                             end: endTimeStr,
-                            available: true
+                            available: !isBooked
                         });
                     }
                     
@@ -1797,14 +1741,24 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
                     
                     if (hasAvailability) {
                         // Check if there are any bookings on this date
+                        // This includes both single-day bookings and multi-day bookings that include this date
                         const [bookings] = await pool.query(`
                             SELECT COUNT(*) as count
                             FROM booking b
                             INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
                             WHERE bs.bs_service_id = ? 
-                            AND b.b_event_date = ?
                             AND b.b_status IN ('pending', 'confirmed')
-                        `, [id, dateStr]);
+                            AND (
+                                b.b_event_date = ?
+                                OR (
+                                    b.b_notes IS NOT NULL 
+                                    AND b.b_notes != ''
+                                    AND JSON_VALID(b.b_notes)
+                                    AND JSON_EXTRACT(b.b_notes, '$.allDates') IS NOT NULL
+                                    AND JSON_CONTAINS(JSON_EXTRACT(b.b_notes, '$.allDates'), JSON_QUOTE(?))
+                                )
+                            )
+                        `, [id, dateStr, dateStr]);
                         
                         // Consider date available if not fully booked (you can adjust this logic)
                         if (bookings[0].count < 10) { // Example: max 10 bookings per day
@@ -1814,14 +1768,24 @@ app.get('/api/services/:id/available-slots', async (req, res) => {
                 } else {
                     // No availability restrictions - all dates are available
                     // Just check if not fully booked
+                    // This includes both single-day bookings and multi-day bookings that include this date
                     const [bookings] = await pool.query(`
                         SELECT COUNT(*) as count
                         FROM booking b
                         INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
                         WHERE bs.bs_service_id = ? 
-                        AND b.b_event_date = ?
                         AND b.b_status IN ('pending', 'confirmed')
-                    `, [id, dateStr]);
+                        AND (
+                            b.b_event_date = ?
+                            OR (
+                                b.b_notes IS NOT NULL 
+                                AND b.b_notes != ''
+                                AND JSON_VALID(b.b_notes)
+                                AND JSON_EXTRACT(b.b_notes, '$.allDates') IS NOT NULL
+                                AND JSON_CONTAINS(JSON_EXTRACT(b.b_notes, '$.allDates'), JSON_QUOTE(?))
+                            )
+                        )
+                    `, [id, dateStr, dateStr]);
                     
                     if (bookings[0].count < 10) {
                         isAvailable = true;
@@ -1926,6 +1890,47 @@ app.post('/api/services', async (req, res) => {
             }
         }
 
+        // Check and add hourly_price and per_day_price columns if they don't exist
+        try {
+            const [hourlyPriceCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_hourly_price'
+            `);
+            if (hourlyPriceCheck.length === 0) {
+                await pool.query(`ALTER TABLE service ADD COLUMN s_hourly_price DECIMAL(10,2) NULL AFTER s_base_price`);
+                console.log('✅ Added s_hourly_price column');
+            }
+        } catch (alterErr) {
+            if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
+                console.error('Error adding s_hourly_price column:', alterErr);
+            }
+        }
+
+        try {
+            const [perDayPriceCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_per_day_price'
+            `);
+            if (perDayPriceCheck.length === 0) {
+                await pool.query(`ALTER TABLE service ADD COLUMN s_per_day_price DECIMAL(10,2) NULL AFTER s_hourly_price`);
+                console.log('✅ Added s_per_day_price column');
+            }
+        } catch (alterErr) {
+            if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
+                console.error('Error adding s_per_day_price column:', alterErr);
+            }
+        }
+
+        // Get hourly and per-day prices from request
+        const hourlyPrice = req.body.hourlyPrice ? parseFloat(req.body.hourlyPrice) : null;
+        const perDayPrice = req.body.perDayPrice ? parseFloat(req.body.perDayPrice) : null;
+
         const insertData = [
             dbUserId, 
             name.trim(), 
@@ -1938,14 +1943,16 @@ app.post('/api/services', async (req, res) => {
             city || null, 
             state || null, 
             fullAddress || null, 
-            1
+            1,
+            hourlyPrice,
+            perDayPrice
         ];
 
         console.log('========================================');
         console.log('💾 INSERTING INTO DATABASE:');
         console.log('========================================');
         console.log('SQL: INSERT INTO service');
-        console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active');
+        console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price');
         console.log('Values:');
         console.log('  s_provider_id:', insertData[0]);
         console.log('  s_name:', insertData[1]);
@@ -1959,13 +1966,15 @@ app.post('/api/services', async (req, res) => {
         console.log('  s_state:', insertData[9]);
         console.log('  s_address:', insertData[10]);
         console.log('  s_is_active:', insertData[11]);
+        console.log('  s_hourly_price:', insertData[12]);
+        console.log('  s_per_day_price:', insertData[13]);
         console.log('========================================');
 
         const [result] = await pool.query(`
             INSERT INTO service 
             (s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, 
-             s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, insertData);
         
         console.log('========================================');
@@ -2031,7 +2040,7 @@ app.put('/api/services/:id', async (req, res) => {
         return res.status(400).json({ ok: false, error: 'Invalid service ID' });
     }
 
-    const { name, description, category, basePrice, pricingType, duration, maxCapacity, city, state, address, latitude, longitude, image } = req.body || {};
+    const { name, description, category, basePrice, pricingType, duration, maxCapacity, city, state, address, latitude, longitude, image, hourlyPrice, perDayPrice } = req.body || {};
     
     // Validate required fields
     if (!name || !category || basePrice === undefined || basePrice === null) {
@@ -2078,6 +2087,48 @@ app.put('/api/services/:id', async (req, res) => {
         if (basePrice !== undefined) {
             updateFields.push('s_base_price = ?');
             updateValues.push(price);
+        }
+        if (hourlyPrice !== undefined) {
+            // Check and add column if it doesn't exist
+            try {
+                const [hourlyPriceCheck] = await pool.query(`
+                    SELECT COLUMN_NAME 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'service' 
+                    AND COLUMN_NAME = 's_hourly_price'
+                `);
+                if (hourlyPriceCheck.length === 0) {
+                    await pool.query(`ALTER TABLE service ADD COLUMN s_hourly_price DECIMAL(10,2) NULL AFTER s_base_price`);
+                }
+            } catch (alterErr) {
+                if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
+                    console.error('Error adding s_hourly_price column:', alterErr);
+                }
+            }
+            updateFields.push('s_hourly_price = ?');
+            updateValues.push(hourlyPrice ? parseFloat(hourlyPrice) : null);
+        }
+        if (perDayPrice !== undefined) {
+            // Check and add column if it doesn't exist
+            try {
+                const [perDayPriceCheck] = await pool.query(`
+                    SELECT COLUMN_NAME 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'service' 
+                    AND COLUMN_NAME = 's_per_day_price'
+                `);
+                if (perDayPriceCheck.length === 0) {
+                    await pool.query(`ALTER TABLE service ADD COLUMN s_per_day_price DECIMAL(10,2) NULL AFTER s_hourly_price`);
+                }
+            } catch (alterErr) {
+                if (alterErr && alterErr.code !== 'ER_DUP_FIELDNAME') {
+                    console.error('Error adding s_per_day_price column:', alterErr);
+                }
+            }
+            updateFields.push('s_per_day_price = ?');
+            updateValues.push(perDayPrice ? parseFloat(perDayPrice) : null);
         }
         if (pricingType !== undefined) {
             updateFields.push('s_pricing_type = ?');
@@ -2203,6 +2254,913 @@ app.put('/api/services/:id', async (req, res) => {
     } catch (err) {
         console.error('Update service failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: err.message || 'Database error' });
+    }
+});
+
+// ============================================
+// SERVICE PACKAGES API ENDPOINTS
+// ============================================
+
+// Helper function to calculate package price from items
+function calculatePackagePrice(pkg, paxCount = null, removedItemIds = []) {
+    if (pkg.sp_price_type === 'fixed') {
+        return parseFloat(pkg.sp_base_price) || 0;
+    }
+    if (pkg.sp_price_type === 'per_person' && paxCount) {
+        return (parseFloat(pkg.sp_base_price) || 0) * paxCount;
+    }
+
+    // Calculate from items
+    let total = 0;
+    for (const cat of pkg.categories || []) {
+        for (const item of cat.items || []) {
+            // Skip removed items
+            if (item.iditem && removedItemIds.includes(item.iditem)) {
+                continue;
+            }
+            total += (item.pi_quantity || 1) * (parseFloat(item.pi_unit_price) || 0);
+        }
+    }
+
+    // Apply discount
+    const discount = parseFloat(pkg.sp_discount_percent) || 0;
+    return total * (1 - discount / 100);
+}
+
+// Get all packages for a service
+app.get('/api/services/:serviceId/packages', async (req, res) => {
+    const serviceId = Number(req.params.serviceId);
+    if (!Number.isFinite(serviceId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid service ID' });
+    }
+
+    try {
+        const pool = getPool();
+
+        // Get packages
+        const [packages] = await pool.query(`
+            SELECT * FROM service_package
+            WHERE sp_service_id = ?
+            ORDER BY sp_display_order ASC, sp_created_at DESC
+        `, [serviceId]);
+
+        // For each package, get categories and items
+        for (const pkg of packages) {
+            const [categories] = await pool.query(`
+                SELECT * FROM package_category
+                WHERE pc_package_id = ?
+                ORDER BY pc_display_order ASC
+            `, [pkg.idpackage]);
+
+            for (const cat of categories) {
+                const [items] = await pool.query(`
+                    SELECT * FROM package_item
+                    WHERE pi_category_id = ?
+                    ORDER BY pi_display_order ASC
+                `, [cat.idcategory]);
+                cat.items = items;
+            }
+            pkg.categories = categories;
+
+            // Calculate price if type is 'calculated'
+            if (pkg.sp_price_type === 'calculated') {
+                pkg.calculated_price = calculatePackagePrice(pkg);
+            }
+        }
+
+        return res.json({ ok: true, packages });
+    } catch (err) {
+        console.error('Get service packages failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Get single package with full details
+app.get('/api/packages/:id', async (req, res) => {
+    const packageId = Number(req.params.id);
+    if (!Number.isFinite(packageId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid package ID' });
+    }
+
+    try {
+        const pool = getPool();
+
+        const [packages] = await pool.query(`
+            SELECT sp.*, s.s_name as service_name
+            FROM service_package sp
+            LEFT JOIN service s ON sp.sp_service_id = s.idservice
+            WHERE sp.idpackage = ?
+        `, [packageId]);
+
+        if (packages.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        const pkg = packages[0];
+
+        // Get categories
+        const [categories] = await pool.query(`
+            SELECT * FROM package_category
+            WHERE pc_package_id = ?
+            ORDER BY pc_display_order ASC
+        `, [packageId]);
+
+        for (const cat of categories) {
+            const [items] = await pool.query(`
+                SELECT * FROM package_item
+                WHERE pi_category_id = ?
+                ORDER BY pi_display_order ASC
+            `, [cat.idcategory]);
+            cat.items = items;
+        }
+        pkg.categories = categories;
+
+        // Calculate price if type is 'calculated'
+        if (pkg.sp_price_type === 'calculated') {
+            pkg.calculated_price = calculatePackagePrice(pkg);
+        }
+
+        return res.json({ ok: true, package: pkg });
+    } catch (err) {
+        console.error('Get package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Create package with categories and items
+app.post('/api/services/:serviceId/packages', async (req, res) => {
+    const serviceId = Number(req.params.serviceId);
+    if (!Number.isFinite(serviceId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid service ID' });
+    }
+
+    const {
+        name, description, minPax, maxPax, basePrice,
+        priceType, discountPercent, isActive, displayOrder, categories
+    } = req.body || {};
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ ok: false, error: 'Package name is required' });
+    }
+
+    const connection = await getPool().getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Insert package
+        const [pkgResult] = await connection.query(`
+            INSERT INTO service_package
+            (sp_service_id, sp_name, sp_description, sp_min_pax, sp_max_pax,
+             sp_base_price, sp_price_type, sp_discount_percent, sp_is_active, sp_display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            serviceId,
+            name.trim(),
+            description || null,
+            minPax || 1,
+            maxPax || null,
+            basePrice || null,
+            priceType || 'calculated',
+            discountPercent || 0,
+            isActive !== false ? 1 : 0,
+            displayOrder || 0
+        ]);
+
+        const packageId = pkgResult.insertId;
+
+        // Insert categories and items
+        if (categories && Array.isArray(categories)) {
+            for (let catIdx = 0; catIdx < categories.length; catIdx++) {
+                const cat = categories[catIdx];
+                if (!cat.name || !cat.name.trim()) continue;
+
+                const [catResult] = await connection.query(`
+                    INSERT INTO package_category
+                    (pc_package_id, pc_name, pc_description, pc_display_order)
+                    VALUES (?, ?, ?, ?)
+                `, [
+                    packageId,
+                    cat.name.trim(),
+                    cat.description || null,
+                    cat.displayOrder !== undefined ? cat.displayOrder : catIdx
+                ]);
+
+                const categoryId = catResult.insertId;
+
+                // Insert items
+                if (cat.items && Array.isArray(cat.items)) {
+                    for (let itemIdx = 0; itemIdx < cat.items.length; itemIdx++) {
+                        const item = cat.items[itemIdx];
+                        if (!item.name || !item.name.trim()) continue;
+
+                        await connection.query(`
+                            INSERT INTO package_item
+                            (pi_category_id, pi_name, pi_description, pi_quantity,
+                             pi_unit, pi_unit_price, pi_is_optional, pi_display_order)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            categoryId,
+                            item.name.trim(),
+                            item.description || null,
+                            item.quantity || 1,
+                            item.unit || 'pc',
+                            item.unitPrice || 0,
+                            item.isOptional ? 1 : 0,
+                            item.displayOrder !== undefined ? item.displayOrder : itemIdx
+                        ]);
+                    }
+                }
+            }
+        }
+
+        await connection.commit();
+        return res.json({ ok: true, id: packageId, message: 'Package created successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Create package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: err.message || 'Database error' });
+    } finally {
+        connection.release();
+    }
+});
+
+// Update package
+app.put('/api/packages/:id', async (req, res) => {
+    const packageId = Number(req.params.id);
+    if (!Number.isFinite(packageId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid package ID' });
+    }
+
+    const {
+        name, description, minPax, maxPax, basePrice,
+        priceType, discountPercent, isActive, displayOrder, categories
+    } = req.body || {};
+
+    const connection = await getPool().getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Check if package exists
+        const [existing] = await connection.query(
+            'SELECT idpackage FROM service_package WHERE idpackage = ?',
+            [packageId]
+        );
+        if (existing.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        // Update package
+        const updateFields = [];
+        const updateValues = [];
+
+        if (name !== undefined) {
+            updateFields.push('sp_name = ?');
+            updateValues.push(name.trim());
+        }
+        if (description !== undefined) {
+            updateFields.push('sp_description = ?');
+            updateValues.push(description || null);
+        }
+        if (minPax !== undefined) {
+            updateFields.push('sp_min_pax = ?');
+            updateValues.push(minPax || 1);
+        }
+        if (maxPax !== undefined) {
+            updateFields.push('sp_max_pax = ?');
+            updateValues.push(maxPax || null);
+        }
+        if (basePrice !== undefined) {
+            updateFields.push('sp_base_price = ?');
+            updateValues.push(basePrice || null);
+        }
+        if (priceType !== undefined) {
+            updateFields.push('sp_price_type = ?');
+            updateValues.push(priceType);
+        }
+        if (discountPercent !== undefined) {
+            updateFields.push('sp_discount_percent = ?');
+            updateValues.push(discountPercent || 0);
+        }
+        if (isActive !== undefined) {
+            updateFields.push('sp_is_active = ?');
+            updateValues.push(isActive ? 1 : 0);
+        }
+        if (displayOrder !== undefined) {
+            updateFields.push('sp_display_order = ?');
+            updateValues.push(displayOrder || 0);
+        }
+
+        if (updateFields.length > 0) {
+            updateValues.push(packageId);
+            await connection.query(
+                `UPDATE service_package SET ${updateFields.join(', ')} WHERE idpackage = ?`,
+                updateValues
+            );
+        }
+
+        // If categories provided, replace all categories and items
+        if (categories !== undefined && Array.isArray(categories)) {
+            // Delete existing categories (items will cascade)
+            await connection.query('DELETE FROM package_category WHERE pc_package_id = ?', [packageId]);
+
+            // Insert new categories and items
+            for (let catIdx = 0; catIdx < categories.length; catIdx++) {
+                const cat = categories[catIdx];
+                if (!cat.name || !cat.name.trim()) continue;
+
+                const [catResult] = await connection.query(`
+                    INSERT INTO package_category
+                    (pc_package_id, pc_name, pc_description, pc_display_order)
+                    VALUES (?, ?, ?, ?)
+                `, [
+                    packageId,
+                    cat.name.trim(),
+                    cat.description || null,
+                    cat.displayOrder !== undefined ? cat.displayOrder : catIdx
+                ]);
+
+                const categoryId = catResult.insertId;
+
+                if (cat.items && Array.isArray(cat.items)) {
+                    for (let itemIdx = 0; itemIdx < cat.items.length; itemIdx++) {
+                        const item = cat.items[itemIdx];
+                        if (!item.name || !item.name.trim()) continue;
+
+                        await connection.query(`
+                            INSERT INTO package_item
+                            (pi_category_id, pi_name, pi_description, pi_quantity,
+                             pi_unit, pi_unit_price, pi_is_optional, pi_display_order)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            categoryId,
+                            item.name.trim(),
+                            item.description || null,
+                            item.quantity || 1,
+                            item.unit || 'pc',
+                            item.unitPrice || 0,
+                            item.isOptional ? 1 : 0,
+                            item.displayOrder !== undefined ? item.displayOrder : itemIdx
+                        ]);
+                    }
+                }
+            }
+        }
+
+        await connection.commit();
+        return res.json({ ok: true, message: 'Package updated successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Update package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: err.message || 'Database error' });
+    } finally {
+        connection.release();
+    }
+});
+
+// Delete package
+app.delete('/api/packages/:id', async (req, res) => {
+    const packageId = Number(req.params.id);
+    if (!Number.isFinite(packageId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid package ID' });
+    }
+
+    try {
+        const pool = getPool();
+        const [result] = await pool.query('DELETE FROM service_package WHERE idpackage = ?', [packageId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        return res.json({ ok: true, message: 'Package deleted successfully' });
+    } catch (err) {
+        console.error('Delete package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Add category to package
+app.post('/api/packages/:id/categories', async (req, res) => {
+    const packageId = Number(req.params.id);
+    if (!Number.isFinite(packageId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid package ID' });
+    }
+
+    const { name, description, displayOrder } = req.body || {};
+    if (!name || !name.trim()) {
+        return res.status(400).json({ ok: false, error: 'Category name is required' });
+    }
+
+    try {
+        const pool = getPool();
+
+        // Check package exists
+        const [pkgExists] = await pool.query(
+            'SELECT idpackage FROM service_package WHERE idpackage = ?',
+            [packageId]
+        );
+        if (pkgExists.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        const [result] = await pool.query(`
+            INSERT INTO package_category
+            (pc_package_id, pc_name, pc_description, pc_display_order)
+            VALUES (?, ?, ?, ?)
+        `, [packageId, name.trim(), description || null, displayOrder || 0]);
+
+        return res.json({ ok: true, id: result.insertId, message: 'Category added successfully' });
+    } catch (err) {
+        console.error('Add category failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Update category
+app.put('/api/categories/:id', async (req, res) => {
+    const categoryId = Number(req.params.id);
+    if (!Number.isFinite(categoryId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid category ID' });
+    }
+
+    const { name, description, displayOrder } = req.body || {};
+
+    try {
+        const pool = getPool();
+
+        const updateFields = [];
+        const updateValues = [];
+
+        if (name !== undefined) {
+            updateFields.push('pc_name = ?');
+            updateValues.push(name.trim());
+        }
+        if (description !== undefined) {
+            updateFields.push('pc_description = ?');
+            updateValues.push(description || null);
+        }
+        if (displayOrder !== undefined) {
+            updateFields.push('pc_display_order = ?');
+            updateValues.push(displayOrder);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No fields to update' });
+        }
+
+        updateValues.push(categoryId);
+        const [result] = await pool.query(
+            `UPDATE package_category SET ${updateFields.join(', ')} WHERE idcategory = ?`,
+            updateValues
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, error: 'Category not found' });
+        }
+
+        return res.json({ ok: true, message: 'Category updated successfully' });
+    } catch (err) {
+        console.error('Update category failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Delete category
+app.delete('/api/categories/:id', async (req, res) => {
+    const categoryId = Number(req.params.id);
+    if (!Number.isFinite(categoryId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid category ID' });
+    }
+
+    try {
+        const pool = getPool();
+        const [result] = await pool.query('DELETE FROM package_category WHERE idcategory = ?', [categoryId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, error: 'Category not found' });
+        }
+
+        return res.json({ ok: true, message: 'Category deleted successfully' });
+    } catch (err) {
+        console.error('Delete category failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Add item to category
+app.post('/api/categories/:id/items', async (req, res) => {
+    const categoryId = Number(req.params.id);
+    if (!Number.isFinite(categoryId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid category ID' });
+    }
+
+    const { name, description, quantity, unit, unitPrice, isOptional, displayOrder } = req.body || {};
+    if (!name || !name.trim()) {
+        return res.status(400).json({ ok: false, error: 'Item name is required' });
+    }
+
+    try {
+        const pool = getPool();
+
+        // Check category exists
+        const [catExists] = await pool.query(
+            'SELECT idcategory FROM package_category WHERE idcategory = ?',
+            [categoryId]
+        );
+        if (catExists.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Category not found' });
+        }
+
+        const [result] = await pool.query(`
+            INSERT INTO package_item
+            (pi_category_id, pi_name, pi_description, pi_quantity,
+             pi_unit, pi_unit_price, pi_is_optional, pi_display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            categoryId,
+            name.trim(),
+            description || null,
+            quantity || 1,
+            unit || 'pc',
+            unitPrice || 0,
+            isOptional ? 1 : 0,
+            displayOrder || 0
+        ]);
+
+        return res.json({ ok: true, id: result.insertId, message: 'Item added successfully' });
+    } catch (err) {
+        console.error('Add item failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Bulk add/update items to category
+app.post('/api/categories/:id/items/bulk', async (req, res) => {
+    const categoryId = Number(req.params.id);
+    if (!Number.isFinite(categoryId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid category ID' });
+    }
+
+    const { items, replaceAll } = req.body || {};
+    if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ ok: false, error: 'Items array is required' });
+    }
+
+    const connection = await getPool().getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Check category exists
+        const [catExists] = await connection.query(
+            'SELECT idcategory FROM package_category WHERE idcategory = ?',
+            [categoryId]
+        );
+        if (catExists.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ ok: false, error: 'Category not found' });
+        }
+
+        // If replaceAll, delete existing items
+        if (replaceAll) {
+            await connection.query('DELETE FROM package_item WHERE pi_category_id = ?', [categoryId]);
+        }
+
+        const insertedIds = [];
+        for (let idx = 0; idx < items.length; idx++) {
+            const item = items[idx];
+            if (!item.name || !item.name.trim()) continue;
+
+            const [result] = await connection.query(`
+                INSERT INTO package_item
+                (pi_category_id, pi_name, pi_description, pi_quantity,
+                 pi_unit, pi_unit_price, pi_is_optional, pi_display_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                categoryId,
+                item.name.trim(),
+                item.description || null,
+                item.quantity || 1,
+                item.unit || 'pc',
+                item.unitPrice || 0,
+                item.isOptional ? 1 : 0,
+                item.displayOrder !== undefined ? item.displayOrder : idx
+            ]);
+            insertedIds.push(result.insertId);
+        }
+
+        await connection.commit();
+        return res.json({ ok: true, ids: insertedIds, message: 'Items added successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Bulk add items failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    } finally {
+        connection.release();
+    }
+});
+
+// Update item
+app.put('/api/items/:id', async (req, res) => {
+    const itemId = Number(req.params.id);
+    if (!Number.isFinite(itemId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid item ID' });
+    }
+
+    const { name, description, quantity, unit, unitPrice, isOptional, displayOrder } = req.body || {};
+
+    try {
+        const pool = getPool();
+
+        const updateFields = [];
+        const updateValues = [];
+
+        if (name !== undefined) {
+            updateFields.push('pi_name = ?');
+            updateValues.push(name.trim());
+        }
+        if (description !== undefined) {
+            updateFields.push('pi_description = ?');
+            updateValues.push(description || null);
+        }
+        if (quantity !== undefined) {
+            updateFields.push('pi_quantity = ?');
+            updateValues.push(quantity || 1);
+        }
+        if (unit !== undefined) {
+            updateFields.push('pi_unit = ?');
+            updateValues.push(unit || 'pc');
+        }
+        if (unitPrice !== undefined) {
+            updateFields.push('pi_unit_price = ?');
+            updateValues.push(unitPrice || 0);
+        }
+        if (isOptional !== undefined) {
+            updateFields.push('pi_is_optional = ?');
+            updateValues.push(isOptional ? 1 : 0);
+        }
+        if (displayOrder !== undefined) {
+            updateFields.push('pi_display_order = ?');
+            updateValues.push(displayOrder);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No fields to update' });
+        }
+
+        updateValues.push(itemId);
+        const [result] = await pool.query(
+            `UPDATE package_item SET ${updateFields.join(', ')} WHERE iditem = ?`,
+            updateValues
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, error: 'Item not found' });
+        }
+
+        return res.json({ ok: true, message: 'Item updated successfully' });
+    } catch (err) {
+        console.error('Update item failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Delete item
+app.delete('/api/items/:id', async (req, res) => {
+    const itemId = Number(req.params.id);
+    if (!Number.isFinite(itemId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid item ID' });
+    }
+
+    try {
+        const pool = getPool();
+        const [result] = await pool.query('DELETE FROM package_item WHERE iditem = ?', [itemId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, error: 'Item not found' });
+        }
+
+        return res.json({ ok: true, message: 'Item deleted successfully' });
+    } catch (err) {
+        console.error('Delete item failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Calculate package price
+app.get('/api/packages/:id/calculate-price', async (req, res) => {
+    const packageId = Number(req.params.id);
+    if (!Number.isFinite(packageId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid package ID' });
+    }
+
+    const pax = req.query.pax ? Number(req.query.pax) : null;
+    const removedItems = req.query.removedItems ?
+        req.query.removedItems.split(',').map(Number).filter(n => Number.isFinite(n)) : [];
+
+    try {
+        const pool = getPool();
+
+        // Get package
+        const [packages] = await pool.query(
+            'SELECT * FROM service_package WHERE idpackage = ?',
+            [packageId]
+        );
+
+        if (packages.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        const pkg = packages[0];
+
+        // Get categories and items
+        const [categories] = await pool.query(`
+            SELECT * FROM package_category
+            WHERE pc_package_id = ?
+            ORDER BY pc_display_order ASC
+        `, [packageId]);
+
+        for (const cat of categories) {
+            const [items] = await pool.query(`
+                SELECT * FROM package_item
+                WHERE pi_category_id = ?
+                ORDER BY pi_display_order ASC
+            `, [cat.idcategory]);
+            cat.items = items;
+        }
+        pkg.categories = categories;
+
+        const calculatedPrice = calculatePackagePrice(pkg, pax, removedItems);
+
+        // Also calculate breakdown
+        const breakdown = {
+            categories: [],
+            subtotal: 0,
+            discount: parseFloat(pkg.sp_discount_percent) || 0,
+            total: calculatedPrice
+        };
+
+        for (const cat of categories) {
+            let catTotal = 0;
+            const catItems = [];
+            for (const item of cat.items) {
+                if (removedItems.includes(item.iditem)) continue;
+                const itemTotal = (item.pi_quantity || 1) * (parseFloat(item.pi_unit_price) || 0);
+                catTotal += itemTotal;
+                catItems.push({
+                    id: item.iditem,
+                    name: item.pi_name,
+                    quantity: item.pi_quantity,
+                    unit: item.pi_unit,
+                    unitPrice: parseFloat(item.pi_unit_price),
+                    total: itemTotal,
+                    isOptional: !!item.pi_is_optional
+                });
+            }
+            if (catItems.length > 0) {
+                breakdown.categories.push({
+                    id: cat.idcategory,
+                    name: cat.pc_name,
+                    items: catItems,
+                    subtotal: catTotal
+                });
+                breakdown.subtotal += catTotal;
+            }
+        }
+
+        return res.json({
+            ok: true,
+            price: calculatedPrice,
+            priceType: pkg.sp_price_type,
+            breakdown
+        });
+    } catch (err) {
+        console.error('Calculate package price failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Save booking package (called when creating a booking with a package)
+app.post('/api/bookings/:bookingId/package', async (req, res) => {
+    const bookingId = Number(req.params.bookingId);
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+
+    const { packageId, paxCount, removedItems, notes } = req.body || {};
+    if (!packageId) {
+        return res.status(400).json({ ok: false, error: 'Package ID is required' });
+    }
+
+    try {
+        const pool = getPool();
+
+        // Get package with full details for snapshot
+        const [packages] = await pool.query(
+            'SELECT * FROM service_package WHERE idpackage = ?',
+            [packageId]
+        );
+
+        if (packages.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Package not found' });
+        }
+
+        const pkg = packages[0];
+
+        // Get categories and items for snapshot
+        const [categories] = await pool.query(`
+            SELECT * FROM package_category
+            WHERE pc_package_id = ?
+            ORDER BY pc_display_order ASC
+        `, [packageId]);
+
+        for (const cat of categories) {
+            const [items] = await pool.query(`
+                SELECT * FROM package_item
+                WHERE pi_category_id = ?
+                ORDER BY pi_display_order ASC
+            `, [cat.idcategory]);
+            cat.items = items;
+        }
+        pkg.categories = categories;
+
+        // Calculate prices
+        const removedItemIds = removedItems || [];
+        const unitPrice = calculatePackagePrice(pkg, 1, []);
+        const totalPrice = calculatePackagePrice(pkg, paxCount || 1, removedItemIds);
+
+        // Create snapshot
+        const snapshot = {
+            ...pkg,
+            calculatedUnitPrice: unitPrice,
+            calculatedTotalPrice: totalPrice
+        };
+
+        // Insert booking package
+        const [result] = await pool.query(`
+            INSERT INTO booking_package
+            (bp_booking_id, bp_package_id, bp_pax_count, bp_unit_price, bp_total_price,
+             bp_removed_items, bp_snapshot, bp_notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            bookingId,
+            packageId,
+            paxCount || 1,
+            unitPrice,
+            totalPrice,
+            removedItemIds.length > 0 ? JSON.stringify(removedItemIds) : null,
+            JSON.stringify(snapshot),
+            notes || null
+        ]);
+
+        return res.json({
+            ok: true,
+            id: result.insertId,
+            unitPrice,
+            totalPrice,
+            message: 'Booking package saved successfully'
+        });
+    } catch (err) {
+        console.error('Save booking package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
+    }
+});
+
+// Get booking package details
+app.get('/api/bookings/:bookingId/package', async (req, res) => {
+    const bookingId = Number(req.params.bookingId);
+    if (!Number.isFinite(bookingId)) {
+        return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
+    }
+
+    try {
+        const pool = getPool();
+
+        const [bookingPackages] = await pool.query(`
+            SELECT bp.*, sp.sp_name as package_name
+            FROM booking_package bp
+            LEFT JOIN service_package sp ON bp.bp_package_id = sp.idpackage
+            WHERE bp.bp_booking_id = ?
+        `, [bookingId]);
+
+        if (bookingPackages.length === 0) {
+            return res.json({ ok: true, package: null });
+        }
+
+        const bp = bookingPackages[0];
+
+        // Parse JSON fields
+        if (bp.bp_removed_items && typeof bp.bp_removed_items === 'string') {
+            bp.bp_removed_items = JSON.parse(bp.bp_removed_items);
+        }
+        if (bp.bp_snapshot && typeof bp.bp_snapshot === 'string') {
+            bp.bp_snapshot = JSON.parse(bp.bp_snapshot);
+        }
+
+        return res.json({ ok: true, package: bp });
+    } catch (err) {
+        console.error('Get booking package failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error' });
     }
 });
 
@@ -2813,19 +3771,62 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
             WHERE m.idmessage = ?
         `, [result.insertId]);
         
-        // Send push notification to other participant
+        // Send push notification and create notification entry for other participant
         const [otherUserRows] = await pool.query(
-            'SELECT u_email FROM `user` WHERE iduser = ?',
+            'SELECT iduser, u_email FROM `user` WHERE iduser = ?',
             [otherParticipantRows[0].cp_user_id]
         );
         if (otherUserRows.length > 0) {
+            const otherUserId = otherUserRows[0].iduser;
+            const otherUserEmail = otherUserRows[0].u_email;
             const senderName = messageRows[0].sender_name || 'Someone';
             const messagePreview = content.trim().length > 50 
                 ? content.trim().substring(0, 50) + '...' 
                 : content.trim();
             
+            // Create notification entry for the message
+            try {
+                // Ensure notification table exists
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS \`notification\` (
+                        \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                        \`n_user_id\` INT(11) NOT NULL,
+                        \`n_title\` VARCHAR(255) NOT NULL,
+                        \`n_message\` TEXT NOT NULL,
+                        \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                        \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                        \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (\`idnotification\`),
+                        INDEX \`idx_user\` (\`n_user_id\`),
+                        INDEX \`idx_read\` (\`n_is_read\`),
+                        INDEX \`idx_created\` (\`n_created_at\`),
+                        FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                `);
+                
+                const notificationTitle = `New message from ${senderName}`;
+                const notificationMessage = messagePreview;
+                
+                // Create notification entry
+                await pool.query(
+                    'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                    [
+                        otherUserId,
+                        notificationTitle,
+                        notificationMessage,
+                        'new_message',
+                        0
+                    ]
+                );
+                
+                console.log(`✅ Notification created for user ID ${otherUserId}`);
+            } catch (notifErr) {
+                console.error('⚠️ Failed to create notification for message (non-critical):', notifErr);
+            }
+            
+            // Send push notification
             sendPushNotification(
-                otherUserRows[0].u_email,
+                otherUserEmail,
                 `New message from ${senderName}`,
                 messagePreview,
                 {
@@ -3597,6 +4598,7 @@ app.post('/api/bookings/:bookingId/payment/complete', async (req, res) => {
 });
 
 // Get provider's bookings (bookings for services owned by the provider)
+// Get provider bookings with client details
 app.get('/api/provider/bookings', async (req, res) => {
     const providerId = req.query.providerId; // Firebase UID
     const providerEmail = req.query.providerEmail;
@@ -3634,7 +4636,7 @@ app.get('/api/provider/bookings', async (req, res) => {
             }
         }
         
-        // Get bookings for services owned by this provider with payment information
+        // Get bookings for services owned by this provider with payment information and client details
         const [rows] = await pool.query(`
             SELECT DISTINCT
                 b.idbooking,
@@ -3648,6 +4650,16 @@ app.get('/api/provider/bookings', async (req, res) => {
                 b.b_created_at,
                 CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
                 u.u_email as client_email,
+                u.u_phone as client_phone,
+                CONCAT(
+                    COALESCE(u.u_address, ''), 
+                    CASE WHEN u.u_address IS NOT NULL AND u.u_address != '' AND u.u_city IS NOT NULL AND u.u_city != '' THEN ', ' ELSE '' END,
+                    COALESCE(u.u_city, ''),
+                    CASE WHEN u.u_city IS NOT NULL AND u.u_city != '' AND u.u_state IS NOT NULL AND u.u_state != '' THEN ', ' ELSE '' END,
+                    COALESCE(u.u_state, ''),
+                    CASE WHEN u.u_zip_code IS NOT NULL AND u.u_zip_code != '' THEN ' ' ELSE '' END,
+                    COALESCE(u.u_zip_code, '')
+                ) as client_address,
                 GROUP_CONCAT(DISTINCT s.s_name SEPARATOR ', ') as service_name,
                 MAX(CASE WHEN p.p_payment_method = 'Cash on Hand' AND p.p_status = 'pending' THEN p.p_payment_method ELSE NULL END) as payment_method,
                 MAX(CASE WHEN p.p_payment_method = 'Cash on Hand' AND p.p_status = 'pending' THEN p.p_status ELSE NULL END) as payment_status,
@@ -3664,11 +4676,26 @@ app.get('/api/provider/bookings', async (req, res) => {
             WHERE s.s_provider_id = ?
             GROUP BY b.idbooking, b.b_event_name, b.b_event_date, b.b_start_time, b.b_end_time, 
                      b.b_location, b.b_total_cost, b.b_status, b.b_created_at, 
-                     u.u_fname, u.u_lname, u.u_email
+                     u.u_fname, u.u_lname, u.u_email, u.u_phone, u.u_address, u.u_city, u.u_state, u.u_zip_code
             ORDER BY b.b_event_date DESC, b.b_created_at DESC
         `, [userId]);
         
-        return res.json({ ok: true, rows });
+        // Process rows: if status is 'completed' but not paid, change to 'cancelled'
+        const processedRows = rows.map(row => {
+            if (row.b_status === 'completed' && row.is_paid !== 1) {
+                // Update in database
+                pool.query('UPDATE booking SET b_status = ? WHERE idbooking = ?', ['cancelled', row.idbooking]).catch(err => {
+                    console.error('Error updating booking status:', err);
+                });
+                return {
+                    ...row,
+                    b_status: 'cancelled'
+                };
+            }
+            return row;
+        });
+        
+        return res.json({ ok: true, rows: processedRows });
     } catch (err) {
         console.error('Get provider bookings failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: 'Database error' });
@@ -4096,7 +5123,25 @@ app.post('/api/bookings', async (req, res) => {
         }
         const clientId = userRows[0].iduser;
         
-        // Check for overlapping bookings for the same service on the same date
+        // Parse date range from notes if it's a multi-day booking
+        let dateRangeInfo = null;
+        let checkDates = [eventDate];
+        
+        if (notes) {
+            try {
+                dateRangeInfo = JSON.parse(notes);
+                if (dateRangeInfo.startDate && dateRangeInfo.endDate && dateRangeInfo.allDates) {
+                    // For multi-day bookings, check all dates in the range
+                    checkDates = dateRangeInfo.allDates;
+                    console.log(`Multi-day booking detected: ${dateRangeInfo.startDate} to ${dateRangeInfo.endDate} (${checkDates.length} days)`);
+                }
+            } catch (e) {
+                // Notes is not JSON, treat as regular notes
+            }
+        }
+        
+        // Check for overlapping bookings for all dates in the range
+        for (const checkDate of checkDates) {
         const [overlappingBookings] = await pool.query(
             `SELECT b.b_start_time, b.b_end_time, b.b_event_name, b.b_status
              FROM booking b
@@ -4107,34 +5152,51 @@ app.post('/api/bookings', async (req, res) => {
              AND (
                  (b.b_start_time < ? AND b.b_end_time > ?) OR
                  (b.b_start_time < ? AND b.b_end_time > ?) OR
-                 (b.b_start_time >= ? AND b.b_end_time <= ?)
+                     (b.b_start_time >= ? AND b.b_end_time <= ?) OR
+                     (b.b_start_time = '00:00:00' AND b.b_end_time = '23:59:59' AND ? = '00:00:00' AND ? = '23:59:59')
              )`,
-            [serviceId, eventDate, endTime, startTime, startTime, endTime, startTime, endTime]
+                [serviceId, checkDate, endTime, startTime, startTime, endTime, startTime, endTime, startTime, endTime]
         );
         
         if (overlappingBookings.length > 0) {
             const conflict = overlappingBookings[0];
             const conflictStart = conflict.b_start_time.toString().slice(0, 5);
             const conflictEnd = conflict.b_end_time.toString().slice(0, 5);
+                const conflictDate = new Date(checkDate).toLocaleDateString();
+                console.log(`Overlap detected for service ${serviceId} on ${checkDate}: ${conflictStart} - ${conflictEnd}`);
             return res.status(409).json({ 
                 ok: false, 
-                error: `This time slot overlaps with an existing booking (${conflictStart} - ${conflictEnd}). Please select a different time.`,
+                    error: `This time slot overlaps with an existing booking on ${conflictDate} (${conflictStart} - ${conflictEnd}). Please select a different time.`,
                 conflict: {
                     start: conflict.b_start_time,
                     end: conflict.b_end_time,
-                    eventName: conflict.b_event_name
+                        eventName: conflict.b_event_name,
+                        date: checkDate
                 }
             });
+            }
         }
         
-        // Get service details for pricing
-        const [serviceRows] = await pool.query('SELECT s_base_price, s_duration, s_category FROM service WHERE idservice = ?', [serviceId]);
+        console.log(`No overlap detected for service ${serviceId} on date range: ${checkDates.join(', ')} (${startTime} - ${endTime})`);
+        
+        // Get service details for pricing and provider info
+        const [serviceRows] = await pool.query(`
+            SELECT s.s_base_price, s.s_duration, s.s_category, s.s_provider_id, s.s_name,
+                   u.iduser as provider_user_id, u.u_email as provider_email, u.u_fname as provider_fname, u.u_lname as provider_lname
+            FROM service s
+            LEFT JOIN user u ON s.s_provider_id = u.iduser
+            WHERE s.idservice = ?
+        `, [serviceId]);
         if (serviceRows.length === 0) {
             return res.status(404).json({ ok: false, error: 'Service not found' });
         }
         const basePrice = parseFloat(serviceRows[0].s_base_price) || 0;
         const serviceDuration = parseInt(serviceRows[0].s_duration) || 60; // Default to 60 minutes
         const serviceCategory = serviceRows[0].s_category || '';
+        const providerUserId = serviceRows[0].provider_user_id;
+        const providerEmail = serviceRows[0].provider_email;
+        const providerName = `${serviceRows[0].provider_fname || ''} ${serviceRows[0].provider_lname || ''}`.trim() || 'Provider';
+        const serviceName = serviceRows[0].s_name || 'Service';
         
         let calculatedCost = 0;
         
@@ -4143,18 +5205,42 @@ app.post('/api/bookings', async (req, res) => {
             const numAttendees = parseInt(attendees) || 1;
             calculatedCost = basePrice * numAttendees;
         } else {
-            // For other services, calculate based on duration (per minute)
-            // Calculate duration from start and end time
-            const startParts = startTime.split(':').map(Number);
-            const endParts = endTime.split(':').map(Number);
-            const startMinutes = startParts[0] * 60 + startParts[1];
-            const endMinutes = endParts[0] * 60 + endParts[1];
-            const selectedDurationMinutes = endMinutes - startMinutes;
+            const MINUTES_PER_DAY = 1440; // 24 hours * 60 minutes
             
-            // Calculate cost: (selected_duration_minutes / service_duration_minutes) * base_price
-            // Example: If service is 60 minutes and user selects 9 hours (540 minutes)
-            // Cost = (540 / 60) * price = 9 * price
-            calculatedCost = (selectedDurationMinutes / serviceDuration) * basePrice;
+            // If we have date range info (multi-day booking), use it for calculation
+            if (dateRangeInfo && dateRangeInfo.totalDays) {
+                // For multi-day bookings, calculate based on number of days in the range
+                calculatedCost = basePrice * dateRangeInfo.totalDays;
+                console.log(`Multi-day booking cost: ${basePrice} * ${dateRangeInfo.totalDays} = ${calculatedCost}`);
+            } else if (serviceDuration >= MINUTES_PER_DAY) {
+                // If service is per day (1440 minutes = 24 hours) but no dateRangeInfo, calculate based on time duration
+                // Calculate duration from start and end time
+                const startParts = startTime.split(':').map(Number);
+                const endParts = endTime.split(':').map(Number);
+                const startMinutes = startParts[0] * 60 + startParts[1];
+                const endMinutes = endParts[0] * 60 + endParts[1];
+                const selectedDurationMinutes = endMinutes - startMinutes;
+                
+                // Calculate how many days the selected duration covers
+                const selectedDays = Math.ceil(selectedDurationMinutes / MINUTES_PER_DAY);
+                // Each day is 1 unit of the base price
+                calculatedCost = basePrice * selectedDays;
+                console.log(`Per-day booking cost: ${basePrice} * ${selectedDays} = ${calculatedCost} (duration: ${selectedDurationMinutes} minutes)`);
+            } else {
+                // For hourly or shorter services, calculate based on duration ratio
+                // Calculate duration from start and end time
+                const startParts = startTime.split(':').map(Number);
+                const endParts = endTime.split(':').map(Number);
+                const startMinutes = startParts[0] * 60 + startParts[1];
+                const endMinutes = endParts[0] * 60 + endParts[1];
+                const selectedDurationMinutes = endMinutes - startMinutes;
+                
+                // Calculate cost: (selected_duration_minutes / service_duration_minutes) * base_price
+                // Example: If service is 60 minutes and user selects 9 hours (540 minutes)
+                // Cost = (540 / 60) * price = 9 * price
+                calculatedCost = (selectedDurationMinutes / serviceDuration) * basePrice;
+                console.log(`Hourly booking cost: (${selectedDurationMinutes} / ${serviceDuration}) * ${basePrice} = ${calculatedCost}`);
+            }
         }
         
         // Create booking
@@ -4174,6 +5260,90 @@ app.post('/api/bookings', async (req, res) => {
              VALUES (?, ?, 1, ?, ?)`,
             [bookingId, serviceId, basePrice, calculatedCost]
         );
+        
+        // Create notification for provider about new booking
+        if (providerUserId) {
+            try {
+                // Ensure notification table exists
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS \`notification\` (
+                        \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                        \`n_user_id\` INT(11) NOT NULL,
+                        \`n_title\` VARCHAR(255) NOT NULL,
+                        \`n_message\` TEXT NOT NULL,
+                        \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                        \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                        \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (\`idnotification\`),
+                        INDEX \`idx_user\` (\`n_user_id\`),
+                        INDEX \`idx_read\` (\`n_is_read\`),
+                        INDEX \`idx_created\` (\`n_created_at\`),
+                        FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                `);
+                
+                // Get client name for notification
+                const [clientRows] = await pool.query(
+                    'SELECT CONCAT(u_fname, " ", u_lname) as client_name FROM `user` WHERE iduser = ?',
+                    [clientId]
+                );
+                const clientName = clientRows.length > 0 ? clientRows[0].client_name : 'A client';
+                
+                const formattedDate = new Date(eventDate).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                const formattedStartTime = new Date(`2000-01-01T${startTime}`).toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+                const formattedEndTime = new Date(`2000-01-01T${endTime}`).toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+                
+                const notificationTitle = 'New Booking Received';
+                const notificationMessage = `${clientName} has booked "${serviceName}" for ${formattedDate} from ${formattedStartTime} to ${formattedEndTime}.\n\nEvent: ${eventName}\nLocation: ${location}${attendees ? `\nAttendees: ${attendees}` : ''}`;
+                
+                // Create notification entry
+                await pool.query(
+                    'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                    [
+                        providerUserId,
+                        notificationTitle,
+                        notificationMessage,
+                        'new_booking',
+                        0
+                    ]
+                );
+                
+                console.log(`✅ Notification created for provider user ID ${providerUserId}`);
+                
+                // Send push notification to provider
+                try {
+                    if (global.sendPushNotification && providerEmail) {
+                        await global.sendPushNotification(
+                            providerEmail,
+                            notificationTitle,
+                            `${clientName} booked "${serviceName}" for ${formattedDate}`,
+                            {
+                                type: 'new_booking',
+                                bookingId: bookingId.toString(),
+                                serviceId: serviceId.toString(),
+                            }
+                        );
+                        console.log(`✅ Push notification sent to provider ${providerEmail}`);
+                    }
+                } catch (pushErr) {
+                    console.error('⚠️ Failed to send push notification to provider (non-critical):', pushErr);
+                }
+            } catch (notifErr) {
+                console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+            }
+        }
         
         return res.json({ ok: true, id: bookingId, message: 'Booking created successfully' });
     } catch (err) {
@@ -4331,10 +5501,63 @@ app.get('/api/bookings/:bookingId/services/:serviceId/rating', async (req, res) 
     }
 });
 
+// Get all reviews for a service
+app.get('/api/services/:serviceId/reviews', async (req, res) => {
+    const serviceId = Number(req.params.serviceId);
+    
+    console.log('📝 Getting reviews for serviceId:', serviceId);
+    
+    if (!Number.isFinite(serviceId)) {
+        console.error('❌ Invalid service ID:', req.params.serviceId);
+        return res.status(400).json({ ok: false, error: 'Invalid service ID' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get all reviews for this service with user information
+        const [reviewRows] = await pool.query(`
+            SELECT 
+                sr.idreview,
+                sr.sr_rating,
+                sr.sr_comment,
+                sr.sr_created_at,
+                sr.sr_updated_at,
+                u.u_fname,
+                u.u_lname,
+                u.u_email,
+                u.u_profile_picture
+            FROM service_review sr
+            INNER JOIN user u ON sr.sr_user_id = u.iduser
+            WHERE sr.sr_service_id = ?
+            ORDER BY sr.sr_created_at DESC
+        `, [serviceId]);
+        
+        console.log(`✅ Found ${reviewRows.length} reviews for service ${serviceId}`);
+        
+        const reviews = reviewRows.map((row) => ({
+            id: row.idreview,
+            rating: row.sr_rating,
+            comment: row.sr_comment,
+            createdAt: row.sr_created_at,
+            updatedAt: row.sr_updated_at,
+            userName: `${row.u_fname || ''} ${row.u_lname || ''}`.trim() || 'Anonymous',
+            userEmail: row.u_email,
+            userProfilePicture: row.u_profile_picture || null
+        }));
+        
+        console.log('📋 Returning reviews:', reviews.length);
+        return res.json({ ok: true, reviews });
+    } catch (err) {
+        console.error('❌ Get service reviews failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
 // Update booking status
 app.post('/api/bookings/:id/status', async (req, res) => {
     const id = Number(req.params.id);
-    const { status, userEmail } = req.body || {};
+    const { status, userEmail, cancellation_reason } = req.body || {};
     const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
     if (!Number.isFinite(id) || !validStatuses.includes(status)) {
         return res.status(400).json({ ok: false, error: 'Invalid parameters' });
@@ -4359,16 +5582,48 @@ app.post('/api/bookings/:id/status', async (req, res) => {
             }
         }
         
-        await pool.query('UPDATE booking SET b_status = ? WHERE idbooking = ?', [status, id]);
+        // If status is 'completed', check if booking is paid
+        // If not paid, automatically set status to 'cancelled'
+        let finalStatus = status;
+        if (status === 'completed') {
+            const [paymentRows] = await pool.query(
+                'SELECT p_status FROM payment WHERE p_booking_id = ? AND p_status = ? LIMIT 1',
+                [id, 'completed']
+            );
+            // Check if there's a completed payment
+            if (paymentRows.length === 0) {
+                // No completed payment found, check is_paid flag in booking
+                const [bookingCheck] = await pool.query(
+                    'SELECT is_paid FROM booking WHERE idbooking = ?',
+                    [id]
+                );
+                if (bookingCheck.length > 0 && bookingCheck[0].is_paid !== 1) {
+                    // Not paid, change to cancelled
+                    finalStatus = 'cancelled';
+                    console.log(`Booking ${id} is completed but not paid, changing status to cancelled`);
+                }
+            }
+        }
+        
+        // Update booking status and store cancellation reason if provided
+        if (finalStatus === 'cancelled' && cancellation_reason) {
+            // Store cancellation reason in b_notes
+            await pool.query('UPDATE booking SET b_status = ?, b_notes = ? WHERE idbooking = ?', 
+                [finalStatus, cancellation_reason, id]);
+        } else {
+        await pool.query('UPDATE booking SET b_status = ? WHERE idbooking = ?', [finalStatus, id]);
+        }
         
         // Get booking details and send push notifications
         const [bookingDetails] = await pool.query(`
             SELECT b.b_event_name, b.b_client_id, b.b_event_date,
                    CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
                    u.u_email as client_email,
+                   u.iduser as client_user_id,
                    s.s_provider_id,
                    CONCAT(p.u_fname, ' ', p.u_lname) as provider_name,
-                   p.u_email as provider_email
+                   p.u_email as provider_email,
+                   p.iduser as provider_user_id
             FROM booking b
             INNER JOIN user u ON b.b_client_id = u.iduser
             INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
@@ -4380,39 +5635,200 @@ app.post('/api/bookings/:id/status', async (req, res) => {
         
         if (bookingDetails.length > 0) {
             const booking = bookingDetails[0];
+            
+            // Ensure notification table exists
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS \`notification\` (
+                    \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                    \`n_user_id\` INT(11) NOT NULL,
+                    \`n_title\` VARCHAR(255) NOT NULL,
+                    \`n_message\` TEXT NOT NULL,
+                    \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                    \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                    \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (\`idnotification\`),
+                    INDEX \`idx_user\` (\`n_user_id\`),
+                    INDEX \`idx_read\` (\`n_is_read\`),
+                    INDEX \`idx_created\` (\`n_created_at\`),
+                    FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            `);
+            
+            if (finalStatus === 'cancelled') {
+                // Create cancellation message with reason
+                const cancellationMessage = cancellation_reason 
+                    ? `Your booking "${booking.b_event_name}" has been cancelled.\n\nReason: ${cancellation_reason}`
+                    : `Your booking "${booking.b_event_name}" has been cancelled.`;
+                
+                const providerCancellationMessage = cancellation_reason
+                    ? `${booking.client_name}'s booking "${booking.b_event_name}" has been cancelled.\n\nReason: ${cancellation_reason}`
+                    : `${booking.client_name}'s booking "${booking.b_event_name}" has been cancelled.`;
+                
+                // Create database notification for client
+                if (booking.client_user_id) {
+                    try {
+                        await pool.query(
+                            'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                            [
+                                booking.client_user_id,
+                                'Booking Cancelled',
+                                cancellationMessage,
+                                'booking_cancelled',
+                                0
+                            ]
+                        );
+                        console.log(`✅ Notification created for client user ID ${booking.client_user_id}`);
+                    } catch (notifErr) {
+                        console.error('⚠️ Failed to create notification for client (non-critical):', notifErr);
+                    }
+                }
+                
+                // Create database notification for provider
+                if (booking.provider_user_id && booking.provider_user_id !== booking.client_user_id) {
+                    try {
+                        await pool.query(
+                            'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                            [
+                                booking.provider_user_id,
+                                'Booking Cancelled',
+                                providerCancellationMessage,
+                                'booking_cancelled',
+                                0
+                            ]
+                        );
+                        console.log(`✅ Notification created for provider user ID ${booking.provider_user_id}`);
+                    } catch (notifErr) {
+                        console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+                    }
+                }
+                
+                // Send push notifications
+                if (booking.client_email) {
+                    sendPushNotification(
+                        booking.client_email,
+                        'Booking Cancelled',
+                        cancellationMessage,
+                        {
+                            type: 'booking_cancelled',
+                            bookingId: id.toString(),
+                            status: 'cancelled',
+                        }
+                    ).catch(err => console.error('Failed to send push notification to client:', err));
+                }
+                
+                if (booking.provider_email && booking.provider_email !== booking.client_email) {
+                    sendPushNotification(
+                        booking.provider_email,
+                        'Booking Cancelled',
+                        providerCancellationMessage,
+                        {
+                            type: 'booking_cancelled',
+                            bookingId: id.toString(),
+                            status: 'cancelled',
+                        }
+                    ).catch(err => console.error('Failed to send push notification to provider:', err));
+                }
+            } else if (finalStatus === 'confirmed') {
+                // Create confirmation message
+                const confirmationMessage = `Your booking "${booking.b_event_name}" has been confirmed!`;
+                const providerConfirmationMessage = `${booking.client_name}'s booking "${booking.b_event_name}" has been confirmed.`;
+                
+                // Create database notification for client
+                if (booking.client_user_id) {
+                    try {
+                        await pool.query(
+                            'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                            [
+                                booking.client_user_id,
+                                'Booking Confirmed',
+                                confirmationMessage,
+                                'booking_confirmed',
+                                0
+                            ]
+                        );
+                        console.log(`✅ Notification created for client user ID ${booking.client_user_id}`);
+                    } catch (notifErr) {
+                        console.error('⚠️ Failed to create notification for client (non-critical):', notifErr);
+                    }
+                }
+                
+                // Create database notification for provider
+                if (booking.provider_user_id && booking.provider_user_id !== booking.client_user_id) {
+                    try {
+                        await pool.query(
+                            'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                            [
+                                booking.provider_user_id,
+                                'Booking Confirmed',
+                                providerConfirmationMessage,
+                                'booking_confirmed',
+                                0
+                            ]
+                        );
+                        console.log(`✅ Notification created for provider user ID ${booking.provider_user_id}`);
+                    } catch (notifErr) {
+                        console.error('⚠️ Failed to create notification for provider (non-critical):', notifErr);
+                    }
+                }
+                
+                // Send push notifications
+                if (booking.client_email) {
+                    sendPushNotification(
+                        booking.client_email,
+                        'Booking Confirmed',
+                        confirmationMessage,
+                        {
+                            type: 'booking_confirmed',
+                            bookingId: id.toString(),
+                            status: 'confirmed',
+                        }
+                    ).catch(err => console.error('Failed to send push notification to client:', err));
+                }
+                
+                if (booking.provider_email && booking.provider_email !== booking.client_email) {
+                    sendPushNotification(
+                        booking.provider_email,
+                        'Booking Confirmed',
+                        providerConfirmationMessage,
+                        {
+                            type: 'booking_confirmed',
+                            bookingId: id.toString(),
+                            status: 'confirmed',
+                        }
+                    ).catch(err => console.error('Failed to send push notification to provider:', err));
+                }
+            } else {
+                // For other statuses (completed, pending), use existing push notification logic
             const statusMessages = {
-                'confirmed': 'Your booking has been confirmed!',
                 'completed': 'Your booking has been completed.',
-                'cancelled': 'Your booking has been cancelled.',
                 'pending': 'Your booking is pending confirmation.'
             };
             
-            // Send notification to client
             if (booking.client_email) {
                 sendPushNotification(
                     booking.client_email,
-                    `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-                    statusMessages[status] || `Your booking status has been updated to ${status}`,
+                    `Booking ${finalStatus.charAt(0).toUpperCase() + finalStatus.slice(1)}`,
+                    statusMessages[finalStatus] || `Your booking status has been updated to ${finalStatus}`,
                     {
                         type: 'booking',
                         bookingId: id.toString(),
-                        status: status,
+                        status: finalStatus,
                     }
                 ).catch(err => console.error('Failed to send push notification to client:', err));
             }
             
-            // Send notification to provider (if status changed by client)
             if (booking.provider_email && booking.provider_email !== booking.client_email) {
                 sendPushNotification(
                     booking.provider_email,
-                    `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-                    `${booking.client_name}'s booking has been ${status}`,
+                    `Booking ${finalStatus.charAt(0).toUpperCase() + finalStatus.slice(1)}`,
+                    `${booking.client_name}'s booking has been ${finalStatus}`,
                     {
                         type: 'booking',
                         bookingId: id.toString(),
-                        status: status,
+                        status: finalStatus,
                     }
                 ).catch(err => console.error('Failed to send push notification to provider:', err));
+                }
             }
         }
         
@@ -4945,251 +6361,6 @@ app.get('/api/dashboard/stats', async (req, res) => {
         });
     } catch (err) {
         console.error('Get dashboard stats failed:', err.code, err.message);
-        return res.status(500).json({ ok: false, error: 'Database error' });
-    }
-});
-
-// ============================================
-// ADMIN ANALYTICS API ENDPOINT
-// ============================================
-
-// Get admin analytics data
-app.get('/api/admin/analytics', async (req, res) => {
-    try {
-        const pool = getPool();
-        
-        // Get current period (this month) and previous period (last month) dates
-        const now = new Date();
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        
-        // 1. Total Revenue (current month vs last month)
-        const [currentRevenue] = await pool.query(`
-            SELECT COALESCE(SUM(b_total_cost), 0) as revenue
-            FROM booking
-            WHERE b_status IN ('confirmed', 'completed')
-            AND MONTH(b_created_at) = MONTH(CURRENT_DATE())
-            AND YEAR(b_created_at) = YEAR(CURRENT_DATE())
-        `);
-        
-        const [previousRevenue] = await pool.query(`
-            SELECT COALESCE(SUM(b_total_cost), 0) as revenue
-            FROM booking
-            WHERE b_status IN ('confirmed', 'completed')
-            AND MONTH(b_created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-            AND YEAR(b_created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-        `);
-        
-        const totalRevenue = parseFloat(currentRevenue[0].revenue) || 0;
-        const prevTotalRevenue = parseFloat(previousRevenue[0].revenue) || 0;
-        const revenueChange = prevTotalRevenue > 0 
-            ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue * 100).toFixed(1)
-            : totalRevenue > 0 ? '100' : '0';
-        const revenueTrend = totalRevenue >= prevTotalRevenue ? 'up' : 'down';
-        
-        // 2. Active Users (non-disabled users) - change based on new registrations
-        const [currentActiveUsers] = await pool.query(`
-            SELECT COUNT(*) as active_users
-            FROM user
-            WHERE u_disabled = 0
-            AND u_email != 'admin@gmail.com'
-        `);
-        
-        // Get new users this month and last month for change calculation
-        const [newUsersThisMonth] = await pool.query(`
-            SELECT COUNT(*) as new_users
-            FROM user
-            WHERE u_email != 'admin@gmail.com'
-            AND MONTH(u_created_at) = MONTH(CURRENT_DATE())
-            AND YEAR(u_created_at) = YEAR(CURRENT_DATE())
-        `);
-        
-        const [newUsersLastMonth] = await pool.query(`
-            SELECT COUNT(*) as new_users
-            FROM user
-            WHERE u_email != 'admin@gmail.com'
-            AND MONTH(u_created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-            AND YEAR(u_created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-        `);
-        
-        const activeUsers = parseInt(currentActiveUsers[0].active_users) || 0;
-        const newUsersCurrent = parseInt(newUsersThisMonth[0].new_users) || 0;
-        const newUsersPrevious = parseInt(newUsersLastMonth[0].new_users) || 0;
-        // Calculate change based on new user growth rate
-        const usersChange = newUsersPrevious > 0
-            ? ((newUsersCurrent - newUsersPrevious) / newUsersPrevious * 100).toFixed(1)
-            : newUsersCurrent > 0 ? '100' : '0';
-        const usersTrend = newUsersCurrent >= newUsersPrevious ? 'up' : 'down';
-        
-        // 3. Total Bookings (current month vs last month)
-        const [currentBookings] = await pool.query(`
-            SELECT COUNT(*) as total_bookings
-            FROM booking
-            WHERE MONTH(b_created_at) = MONTH(CURRENT_DATE())
-            AND YEAR(b_created_at) = YEAR(CURRENT_DATE())
-        `);
-        
-        const [previousBookings] = await pool.query(`
-            SELECT COUNT(*) as total_bookings
-            FROM booking
-            WHERE MONTH(b_created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-            AND YEAR(b_created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-        `);
-        
-        const totalBookings = parseInt(currentBookings[0].total_bookings) || 0;
-        const prevTotalBookings = parseInt(previousBookings[0].total_bookings) || 0;
-        const bookingsChange = prevTotalBookings > 0
-            ? ((totalBookings - prevTotalBookings) / prevTotalBookings * 100).toFixed(1)
-            : totalBookings > 0 ? '100' : '0';
-        const bookingsTrend = totalBookings >= prevTotalBookings ? 'up' : 'down';
-        
-        // 4. Average Booking Value (current month vs last month)
-        const [currentAvgBooking] = await pool.query(`
-            SELECT COALESCE(AVG(b_total_cost), 0) as avg_value
-            FROM booking
-            WHERE b_status IN ('confirmed', 'completed')
-            AND MONTH(b_created_at) = MONTH(CURRENT_DATE())
-            AND YEAR(b_created_at) = YEAR(CURRENT_DATE())
-        `);
-        
-        const [previousAvgBooking] = await pool.query(`
-            SELECT COALESCE(AVG(b_total_cost), 0) as avg_value
-            FROM booking
-            WHERE b_status IN ('confirmed', 'completed')
-            AND MONTH(b_created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-            AND YEAR(b_created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-        `);
-        
-        const avgBookingValue = parseFloat(currentAvgBooking[0].avg_value) || 0;
-        const prevAvgBookingValue = parseFloat(previousAvgBooking[0].avg_value) || 0;
-        const avgBookingChange = prevAvgBookingValue > 0
-            ? ((avgBookingValue - prevAvgBookingValue) / prevAvgBookingValue * 100).toFixed(1)
-            : avgBookingValue > 0 ? '100' : '0';
-        const avgBookingTrend = avgBookingValue >= prevAvgBookingValue ? 'up' : 'down';
-        
-        // 5. Monthly Revenue for last 12 months
-        const [monthlyRevenue] = await pool.query(`
-            SELECT 
-                MONTH(b_created_at) as month,
-                YEAR(b_created_at) as year,
-                COALESCE(SUM(b_total_cost), 0) as revenue
-            FROM booking
-            WHERE b_status IN ('confirmed', 'completed')
-            AND b_created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
-            GROUP BY YEAR(b_created_at), MONTH(b_created_at)
-            ORDER BY year, month
-        `);
-        
-        // Create array for 12 months with revenue data
-        const monthlyRevenueData = [];
-        const monthLabels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-        const revenueMap = {};
-        monthlyRevenue.forEach(row => {
-            const key = `${row.year}-${row.month}`;
-            revenueMap[key] = parseFloat(row.revenue) || 0;
-        });
-        
-        for (let i = 11; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - i);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const key = `${year}-${month}`;
-            monthlyRevenueData.push({
-                month: monthLabels[date.getMonth()],
-                revenue: revenueMap[key] || 0
-            });
-        }
-        
-        // 6. User Growth Metrics (reuse variables from section 2)
-        // newUsersThisMonth and activeUsers are already calculated above
-        
-        // Conversion rate: bookings / active users
-        const conversionRate = activeUsers > 0 
-            ? ((totalBookings / activeUsers) * 100).toFixed(1)
-            : '0';
-        
-        // 7. Top Performing Services
-        const [topServices] = await pool.query(`
-            SELECT 
-                s.s_name as service_name,
-                COUNT(bs.bs_booking_id) as booking_count,
-                COALESCE(SUM(bs.bs_total_price), 0) as total_revenue
-            FROM service s
-            INNER JOIN booking_service bs ON s.idservice = bs.bs_service_id
-            INNER JOIN booking b ON bs.bs_booking_id = b.idbooking
-            WHERE b.b_status IN ('confirmed', 'completed')
-            GROUP BY s.idservice, s.s_name
-            ORDER BY booking_count DESC, total_revenue DESC
-            LIMIT 10
-        `);
-        
-        // 8. Booking Status Distribution
-        const [statusDistribution] = await pool.query(`
-            SELECT 
-                b_status,
-                COUNT(*) as count
-            FROM booking
-            GROUP BY b_status
-        `);
-        
-        const totalStatusCount = statusDistribution.reduce((sum, row) => sum + parseInt(row.count), 0);
-        const statusData = statusDistribution.map(row => {
-            const count = parseInt(row.count) || 0;
-            const percentage = totalStatusCount > 0 ? Math.round((count / totalStatusCount) * 100) : 0;
-            let color = '#3b82f6';
-            if (row.b_status === 'pending') color = '#f59e0b';
-            else if (row.b_status === 'completed') color = '#10b981';
-            else if (row.b_status === 'cancelled') color = '#ef4444';
-            
-            return {
-                status: row.b_status.charAt(0).toUpperCase() + row.b_status.slice(1),
-                count: count,
-                percentage: percentage,
-                color: color
-            };
-        });
-        
-        return res.json({
-            ok: true,
-            analytics: {
-                totalRevenue: {
-                    value: totalRevenue,
-                    change: revenueChange,
-                    trend: revenueTrend
-                },
-                activeUsers: {
-                    value: activeUsers,
-                    change: usersChange,
-                    trend: usersTrend
-                },
-                totalBookings: {
-                    value: totalBookings,
-                    change: bookingsChange,
-                    trend: bookingsTrend
-                },
-                avgBookingValue: {
-                    value: avgBookingValue,
-                    change: avgBookingChange,
-                    trend: avgBookingTrend
-                },
-                monthlyRevenue: monthlyRevenueData,
-                userGrowth: {
-                    newUsersThisMonth: newUsersCurrent,
-                    activeUsers: activeUsers,
-                    conversionRate: conversionRate
-                },
-                topServices: topServices.map(row => ({
-                    name: row.service_name,
-                    bookings: parseInt(row.booking_count) || 0,
-                    revenue: parseFloat(row.total_revenue) || 0
-                })),
-                bookingStatusDistribution: statusData
-            }
-        });
-    } catch (err) {
-        console.error('Get admin analytics failed:', err.code, err.message);
         return res.status(500).json({ ok: false, error: 'Database error' });
     }
 });
@@ -6080,18 +7251,35 @@ app.get('/api/provider/job-postings', async (req, res) => {
             [providerEmail]
         );
 
+        // Check if jp_job_type column exists, if not add it
+        try {
+            await pool.query('ALTER TABLE `provider_job_posting` ADD COLUMN `jp_job_type` ENUM(\'full_time\', \'part_time\') NOT NULL DEFAULT \'full_time\' AFTER `jp_deadline_date`');
+        } catch (alterErr) {
+            // Column might already exist, ignore error
+            if (alterErr.message && !alterErr.message.includes('Duplicate column name')) {
+                console.log('Note: jp_job_type column may already exist');
+            }
+        }
+
         const [rows] = await pool.query(
             `SELECT 
-                idjob_posting as id,
-                jp_job_title as jobTitle,
-                jp_description as description,
-                jp_deadline_date as deadlineDate,
-                jp_status as status,
-                jp_created_at as createdAt,
-                jp_updated_at as updatedAt
-             FROM provider_job_posting 
-             WHERE jp_provider_email = ? 
-             ORDER BY jp_created_at DESC`,
+                jp.idjob_posting as id,
+                jp.jp_job_title as jobTitle,
+                jp.jp_description as description,
+                jp.jp_deadline_date as deadlineDate,
+                COALESCE(jp.jp_job_type, 'full_time') as jobType,
+                jp.jp_status as status,
+                jp.jp_created_at as createdAt,
+                jp.jp_updated_at as updatedAt,
+                TRIM(CONCAT_WS(', ',
+                    NULLIF(u.u_address, ''),
+                    NULLIF(u.u_city, ''),
+                    NULLIF(CONCAT(u.u_state, ' ', u.u_zip_code), ' ')
+                )) as location
+             FROM provider_job_posting jp
+             LEFT JOIN user u ON jp.jp_provider_email COLLATE utf8mb4_unicode_ci = u.u_email COLLATE utf8mb4_unicode_ci
+             WHERE jp.jp_provider_email = ? 
+             ORDER BY jp.jp_created_at DESC`,
             [providerEmail]
         );
 
@@ -6106,10 +7294,15 @@ app.get('/api/provider/job-postings', async (req, res) => {
 app.post('/api/provider/job-postings', async (req, res) => {
     try {
         const pool = getPool();
-        const { providerEmail, jobTitle, description, deadlineDate } = req.body;
+        const { providerEmail, jobTitle, description, deadlineDate, jobType } = req.body;
 
-        if (!providerEmail || !jobTitle || !description || !deadlineDate) {
+        if (!providerEmail || !jobTitle || !description || !deadlineDate || !jobType) {
             return res.status(400).json({ ok: false, error: 'All fields are required' });
+        }
+
+        // Validate jobType
+        if (jobType !== 'full_time' && jobType !== 'part_time') {
+            return res.status(400).json({ ok: false, error: 'Job type must be either full_time or part_time' });
         }
 
         // Validate deadline date is in the future
@@ -6129,6 +7322,7 @@ app.post('/api/provider/job-postings', async (req, res) => {
                 \`jp_job_title\` VARCHAR(200) NOT NULL,
                 \`jp_description\` TEXT NOT NULL,
                 \`jp_deadline_date\` DATE NOT NULL,
+                \`jp_job_type\` ENUM('full_time', 'part_time') NOT NULL DEFAULT 'full_time',
                 \`jp_status\` ENUM('active', 'closed', 'expired') NOT NULL DEFAULT 'active',
                 \`jp_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \`jp_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -6139,11 +7333,21 @@ app.post('/api/provider/job-postings', async (req, res) => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        // Check if jp_job_type column exists, if not add it
+        try {
+            await pool.query('ALTER TABLE `provider_job_posting` ADD COLUMN `jp_job_type` ENUM(\'full_time\', \'part_time\') NOT NULL DEFAULT \'full_time\' AFTER `jp_deadline_date`');
+        } catch (alterErr) {
+            // Column might already exist, ignore error
+            if (alterErr.message && !alterErr.message.includes('Duplicate column name')) {
+                console.log('Note: jp_job_type column may already exist');
+            }
+        }
+
         const [result] = await pool.query(
             `INSERT INTO provider_job_posting 
-             (jp_provider_email, jp_job_title, jp_description, jp_deadline_date, jp_status) 
-             VALUES (?, ?, ?, ?, 'active')`,
-            [providerEmail, jobTitle, description, deadlineDate]
+             (jp_provider_email, jp_job_title, jp_description, jp_deadline_date, jp_job_type, jp_status) 
+             VALUES (?, ?, ?, ?, ?, 'active')`,
+            [providerEmail, jobTitle, description, deadlineDate, jobType]
         );
 
         return res.json({ 
@@ -6273,18 +7477,34 @@ app.get('/api/job-postings', async (req, res) => {
              AND jp_status = 'active'`
         );
 
+        // Check if jp_job_type column exists, if not add it
+        try {
+            await pool.query('ALTER TABLE `provider_job_posting` ADD COLUMN `jp_job_type` ENUM(\'full_time\', \'part_time\') NOT NULL DEFAULT \'full_time\' AFTER `jp_deadline_date`');
+        } catch (alterErr) {
+            // Column might already exist, ignore error
+            if (alterErr.message && !alterErr.message.includes('Duplicate column name')) {
+                console.log('Note: jp_job_type column may already exist');
+            }
+        }
+
         let query = `
             SELECT 
                 jp.idjob_posting as id,
                 jp.jp_job_title as jobTitle,
                 jp.jp_description as description,
                 jp.jp_deadline_date as deadlineDate,
+                COALESCE(jp.jp_job_type, 'full_time') as jobType,
                 jp.jp_status as status,
                 jp.jp_created_at as createdAt,
                 jp.jp_updated_at as updatedAt,
                 u.u_fname as providerFirstName,
                 u.u_lname as providerLastName,
-                u.u_email as providerEmail
+                u.u_email as providerEmail,
+                TRIM(CONCAT_WS(', ',
+                    NULLIF(u.u_address, ''),
+                    NULLIF(u.u_city, ''),
+                    NULLIF(CONCAT(u.u_state, ' ', u.u_zip_code), ' ')
+                )) as location
             FROM provider_job_posting jp
             LEFT JOIN user u ON jp.jp_provider_email COLLATE utf8mb4_unicode_ci = u.u_email COLLATE utf8mb4_unicode_ci
             WHERE 1=1
@@ -6430,7 +7650,7 @@ app.get('/api/provider/job-applications', async (req, res) => {
                 FROM INFORMATION_SCHEMA.COLUMNS 
                 WHERE TABLE_SCHEMA = DATABASE() 
                 AND TABLE_NAME = 'job_application' 
-                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_rejection_note')
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_interview_description', 'ja_rejection_note')
             `);
             
             const existingColumns = columns.map((col) => col.COLUMN_NAME);
@@ -6441,6 +7661,10 @@ app.get('/api/provider/job-applications', async (req, res) => {
             
             if (!existingColumns.includes('ja_interview_time')) {
                 await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_description')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_description TEXT NULL`);
             }
             
             if (!existingColumns.includes('ja_rejection_note')) {
@@ -6460,6 +7684,7 @@ app.get('/api/provider/job-applications', async (req, res) => {
                 ja.ja_status as status,
                 ja.ja_interview_date as interviewDate,
                 ja.ja_interview_time as interviewTime,
+                ja.ja_interview_description as interviewDescription,
                 ja.ja_rejection_note as rejectionNote,
                 ja.ja_created_at as appliedAt,
                 jp.jp_job_title as jobTitle,
@@ -6495,7 +7720,7 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
     try {
         const pool = getPool();
         const applicationId = parseInt(req.params.id);
-        const { providerEmail, interviewDate, interviewTime } = req.body;
+        const { providerEmail, interviewDate, interviewTime, interviewDescription } = req.body;
 
         if (!providerEmail || !interviewDate || !interviewTime) {
             return res.status(400).json({ ok: false, error: 'Provider email, interview date, and time are required' });
@@ -6517,7 +7742,7 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
                 FROM INFORMATION_SCHEMA.COLUMNS 
                 WHERE TABLE_SCHEMA = DATABASE() 
                 AND TABLE_NAME = 'job_application' 
-                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time')
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_interview_description')
             `);
             
             const existingColumns = columns.map((col) => col.COLUMN_NAME);
@@ -6528,6 +7753,10 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
             
             if (!existingColumns.includes('ja_interview_time')) {
                 await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_description')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_description TEXT NULL`);
             }
         } catch (alterErr) {
             // Columns might already exist, ignore error
@@ -6547,15 +7776,155 @@ app.put('/api/provider/job-applications/:id/schedule-interview', async (req, res
             return res.status(404).json({ ok: false, error: 'Application not found or access denied' });
         }
 
+        // Get applicant user ID and email for notification, and check if interview already exists
+        const [applicationRows] = await pool.query(
+            `SELECT ja.ja_user_email, ja.ja_interview_date, ja.ja_interview_time, u.iduser, jp.jp_job_title
+             FROM job_application ja
+             INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+             LEFT JOIN user u ON ja.ja_user_email = u.u_email COLLATE utf8mb4_unicode_ci
+             WHERE ja.idjob_application = ?`,
+            [applicationId]
+        );
+
+        if (applicationRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Application not found' });
+        }
+
+        const applicantEmail = applicationRows[0].ja_user_email;
+        const applicantUserId = applicationRows[0].iduser;
+        const jobTitle = applicationRows[0].jp_job_title || 'the job';
+        const existingInterviewDate = applicationRows[0].ja_interview_date;
+        const existingInterviewTime = applicationRows[0].ja_interview_time;
+        const isReschedule = existingInterviewDate && existingInterviewTime;
+
         // Update application with interview schedule
         await pool.query(
             `UPDATE job_application 
              SET ja_interview_date = ?, 
                  ja_interview_time = ?,
+                 ja_interview_description = ?,
                  ja_status = 'reviewed'
              WHERE idjob_application = ?`,
-            [interviewDate, interviewTime, applicationId]
+            [interviewDate, interviewTime, interviewDescription || null, applicationId]
         );
+
+        // Create notification for the applicant
+        if (applicantUserId) {
+            try {
+                // Ensure notification table exists
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS \`notification\` (
+                        \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                        \`n_user_id\` INT(11) NOT NULL,
+                        \`n_title\` VARCHAR(255) NOT NULL,
+                        \`n_message\` TEXT NOT NULL,
+                        \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                        \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                        \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (\`idnotification\`),
+                        INDEX \`idx_user\` (\`n_user_id\`),
+                        INDEX \`idx_read\` (\`n_is_read\`),
+                        INDEX \`idx_created\` (\`n_created_at\`),
+                        FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                `);
+
+                // Format interview date and time for display
+                const interviewDateObj = new Date(interviewDate);
+                const formattedDate = interviewDateObj.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                const [hours, minutes] = interviewTime.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                const formattedTime = `${displayHour}:${minutes} ${ampm}`;
+
+                // Create notification message
+                let notificationTitle = isReschedule ? 'Interview Rescheduled' : 'Interview Scheduled';
+                let notificationMessage = '';
+                
+                if (isReschedule) {
+                    // Format old interview date and time
+                    const oldDateObj = new Date(existingInterviewDate);
+                    const oldFormattedDate = oldDateObj.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    const [oldHours, oldMinutes] = existingInterviewTime.split(':');
+                    const oldHour = parseInt(oldHours);
+                    const oldAmpm = oldHour >= 12 ? 'PM' : 'AM';
+                    const oldDisplayHour = oldHour % 12 || 12;
+                    const oldFormattedTime = `${oldDisplayHour}:${oldMinutes} ${oldAmpm}`;
+                    
+                    notificationMessage = `Your interview for "${jobTitle}" has been rescheduled.\n\n`;
+                    notificationMessage += `📅 Previous: ${oldFormattedDate} at ${oldFormattedTime}\n`;
+                    notificationMessage += `📅 New Date: ${formattedDate}\n`;
+                    notificationMessage += `🕐 New Time: ${formattedTime}\n`;
+                } else {
+                    notificationMessage = `You have been scheduled for an interview for "${jobTitle}".\n\n`;
+                    notificationMessage += `📅 Date: ${formattedDate}\n`;
+                    notificationMessage += `🕐 Time: ${formattedTime}\n`;
+                }
+                
+                if (interviewDescription && interviewDescription.trim()) {
+                    notificationMessage += `\n📝 Instructions:\n${interviewDescription.trim()}`;
+                }
+
+                // Create notification entry
+                await pool.query(
+                    'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+                    [
+                        applicantUserId,
+                        notificationTitle,
+                        notificationMessage,
+                        isReschedule ? 'interview_rescheduled' : 'interview_scheduled',
+                        0
+                    ]
+                );
+
+                console.log(`✅ Notification created for applicant user ID ${applicantUserId}`);
+
+                // Send push notification to the applicant
+                try {
+                    if (global.sendPushNotification) {
+                        let pushTitle = isReschedule ? 'Interview Rescheduled' : 'Interview Scheduled';
+                        let pushMessage = '';
+                        
+                        if (isReschedule) {
+                            pushMessage = `Your interview for "${jobTitle}" has been rescheduled to ${formattedDate} at ${formattedTime}`;
+                        } else {
+                            pushMessage = `Interview scheduled for "${jobTitle}" on ${formattedDate} at ${formattedTime}`;
+                        }
+                        
+                        if (interviewDescription && interviewDescription.trim()) {
+                            pushMessage += `. ${interviewDescription.trim().substring(0, 80)}${interviewDescription.trim().length > 80 ? '...' : ''}`;
+                        }
+
+                        await global.sendPushNotification(
+                            applicantEmail,
+                            pushTitle,
+                            pushMessage,
+                            {
+                                type: isReschedule ? 'interview_rescheduled' : 'interview_scheduled',
+                                applicationId: applicationId.toString(),
+                                jobTitle: jobTitle
+                            }
+                        );
+                        console.log(`✅ Push notification sent to applicant ${applicantEmail}`);
+                    }
+                } catch (pushErr) {
+                    console.error('⚠️ Failed to send push notification (non-critical):', pushErr);
+                    // Don't fail the interview scheduling if push notification fails
+                }
+            } catch (notifErr) {
+                console.error('⚠️ Failed to create notification (non-critical):', notifErr);
+                // Don't fail the interview scheduling if notification fails
+            }
+        }
 
         return res.json({ ok: true, message: 'Interview scheduled successfully' });
     } catch (err) {
@@ -6621,6 +7990,82 @@ app.put('/api/provider/job-applications/:id/reject', async (req, res) => {
     }
 });
 
+// Accept/Hire applicant after interview
+app.put('/api/provider/job-applications/:id/accept', async (req, res) => {
+    try {
+        const pool = getPool();
+        const applicationId = parseInt(req.params.id);
+        const { providerEmail, hireNote } = req.body;
+
+        if (!providerEmail) {
+            return res.status(400).json({ ok: false, error: 'Provider email is required' });
+        }
+
+        if (!hireNote || !hireNote.trim()) {
+            return res.status(400).json({ ok: false, error: 'Hiring note is required' });
+        }
+
+        // Add hire_note column if it doesn't exist
+        try {
+            const [columns] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'job_application' 
+                AND COLUMN_NAME = 'ja_hire_note'
+            `);
+            
+            if (columns.length === 0) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_hire_note TEXT NULL`);
+            }
+        } catch (alterErr) {
+            console.log('Note: Hire note column check failed:', alterErr.message);
+        }
+
+        // Verify the application belongs to a job posting by this provider
+        const [verify] = await pool.query(
+            `SELECT ja.idjob_application, ja.ja_interview_date, ja.ja_interview_time
+             FROM job_application ja
+             INNER JOIN provider_job_posting jp ON ja.ja_job_posting_id = jp.idjob_posting
+             WHERE ja.idjob_application = ? AND jp.jp_provider_email = ?`,
+            [applicationId, providerEmail]
+        );
+
+        if (verify.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Application not found or access denied' });
+        }
+
+        const application = verify[0];
+
+        // Check if interview was scheduled
+        if (!application.ja_interview_date || !application.ja_interview_time) {
+            return res.status(400).json({ ok: false, error: 'Interview must be scheduled before hiring' });
+        }
+
+        // Check if interview time has passed
+        const interviewDateTime = new Date(`${application.ja_interview_date}T${application.ja_interview_time}`);
+        const now = new Date();
+        
+        if (interviewDateTime > now) {
+            return res.status(400).json({ ok: false, error: 'Cannot hire applicant before the scheduled interview time' });
+        }
+
+        // Update application status to accepted and store hire note
+        await pool.query(
+            `UPDATE job_application 
+             SET ja_status = 'accepted',
+                 ja_hire_note = ?
+             WHERE idjob_application = ?`,
+            [hireNote.trim(), applicationId]
+        );
+
+        return res.json({ ok: true, message: 'Applicant hired successfully' });
+    } catch (err) {
+        console.error('Accept application failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
 // Get job applications for a user
 app.get('/api/user/job-applications', async (req, res) => {
     try {
@@ -6638,7 +8083,7 @@ app.get('/api/user/job-applications', async (req, res) => {
                 FROM INFORMATION_SCHEMA.COLUMNS 
                 WHERE TABLE_SCHEMA = DATABASE() 
                 AND TABLE_NAME = 'job_application' 
-                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_rejection_note')
+                AND COLUMN_NAME IN ('ja_interview_date', 'ja_interview_time', 'ja_interview_description', 'ja_rejection_note')
             `);
             
             const existingColumns = columns.map((col) => col.COLUMN_NAME);
@@ -6649,6 +8094,10 @@ app.get('/api/user/job-applications', async (req, res) => {
             
             if (!existingColumns.includes('ja_interview_time')) {
                 await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_time TIME NULL`);
+            }
+            
+            if (!existingColumns.includes('ja_interview_description')) {
+                await pool.query(`ALTER TABLE job_application ADD COLUMN ja_interview_description TEXT NULL`);
             }
             
             if (!existingColumns.includes('ja_rejection_note')) {
@@ -6667,6 +8116,7 @@ app.get('/api/user/job-applications', async (req, res) => {
                 ja.ja_status as status,
                 ja.ja_interview_date as interviewDate,
                 ja.ja_interview_time as interviewTime,
+                ja.ja_interview_description as interviewDescription,
                 ja.ja_rejection_note as rejectionNote,
                 ja.ja_created_at as appliedAt,
                 jp.jp_job_title as jobTitle,
@@ -6737,9 +8187,17 @@ app.get('/api/provider/job-applications/:id/resume', async (req, res) => {
 
 // Register push notification token
 app.post('/api/notifications/register-token', async (req, res) => {
-    const { userId, userEmail, pushToken, platform } = req.body || {};
+    const { userId, userEmail, pushToken, platform, subscriptionData } = req.body || {};
+    
+    console.log('📥 Push token registration request received:');
+    console.log('   User ID:', userId);
+    console.log('   User Email:', userEmail);
+    console.log('   Platform:', platform || 'unknown');
+    console.log('   Token preview:', pushToken ? pushToken.substring(0, 30) + '...' : 'MISSING');
+    console.log('   Has subscription data:', !!subscriptionData);
     
     if (!userId || !userEmail || !pushToken) {
+        console.log('❌ Missing required fields');
         return res.status(400).json({ ok: false, error: 'Missing required fields' });
     }
 
@@ -6754,6 +8212,7 @@ app.post('/api/notifications/register-token', async (req, res) => {
                 \`user_email\` VARCHAR(255) NOT NULL,
                 \`push_token\` TEXT NOT NULL,
                 \`platform\` VARCHAR(50) NOT NULL,
+                \`subscription_data\` TEXT NULL,
                 \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (\`id\`),
@@ -6763,20 +8222,53 @@ app.post('/api/notifications/register-token', async (req, res) => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        // Check if subscription_data column exists, if not add it
+        try {
+            await pool.query('ALTER TABLE \`device_tokens\` ADD COLUMN \`subscription_data\` TEXT NULL');
+            console.log('✅ Added subscription_data column to device_tokens table');
+        } catch (alterErr) {
+            if (!alterErr.message.includes('Duplicate column name')) {
+                console.log('⚠️ Could not add subscription_data column (may already exist):', alterErr.message);
+            }
+        }
+
         // Insert or update token
-        await pool.query(`
-            INSERT INTO \`device_tokens\` (user_id, user_email, push_token, platform)
-            VALUES (?, ?, ?, ?)
+        const [result] = await pool.query(`
+            INSERT INTO \`device_tokens\` (user_id, user_email, push_token, platform, subscription_data)
+            VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 push_token = VALUES(push_token),
                 platform = VALUES(platform),
+                subscription_data = VALUES(subscription_data),
                 updated_at = CURRENT_TIMESTAMP
-        `, [userId, userEmail, pushToken, platform || 'unknown']);
+        `, [userId, userEmail, pushToken, platform || 'unknown', subscriptionData || null]);
 
         console.log('✅ Push token registered for user:', userEmail);
+        console.log('   Platform:', platform || 'unknown');
+        console.log('   Token ID:', result.insertId || 'updated');
         return res.json({ ok: true, message: 'Token registered successfully' });
     } catch (err) {
         console.error('❌ Error registering push token:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get VAPID public key for web push (placeholder - you need to generate VAPID keys)
+app.get('/api/notifications/vapid-public-key', async (req, res) => {
+    try {
+        // TODO: Generate VAPID keys using web-push library
+        // For now, return null to use browser notifications as fallback
+        // To enable full web push, install: npm install web-push
+        // Then generate keys: const vapidKeys = webpush.generateVAPIDKeys();
+        // Store private key securely, return public key here
+        
+        return res.json({ 
+            ok: true, 
+            publicKey: null, // Set to your VAPID public key when ready
+            message: 'VAPID keys not configured. Using browser notifications as fallback.'
+        });
+    } catch (err) {
+        console.error('❌ Error getting VAPID key:', err);
         return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
     }
 });
@@ -6788,43 +8280,117 @@ async function sendPushNotification(userEmail, title, body, data = {}) {
         
         // Get all push tokens for the user
         const [tokens] = await pool.query(
-            'SELECT push_token FROM `device_tokens` WHERE user_email = ?',
+            'SELECT push_token, platform, created_at, updated_at FROM `device_tokens` WHERE user_email = ?',
             [userEmail]
         );
 
         if (!tokens || tokens.length === 0) {
             console.log('⚠️ No push tokens found for user:', userEmail);
+            console.log('💡 Make sure the user has logged in and granted notification permissions');
             return { success: false, message: 'No push tokens found' };
         }
-
-        // Send notification via Expo Push Notification Service
-        const messages = tokens.map((token) => ({
-            to: token.push_token,
-            sound: 'default',
-            title: title,
-            body: body,
-            data: data,
-            badge: 1,
-        }));
-
-        const response = await fetch('https://exp.host/--/api/v2/push/send', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Accept-Encoding': 'gzip, deflate',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messages),
+        
+        console.log(`📱 Found ${tokens.length} device token(s) for user: ${userEmail}`);
+        tokens.forEach((token, index) => {
+            console.log(`   Device ${index + 1}: Platform: ${token.platform || 'unknown'}, Token: ${token.push_token.substring(0, 20)}...`);
         });
 
-        const result = await response.json();
-        
-        if (response.ok) {
-            console.log('✅ Push notification sent successfully:', result);
-            return { success: true, result };
+        // Separate mobile (Expo) and web push tokens
+        const expoTokens = tokens.filter(t => t.platform !== 'web');
+        const webTokens = tokens.filter(t => t.platform === 'web');
+
+        // Send to Expo Push Notification Service (mobile)
+        const expoMessages = expoTokens.map((token) => {
+            const message = {
+                to: token.push_token,
+                sound: 'default',
+                title: title,
+                body: body,
+                data: data,
+                badge: 1,
+            };
+            
+            // For Android, ensure proper notification display
+            if (token.platform === 'android') {
+                message.priority = 'high';
+                message.channelId = 'default';
+            }
+            
+            return message;
+        });
+
+        let expoResult = null;
+        if (expoMessages.length > 0) {
+            const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(expoMessages),
+            });
+            expoResult = await response.json();
+        }
+
+        // Send to Web Push (if web-push library is installed)
+        // TODO: Implement web push sending using web-push library
+        // For now, web push will use in-app notifications (toast/banner) as fallback
+        if (webTokens.length > 0) {
+            console.log(`🌐 Found ${webTokens.length} web push token(s) - using in-app notifications as fallback`);
+            console.log('💡 To enable full web push, install web-push and configure VAPID keys');
+        }
+
+        // Process results
+        if (expoResult) {
+            console.log('✅ Push notification sent successfully');
+            console.log('📤 Sent to:', expoTokens.length, 'mobile device(s)');
+            if (webTokens.length > 0) {
+                console.log('🌐 Web tokens:', webTokens.length, '(using in-app notifications)');
+            }
+            console.log('📋 Response:', JSON.stringify(expoResult, null, 2));
+            
+            // Log each token result
+            if (expoResult.data && Array.isArray(expoResult.data)) {
+                let successCount = 0;
+                let failCount = 0;
+                
+                expoResult.data.forEach((receipt, index) => {
+                    const token = expoTokens[index];
+                    const platform = token?.platform || 'unknown';
+                    const tokenPreview = token?.push_token ? token.push_token.substring(0, 30) + '...' : 'N/A';
+                    
+                    if (receipt.status === 'ok') {
+                        console.log(`✅ Device ${index + 1} (${platform}): Notification delivered`);
+                        console.log(`   Token: ${tokenPreview}`);
+                        successCount++;
+                    } else {
+                        console.error(`❌ Device ${index + 1} (${platform}): ${receipt.message || 'Failed'}`);
+                        console.error(`   Token: ${tokenPreview}`);
+                        if (receipt.message && receipt.message.includes('FCM server key')) {
+                            console.error(`   ⚠️ FCM credentials not configured for this token`);
+                            console.error(`   💡 This token is from an old build. Rebuild the app and re-register the token.`);
+                            console.error(`   📖 Run: npx eas-cli build --platform android --profile preview`);
+                        }
+                        failCount++;
+                    }
+                });
+                
+                console.log(`📊 Summary: ${successCount} successful, ${failCount} failed`);
+                
+                if (failCount > 0 && successCount === 0) {
+                    console.error(`⚠️ All notifications failed. Check FCM configuration.`);
+                }
+            }
+            
+            return { success: true, result: expoResult };
+        } else if (webTokens.length > 0) {
+            // Only web tokens - notifications will be shown via in-app toast/banner
+            console.log('✅ Web push notification handled via in-app notifications');
+            return { success: true, message: 'Web notifications handled via in-app system' };
         } else {
-            console.error('❌ Failed to send push notification:', result);
-            return { success: false, error: result };
+            console.error('❌ No tokens to send notifications to');
+            return { success: false, error: 'No tokens found' };
         }
     } catch (error) {
         console.error('❌ Error sending push notification:', error);
@@ -6834,6 +8400,692 @@ async function sendPushNotification(userEmail, title, body, data = {}) {
 
 // Make sendPushNotification available globally for use in other endpoints
 global.sendPushNotification = sendPushNotification;
+
+// ============================================
+// PROVIDER PROFILE API ENDPOINTS (PUBLIC)
+// ============================================
+
+// Get provider profile by email
+app.get('/api/provider/profile', async (req, res) => {
+    const providerEmail = req.query.email;
+    
+    if (!providerEmail) {
+        return res.status(400).json({ ok: false, error: 'Provider email is required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // First check if user exists
+        const [userCheck] = await pool.query(
+            'SELECT iduser, u_provider_status FROM `user` WHERE u_email = ?',
+            [providerEmail]
+        );
+        
+        if (userCheck.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Provider not found' });
+        }
+        
+        const userId = userCheck[0].iduser;
+        const providerStatus = userCheck[0].u_provider_status;
+        
+        // Check if review table exists
+        let reviewTableExists = false;
+        try {
+            await pool.query('SELECT 1 FROM `review` LIMIT 1');
+            reviewTableExists = true;
+        } catch (err) {
+            // Review table doesn't exist, that's okay
+            reviewTableExists = false;
+        }
+        
+        // Get provider information (allow viewing even if not approved, but only if they have services)
+        let query;
+        if (reviewTableExists) {
+            query = `
+                SELECT 
+                    u.iduser,
+                    u.u_email,
+                    u.u_fname,
+                    u.u_lname,
+                    u.u_phone,
+                    u.u_address,
+                    u.u_city,
+                    u.u_state,
+                    u.u_profile_picture,
+                    u.u_provider_status,
+                    COUNT(DISTINCT s.idservice) as total_services,
+                    COUNT(DISTINCT bs.bs_booking_id) as total_bookings,
+                    AVG(r.r_rating) as average_rating,
+                    COUNT(DISTINCT r.idreview) as total_reviews
+                FROM user u
+                LEFT JOIN service s ON u.iduser = s.s_provider_id AND s.s_is_active = 1
+                LEFT JOIN booking_service bs ON s.idservice = bs.bs_service_id
+                LEFT JOIN review r ON s.idservice = r.r_service_id
+                WHERE u.iduser = ?
+                GROUP BY u.iduser
+                HAVING total_services > 0
+            `;
+        } else {
+            // Use service ratings directly from service table
+            query = `
+                SELECT 
+                    u.iduser,
+                    u.u_email,
+                    u.u_fname,
+                    u.u_lname,
+                    u.u_phone,
+                    u.u_address,
+                    u.u_city,
+                    u.u_state,
+                    u.u_profile_picture,
+                    u.u_provider_status,
+                    COUNT(DISTINCT s.idservice) as total_services,
+                    COUNT(DISTINCT bs.bs_booking_id) as total_bookings,
+                    AVG(CASE WHEN s.s_rating IS NOT NULL AND s.s_rating > 0 THEN s.s_rating ELSE NULL END) as average_rating,
+                    SUM(COALESCE(s.s_review_count, 0)) as total_reviews
+                FROM user u
+                LEFT JOIN service s ON u.iduser = s.s_provider_id AND s.s_is_active = 1
+                LEFT JOIN booking_service bs ON s.idservice = bs.bs_service_id
+                WHERE u.iduser = ?
+                GROUP BY u.iduser
+                HAVING total_services > 0
+            `;
+        }
+        
+        const [providerRows] = await pool.query(query, [userId]);
+        
+        if (providerRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Provider not found or has no active services' });
+        }
+        
+        const provider = providerRows[0];
+        
+        // Convert average_rating to number
+        if (provider.average_rating !== null && provider.average_rating !== undefined) {
+            provider.average_rating = parseFloat(provider.average_rating);
+        } else {
+            provider.average_rating = null;
+        }
+        
+        // Ensure total_reviews is a number
+        if (provider.total_reviews !== null && provider.total_reviews !== undefined) {
+            provider.total_reviews = parseInt(provider.total_reviews) || 0;
+        } else {
+            provider.total_reviews = 0;
+        }
+        
+        // Ensure counts are numbers
+        provider.total_services = parseInt(provider.total_services) || 0;
+        provider.total_bookings = parseInt(provider.total_bookings) || 0;
+        
+        return res.json({ ok: true, provider });
+    } catch (err) {
+        console.error('Get provider profile failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Search providers
+app.get('/api/providers/search', async (req, res) => {
+    const search = req.query.search;
+    
+    if (!search || !search.trim()) {
+        return res.json({ ok: true, providers: [] });
+    }
+    
+    try {
+        const pool = getPool();
+        const searchTerm = `%${search.trim()}%`;
+        
+        // Check if service_review table exists
+        let reviewTableExists = false;
+        try {
+            await pool.query('SELECT 1 FROM `service_review` LIMIT 1');
+            reviewTableExists = true;
+        } catch (err) {
+            reviewTableExists = false;
+        }
+        
+        // Build query based on whether review table exists
+        let query;
+        if (reviewTableExists) {
+            query = `
+                SELECT DISTINCT
+                    u.iduser,
+                    u.u_fname,
+                    u.u_lname,
+                    u.u_email,
+                    u.u_profile_picture,
+                    CONCAT(u.u_fname, ' ', u.u_lname) as provider_name,
+                    COUNT(DISTINCT s.idservice) as service_count,
+                    AVG(s.s_rating) as avg_rating,
+                    COUNT(DISTINCT sr.idreview) as review_count
+                FROM user u
+                INNER JOIN service s ON u.iduser = s.s_provider_id
+                LEFT JOIN service_review sr ON s.idservice = sr.sr_service_id
+                WHERE s.s_is_active = 1
+                    AND (u.u_fname LIKE ? OR u.u_lname LIKE ? OR CONCAT(u.u_fname, ' ', u.u_lname) LIKE ? OR u.u_email LIKE ?)
+                GROUP BY u.iduser, u.u_fname, u.u_lname, u.u_email, u.u_profile_picture
+                HAVING service_count > 0
+                ORDER BY avg_rating DESC, service_count DESC
+                LIMIT 20
+            `;
+        } else {
+            query = `
+                SELECT DISTINCT
+                    u.iduser,
+                    u.u_fname,
+                    u.u_lname,
+                    u.u_email,
+                    u.u_profile_picture,
+                    CONCAT(u.u_fname, ' ', u.u_lname) as provider_name,
+                    COUNT(DISTINCT s.idservice) as service_count,
+                    AVG(s.s_rating) as avg_rating,
+                    0 as review_count
+                FROM user u
+                INNER JOIN service s ON u.iduser = s.s_provider_id
+                WHERE s.s_is_active = 1
+                    AND (u.u_fname LIKE ? OR u.u_lname LIKE ? OR CONCAT(u.u_fname, ' ', u.u_lname) LIKE ? OR u.u_email LIKE ?)
+                GROUP BY u.iduser, u.u_fname, u.u_lname, u.u_email, u.u_profile_picture
+                HAVING service_count > 0
+                ORDER BY avg_rating DESC, service_count DESC
+                LIMIT 20
+            `;
+        }
+        
+        const [rows] = await pool.query(query, [searchTerm, searchTerm, searchTerm, searchTerm]);
+        
+        return res.json({ ok: true, providers: rows });
+    } catch (err) {
+        console.error('Search providers failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get provider services by email
+app.get('/api/provider/services', async (req, res) => {
+    const providerEmail = req.query.email;
+    
+    if (!providerEmail) {
+        return res.status(400).json({ ok: false, error: 'Provider email is required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get provider user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [providerEmail]);
+        if (userRows.length === 0) {
+            return res.json({ ok: true, services: [] });
+        }
+        
+        const providerId = userRows[0].iduser;
+        
+        // Check if service_image table exists
+        let serviceImageTableExists = false;
+        try {
+            await pool.query('SELECT 1 FROM `service_image` LIMIT 1');
+            serviceImageTableExists = true;
+        } catch (err) {
+            // service_image table doesn't exist, that's okay
+            serviceImageTableExists = false;
+        }
+        
+        // Check if hourly_price and per_day_price columns exist
+        let hasHourlyPrice = false;
+        let hasPerDayPrice = false;
+        try {
+            const [hourlyCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_hourly_price'
+            `);
+            hasHourlyPrice = hourlyCheck.length > 0;
+            
+            const [perDayCheck] = await pool.query(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'service' 
+                AND COLUMN_NAME = 's_per_day_price'
+            `);
+            hasPerDayPrice = perDayCheck.length > 0;
+        } catch (colErr) {
+            console.log('⚠️ Could not check for pricing columns, using defaults');
+        }
+        
+        // Get provider's active services
+        let query;
+        if (serviceImageTableExists) {
+            query = `
+                SELECT 
+                    s.*,
+                    ${hasHourlyPrice ? 'COALESCE(s.s_hourly_price, s.s_base_price)' : 's.s_base_price'} as s_hourly_price,
+                    ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
+                    si.si_image_url as primary_image
+                FROM service s
+                LEFT JOIN service_image si ON s.idservice = si.si_service_id AND si.si_is_primary = 1
+                WHERE s.s_provider_id = ? AND s.s_is_active = 1
+                ORDER BY s.idservice DESC
+            `;
+        } else {
+            query = `
+                SELECT 
+                    s.*,
+                    ${hasHourlyPrice ? 'COALESCE(s.s_hourly_price, s.s_base_price)' : 's.s_base_price'} as s_hourly_price,
+                    ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
+                    NULL as primary_image
+                FROM service s
+                WHERE s.s_provider_id = ? AND s.s_is_active = 1
+                ORDER BY s.idservice DESC
+            `;
+        }
+        
+        const [serviceRows] = await pool.query(query, [providerId]);
+        
+        console.log(`Found ${serviceRows.length} services for provider ${providerEmail} (ID: ${providerId})`);
+        
+        // Map image URLs - return relative paths, client will handle full URL
+        const services = serviceRows.map(service => {
+            // Keep the image path as is - client will prepend base URL if needed
+            // If it's already a full URL, keep it; if it's relative, client will handle it
+            return service;
+        });
+        
+        return res.json({ ok: true, services });
+    } catch (err) {
+        console.error('Get provider services failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// ============================================
+// NOTIFICATIONS API ENDPOINTS
+// ============================================
+
+// Get user notifications (includes both notification table entries and system messages from conversations)
+app.get('/api/notifications', async (req, res) => {
+    const userEmail = req.query.email;
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Ensure notification table exists
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`notification\` (
+                \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`n_user_id\` INT(11) NOT NULL,
+                \`n_title\` VARCHAR(255) NOT NULL,
+                \`n_message\` TEXT NOT NULL,
+                \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idnotification\`),
+                INDEX \`idx_user\` (\`n_user_id\`),
+                INDEX \`idx_read\` (\`n_is_read\`),
+                INDEX \`idx_created\` (\`n_created_at\`),
+                FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        
+        // Get notifications from notification table
+        const [notifications] = await pool.query(
+            'SELECT * FROM `notification` WHERE n_user_id = ? ORDER BY n_created_at DESC LIMIT 50',
+            [userId]
+        );
+        
+        // Also fetch system messages from "System Notifications" conversation
+        const [systemConvRows] = await pool.query(
+            `SELECT c.idconversation 
+             FROM conversation c
+             INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
+             WHERE c.c_subject LIKE ? 
+             AND c.c_service_id IS NULL 
+             AND c.c_booking_id IS NULL 
+             AND c.c_hiring_request_id IS NULL
+             AND cp.cp_user_id = ?
+             LIMIT 1`,
+            ['System Notifications%', userId]
+        );
+        
+        const systemNotifications = [];
+        if (systemConvRows.length > 0) {
+            const conversationId = systemConvRows[0].idconversation;
+            
+            // Get system messages from this conversation
+            const [systemMessages] = await pool.query(
+                `SELECT m.idmessage, m.m_content, m.m_created_at, m.m_is_read
+                 FROM message m
+                 WHERE m.m_conversation_id = ? 
+                 AND m.m_message_type = 'system'
+                 ORDER BY m.m_created_at DESC
+                 LIMIT 50`,
+                [conversationId]
+            );
+            
+            // Convert system messages to notification format
+            for (const msg of systemMessages) {
+                // Check if message is about provider application rejection
+                if (msg.m_content.includes('provider application has been rejected')) {
+                    const reasonMatch = msg.m_content.match(/Reason: (.+?)(\n|$)/);
+                    const reason = reasonMatch ? reasonMatch[1].trim() : '';
+                    
+                    systemNotifications.push({
+                        idnotification: `system_${msg.idmessage}`, // Use negative ID to distinguish from regular notifications
+                        n_user_id: userId,
+                        n_title: 'Provider Application Rejected',
+                        n_message: msg.m_content,
+                        n_type: 'provider_application_rejected',
+                        n_is_read: msg.m_is_read,
+                        n_created_at: msg.m_created_at,
+                        is_system_message: true, // Flag to identify system messages
+                        message_id: msg.idmessage
+                    });
+                }
+            }
+        }
+        
+        // Combine both types of notifications and sort by date
+        const allNotifications = [...notifications, ...systemNotifications].sort((a, b) => {
+            const dateA = new Date(a.n_created_at).getTime();
+            const dateB = new Date(b.n_created_at).getTime();
+            return dateB - dateA; // Most recent first
+        });
+        
+        return res.json({ ok: true, notifications: allNotifications });
+    } catch (err) {
+        console.error('Get notifications failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Get unread notification count (includes both notification table and system messages)
+app.get('/api/notifications/unread-count', async (req, res) => {
+    const userEmail = req.query.email;
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Ensure notification table exists
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS \`notification\` (
+                \`idnotification\` INT(11) NOT NULL AUTO_INCREMENT,
+                \`n_user_id\` INT(11) NOT NULL,
+                \`n_title\` VARCHAR(255) NOT NULL,
+                \`n_message\` TEXT NOT NULL,
+                \`n_type\` VARCHAR(50) NOT NULL DEFAULT 'info',
+                \`n_is_read\` TINYINT(1) NOT NULL DEFAULT 0,
+                \`n_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (\`idnotification\`),
+                INDEX \`idx_user\` (\`n_user_id\`),
+                INDEX \`idx_read\` (\`n_is_read\`),
+                INDEX \`idx_created\` (\`n_created_at\`),
+                FOREIGN KEY (\`n_user_id\`) REFERENCES \`user\`(\`iduser\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        
+        // Get unread count from notification table
+        const [countRows] = await pool.query(
+            'SELECT COUNT(*) as count FROM `notification` WHERE n_user_id = ? AND n_is_read = 0',
+            [userId]
+        );
+        let unreadCount = countRows[0].count || 0;
+        
+        // Also count unread system messages from "System Notifications" conversation
+        const [systemConvRows] = await pool.query(
+            `SELECT c.idconversation 
+             FROM conversation c
+             INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
+             WHERE c.c_subject LIKE ? 
+             AND c.c_service_id IS NULL 
+             AND c.c_booking_id IS NULL 
+             AND c.c_hiring_request_id IS NULL
+             AND cp.cp_user_id = ?
+             LIMIT 1`,
+            ['System Notifications%', userId]
+        );
+        
+        if (systemConvRows.length > 0) {
+            const conversationId = systemConvRows[0].idconversation;
+            
+            // Count unread system messages about provider application rejection
+            const [systemCountRows] = await pool.query(
+                `SELECT COUNT(*) as count 
+                 FROM message m
+                 WHERE m.m_conversation_id = ? 
+                 AND m.m_message_type = 'system'
+                 AND m.m_is_read = 0
+                 AND m.m_content LIKE '%provider application has been rejected%'`,
+                [conversationId]
+            );
+            
+            unreadCount += (systemCountRows[0].count || 0);
+        }
+        
+        return res.json({ ok: true, count: unreadCount });
+    } catch (err) {
+        console.error('Get unread notification count failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Mark notification as read
+app.post('/api/notifications/:id/read', async (req, res) => {
+    const notificationId = req.params.id;
+    const userEmail = req.query.email;
+    
+    if (!notificationId) {
+        return res.status(400).json({ ok: false, error: 'Invalid notification ID' });
+    }
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Check if it's a system message (starts with "system_")
+        if (notificationId.toString().startsWith('system_')) {
+            const messageId = notificationId.toString().replace('system_', '');
+            // Mark system message as read
+            await pool.query(
+                'UPDATE `message` SET m_is_read = 1 WHERE idmessage = ?',
+                [messageId]
+            );
+        } else {
+            // Mark regular notification as read (only if it belongs to the user)
+            await pool.query(
+                'UPDATE `notification` SET n_is_read = 1 WHERE idnotification = ? AND n_user_id = ?',
+                [notificationId, userId]
+            );
+        }
+        
+        return res.json({ ok: true, message: 'Notification marked as read' });
+    } catch (err) {
+        console.error('Mark notification as read failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Mark all notifications as read (includes both notification table and system messages)
+app.post('/api/notifications/mark-all-read', async (req, res) => {
+    const userEmail = req.query.email;
+    
+    if (!userEmail) {
+        return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    
+    try {
+        const pool = getPool();
+        
+        // Get user ID
+        const [userRows] = await pool.query('SELECT iduser FROM `user` WHERE u_email = ?', [userEmail]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+        const userId = userRows[0].iduser;
+        
+        // Mark all notifications as read
+        await pool.query(
+            'UPDATE `notification` SET n_is_read = 1 WHERE n_user_id = ? AND n_is_read = 0',
+            [userId]
+        );
+        
+        // Also mark all system messages as read
+        const [systemConvRows] = await pool.query(
+            `SELECT c.idconversation 
+             FROM conversation c
+             INNER JOIN conversation_participant cp ON c.idconversation = cp.cp_conversation_id
+             WHERE c.c_subject LIKE ? 
+             AND c.c_service_id IS NULL 
+             AND c.c_booking_id IS NULL 
+             AND c.c_hiring_request_id IS NULL
+             AND cp.cp_user_id = ?
+             LIMIT 1`,
+            ['System Notifications%', userId]
+        );
+        
+        if (systemConvRows.length > 0) {
+            const conversationId = systemConvRows[0].idconversation;
+            
+            // Mark all unread system messages as read
+            await pool.query(
+                `UPDATE message 
+                 SET m_is_read = 1 
+                 WHERE m_conversation_id = ? 
+                 AND m_message_type = 'system'
+                 AND m_is_read = 0
+                 AND m_content LIKE '%provider application has been rejected%'`,
+                [conversationId]
+            );
+        }
+        
+        return res.json({ ok: true, message: 'All notifications marked as read' });
+    } catch (err) {
+        console.error('Mark all notifications as read failed:', err.code, err.message);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Test endpoint to send push notification manually
+app.post('/api/notifications/test-push', async (req, res) => {
+    try {
+        const { userEmail, title, body } = req.body;
+        
+        if (!userEmail) {
+            return res.status(400).json({ ok: false, error: 'userEmail is required' });
+        }
+        
+        const testTitle = title || 'Test Notification';
+        const testBody = body || 'This is a test push notification from the server';
+        
+        console.log(`🧪 Testing push notification for: ${userEmail}`);
+        
+        const result = await sendPushNotification(
+            userEmail,
+            testTitle,
+            testBody,
+            {
+                type: 'test',
+                timestamp: new Date().toISOString(),
+            }
+        );
+        
+        if (result.success) {
+            return res.json({ 
+                ok: true, 
+                message: 'Test notification sent successfully',
+                result: result.result 
+            });
+        } else {
+            return res.status(500).json({ 
+                ok: false, 
+                error: result.message || 'Failed to send notification',
+                details: result.error 
+            });
+        }
+    } catch (err) {
+        console.error('❌ Test push notification failed:', err);
+        return res.status(500).json({ ok: false, error: 'Server error: ' + err.message });
+    }
+});
+
+// Get push tokens for a user (for debugging)
+app.get('/api/notifications/push-tokens/:email', async (req, res) => {
+    try {
+        const userEmail = req.params.email;
+        const pool = getPool();
+        
+        const [tokens] = await pool.query(
+            'SELECT id, user_id, user_email, platform, created_at, updated_at, LEFT(push_token, 50) as push_token_preview FROM `device_tokens` WHERE user_email = ? ORDER BY updated_at DESC',
+            [userEmail]
+        );
+        
+        return res.json({ 
+            ok: true, 
+            count: tokens.length,
+            tokens: tokens 
+        });
+    } catch (err) {
+        console.error('❌ Get push tokens failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
+
+// Delete push tokens for a user (for testing - to clear old tokens)
+app.delete('/api/notifications/push-tokens/:email', async (req, res) => {
+    try {
+        const userEmail = req.params.email;
+        const pool = getPool();
+        
+        const [result] = await pool.query(
+            'DELETE FROM `device_tokens` WHERE user_email = ?',
+            [userEmail]
+        );
+        
+        console.log(`🗑️ Deleted ${result.affectedRows} push token(s) for user: ${userEmail}`);
+        
+        return res.json({ 
+            ok: true, 
+            message: `Deleted ${result.affectedRows} push token(s)`,
+            deletedCount: result.affectedRows
+        });
+    } catch (err) {
+        console.error('❌ Delete push tokens failed:', err);
+        return res.status(500).json({ ok: false, error: 'Database error: ' + err.message });
+    }
+});
 
 // 404 handler for undefined routes
 app.use((req, res) => {
@@ -6845,7 +9097,9 @@ app.use((req, res) => {
             'POST /api/users/apply-provider',
             'GET /api/health',
             'POST /api/register',
-            'POST /api/notifications/register-token'
+            'POST /api/notifications/register-token',
+            'POST /api/notifications/test-push',
+            'GET /api/notifications/push-tokens/:email'
         ]
     });
 });
