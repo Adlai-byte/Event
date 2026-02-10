@@ -13,10 +13,12 @@ import {
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { getShadowStyle } from '../../utils/shadowStyles';
+import { AppLayout } from '../../components/layout';
 
 interface PaymentMethodsViewProps {
   user: User;
-  onBack: () => void;
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
 }
 
 interface PaymentMethod {
@@ -30,7 +32,8 @@ interface PaymentMethod {
 
 export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   user,
-  onBack
+  onNavigate,
+  onLogout,
 }) => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,31 +262,16 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment Methods</Text>
-          <View style={styles.headerRight} />
-        </View>
+      <AppLayout role="user" activeRoute="settings" title="Payment Methods" user={user} onNavigate={onNavigate} onLogout={onLogout}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C63FF" />
         </View>
-      </View>
+      </AppLayout>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Methods</Text>
-        <View style={styles.headerRight} />
-      </View>
-
+    <AppLayout role="user" activeRoute="settings" title="Payment Methods" user={user} onNavigate={onNavigate} onLogout={onLogout}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Add GCash Button */}
         {!showAddForm && (
@@ -377,7 +365,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
@@ -385,43 +373,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  headerRight: {
-    width: 60,
   },
   scrollView: {
     flex: 1,
