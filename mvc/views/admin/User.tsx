@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Platform } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import UserService, { AdminUserRow } from '../../services/UserService';
+import { AppLayout } from '../../components/layout';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -18,7 +19,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   const [activeTab, setActiveTab] = useState<'list' | 'add'>('list');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -93,53 +94,16 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
     }
   }, [errorMessage]);
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity 
-      style={styles.sidebarItem} 
-      onPress={() => {
-        onNavigate?.(route);
-        if (isMobile) setSidebarVisible(false);
-      }}
-    >
-      <Text style={styles.sidebarIcon}>{icon}</Text>
-      <Text style={styles.sidebarLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      {isMobile && (
-        <TouchableOpacity onPress={() => setSidebarVisible(false)} style={styles.closeSidebarButton}>
-          <Text style={styles.closeSidebarIcon}>✕</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-        <SidebarItem icon="👤" label="Users" route="user" />
-        <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-        <SidebarItem icon="📊" label="Analytics" route="analytics" />
-      </View>
-
-      <TouchableOpacity 
-        style={styles.logoutButton} 
-        onPress={() => {
-          if (isMobile) setSidebarVisible(false);
-          onLogout?.();
-        }}
-      >
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  // Filter rows based on search query
+  const filteredRows = rows.filter((u) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query) ||
+      u.role.toLowerCase().includes(query) ||
+      u.status.toLowerCase().includes(query)
+    );
+  });
 
   const handleEditUser = async (userEmail: string) => {
     try {
@@ -148,14 +112,14 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       if (!resp.ok) throw new Error('Failed to fetch user details');
       const data = await resp.json();
       if (!data.ok || !data.exists) throw new Error('User not found');
-      
+
       // Also get the user ID from the full list
       const listResp = await fetch(`${getApiBaseUrl()}/api/users`);
       const listData = await listResp.json();
       if (!listResp.ok || !listData.ok) throw new Error('Failed to fetch user list');
       const match = listData.rows.find((x: any) => x.u_email === userEmail);
       if (!match) throw new Error('User ID not found');
-      
+
       setEditingUserId(match.iduser);
       setEditFirstName(data.firstName || '');
       setEditMiddleName(data.middleName || '');
@@ -172,10 +136,10 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
 
   const handleUpdateUser = async () => {
     if (!editingUserId) return;
-    
+
     // Clear previous error message
     setErrorMessage('');
-    
+
     if (!editFirstName.trim() || !editLastName.trim() || !editEmail.trim()) {
       setErrorMessage('First name, last name, and email are required.');
       return;
@@ -199,7 +163,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       });
       const data = await resp.json();
       if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update user');
-      
+
       // Reset edit form
       setEditingUserId(null);
       setEditFirstName('');
@@ -209,7 +173,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       setEditEmail('');
       setEditPassword('');
       setEditConfirmPassword('');
-      
+
       // Refresh user list
       const r = await fetch(`${getApiBaseUrl()}/api/users`);
       const j = await r.json();
@@ -222,7 +186,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
         }));
         setRows(mapped);
       }
-      
+
       // Switch to list view and show success message
       setActiveTab('list');
       setSuccessMessage('User updated successfully!');
@@ -244,48 +208,28 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   };
 
   return (
-    <View style={styles.layout}>
-      {/* Sidebar */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <SidebarContent />
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="admin"
+      activeRoute="user"
+      title="Users"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity
-                onPress={() => setSidebarVisible(true)}
-                style={styles.mobileMenuButton}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.title}>Users Management</Text>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>Users Management</Text>
         </View>
 
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('list')}
               >
                 <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>View All</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('add')}
               >
@@ -308,58 +252,58 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                 <>
                   <Text style={styles.formTitle}>Edit User</Text>
                   <Text style={styles.formLabel}>First Name</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your first name" 
-                    value={editFirstName} 
-                    onChangeText={setEditFirstName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your first name"
+                    value={editFirstName}
+                    onChangeText={setEditFirstName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your middle name" 
-                    value={editMiddleName} 
-                    onChangeText={setEditMiddleName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your middle name"
+                    value={editMiddleName}
+                    onChangeText={setEditMiddleName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your last name" 
-                    value={editLastName} 
-                    onChangeText={setEditLastName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your last name"
+                    value={editLastName}
+                    onChangeText={setEditLastName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Jr., Sr., III, etc." 
-                    value={editSuffix} 
-                    onChangeText={setEditSuffix} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Jr., Sr., III, etc."
+                    value={editSuffix}
+                    onChangeText={setEditSuffix}
                     autoCapitalize="characters"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Email</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="you@example.com" 
-                    value={editEmail} 
-                    onChangeText={setEditEmail} 
-                    autoCapitalize="none" 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="you@example.com"
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>New Password (leave blank to keep current)</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput 
-                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
-                      placeholder="••••••••" 
-                      value={editPassword} 
-                      onChangeText={setEditPassword} 
+                    <TextInput
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]}
+                      placeholder="••••••••"
+                      value={editPassword}
+                      onChangeText={setEditPassword}
                       secureTextEntry={!showEditPassword}
                       placeholderTextColor="#94A3B8"
                     />
@@ -369,11 +313,11 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   </View>
                   <Text style={styles.formLabel}>Confirm New Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput 
-                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
-                      placeholder="••••••••" 
-                      value={editConfirmPassword} 
-                      onChangeText={setEditConfirmPassword} 
+                    <TextInput
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]}
+                      placeholder="••••••••"
+                      value={editConfirmPassword}
+                      onChangeText={setEditConfirmPassword}
                       secureTextEntry={!showEditConfirm}
                       placeholderTextColor="#94A3B8"
                     />
@@ -393,58 +337,58 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               ) : (
                 <>
                   <Text style={styles.formLabel}>First Name</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your first name" 
-                    value={firstName} 
-                    onChangeText={setFirstName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your first name"
+                    value={firstName}
+                    onChangeText={setFirstName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your middle name" 
-                    value={middleName} 
-                    onChangeText={setMiddleName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your middle name"
+                    value={middleName}
+                    onChangeText={setMiddleName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Enter your last name" 
-                    value={lastName} 
-                    onChangeText={setLastName} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Enter your last name"
+                    value={lastName}
+                    onChangeText={setLastName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="Jr., Sr., III, etc." 
-                    value={suffix} 
-                    onChangeText={setSuffix} 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="Jr., Sr., III, etc."
+                    value={suffix}
+                    onChangeText={setSuffix}
                     autoCapitalize="characters"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Email</Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder="you@example.com" 
-                    value={email} 
-                    onChangeText={setEmail} 
-                    autoCapitalize="none" 
+                  <TextInput
+                    style={styles.addInputFull}
+                    placeholder="you@example.com"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#94A3B8"
                   />
                   <Text style={styles.formLabel}>Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput 
-                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
-                      placeholder="••••••••" 
-                      value={password} 
-                      onChangeText={setPassword} 
+                    <TextInput
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]}
+                      placeholder="••••••••"
+                      value={password}
+                      onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                       placeholderTextColor="#94A3B8"
                     />
@@ -454,11 +398,11 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   </View>
                   <Text style={styles.formLabel}>Confirm Password</Text>
                   <View style={styles.passwordRow}>
-                    <TextInput 
-                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]} 
-                      placeholder="••••••••" 
-                      value={confirmPassword} 
-                      onChangeText={setConfirmPassword} 
+                    <TextInput
+                      style={[styles.addInputFull, { flex: 1, borderWidth: 0, paddingRight: 8 }]}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
                       secureTextEntry={!showConfirm}
                       placeholderTextColor="#94A3B8"
                     />
@@ -469,14 +413,14 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   <TouchableOpacity style={styles.addButtonLarge} onPress={async () => {
                     // Clear previous error message
                     setErrorMessage('');
-                    
-                    if (!firstName.trim() || !lastName.trim() || !email.trim()) { 
+
+                    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
                       setErrorMessage('First name, last name, and email are required.');
-                      return; 
+                      return;
                     }
-                    if (password !== confirmPassword) { 
+                    if (password !== confirmPassword) {
                       setErrorMessage('Passwords do not match.');
-                      return; 
+                      return;
                     }
                     try {
                       const resp = await fetch(`${getApiBaseUrl()}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, middleName, lastName, suffix, email, password: password || undefined }) });
@@ -492,7 +436,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       // Switch back to list view and show success message
                       setActiveTab('list');
                       setSuccessMessage('User successfully added!');
-                    } catch (e: any) { 
+                    } catch (e: any) {
                       setErrorMessage(e.message || 'Failed to add user. Please try again.');
                     }
                   }}>
@@ -512,6 +456,18 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   </TouchableOpacity>
                 </View>
               ) : null}
+
+              {/* Search Container */}
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by name, email, role, or status..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
               {isMobile ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableScrollView}>
                   <View style={styles.tableContainer}>
@@ -522,7 +478,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                 <Text style={[styles.th, { flex: 1 }]}>Status</Text>
                 <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Actions</Text>
               </View>
-              {rows.map((u, i) => (
+              {filteredRows.map((u, i) => (
                 <View key={i} style={[styles.row, i % 2 === 1 && styles.rowAlt]}>
                   <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
                   <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
@@ -570,7 +526,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     <Text style={[styles.th, { flex: 1 }]}>Status</Text>
                     <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Actions</Text>
                   </View>
-                  {rows.map((u, i) => (
+                  {filteredRows.map((u, i) => (
                     <View key={i} style={[styles.row, i % 2 === 1 && styles.rowAlt]}>
                       <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
                       <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
@@ -613,177 +569,18 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
           )}
         </View>
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EEF1F5',
   },
   content: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
-  },
-  // Sidebar styles (mirrors admin Dashboard)
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    ...(isMobile && {
-      height: '100%',
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 1000,
-    }),
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  formLabel: {
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginTop: isMobile ? 12 : 16,
-    marginBottom: isMobile ? 6 : 8,
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: isMobile ? 16 : 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
   header: {
     marginBottom: isMobile ? 16 : 24,
@@ -827,6 +624,43 @@ const styles = StyleSheet.create({
   tabButtonTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  formLabel: {
+    fontSize: isMobile ? 13 : 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: isMobile ? 12 : 16,
+    marginBottom: isMobile ? 6 : 8,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: isMobile ? 16 : 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  searchContainer: {
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? {
+      outlineStyle: 'none' as any,
+      cursor: 'text' as any,
+    } as any : {}),
   },
   tableScrollView: {
     marginTop: 8,
@@ -887,21 +721,6 @@ const styles = StyleSheet.create({
     fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-  },
-  addInput: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginRight: 8,
-    backgroundColor: '#F8FAFC',
-  },
   addInputFull: {
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
@@ -911,12 +730,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     fontSize: isMobile ? 14 : 15,
     color: '#1E293B',
-  },
-  addButton: {
-    backgroundColor: '#4a55e1',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
   },
   addButtonText: {
     color: '#fff',
