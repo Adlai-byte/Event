@@ -630,10 +630,7 @@ function App(): React.JSX.Element {
       // The role will be loaded and routing will happen automatically via useEffect
       // The useEffect at line 281 will update viewMode to 'landing' soon
         return (
-          <View style={[
-            styles.container,
-            { paddingBottom: 0 }
-          ]}>
+          <View style={styles.container}>
             <StatusBar style="auto" />
             <DashboardView
               user={authState.user}
@@ -678,10 +675,7 @@ function App(): React.JSX.Element {
     }
 
     return (
-      <View style={[
-        styles.container,
-        (mainView === 'dashboard' || mainView.startsWith('admin') || mainView.startsWith('provider')) && { paddingBottom: 0 }
-      ]}>
+      <View style={styles.container}>
         <StatusBar style="auto" />
 
 
@@ -819,7 +813,6 @@ function App(): React.JSX.Element {
           <AdminMessagingView
             userId={authState.user?.uid || ''}
             user={authState.user || undefined}
-            onBack={() => setMainView('adminDashboard')}
             onNavigate={(route: string) => {
               if (route === 'dashboard') setMainView('adminDashboard');
               if (route === 'user') setMainView('adminUser');
@@ -998,32 +991,60 @@ function App(): React.JSX.Element {
               if (route === 'paymentSetup') setMainView('providerPaymentSetup');
               if (route === 'personalInfo') setMainView('providerPersonalInfo');
             }}
-            onBack={() => setMainView('providerDashboard')}
           />
         )}
 
         {mainView === 'providerSettings' && authState.user?.role === 'provider' && (
           <ProviderSettingsView
             user={authState.user!}
-            onBack={() => setMainView('providerProfile')}
             onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('providerDashboard');
+              if (route === 'services') setMainView('providerServices');
+              if (route === 'bookings') setMainView('providerBookings');
+              if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
+              if (route === 'messages') setMainView('providerMessages');
+              if (route === 'analytics') setMainView('providerAnalytics');
               if (route === 'profile') setMainView('providerProfile');
               if (route === 'settings') setMainView('providerSettings');
             }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'providerPaymentSetup' && authState.user?.role === 'provider' && (
           <PaymentSetupView
             user={authState.user!}
-            onBack={() => setMainView('providerProfile')}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('providerDashboard');
+              if (route === 'services') setMainView('providerServices');
+              if (route === 'bookings') setMainView('providerBookings');
+              if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
+              if (route === 'messages') setMainView('providerMessages');
+              if (route === 'analytics') setMainView('providerAnalytics');
+              if (route === 'profile') setMainView('providerProfile');
+              if (route === 'settings') setMainView('providerSettings');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'providerPersonalInfo' && authState.user?.role === 'provider' && (
           <PersonalInfoView
             user={authState.user!}
-            onBack={() => setMainView('providerProfile')}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('providerDashboard');
+              if (route === 'services') setMainView('providerServices');
+              if (route === 'bookings') setMainView('providerBookings');
+              if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
+              if (route === 'messages') setMainView('providerMessages');
+              if (route === 'analytics') setMainView('providerAnalytics');
+              if (route === 'profile') setMainView('providerProfile');
+              if (route === 'settings') setMainView('providerSettings');
+            }}
+            onLogout={handleLogoutVoid}
             onSendVerificationEmail={async () => {
               if (!authController) {
                 return { success: false, error: 'Authentication controller not available' };
@@ -1187,35 +1208,72 @@ function App(): React.JSX.Element {
           <MessagingView
             userId={authState.user?.uid || ''}
             userEmail={authState.user?.email || undefined}
+            user={authState.user || undefined}
             conversationId={selectedConversationId}
-            onBack={() => {
-              setSelectedConversationId(undefined);
-              setMainView('dashboard');
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
             }}
+            onLogout={handleLogoutVoid}
           />
         )}
         
         {mainView === 'notifications' && (authState.user?.role === 'user' || !authState.user?.role) && (
           <NotificationView
             userEmail={authState.user?.email || ''}
-            onBack={() => setMainView('dashboard')}
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'providerNotifications' && authState.user?.role === 'provider' && (
           <NotificationView
             userEmail={authState.user?.email || ''}
-            onBack={() => setMainView('providerDashboard')}
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('providerDashboard');
+              if (route === 'services') setMainView('providerServices');
+              if (route === 'bookings') setMainView('providerBookings');
+              if (route === 'proposals') setMainView('providerProposals');
+              if (route === 'hiring') setMainView('providerHiring');
+              if (route === 'messages') setMainView('providerMessages');
+              if (route === 'analytics') setMainView('providerAnalytics');
+              if (route === 'profile') setMainView('providerProfile');
+              if (route === 'settings') setMainView('providerSettings');
+              if (route === 'notifications') setMainView('providerNotifications');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
         {mainView === 'providerProfile' && selectedProviderEmail && (authState.user?.role === 'user' || !authState.user?.role) && (
           <UserProviderProfileView
             providerEmail={selectedProviderEmail}
-            onBack={() => {
-              setMainView('dashboard');
-              setSelectedProviderEmail(null);
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') { setMainView('dashboard'); setSelectedProviderEmail(null); }
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
             }}
+            onLogout={handleLogoutVoid}
             onNavigateToService={(serviceId: string) => {
               setSelectedServiceId(serviceId);
               setMainView('serviceDetails');
@@ -1227,8 +1285,18 @@ function App(): React.JSX.Element {
           <HiringView
             userId={authState.user?.uid || ''}
             userEmail={authState.user?.email || undefined}
-            userType="client" // This could be determined by user role
-            onBack={() => setMainView('dashboard')}
+            userType="client"
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
@@ -1239,14 +1307,31 @@ function App(): React.JSX.Element {
             onLogout={handleLogout}
             onNavigateToPersonalInfo={() => setMainView('personalInfo')}
             onNavigateToHelpCenter={() => setMainView('tips')}
-            onBack={() => setMainView('dashboard')}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
           />
         )}
 
         {mainView === 'personalInfo' && (authState.user?.role === 'user' || !authState.user?.role) && (
           <PersonalInfoView
             user={authState.user!}
-            onBack={() => setMainView('profile')}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
+            onLogout={handleLogoutVoid}
             onSendVerificationEmail={async () => {
               if (!authController) {
                 return { success: false, error: 'Authentication controller not available' };
@@ -1404,23 +1489,50 @@ function App(): React.JSX.Element {
 
         {mainView === 'tips' && (authState.user?.role === 'user' || !authState.user?.role) && (
           <TipsView
-            onBack={() => setMainView('profile')}
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
          {mainView === 'settings' && (authState.user?.role === 'user' || !authState.user?.role) && (
            <SettingsView
-             onBack={() => setMainView('profile')}
+             user={authState.user || undefined}
+             onNavigate={(route: string) => {
+               if (route === 'dashboard') setMainView('dashboard');
+               if (route === 'bookings') setMainView('bookings');
+               if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+               if (route === 'hiring') setMainView('hiring');
+               if (route === 'profile') setMainView('profile');
+               if (route === 'notifications') setMainView('notifications');
+               if (route === 'settings') setMainView('settings');
+             }}
+             onLogout={handleLogoutVoid}
            />
          )}
 
         {mainView === 'serviceDetails' && selectedServiceId && (authState.user?.role === 'user' || !authState.user?.role) && (
           <ServiceDetailsView
             serviceId={selectedServiceId}
-            onBack={() => {
-              setMainView('dashboard');
-              setSelectedServiceId(null);
+            user={authState.user || undefined}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') { setMainView('dashboard'); setSelectedServiceId(null); }
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
             }}
+            onLogout={handleLogoutVoid}
             onNavigateToProviderProfile={(providerEmail: string) => {
               setSelectedProviderEmail(providerEmail);
               setMainView('providerProfile');
@@ -1437,57 +1549,19 @@ function App(): React.JSX.Element {
         {mainView === 'paymentMethods' && (authState.user?.role === 'user' || !authState.user?.role) && (
           <PaymentMethodsView
             user={authState.user!}
-            onBack={() => setMainView('profile')}
+            onNavigate={(route: string) => {
+              if (route === 'dashboard') setMainView('dashboard');
+              if (route === 'bookings') setMainView('bookings');
+              if (route === 'messages') { setSelectedConversationId(undefined); setMainView('messages'); }
+              if (route === 'hiring') setMainView('hiring');
+              if (route === 'profile') setMainView('profile');
+              if (route === 'notifications') setMainView('notifications');
+              if (route === 'settings') setMainView('settings');
+            }}
+            onLogout={handleLogoutVoid}
           />
         )}
 
-        {/* Bottom Navigation (hidden on Home, Admin, Provider views, and Web) */}
-        {mainView !== 'dashboard' && !mainView.startsWith('admin') && !mainView.startsWith('provider') && Platform.OS !== 'web' && (
-          <View style={styles.bottomNavigation}>
-            <TouchableOpacity 
-              style={styles.bottomNavItem}
-              onPress={() => setMainView('dashboard')}
-            >
-              <Text style={styles.bottomNavIcon}>🏠</Text>
-              <Text style={styles.bottomNavLabel}>Home</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.bottomNavItem, mainView === 'messages' && styles.activeBottomNavItem]}
-                onPress={() => {
-                  setSelectedConversationId(undefined); // Clear any previous conversationId
-                  setMainView('messages');
-                }}
-            >
-                <Text style={[styles.bottomNavIcon, mainView === 'messages' && styles.activeBottomNavIcon]}>💬</Text>
-                <Text style={[styles.bottomNavLabel, mainView === 'messages' && styles.activeBottomNavLabel]}>Message</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.bottomNavItem, mainView === 'bookings' && styles.activeBottomNavItem]}
-              onPress={() => setMainView('bookings')}
-            >
-              <Text style={[styles.bottomNavIcon, mainView === 'bookings' && styles.activeBottomNavIcon]}>📅</Text>
-              <Text style={[styles.bottomNavLabel, mainView === 'bookings' && styles.activeBottomNavLabel]}>Booking</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.bottomNavItem, mainView === 'hiring' && styles.activeBottomNavItem]}
-              onPress={() => setMainView('hiring')}
-            >
-              <Text style={[styles.bottomNavIcon, mainView === 'hiring' && styles.activeBottomNavIcon]}>💼</Text>
-              <Text style={[styles.bottomNavLabel, mainView === 'hiring' && styles.activeBottomNavLabel]}>Job</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.bottomNavItem, mainView === 'profile' && styles.activeBottomNavItem]}
-              onPress={() => setMainView('profile')}
-            >
-              <Text style={[styles.bottomNavIcon, mainView === 'profile' && styles.activeBottomNavIcon]}>👤</Text>
-              <Text style={[styles.bottomNavLabel, mainView === 'profile' && styles.activeBottomNavLabel]}>Profile</Text>
-            </TouchableOpacity>
-          </View>
-        )}
        </View>
      );
   }
@@ -1615,54 +1689,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f2f5',
     position: 'relative',
-    paddingBottom: 80, // Add space for bottom navigation
   },
   containerAuthMobile: {
     backgroundColor: 'transparent',
-  },
-  // Bottom Navigation Styles
-  bottomNavigation: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    paddingBottom: 40,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  bottomNavItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  activeBottomNavItem: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 12,
-    marginHorizontal: 2,
-  },
-  bottomNavIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  activeBottomNavIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  bottomNavLabel: {
-    fontSize: 12,
-    color: '#636E72',
-    fontWeight: '500',
-  },
-  activeBottomNavLabel: {
-    fontSize: 12,
-    color: '#6C63FF',
-    fontWeight: '600',
   },
   fullPageLoadingOverlay: {
     position: 'absolute',

@@ -159,12 +159,12 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
         }
       } else {
         Alert.alert('Error', 'Failed to load service details');
-        onBack();
+        onNavigate('dashboard');
       }
     } catch (error) {
       console.error('Error loading service details:', error);
       Alert.alert('Error', 'Failed to load service details. Please try again.');
-      onBack();
+      onNavigate('dashboard');
     } finally {
       setLoading(false);
     }
