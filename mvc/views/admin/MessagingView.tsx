@@ -14,18 +14,18 @@ import {
 import { MessagingController } from '../../controllers/MessagingController';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
+import { AppLayout } from '../../components/layout';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface MessagingViewProps {
   userId: string;
   user?: User;
-  onBack: () => void;
   onNavigate?: (route: string) => void;
   onLogout?: () => void | Promise<void>;
 }
 
-export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBack, onNavigate, onLogout }) => {
+export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNavigate, onLogout }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -33,7 +33,6 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeRoute, setActiveRoute] = useState('messages');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'recent'>('all');
 
@@ -48,7 +47,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
     loadConversations();
     loadUnreadCount();
-    
+
     const unsubscribeConversations = messagingController.subscribeToUserConversations(
       userId,
       (updatedConversations) => {
@@ -65,7 +64,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
-      
+
       const unsubscribeMessages = messagingController.subscribeToConversationMessages(
         selectedConversation.id,
         (updatedMessages) => {
@@ -139,17 +138,17 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const formatDate = (date: Date): string => {
     const today = new Date();
     const messageDate = new Date(date);
-    
+
     if (messageDate.toDateString() === today.toDateString()) {
       return 'Today';
     }
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     if (messageDate.toDateString() === yesterday.toDateString()) {
       return 'Yesterday';
     }
-    
+
     return messageDate.toLocaleDateString();
   };
 
@@ -184,29 +183,15 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(conv => {
         const otherParticipantId = conv.participants.find(id => id !== userId) || '';
-        const lastMessageContent = conv.lastMessage?.content.toLowerCase() || '';
-        return otherParticipantId.toLowerCase().includes(query) || 
+        const lastMessageContent = typeof conv.lastMessage === 'string'
+          ? conv.lastMessage.toLowerCase()
+          : conv.lastMessage?.content.toLowerCase() || '';
+        return otherParticipantId.toLowerCase().includes(query) ||
                lastMessageContent.includes(query);
       });
     }
 
     return filtered;
-  };
-
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => {
-    const isActive = activeRoute === route;
-    return (
-      <TouchableOpacity 
-        style={[styles.sidebarItem, isActive && styles.sidebarItemActive]} 
-        onPress={() => {
-          setActiveRoute(route);
-          onNavigate?.(route);
-        }}
-      >
-        <Text style={[styles.sidebarIcon, isActive && styles.sidebarIconActive]}>{icon}</Text>
-        <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{label}</Text>
-      </TouchableOpacity>
-    );
   };
 
   const renderMessage = (message: Message) => {
@@ -285,7 +270,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
             styles.conversationPreview,
             hasUnread && styles.unreadPreview
           ]} numberOfLines={1}>
-            {conversation.lastMessage?.content || 'No messages yet'}
+            {typeof conversation.lastMessage === 'string'
+              ? conversation.lastMessage
+              : conversation.lastMessage?.content || 'No messages yet'}
           </Text>
           {hasUnread && (
             <View style={styles.unreadBadge}>
@@ -301,136 +288,117 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
   if (loading && conversations.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={styles.sidebar}>
-          <View style={styles.profileCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-            </View>
-            <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-            <Text style={styles.profileEmail}>{user?.email || 'admin@example.com'}</Text>
-          </View>
-        </View>
+      <AppLayout
+        role="admin"
+        activeRoute="messages"
+        title="Messages"
+        user={user}
+        onNavigate={onNavigate!}
+        onLogout={onLogout!}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4a55e1" />
           <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
-      </View>
+      </AppLayout>
     );
   }
-  
+
   return (
-    <View style={styles.container}>
+    <AppLayout
+      role="admin"
+      activeRoute="messages"
+      title="Messages"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       {!selectedConversation ? (
-        // Conversations List with Sidebar
-        <View style={styles.layout}>
-          <View style={styles.sidebar}>
-            <View style={styles.profileCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
+        // Conversations List
+        <View style={styles.conversationsContainer}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.headerTitle}>Messages</Text>
+              <Text style={styles.headerSubtitle}>Manage all conversations</Text>
+            </View>
+            {unreadCount > 0 && (
+              <View style={styles.unreadHeaderBadge}>
+                <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
               </View>
-              <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-              <Text style={styles.profileEmail}>{user?.email || 'admin@example.com'}</Text>
-            </View>
-
-            <View style={styles.sidebarNav}>
-              <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-              <SidebarItem icon="👤" label="Users" route="user" />
-              <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-              <SidebarItem icon="📊" label="Analytics" route="analytics" />
-            </View>
-
-            <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-              <Text style={styles.logoutIcon}>🚪</Text>
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+            )}
           </View>
 
-          <View style={styles.conversationsContainer}>
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.headerTitle}>Messages</Text>
-                <Text style={styles.headerSubtitle}>Manage all conversations</Text>
-              </View>
-              {unreadCount > 0 && (
-                <View style={styles.unreadHeaderBadge}>
-                  <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
-                </View>
+          {/* Search and Filter */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94A3B8"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Text style={styles.clearIcon}>✕</Text>
+                </TouchableOpacity>
               )}
             </View>
-
-            {/* Search and Filter */}
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputContainer}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search conversations..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#94A3B8"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Text style={styles.clearIcon}>✕</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.filterContainer}>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterType === 'all' && styles.filterButtonActive]}
-                  onPress={() => setFilterType('all')}
-                >
-                  <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>
-                    All
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterType === 'unread' && styles.filterButtonActive]}
-                  onPress={() => setFilterType('unread')}
-                >
-                  <Text style={[styles.filterText, filterType === 'unread' && styles.filterTextActive]}>
-                    Unread
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterType === 'recent' && styles.filterButtonActive]}
-                  onPress={() => setFilterType('recent')}
-                >
-                  <Text style={[styles.filterText, filterType === 'recent' && styles.filterTextActive]}>
-                    Recent
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.filterContainer}>
+              <TouchableOpacity
+                style={[styles.filterButton, filterType === 'all' && styles.filterButtonActive]}
+                onPress={() => setFilterType('all')}
+              >
+                <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterButton, filterType === 'unread' && styles.filterButtonActive]}
+                onPress={() => setFilterType('unread')}
+              >
+                <Text style={[styles.filterText, filterType === 'unread' && styles.filterTextActive]}>
+                  Unread
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterButton, filterType === 'recent' && styles.filterButtonActive]}
+                onPress={() => setFilterType('recent')}
+              >
+                <Text style={[styles.filterText, filterType === 'recent' && styles.filterTextActive]}>
+                  Recent
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.conversationsList}>
-              {getFilteredConversations().map(renderConversationItem)}
-              
-              {getFilteredConversations().length === 0 && (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateIcon}>💬</Text>
-                  <Text style={styles.emptyStateText}>
-                    {searchQuery ? 'No conversations found' : 'No conversations yet'}
-                  </Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    {searchQuery 
-                      ? 'Try adjusting your search or filters'
-                      : 'Messages from users will appear here'}
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
           </View>
+
+          <ScrollView style={styles.conversationsList}>
+            {getFilteredConversations().map(renderConversationItem)}
+
+            {getFilteredConversations().length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateIcon}>💬</Text>
+                <Text style={styles.emptyStateText}>
+                  {searchQuery ? 'No conversations found' : 'No conversations yet'}
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {searchQuery
+                    ? 'Try adjusting your search or filters'
+                    : 'Messages from users will appear here'}
+                </Text>
+              </View>
+            )}
+          </ScrollView>
         </View>
       ) : (
         // Chat View
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={styles.chatContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.chatHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setSelectedConversation(null)}
               style={styles.backButton}
             >
@@ -487,108 +455,11 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
           </View>
         </KeyboardAvoidingView>
       )}
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = Math.min(220, Dimensions.get('window').width * 0.25);
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EEF1F5',
-  },
-  layout: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#EEF1F5',
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#1F3B57',
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarIconActive: {
-    color: '#fff',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-    textTransform: 'capitalize',
-  },
-  sidebarLabelActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -955,4 +826,3 @@ const styles = StyleSheet.create({
 });
 
 export default MessagingView;
-
