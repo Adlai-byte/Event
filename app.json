@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Event",
-    "slug": "Event",
+    "slug": "e-vent",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,7 +21,8 @@
           "sounds": [],
           "mode": "production"
         }
-      ]
+      ],
+      "expo-router"
     ],
     "ios": {
       "supportsTablet": true,
@@ -44,14 +45,17 @@
         "VIBRATE"
       ]
     },
-    "scheme": "com.event",
+    "scheme": "e-vent",
     "web": {
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "829882ad-1d3e-4e96-a69f-50a779b1fdc8"
+        "projectId": "2f700796-ad6c-4968-ba78-bf655e52d776"
       }
-    }
+    },
+    "owner": "honey25"
   }
 }
