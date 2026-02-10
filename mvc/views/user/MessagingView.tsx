@@ -16,6 +16,7 @@ import {
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
+import { AppLayout } from '../../components/layout';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const isMobile = width < 768 || Platform.OS !== 'web';
@@ -23,11 +24,13 @@ const isMobile = width < 768 || Platform.OS !== 'web';
 interface MessagingViewProps {
   userId: string;
   userEmail?: string;
+  user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
   conversationId?: string; // Optional: to open a specific conversation
-  onBack: () => void;
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
 }
 
-export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail, conversationId, onBack }) => {
+export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail, user, conversationId, onNavigate, onLogout }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -386,23 +389,20 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   }
   
   return (
-    <View style={styles.container}>
-      {/* Web: Split view with conversations list and chat side by side */}
-      {Platform.OS === 'web' ? (
-        <View style={styles.webContainer}>
-          {/* Conversations List - Always visible on web */}
-          <View style={styles.conversationsContainer}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                <Text style={styles.backButtonText}>← Back</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Messages</Text>
-              {unreadCount > 0 && (
-                <View style={styles.unreadHeaderBadge}>
-                  <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
-                </View>
-              )}
-            </View>
+    <AppLayout
+      role="user"
+      activeRoute="messages"
+      title="Messages"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        {/* Web: Split view with conversations list and chat side by side */}
+        {Platform.OS === 'web' ? (
+          <View style={styles.webContainer}>
+            {/* Conversations List - Always visible on web */}
+            <View style={styles.conversationsContainer}>
 
             <ScrollView style={styles.conversationsList}>
               {conversations.map(renderConversationItem)}
@@ -420,10 +420,20 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
           </View>
 
           {/* Chat Area - Right side on web */}
-          {selectedConversation ? (
+          {(() => {
+            const os = Platform.OS;
+            let keyboardBehavior: 'padding' | 'height' | undefined;
+            if (os === 'web') {
+              keyboardBehavior = undefined;
+            } else if (os === 'ios') {
+              keyboardBehavior = 'padding';
+            } else {
+              keyboardBehavior = 'height';
+            }
+            return selectedConversation ? (
             <KeyboardAvoidingView 
               style={styles.chatContainer}
-              behavior={(Platform.OS as string) === 'web' ? undefined : (Platform.OS === 'ios' ? 'padding' : 'height')}
+              behavior={keyboardBehavior}
             >
               <View style={styles.chatHeader}>
                 <Text style={styles.chatTitle}>
@@ -472,30 +482,20 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
                 </View>
               )}
             </KeyboardAvoidingView>
-          ) : (
+            ) : (
             <View style={styles.emptyChatArea}>
               <Text style={styles.emptyChatIcon}>💬</Text>
               <Text style={styles.emptyChatText}>Select a conversation to start messaging</Text>
             </View>
-          )}
+            );
+          })()}
         </View>
-      ) : (
-        /* Mobile: Full screen view */
-        <>
-      {!selectedConversation ? (
-        // Conversations List
-        <View style={styles.conversationsContainer}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Messages</Text>
-            {unreadCount > 0 && (
-              <View style={styles.unreadHeaderBadge}>
-                <Text style={styles.unreadHeaderCount}>{unreadCount}</Text>
-              </View>
-            )}
-          </View>
+        ) : (
+          /* Mobile: Full screen view */
+          <>
+        {!selectedConversation ? (
+          // Conversations List
+          <View style={styles.conversationsContainer}>
 
           <ScrollView style={styles.conversationsList}>
             {conversations.map(renderConversationItem)}
@@ -511,11 +511,20 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
             )}
           </ScrollView>
         </View>
-      ) : (
-        // Chat View
+      ) : (() => {
+        const os = Platform.OS as 'ios' | 'android' | 'web' | 'windows' | 'macos';
+        let keyboardBehavior: 'padding' | 'height' | undefined;
+        if (os === 'web') {
+          keyboardBehavior = undefined;
+        } else if (os === 'ios') {
+          keyboardBehavior = 'padding';
+        } else {
+          keyboardBehavior = 'height';
+        }
+        return (
         <KeyboardAvoidingView 
           style={styles.chatContainer}
-              behavior={(Platform.OS as string) === 'web' ? undefined : (Platform.OS === 'ios' ? 'padding' : 'height')}
+          behavior={keyboardBehavior}
         >
           <View style={styles.chatHeader}>
             <TouchableOpacity 
@@ -574,10 +583,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
             </View>
           )}
         </KeyboardAvoidingView>
-          )}
-        </>
-      )}
-    </View>
+        );
+      })()}
+          </>
+        )}
+      </View>
+    </AppLayout>
   );
 };
 
@@ -621,45 +632,7 @@ const styles = StyleSheet.create({
     borderRightWidth: Platform.OS === 'web' ? 1 : 0,
     borderRightColor: Platform.OS === 'web' ? '#E5E7EB' : 'transparent',
     backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
-    paddingVertical: Platform.OS === 'web' ? 18 : 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-    } : {}),
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  unreadHeaderBadge: {
-    backgroundColor: '#F44336',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 24,
-    alignItems: 'center',
-  },
-  unreadHeaderCount: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    paddingTop: Platform.OS === 'web' ? 0 : 30,
   },
   conversationsList: {
     flex: 1,
