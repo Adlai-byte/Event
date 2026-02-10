@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Platform, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Platform, Image, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { User as UserModel } from '../../models/User';
 import { ServiceCategory } from '../../models/Service';
+import { ServicePackage, formatPeso, calculatePackagePrice } from '../../models/Package';
 import { getApiBaseUrl } from '../../services/api';
+import { PackageBuilder } from '../../components/PackageBuilder';
+import { AppLayout } from '../../components/layout';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
 
 interface ProviderServicesProps {
@@ -36,13 +40,19 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'edit'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'edit' | 'packages'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  // Package-related state
+  const [packages, setPackages] = useState<Record<string, ServicePackage[]>>({});
+  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [showPackageBuilder, setShowPackageBuilder] = useState(false);
+  const [selectedServiceForPackage, setSelectedServiceForPackage] = useState<Service | null>(null);
+  const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
 
   // Form state for adding/editing service
   const [newService, setNewService] = useState({
@@ -50,8 +60,8 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     description: '',
     category: '',
     price: '',
-    duration: '',
-    durationType: 'hourly' as 'hourly' | 'per_day',
+    hourlyPrice: '',
+    perDayPrice: '',
     maxCapacity: '',
     latitude: '',
     longitude: '',
@@ -83,7 +93,6 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
         category: '',
         price: '',
         duration: '',
-        durationType: 'hourly',
         maxCapacity: undefined,
         latitude: '',
         longitude: '',
@@ -481,11 +490,16 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               longitude: parsedLongitude
             });
             
+            // Use hourly price if available, otherwise use base price
+            const displayPrice = s.s_hourly_price ? parseFloat(s.s_hourly_price) : (parseFloat(s.s_base_price) || 0);
+            
             return {
               id: s.idservice.toString(),
               name: s.s_name,
               category: s.s_category,
-              price: parseFloat(s.s_base_price) || 0,
+              price: displayPrice,
+              hourlyPrice: s.s_hourly_price ? parseFloat(s.s_hourly_price) : null,
+              perDayPrice: s.s_per_day_price ? parseFloat(s.s_per_day_price) : null,
               status: s.s_is_active ? 'active' : 'inactive',
               rating: parseFloat(s.s_rating) || 0,
               bookings: s.s_review_count || 0,
@@ -507,6 +521,124 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPackages = async () => {
+    if (services.length === 0) return;
+
+    setLoadingPackages(true);
+    try {
+      const pkgsByService: Record<string, ServicePackage[]> = {};
+
+      for (const service of services) {
+        try {
+          const resp = await fetch(`${getApiBaseUrl()}/api/services/${service.id}/packages`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.ok && Array.isArray(data.packages)) {
+              pkgsByService[service.id] = data.packages.map((p: any) => ({
+                id: p.idpackage,
+                serviceId: p.sp_service_id,
+                name: p.sp_name,
+                description: p.sp_description,
+                minPax: p.sp_min_pax,
+                maxPax: p.sp_max_pax,
+                basePrice: p.sp_base_price ? parseFloat(p.sp_base_price) : undefined,
+                priceType: p.sp_price_type,
+                discountPercent: parseFloat(p.sp_discount_percent) || 0,
+                calculatedPrice: p.calculated_price,
+                isActive: !!p.sp_is_active,
+                displayOrder: p.sp_display_order || 0,
+                categories: (p.categories || []).map((c: any) => ({
+                  id: c.idcategory,
+                  packageId: c.pc_package_id,
+                  name: c.pc_name,
+                  description: c.pc_description,
+                  displayOrder: c.pc_display_order || 0,
+                  items: (c.items || []).map((i: any) => ({
+                    id: i.iditem,
+                    categoryId: i.pi_category_id,
+                    name: i.pi_name,
+                    description: i.pi_description,
+                    quantity: i.pi_quantity || 1,
+                    unit: i.pi_unit || 'pc',
+                    unitPrice: parseFloat(i.pi_unit_price) || 0,
+                    isOptional: !!i.pi_is_optional,
+                    displayOrder: i.pi_display_order || 0,
+                  })),
+                })),
+              }));
+            }
+          }
+        } catch (err) {
+          console.error(`Error loading packages for service ${service.id}:`, err);
+        }
+      }
+
+      setPackages(pkgsByService);
+    } catch (error) {
+      console.error('Error loading packages:', error);
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
+
+  // Load packages when services change or when switching to packages tab
+  useEffect(() => {
+    if (activeTab === 'packages' && services.length > 0) {
+      loadPackages();
+    }
+  }, [activeTab, services]);
+
+  const handleCreatePackage = (service: Service) => {
+    setSelectedServiceForPackage(service);
+    setEditingPackage(null);
+    setShowPackageBuilder(true);
+  };
+
+  const handleEditPackage = (pkg: ServicePackage, service: Service) => {
+    setSelectedServiceForPackage(service);
+    setEditingPackage(pkg);
+    setShowPackageBuilder(true);
+  };
+
+  const handleDeletePackage = async (pkg: ServicePackage) => {
+    Alert.alert(
+      'Delete Package',
+      `Are you sure you want to delete "${pkg.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const resp = await fetch(`${getApiBaseUrl()}/api/packages/${pkg.id}`, {
+                method: 'DELETE',
+              });
+              const data = await resp.json();
+              if (data.ok) {
+                setSuccessMessage('Package deleted successfully');
+                loadPackages();
+              } else {
+                Alert.alert('Error', data.error || 'Failed to delete package');
+              }
+            } catch (error) {
+              console.error('Delete package error:', error);
+              Alert.alert('Error', 'Failed to delete package');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handlePackageSaved = () => {
+    setSuccessMessage(editingPackage ? 'Package updated successfully!' : 'Package created successfully!');
+    loadPackages();
+    setShowPackageBuilder(false);
+    setEditingPackage(null);
+    setSelectedServiceForPackage(null);
   };
 
   const handleAddService = async () => {
@@ -535,26 +667,31 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       return;
     }
 
-    // Validate price is a valid number
-    const price = parseFloat(newService.price);
-    if (isNaN(price) || price <= 0) {
-      setErrorMessage('Please enter a valid price');
-      return;
-    }
-
-    // Validate duration (not required for catering)
-    if (newService.category !== 'catering') {
-      if (!newService.duration) {
-        setErrorMessage('Please enter a duration');
+    // Validate prices based on category
+    if (newService.category === 'catering') {
+      // For catering, validate base price (per person)
+      const price = parseFloat(newService.price);
+      if (isNaN(price) || price <= 0) {
+        setErrorMessage('Please enter a valid price per person');
         return;
       }
-
-      const durationValue = parseInt(newService.duration);
-      if (isNaN(durationValue) || durationValue <= 0) {
-        setErrorMessage('Please enter a valid duration');
+    } else {
+      // For non-catering, validate hourly and per-day prices
+      const hourlyPrice = newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null;
+      const perDayPrice = newService.perDayPrice ? parseFloat(newService.perDayPrice) : null;
+      
+      if (!hourlyPrice || hourlyPrice <= 0) {
+        setErrorMessage('Please enter a valid hourly price');
+        return;
+      }
+      
+      if (!perDayPrice || perDayPrice <= 0) {
+        setErrorMessage('Please enter a valid per day price');
         return;
       }
     }
+
+    // Duration is no longer required - will use default (1 hour = 60 minutes)
 
     setSubmitting(true);
     console.log('🚀 Starting service creation...');
@@ -571,27 +708,23 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
         }
       }
 
-      // Convert duration to minutes based on duration type (skip for catering)
-      let durationInMinutes = 60; // default
-      if (newService.category !== 'catering' && newService.duration) {
-        const durationValue = parseInt(newService.duration);
-        if (newService.durationType === 'hourly') {
-          durationInMinutes = durationValue * 60; // Convert hours to minutes
-        } else if (newService.durationType === 'per_day') {
-          durationInMinutes = durationValue * 24 * 60; // Convert days to minutes
-        }
-      } else if (newService.category === 'catering') {
-        // For catering, set a default duration (e.g., 4 hours = 240 minutes)
-        durationInMinutes = 240;
-      }
+      // Set default duration (1 hour = 60 minutes for non-catering, 4 hours = 240 minutes for catering)
+      let durationInMinutes = newService.category === 'catering' ? 240 : 60;
 
+      // Determine base price - use hourly price for non-catering, or price for catering
+      const basePrice = newService.category === 'catering' 
+        ? parseFloat(newService.price) 
+        : (parseFloat(newService.hourlyPrice) || 0);
+      
       const requestBody = {
         providerId: user.uid,
         providerEmail: user.email || null,
         name: newService.name.trim(),
         description: newService.description.trim() || null,
         category: newService.category,
-        basePrice: price,
+        basePrice: basePrice,
+        hourlyPrice: newService.category !== 'catering' && newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null,
+        perDayPrice: newService.category !== 'catering' && newService.perDayPrice ? parseFloat(newService.perDayPrice) : null,
         pricingType: 'fixed',
         duration: durationInMinutes,
         maxCapacity: parseInt(newService.maxCapacity) || 1,
@@ -665,9 +798,9 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
           description: '', 
           category: '', 
           price: '', 
-          duration: '', 
-          durationType: 'hourly',
-          maxCapacity: '', 
+          hourlyPrice: '',
+          perDayPrice: '',
+    maxCapacity: '',
           latitude: '', 
           longitude: '', 
           address: '',
@@ -768,7 +901,8 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     }
   };
 
-  const handleImagePick = () => {
+  const handleImagePick = async () => {
+    try {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       // For web, create a file input
       const input = document.createElement('input');
@@ -777,9 +911,9 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       input.onchange = (e: any) => {
         const file = e.target.files?.[0];
         if (file) {
-          // Validate file size (max 5MB)
-          if (file.size > 5 * 1024 * 1024) {
-            Alert.alert('Error', 'Image size must be less than 5MB');
+            // Validate file size (max 10MB for service images)
+            if (file.size > 10 * 1024 * 1024) {
+              Alert.alert('Error', 'Image size must be less than 10MB');
             return;
           }
           const reader = new FileReader();
@@ -795,8 +929,45 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       };
       input.click();
     } else {
-      // For mobile, you can use expo-image-picker or react-native-image-picker
-      Alert.alert('Image Upload', 'Image picker not implemented for mobile. Please use web version.');
+        // Mobile implementation using expo-image-picker
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Required',
+            'We need access to your photos to upload a service image. Please enable photo library access in your device settings.'
+          );
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [16, 9], // Service images can be landscape
+          quality: 0.8,
+          base64: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          // Check file size (10MB limit)
+          if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+            Alert.alert('Error', 'Image size must be less than 10MB');
+            return;
+          }
+          // Convert to base64 if we have the data
+          if (asset.base64) {
+            const imageExtension = asset.uri.split('.').pop()?.toLowerCase() || 'jpeg';
+            const base64String = `data:image/${imageExtension};base64,${asset.base64}`;
+            setNewService(prev => ({ ...prev, image: base64String }));
+          } else {
+            Alert.alert('Warning', 'Image processing failed. Please try selecting the image again.');
+            console.warn('Base64 data not available for image:', asset.uri);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -1059,34 +1230,13 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       }
     }
     
-    // Convert duration from minutes to hours or days
-    let durationValue = '';
-    let durationType: 'hourly' | 'per_day' = 'hourly';
-    if (service.duration) {
-      const durationInMinutes = service.duration;
-      // Check if it's a multiple of 24 hours (1 day = 1440 minutes)
-      if (durationInMinutes % (24 * 60) === 0) {
-        // It's per day
-        durationType = 'per_day';
-        durationValue = (durationInMinutes / (24 * 60)).toString();
-      } else if (durationInMinutes % 60 === 0) {
-        // It's hourly (multiple of 60 minutes)
-        durationType = 'hourly';
-        durationValue = (durationInMinutes / 60).toString();
-      } else {
-        // Default to hourly and show as hours (round to nearest hour)
-        durationType = 'hourly';
-        durationValue = Math.round(durationInMinutes / 60).toString();
-      }
-    }
-
     setNewService({
       name: service.name,
       description: service.description || '',
       category: service.category,
-      price: service.price.toString(),
-      duration: durationValue,
-      durationType: durationType,
+      price: service.category === 'catering' ? service.price.toString() : '',
+      hourlyPrice: service.hourlyPrice ? service.hourlyPrice.toString() : '',
+      perDayPrice: service.perDayPrice ? service.perDayPrice.toString() : '',
       maxCapacity: service.maxCapacity?.toString() || '',
       latitude: service.latitude?.toString() || '',
       longitude: service.longitude?.toString() || '',
@@ -1104,53 +1254,67 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       return;
     }
 
-    // Validate required fields
-    if (!newService.name || !newService.category || !newService.price) {
-      setErrorMessage('Please fill in all required fields (Service Name, Category, and Price)');
+    // Validate required fields based on category
+    if (!newService.name || !newService.category) {
+      setErrorMessage('Please fill in all required fields (Service Name and Category)');
       return;
     }
 
-    // Validate price is a valid number
-    const price = parseFloat(newService.price);
-    if (isNaN(price) || price <= 0) {
-      setErrorMessage('Please enter a valid price');
-      return;
-    }
-
-    // Validate duration if provided (not required for catering)
-    if (newService.category !== 'catering' && newService.duration) {
-      const durationValue = parseInt(newService.duration);
-      if (isNaN(durationValue) || durationValue <= 0) {
-        setErrorMessage('Please enter a valid duration');
+    // Validate prices based on category
+    if (newService.category === 'catering') {
+      // For catering, validate base price (per person)
+      if (!newService.price) {
+        setErrorMessage('Please enter a price per person');
+        return;
+      }
+      const price = parseFloat(newService.price);
+      if (isNaN(price) || price <= 0) {
+        setErrorMessage('Please enter a valid price per person');
+        return;
+      }
+    } else {
+      // For non-catering, validate hourly and per-day prices
+      const hourlyPrice = newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null;
+      const perDayPrice = newService.perDayPrice ? parseFloat(newService.perDayPrice) : null;
+      
+      if (!hourlyPrice || hourlyPrice <= 0) {
+        setErrorMessage('Please enter a valid hourly price');
+        return;
+      }
+      
+      if (!perDayPrice || perDayPrice <= 0) {
+        setErrorMessage('Please enter a valid per day price');
         return;
       }
     }
 
+    // Duration is no longer required - will use default (1 hour = 60 minutes)
+
     setSubmitting(true);
 
     try {
+      // Determine base price - use hourly price for non-catering, or price for catering
+      const basePrice = newService.category === 'catering' 
+        ? parseFloat(newService.price) 
+        : (parseFloat(newService.hourlyPrice) || 0);
+      
       const requestBody: any = {
         name: newService.name.trim(),
         description: newService.description.trim() || null,
         category: newService.category,
-        basePrice: price,
+        basePrice: basePrice,
         pricingType: 'fixed',
       };
 
-      if (newService.category !== 'catering' && newService.duration) {
-        // Convert duration to minutes based on duration type
-        const durationValue = parseInt(newService.duration);
-        if (newService.durationType === 'hourly') {
-          requestBody.duration = durationValue * 60; // Convert hours to minutes
-        } else if (newService.durationType === 'per_day') {
-          requestBody.duration = durationValue * 24 * 60; // Convert days to minutes
-        } else {
-          requestBody.duration = durationValue || 60;
-        }
-      } else if (newService.category === 'catering') {
-        // For catering, set a default duration (e.g., 4 hours = 240 minutes)
-        requestBody.duration = 240;
+      // Set default duration (1 hour = 60 minutes for non-catering, 4 hours = 240 minutes for catering)
+      requestBody.duration = newService.category === 'catering' ? 240 : 60;
+      
+      // Add hourly and per-day prices for non-catering services
+      if (newService.category !== 'catering') {
+        requestBody.hourlyPrice = newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null;
+        requestBody.perDayPrice = newService.perDayPrice ? parseFloat(newService.perDayPrice) : null;
       }
+      
       if (newService.maxCapacity) {
         requestBody.maxCapacity = parseInt(newService.maxCapacity) || 1;
       }
@@ -1206,9 +1370,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
           description: '',
           category: '',
           price: '',
-          duration: '',
-          durationType: 'hourly',
-          maxCapacity: '',
+    maxCapacity: '',
           latitude: '',
           longitude: '',
           address: '',
@@ -1233,55 +1395,6 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     }
   };
 
-  const handleSidebarItemPress = (route: string) => {
-    onNavigate?.(route);
-    if (isMobile) {
-      setSidebarVisible(false);
-    }
-  };
-
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity style={styles.sidebarItem} onPress={() => handleSidebarItemPress(route)}>
-      <Text style={styles.sidebarIcon}>{icon}</Text>
-      <Text style={styles.sidebarLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
-  const SidebarContent = () => (
-    <View style={styles.sidebar}>
-      <View style={styles.profileCard}>
-        {isMobile && (
-          <TouchableOpacity 
-            style={styles.closeSidebarButton}
-            onPress={() => setSidebarVisible(false)}
-          >
-            <Text style={styles.closeSidebarIcon}>✕</Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.getInitials() || 'PR'}</Text>
-        </View>
-        <Text style={styles.profileName}>{user?.getFullName() || 'Provider'}</Text>
-        <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-      </View>
-
-      <View style={styles.sidebarNav}>
-        <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-        <SidebarItem icon="🎯" label="Services" route="services" />
-        <SidebarItem icon="📅" label="Bookings" route="bookings" />
-        <SidebarItem icon="💼" label="Hiring" route="hiring" />
-        <SidebarItem icon="💬" label="Messages" route="messages" />
-        <SidebarItem icon="👤" label="Profile" route="profile" />
-        <SidebarItem icon="⚙️" label="Settings" route="settings" />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-        <Text style={styles.logoutIcon}>🚪</Text>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   const categories = ['all', 'venue', 'catering', 'photography', 'music'];
   const filteredServices = services.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1291,40 +1404,15 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   });
 
   return (
-    <View style={styles.layout}>
-      {/* Sidebar - Desktop always visible, Mobile in modal */}
-      {isMobile ? (
-        <Modal
-          visible={sidebarVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setSidebarVisible(false)}
-        >
-          <View style={styles.sidebarOverlay}>
-            <View style={styles.mobileSidebar}>
-              <SidebarContent />
-            </View>
-          </View>
-        </Modal>
-      ) : (
-        <SidebarContent />
-      )}
-
-      {/* Main */}
+    <AppLayout
+      role="provider"
+      activeRoute="services"
+      title="Services"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout?.()}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isMobile && (
-              <TouchableOpacity 
-                style={styles.mobileMenuButton}
-                onPress={() => setSidebarVisible(true)}
-              >
-                <Text style={styles.mobileMenuIcon}>≡</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.headerTitle}>My Services</Text>
-          </View>
-        </View>
 
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
@@ -1334,7 +1422,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
           >
             <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>My Services</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabButton, (activeTab === 'add' || activeTab === 'edit') && styles.tabButtonActive]}
             onPress={() => {
               // Always reset form when switching to add mode
@@ -1344,8 +1432,6 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
                 description: '',
                 category: '',
                 price: '',
-                duration: '',
-                durationType: 'hourly',
                 maxCapacity: undefined,
                 latitude: '',
                 longitude: '',
@@ -1367,6 +1453,14 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
           >
             <Text style={[styles.tabButtonText, (activeTab === 'add' || activeTab === 'edit') && styles.tabButtonTextActive]}>
               {activeTab === 'edit' ? 'Cancel Edit' : 'Add Service'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'packages' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('packages')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'packages' && styles.tabButtonTextActive]}>
+              Packages
             </Text>
           </TouchableOpacity>
         </View>
@@ -1743,68 +1837,44 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
                 ))}
               </View>
               
-              <View style={styles.formRow}>
-                <View style={styles.formCol}>
-                  <Text style={styles.formLabel}>Price (₱) *</Text>
-                  <TextInput 
-                    style={styles.addInput} 
-                    placeholder="Enter price" 
-                    keyboardType="numeric"
-                    value={newService.price}
-                    onChangeText={(text) => setNewService({...newService, price: text})}
-                  />
-                </View>
-                {newService.category !== 'catering' && (
+              {newService.category === 'catering' ? (
+                <View style={styles.formRow}>
                   <View style={styles.formCol}>
-                    <Text style={styles.formLabel}>Duration Type *</Text>
-                    <View style={styles.durationTypeContainer}>
-                      <TouchableOpacity
-                        style={[
-                          styles.durationTypeButton,
-                          newService.durationType === 'hourly' && styles.durationTypeButtonActive
-                        ]}
-                        onPress={() => setNewService({...newService, durationType: 'hourly'})}
-                      >
-                        <Text style={[
-                          styles.durationTypeText,
-                          newService.durationType === 'hourly' && styles.durationTypeTextActive
-                        ]}>
-                          Hourly
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.durationTypeButton,
-                          newService.durationType === 'per_day' && styles.durationTypeButtonActive
-                        ]}
-                        onPress={() => setNewService({...newService, durationType: 'per_day'})}
-                      >
-                        <Text style={[
-                          styles.durationTypeText,
-                          newService.durationType === 'per_day' && styles.durationTypeTextActive
-                        ]}>
-                          Per Day
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    <Text style={styles.formLabel}>Price (₱) *</Text>
+                    <TextInput 
+                      style={styles.addInput} 
+                      placeholder="Enter price per person" 
+                      keyboardType="numeric"
+                      value={newService.price}
+                      onChangeText={(text) => setNewService({...newService, price: text})}
+                    />
                   </View>
-                )}
-              </View>
-
-              {newService.category !== 'catering' && (
-                <>
-                  <Text style={styles.formLabel}>
-                    Duration {newService.durationType === 'hourly' ? '(hours)' : '(days)'} *
-                  </Text>
-                  <TextInput 
-                    style={styles.addInputFull} 
-                    placeholder={newService.durationType === 'hourly' ? 'Enter hours (e.g., 2)' : 'Enter days (e.g., 1)'} 
-                    keyboardType="numeric"
-                    value={newService.duration}
-                    onChangeText={(text) => setNewService({...newService, duration: text})}
-                  />
-                </>
+                </View>
+              ) : (
+                <View style={styles.formRow}>
+                  <View style={styles.formCol}>
+                    <Text style={styles.formLabel}>Hourly Price (₱) *</Text>
+                    <TextInput 
+                      style={styles.addInput} 
+                      placeholder="Enter hourly price" 
+                      keyboardType="numeric"
+                      value={newService.hourlyPrice}
+                      onChangeText={(text) => setNewService({...newService, hourlyPrice: text})}
+                    />
+                  </View>
+                  <View style={styles.formCol}>
+                    <Text style={styles.formLabel}>Per Day Price (₱) *</Text>
+                    <TextInput 
+                      style={styles.addInput} 
+                      placeholder="Enter per day price" 
+                      keyboardType="numeric"
+                      value={newService.perDayPrice}
+                      onChangeText={(text) => setNewService({...newService, perDayPrice: text})}
+                    />
+                  </View>
+                </View>
               )}
+
 
               <Text style={styles.formLabel}>Max Capacity</Text>
               <TextInput 
@@ -1832,180 +1902,163 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               </TouchableOpacity>
             </View>
           )}
+
+          {activeTab === 'packages' && (
+            <View style={styles.packagesContainer}>
+              {successMessage ? (
+                <View style={styles.successMessage}>
+                  <Text style={styles.successMessageText}>{successMessage}</Text>
+                  <TouchableOpacity onPress={() => setSuccessMessage('')} style={styles.successCloseButton}>
+                    <Text style={styles.successCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {loadingPackages ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#4A55E1" />
+                  <Text style={styles.loadingText}>Loading packages...</Text>
+                </View>
+              ) : services.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No services yet</Text>
+                  <Text style={styles.emptyStateSubtext}>Create a service first to add packages</Text>
+                </View>
+              ) : (
+                <>
+                  {services.map(service => (
+                    <View key={service.id} style={styles.servicePackageSection}>
+                      <View style={styles.servicePackageHeader}>
+                        <View style={styles.servicePackageInfo}>
+                          <Text style={styles.servicePackageName}>{service.name}</Text>
+                          <Text style={styles.servicePackageCategory}>
+                            {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.createPackageButton}
+                          onPress={() => handleCreatePackage(service)}
+                        >
+                          <Text style={styles.createPackageIcon}>+</Text>
+                          <Text style={styles.createPackageText}>Add Package</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {packages[service.id]?.length > 0 ? (
+                        <View style={styles.packagesList}>
+                          {packages[service.id].map(pkg => {
+                            const price = pkg.priceType === 'calculated'
+                              ? calculatePackagePrice(pkg)
+                              : pkg.basePrice || 0;
+
+                            return (
+                              <View key={pkg.id} style={styles.packageCard}>
+                                <View style={styles.packageCardHeader}>
+                                  <View style={styles.packageCardInfo}>
+                                    <Text style={styles.packageCardName}>{pkg.name}</Text>
+                                    {pkg.description && (
+                                      <Text style={styles.packageCardDescription} numberOfLines={2}>
+                                        {pkg.description}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  <View style={styles.packageCardPrice}>
+                                    <Text style={styles.packagePriceLabel}>
+                                      {pkg.priceType === 'per_person' ? 'Per Person' : 'Total'}
+                                    </Text>
+                                    <Text style={styles.packagePriceValue}>{formatPeso(price)}</Text>
+                                    {pkg.discountPercent > 0 && (
+                                      <Text style={styles.packageDiscount}>
+                                        {pkg.discountPercent}% off
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+
+                                <View style={styles.packageCardMeta}>
+                                  {pkg.minPax && (
+                                    <Text style={styles.packageMetaText}>
+                                      Min: {pkg.minPax} pax
+                                    </Text>
+                                  )}
+                                  {pkg.maxPax && (
+                                    <Text style={styles.packageMetaText}>
+                                      Max: {pkg.maxPax} pax
+                                    </Text>
+                                  )}
+                                  <Text style={styles.packageMetaText}>
+                                    {pkg.categories.length} categories
+                                  </Text>
+                                  <Text style={styles.packageMetaText}>
+                                    {pkg.categories.reduce((sum, c) => sum + c.items.length, 0)} items
+                                  </Text>
+                                </View>
+
+                                <View style={styles.packageCardActions}>
+                                  <TouchableOpacity
+                                    style={[styles.packageActionButton, styles.packageEditButton]}
+                                    onPress={() => handleEditPackage(pkg, service)}
+                                  >
+                                    <Text style={styles.packageEditButtonText}>Edit</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[styles.packageActionButton, styles.packageDeleteButton]}
+                                    onPress={() => handleDeletePackage(pkg)}
+                                  >
+                                    <Text style={styles.packageDeleteButtonText}>Delete</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      ) : (
+                        <View style={styles.noPackages}>
+                          <Text style={styles.noPackagesText}>No packages yet</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
-    </View>
+
+      {/* Package Builder Modal */}
+      {selectedServiceForPackage && (
+        <PackageBuilder
+          visible={showPackageBuilder}
+          serviceId={parseInt(selectedServiceForPackage.id)}
+          serviceName={selectedServiceForPackage.name}
+          packageToEdit={editingPackage}
+          onClose={() => {
+            setShowPackageBuilder(false);
+            setEditingPackage(null);
+            setSelectedServiceForPackage(null);
+          }}
+          onSave={handlePackageSaved}
+        />
+      )}
+    </AppLayout>
   );
 };
 
-const sidebarWidth = isMobile ? screenWidth * 0.8 : Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    backgroundColor: '#EEF1F5',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EEF1F5',
   },
   content: {
     padding: isMobile ? 12 : 20,
-    paddingTop: isMobile ? 60 : 20,
     paddingBottom: isMobile ? 20 : 20,
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    height: isMobile ? '100%' : undefined,
-  },
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mobileSidebar: {
-    width: sidebarWidth,
-    height: '100%',
-    backgroundColor: '#102A43',
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  closeSidebarButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  closeSidebarIcon: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  mobileMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  mobileMenuIcon: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     elevation: 2,
-  },
-  header: {
-    marginBottom: isMobile ? 16 : 24,
-  },
-  headerTitle: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: '#1E293B',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -2583,6 +2636,170 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     lineHeight: 20,
+  },
+  // Packages tab styles
+  packagesContainer: {
+    flex: 1,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  servicePackageSection: {
+    marginBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingBottom: 20,
+  },
+  servicePackageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  servicePackageInfo: {
+    flex: 1,
+  },
+  servicePackageName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  servicePackageCategory: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  createPackageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#4A55E1',
+    borderRadius: 8,
+  },
+  createPackageIcon: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginRight: 6,
+  },
+  createPackageText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  packagesList: {
+    marginTop: 8,
+  },
+  packageCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  packageCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  packageCardInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  packageCardName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  packageCardDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  packageCardPrice: {
+    alignItems: 'flex-end',
+  },
+  packagePriceLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+  },
+  packagePriceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  packageDiscount: {
+    fontSize: 11,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  packageCardMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  packageMetaText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  packageCardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  packageActionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+  packageEditButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  packageEditButtonText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  packageDeleteButton: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  packageDeleteButtonText: {
+    fontSize: 13,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  noPackages: {
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  noPackagesText: {
+    fontSize: 14,
+    color: '#9CA3AF',
   },
 });
 
