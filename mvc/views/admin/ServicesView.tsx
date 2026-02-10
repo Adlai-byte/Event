@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { User as UserModel } from '../../models/User';
-import { ServiceCategory } from '../../models/Service';
 import { getApiBaseUrl } from '../../services/api';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { AppLayout } from '../../components/layout';
 
 interface AdminServicesProps {
   user?: UserModel;
@@ -46,6 +44,21 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
     longitude: '',
     address: ''
   });
+
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  // Email validation function - stricter validation
+  const validateEmail = (email: string): string | null => {
+    if (!email.trim()) {
+      return 'Email is required';
+    }
+    // Requires proper domain and TLD (at least 2 characters)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  };
 
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const mapWebViewRef = useRef<WebView>(null);
@@ -140,7 +153,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
         doubleClickZoom: true,
         scrollWheelZoom: true
       }).setView([lat, lng], 13);
-      
+
       mapInstanceRef.current = map;
       mapInitializedRef.current = true;
 
@@ -233,15 +246,16 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
     }
   };
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity style={styles.sidebarItem} onPress={() => onNavigate?.(route)}>
-      <Text style={styles.sidebarIcon}>{icon}</Text>
-      <Text style={styles.sidebarLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
   const handleAddService = async () => {
     if (submitting) {
+      return;
+    }
+
+    // Validate email format
+    const emailValidationError = validateEmail(newService.providerEmail);
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      Alert.alert('Invalid Email', emailValidationError);
       return;
     }
 
@@ -292,7 +306,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
 
       const resp = await fetch(`${getApiBaseUrl()}/api/services`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
@@ -313,19 +327,19 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
 
       if (data.ok) {
         Alert.alert('Success', 'Service added successfully!');
-        
-        setNewService({ 
+
+        setNewService({
           providerEmail: '',
-          name: '', 
-          description: '', 
-          category: '', 
-          price: '', 
+          name: '',
+          description: '',
+          category: '',
+          price: '',
           pricingType: 'fixed',
-          latitude: '', 
-          longitude: '', 
-          address: '' 
+          latitude: '',
+          longitude: '',
+          address: ''
         });
-        
+
         const defaultLocation = { lat: 14.5995, lng: 120.9842 };
         setMapLocation(defaultLocation);
         mapInitializedRef.current = false;
@@ -335,7 +349,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           } catch (e) {}
           mapInstanceRef.current = null;
         }
-        
+
         setActiveTab('list');
         await loadServices();
       } else {
@@ -370,7 +384,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
     const initialLat = mapLocation?.lat || 14.5995;
     const initialLng = mapLocation?.lng || 120.9842;
     const isWeb = Platform.OS === 'web';
-    
+
     return `
       <!DOCTYPE html>
       <html>
@@ -387,16 +401,16 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
           <script>
             const map = L.map('map').setView([${initialLat}, ${initialLng}], 13);
-            
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
               attribution: '© OpenStreetMap contributors',
               maxZoom: 19
             }).addTo(map);
-            
+
             let marker = L.marker([${initialLat}, ${initialLng}], {
               draggable: true
             }).addTo(map);
-            
+
             const sendMessage = (data) => {
               const message = JSON.stringify(data);
               ${isWeb ? `
@@ -411,13 +425,13 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 }
               `}
             };
-            
+
             const updateLocation = async (lat, lng) => {
               try {
                 const response = await fetch(\`https://nominatim.openstreetmap.org/reverse?format=json&lat=\${lat}&lon=\${lng}\`);
                 const data = await response.json();
                 const address = data.display_name || '';
-                
+
                 sendMessage({
                   type: 'location-selected',
                   lat: lat,
@@ -433,19 +447,19 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 });
               }
             };
-            
+
             marker.on('dragend', function(e) {
               const position = marker.getLatLng();
               updateLocation(position.lat, position.lng);
             });
-            
+
             map.on('click', function(e) {
               const lat = e.latlng.lat;
               const lng = e.latlng.lng;
               marker.setLatLng([lat, lng]);
               updateLocation(lat, lng);
             });
-            
+
             updateLocation(${initialLat}, ${initialLng});
           </script>
         </body>
@@ -461,7 +475,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
         body: JSON.stringify({ isActive: service.status !== 'active' })
       });
       if (resp.ok) {
-        setServices(prev => prev.map(s => 
+        setServices(prev => prev.map(s =>
           s.id === service.id ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' } : s
         ));
       } else {
@@ -482,43 +496,26 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
   });
 
   return (
-    <View style={styles.layout}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-          </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="👤" label="Users" route="user" />
-          <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-          <SidebarItem icon="📊" label="Analytics" route="analytics" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main */}
+    <AppLayout
+      role="admin"
+      activeRoute="services"
+      title="Services"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>Services Management</Text>
             <View style={styles.headerActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('list')}
               >
                 <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>View All</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('add')}
               >
@@ -580,7 +577,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                     </View>
                   </View>
                   <View style={styles.serviceActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.actionButton, service.status === 'active' ? styles.deactivateButton : styles.activateButton]}
                       onPress={() => handleToggleServiceStatus(service)}
                     >
@@ -604,33 +601,40 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           {activeTab === 'add' && (
             <View style={styles.addForm}>
               <Text style={styles.formLabel}>Provider Email *</Text>
-              <TextInput 
-                style={styles.addInputFull} 
-                placeholder="Enter provider email" 
+              <TextInput
+                style={[styles.addInputFull, emailError && { borderColor: '#ef4444', borderWidth: 1 }]}
+                placeholder="Enter provider email"
                 value={newService.providerEmail}
-                onChangeText={(text) => setNewService({...newService, providerEmail: text})}
+                onChangeText={(text) => {
+                  setNewService({...newService, providerEmail: text});
+                  // Real-time email validation
+                  const error = validateEmail(text);
+                  setEmailError(error);
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
               />
-              
+              {emailError && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{emailError}</Text>}
+
               <Text style={styles.formLabel}>Service Name *</Text>
-              <TextInput 
-                style={styles.addInputFull} 
-                placeholder="Enter service name" 
+              <TextInput
+                style={styles.addInputFull}
+                placeholder="Enter service name"
                 value={newService.name}
                 onChangeText={(text) => setNewService({...newService, name: text})}
               />
-              
+
               <Text style={styles.formLabel}>Description</Text>
-              <TextInput 
-                style={[styles.addInputFull, styles.textArea]} 
-                placeholder="Enter service description" 
+              <TextInput
+                style={[styles.addInputFull, styles.textArea]}
+                placeholder="Enter service description"
                 multiline
                 numberOfLines={4}
                 value={newService.description}
                 onChangeText={(text) => setNewService({...newService, description: text})}
               />
-              
+
               <Text style={styles.formLabel}>Location *</Text>
               <Text style={styles.mapHint}>Click on the map or drag the marker to pin the service location</Text>
               <View style={styles.mapContainer}>
@@ -660,12 +664,12 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                   Location will appear here after pinning
                 </Text>
               )}
-              
+
               <Text style={styles.formLabel}>Category *</Text>
               <View style={styles.categoryGrid}>
                 {categories.filter(c => c !== 'all').map(cat => (
-                  <TouchableOpacity 
-                    key={cat} 
+                  <TouchableOpacity
+                    key={cat}
                     style={[styles.categoryOption, newService.category === cat && styles.categoryOptionSelected]}
                     onPress={() => setNewService({...newService, category: cat})}
                   >
@@ -675,10 +679,10 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               <Text style={styles.formLabel}>Pricing Type *</Text>
               <View style={styles.pricingTypeContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.pricingTypeOption, newService.pricingType === 'fixed' && styles.pricingTypeOptionSelected]}
                   onPress={() => setNewService({...newService, pricingType: 'fixed'})}
                 >
@@ -686,7 +690,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                     Fixed Price
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.pricingTypeOption, newService.pricingType === 'per_person' && styles.pricingTypeOptionSelected]}
                   onPress={() => setNewService({...newService, pricingType: 'per_person'})}
                 >
@@ -695,20 +699,20 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                   </Text>
                 </TouchableOpacity>
               </View>
-              
+
               <Text style={styles.formLabel}>
                 {newService.pricingType === 'per_person' ? 'Price per Person (₱) *' : 'Price (₱) *'}
               </Text>
-              <TextInput 
-                style={styles.addInputFull} 
-                placeholder={newService.pricingType === 'per_person' ? "Enter price per person" : "Enter price"} 
+              <TextInput
+                style={styles.addInputFull}
+                placeholder={newService.pricingType === 'per_person' ? "Enter price per person" : "Enter price"}
                 keyboardType="numeric"
                 value={newService.price}
                 onChangeText={(text) => setNewService({...newService, price: text})}
               />
-              
-              <TouchableOpacity 
-                style={[styles.addButtonLarge, submitting && styles.addButtonDisabled]} 
+
+              <TouchableOpacity
+                style={[styles.addButtonLarge, submitting && styles.addButtonDisabled]}
                 onPress={handleAddService}
                 disabled={submitting}
               >
@@ -722,99 +726,17 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
           )}
         </View>
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#EEF1F5',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EEF1F5',
   },
   content: {
     padding: 20,
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -1036,21 +958,6 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
-  formRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  formCol: {
-    flex: 1,
-  },
-  addInput: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#F8FAFC',
-  },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1172,4 +1079,3 @@ const styles = StyleSheet.create({
 });
 
 export default ServicesView;
-
