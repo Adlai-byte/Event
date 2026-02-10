@@ -1,35 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
-  Dimensions
+  Image,
+  Platform
 } from 'react-native';
 import { User } from '../../models/User';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { getApiBaseUrl } from '../../services/api';
+import { AppLayout } from '../../components/layout';
 
 interface ProfileViewProps {
   user: User;
   onLogout: () => Promise<boolean>;
   onNavigate?: (route: string) => void;
-  onBack: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   onLogout,
   onNavigate,
-  onBack
 }) => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
-
   const handleLogout = async (): Promise<void> => {
     try {
       const success = await onLogout();
@@ -41,6 +35,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     } catch (error) {
       Alert.alert('Error', 'An error occurred during logout. Please try again.');
     }
+  };
+
+  const getImageUri = (): string | null => {
+    if (!user.profilePicture) return null;
+    
+    // If it's already a full URL, return as is
+    if (user.profilePicture.startsWith('http://') || user.profilePicture.startsWith('https://')) {
+      return user.profilePicture;
+    }
+    
+    // If it's a relative path, prepend the API base URL
+    if (user.profilePicture.startsWith('/uploads/')) {
+      return `${getApiBaseUrl()}${user.profilePicture}`;
+    }
+    
+    // Return as is if it's a data URI or other format
+    return user.profilePicture;
   };
 
   const renderMenuButton = (
@@ -66,25 +77,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView 
-        style={styles.scrollView} 
+    <AppLayout
+      role="provider"
+      activeRoute="profile"
+      title="Profile"
+      user={user}
+      onNavigate={(route) => onNavigate?.(route)}
+      onLogout={() => onLogout()}
+    >
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
       >
+        <View style={styles.contentWrapper}>
+          <View style={styles.content}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
+            {getImageUri() ? (
+              <Image
+                source={{ uri: getImageUri()! }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+                onError={(error) => {
+                  console.error('❌ Image load error:', error.nativeEvent.error);
+                  console.error('❌ Failed to load image from:', getImageUri());
+                }}
+                onLoad={() => {
+                  console.log('✅ Image loaded successfully:', getImageUri());
+                }}
+              />
+            ) : (
             <Text style={styles.avatarText}>{user.getInitials()}</Text>
+            )}
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user.getFullName()}</Text>
@@ -95,57 +121,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </View>
             )}
           </View>
-        </View>
-
-        {/* Notifications Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          
-          {renderMenuButton(
-            '🔔',
-            'Notifications',
-            'Manage your notification preferences',
-            () => {},
-            true,
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-              thumbColor={notificationsEnabled ? '#FFFFFF' : '#FFFFFF'}
-            />
-          )}
-
-          {notificationsEnabled && (
-            <>
-              {renderMenuButton(
-                '📧',
-                'Email Notifications',
-                'Receive notifications via email',
-                () => {},
-                true,
-                <Switch
-                  value={emailNotifications}
-                  onValueChange={setEmailNotifications}
-                  trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-                  thumbColor={emailNotifications ? '#FFFFFF' : '#FFFFFF'}
-                />
-              )}
-
-              {renderMenuButton(
-                '📱',
-                'Push Notifications',
-                'Receive push notifications on your device',
-                () => {},
-                true,
-                <Switch
-                  value={pushNotifications}
-                  onValueChange={setPushNotifications}
-                  trackColor={{ false: '#E9ECEF', true: '#6C63FF' }}
-                  thumbColor={pushNotifications ? '#FFFFFF' : '#FFFFFF'}
-                />
-              )}
-            </>
-          )}
         </View>
 
         {/* Account Section */}
@@ -160,50 +135,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
 
           {renderMenuButton(
-            '⚙️',
-            'Settings',
-            'App preferences and configuration',
-            () => onNavigate?.('settings')
-          )}
-
-          {renderMenuButton(
-            '🔒',
-            'Privacy & Security',
-            'Manage your privacy and security settings',
-            () => {}
-          )}
-
-          {renderMenuButton(
             '💳',
             'Payment Setup',
             'Set up your PayMongo payment link',
             () => onNavigate?.('paymentSetup')
-          )}
-        </View>
-
-        {/* Support Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          
-          {renderMenuButton(
-            '❓',
-            'Help Center',
-            'Get help and find answers',
-            () => {}
-          )}
-
-          {renderMenuButton(
-            '📞',
-            'Contact Support',
-            'Get in touch with our support team',
-            () => {}
-          )}
-
-          {renderMenuButton(
-            '📝',
-            'Feedback',
-            'Share your feedback with us',
-            () => {}
           )}
         </View>
 
@@ -220,58 +155,62 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
+          </View>
+        </View>
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: screenWidth < 768 ? 60 : 50,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerRight: {
-    width: 60,
-  },
   scrollView: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? {
+      alignItems: 'center',
+      paddingVertical: 20,
+    } : {}),
+  },
+  content: {
+    ...(Platform.OS === 'web' ? {
+      width: '100%',
+      maxWidth: 800,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      marginHorizontal: 'auto',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      marginTop: 20,
+      marginBottom: 20,
+      padding: 20,
+    } : {}),
+  },
   profileSection: {
     backgroundColor: '#ffffff',
+    ...(Platform.OS === 'web' ? {
+      margin: 0,
+      marginBottom: 20,
+      borderRadius: 12,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      elevation: 0,
+    } : {
     margin: 20,
     borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
     padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   avatarContainer: {
     width: 80,
@@ -286,6 +225,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   userInfo: {
     flex: 1,
@@ -314,7 +258,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
+    ...(Platform.OS === 'web' ? {
+      marginHorizontal: 0,
+    } : {
     marginHorizontal: 20,
+    }),
     marginBottom: 20,
   },
   sectionTitle: {
