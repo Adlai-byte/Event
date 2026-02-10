@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { AppLayout } from '../../components/layout';
 
 interface AdminBookingsProps {
   user?: UserModel;
@@ -27,6 +26,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadBookings();
@@ -61,13 +61,6 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
     }
   };
 
-  const SidebarItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
-    <TouchableOpacity style={styles.sidebarItem} onPress={() => onNavigate?.(route)}>
-      <Text style={styles.sidebarIcon}>{icon}</Text>
-      <Text style={styles.sidebarLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
   const statusColors: { [key: string]: string } = {
     pending: '#f59e0b',
     confirmed: '#3b82f6',
@@ -76,43 +69,46 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
   };
 
   const statusFilters = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
-  const filteredBookings = bookings.filter(b => filterStatus === 'all' || b.status === filterStatus);
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
+    const matchesSearch = !searchQuery ||
+      b.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.services.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesStatus && matchesSearch;
+  });
 
   const getStatusColor = (status: string) => statusColors[status] || '#64748B';
 
   return (
-    <View style={styles.layout}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.getInitials() || 'AD'}</Text>
-          </View>
-          <Text style={styles.profileName}>{user?.getFullName() || 'Admin'}</Text>
-          <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-        </View>
-
-        <View style={styles.sidebarNav}>
-          <SidebarItem icon="🏠" label="Dashboard" route="dashboard" />
-          <SidebarItem icon="👤" label="Users" route="user" />
-          <SidebarItem icon="🚀" label="Provider Applications" route="providerApplications" />
-          <SidebarItem icon="📊" label="Analytics" route="analytics" />
-        </View>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={() => onLogout?.()}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main */}
+    <AppLayout
+      role="admin"
+      activeRoute="bookings"
+      title="Bookings"
+      user={user}
+      onNavigate={onNavigate!}
+      onLogout={onLogout!}
+    >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Bookings Management</Text>
-              <Text style={styles.subtitle}>{bookings.length} total bookings</Text>
+              <Text style={styles.subtitle}>{filteredBookings.length} of {bookings.length} bookings</Text>
             </View>
+          </View>
+
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search bookings by event name, client, location, date, or service..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94A3B8"
+            />
           </View>
 
           {/* Status Filters */}
@@ -176,20 +172,20 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
               </View>
 
               <View style={styles.bookingActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => Alert.alert('View Details', `Booking ID: ${booking.id}`)}
                 >
                   <Text style={styles.actionButtonText}>View Details</Text>
                 </TouchableOpacity>
                 {booking.status === 'pending' && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.actionButton, styles.confirmButton]}
                     onPress={async () => {
                       Alert.alert('Confirm Booking', 'Are you sure you want to confirm this booking?', [
                         { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: 'Confirm', 
+                        {
+                          text: 'Confirm',
                           onPress: async () => {
                             try {
                               const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${booking.id}/status`, {
@@ -198,7 +194,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                                 body: JSON.stringify({ status: 'confirmed' })
                               });
                               if (resp.ok) {
-                                setBookings(prev => prev.map(b => 
+                                setBookings(prev => prev.map(b =>
                                   b.id === booking.id ? { ...b, status: 'confirmed' as const } : b
                                 ));
                               } else {
@@ -216,13 +212,13 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                   </TouchableOpacity>
                 )}
                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.actionButton, styles.cancelButton]}
                     onPress={async () => {
                       Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
                         { text: 'No', style: 'cancel' },
-                        { 
-                          text: 'Yes, Cancel', 
+                        {
+                          text: 'Yes, Cancel',
                           style: 'destructive',
                           onPress: async () => {
                             try {
@@ -232,7 +228,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                                 body: JSON.stringify({ status: 'cancelled' })
                               });
                               if (resp.ok) {
-                                setBookings(prev => prev.map(b => 
+                                setBookings(prev => prev.map(b =>
                                   b.id === booking.id ? { ...b, status: 'cancelled' as const } : b
                                 ));
                               } else {
@@ -260,99 +256,17 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
           )}
         </View>
       </ScrollView>
-    </View>
+    </AppLayout>
   );
 };
 
-const sidebarWidth = Math.min(220, screenWidth * 0.25);
-
 const styles = StyleSheet.create({
-  layout: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#EEF1F5',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EEF1F5',
   },
   content: {
     padding: 20,
-  },
-  sidebar: {
-    width: sidebarWidth,
-    backgroundColor: '#102A43',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#1F3B57',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 20,
-  },
-  profileName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileEmail: {
-    color: '#9FB3C8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sidebarNav: {
-    marginTop: 20,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  sidebarIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#DFE7EF',
-  },
-  sidebarLabel: {
-    color: '#DFE7EF',
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#1F3B57',
-  },
-  logoutIcon: {
-    width: 26,
-    fontSize: 16,
-    color: '#FEE2E2',
-  },
-  logoutText: {
-    color: '#FEE2E2',
-    fontSize: 14,
-    marginLeft: 6,
-    fontWeight: '600',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -525,7 +439,20 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
   },
+  searchContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1E293B',
+  },
 });
 
 export default BookingsView;
-
