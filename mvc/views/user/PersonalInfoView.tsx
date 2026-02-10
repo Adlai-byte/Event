@@ -7,29 +7,39 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Dimensions,
   Platform,
   Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { AppLayout } from '../../components/layout';
 
 interface PersonalInfoViewProps {
   user: User;
-  onBack: () => void;
-  onSave?: (updatedUser: Partial<User>) => Promise<boolean>;
+  onNavigate: (route: string) => void;
+  onLogout: () => void;
+  onSave?: (updatedUser: Partial<User>) => Promise<boolean | { success: boolean; error?: string; message?: string }>;
+  onSendVerificationEmail?: () => Promise<{ success: boolean; error?: string }>;
+  onCheckVerification?: () => Promise<{ success: boolean; verified: boolean; error?: string }>;
 }
 
 export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   user,
-  onBack,
-  onSave
+  onNavigate,
+  onLogout,
+  onSave,
+  onSendVerificationEmail,
+  onCheckVerification
 }) => {
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [checkingVerification, setCheckingVerification] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(user.profilePicture || null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorTooltip, setShowErrorTooltip] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showSuccessTooltip, setShowSuccessTooltip] = useState(false);
 
   // Update profile picture when user prop changes (after save)
   React.useEffect(() => {
@@ -38,7 +48,9 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   }, [user.profilePicture]);
   const [formData, setFormData] = useState({
     firstName: user.firstName || '',
+    middleName: user.middleName || '',
     lastName: user.lastName || '',
+    suffix: user.suffix || '',
     email: user.email || '',
     phone: user.phone || '',
     dateOfBirth: user.dateOfBirth || '',
@@ -49,28 +61,120 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   });
 
   const handleSave = async (): Promise<void> => {
+    setErrorMessage(null);
+    setShowErrorTooltip(false);
+    setSuccessMessage(null);
+    setShowSuccessTooltip(false);
+    
     if (onSave) {
       const updatedData = {
         ...formData,
         profilePicture: profilePicture || undefined
       };
-      const success = await onSave(updatedData);
+      const result = await onSave(updatedData);
+      
+      // Handle both boolean and object return types
+      if (result === null || result === undefined) {
+        setErrorMessage('Failed to save. Please try again.');
+        setShowErrorTooltip(true);
+        return;
+      }
+      
+      type ResultType = boolean | { success: boolean; error?: string; message?: string };
+      const typedResult = result as ResultType;
+      
+      const success = typeof typedResult === 'boolean' ? typedResult : (typedResult && typeof typedResult === 'object' && 'success' in typedResult ? typedResult.success : false);
+      const error = typeof typedResult === 'object' && typedResult !== null && 'error' in typedResult ? typedResult.error : null;
+      const message = typeof typedResult === 'object' && typedResult !== null && 'message' in typedResult ? typedResult.message : null;
+      
+      // Check if email verification was sent (this is actually a success)
+      const emailChanged = formData.email && formData.email.trim() !== user.email.trim();
+      if (emailChanged && message && message.toLowerCase().includes('verification email')) {
+        // Verification email was sent - this is success
+        setIsEditing(false);
+        if (Platform.OS === 'web') {
+          // Show success message as tooltip
+          setSuccessMessage(message);
+          setShowSuccessTooltip(true);
+          setTimeout(() => {
+            setShowSuccessTooltip(false);
+          }, 8000);
+        } else {
+          Alert.alert('Verification Email Sent', message);
+        }
+        return;
+      }
+      
       if (success) {
         setIsEditing(false);
+        if (Platform.OS === 'web') {
+          // Show success tooltip on web
+          setSuccessMessage('Successfully updated!');
+          setShowSuccessTooltip(true);
+          setTimeout(() => {
+            setShowSuccessTooltip(false);
+          }, 3000);
+        } else {
         Alert.alert('Success', 'Personal information updated successfully!');
+        }
       } else {
-        Alert.alert('Error', 'Failed to update personal information');
+        // Set error message for tooltip
+        let errorMsg = error || 'Failed to update personal information';
+        
+        // Check if error is related to email verification
+        if (errorMsg.toLowerCase().includes('verify') || errorMsg.toLowerCase().includes('verification')) {
+          // Keep the original message if it's about verification
+          errorMsg = errorMsg;
+        } else if (errorMsg.toLowerCase().includes('email')) {
+          // Check if email is verified before suggesting verification
+          const emailChanged = formData.email && formData.email.trim() !== user.email.trim();
+          if (emailChanged && !user.emailVerified) {
+            // If email was changed and not verified, suggest verification
+            errorMsg = 'Please verify your current email address before changing it. Check your inbox for a verification email, or use the "Send Verification Email" button in your Account Information section.';
+          } else if (emailChanged && user.emailVerified) {
+            // If email was changed and already verified, show the actual error
+            errorMsg = errorMsg || 'Failed to update email. Please try again.';
+          } else {
+            // If it's an email-related error but not specifically about verification, show the actual error
+            errorMsg = errorMsg;
+          }
+        } else {
+          // For other errors, check if email was changed
+          const emailChanged = formData.email && formData.email.trim() !== user.email.trim();
+          if (emailChanged && !user.emailVerified) {
+            errorMsg = 'Please verify your current email address before changing it. Check your inbox for a verification email, or use the "Send Verification Email" button in your Account Information section.';
+          }
+        }
+        
+        setErrorMessage(errorMsg);
+        
+        if (Platform.OS === 'web') {
+          setShowErrorTooltip(true);
+          // Auto-hide after 5 seconds
+          setTimeout(() => {
+            setShowErrorTooltip(false);
+          }, 5000);
+        } else {
+          Alert.alert('Error', errorMsg);
+        }
       }
     } else {
       setIsEditing(false);
+      if (Platform.OS === 'web') {
+        setErrorMessage(null);
+        setShowErrorTooltip(false);
+      } else {
       Alert.alert('Success', 'Personal information updated successfully!');
+      }
     }
   };
 
   const handleCancel = (): void => {
     setFormData({
       firstName: user.firstName || '',
+      middleName: user.middleName || '',
       lastName: user.lastName || '',
+      suffix: user.suffix || '',
       email: user.email || '',
       phone: user.phone || '',
       dateOfBirth: user.dateOfBirth || '',
@@ -204,32 +308,55 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   );
 
   return (
+    <AppLayout role="user" activeRoute="profile" title="Personal Info" user={user} onNavigate={onNavigate} onLogout={onLogout}>
     <View style={styles.container}>
-      {/* Background Design */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundGradient} />
-      </View>
+      {/* Success Tooltip for Web */}
+      {Platform.OS === 'web' && showSuccessTooltip && successMessage && (
+        <View style={styles.successTooltip}>
+          <View style={styles.successTooltipContent}>
+            <Text style={styles.successTooltipIcon}>✓</Text>
+            <Text style={styles.successTooltipText}>{successMessage}</Text>
+            <TouchableOpacity
+              style={styles.successTooltipClose}
+              onPress={() => setShowSuccessTooltip(false)}
+            >
+              <Text style={styles.successTooltipCloseText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal Information</Text>
+      {/* Error Tooltip for Web */}
+      {Platform.OS === 'web' && showErrorTooltip && errorMessage && (
+        <View style={styles.errorTooltip}>
+          <View style={styles.errorTooltipContent}>
+            <Text style={styles.errorTooltipIcon}>⚠️</Text>
+            <Text style={styles.errorTooltipText}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={styles.errorTooltipClose}
+              onPress={() => setShowErrorTooltip(false)}
+            >
+              <Text style={styles.errorTooltipCloseText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.content}>
+          {/* Edit Button - Inside Card */}
+          <View style={styles.editButtonContainer}>
         <TouchableOpacity
           onPress={isEditing ? handleSave : () => setIsEditing(true)}
-          style={styles.headerButton}
+              style={styles.editButton}
         >
-          <Text style={styles.headerButtonText}>
+              <Text style={styles.editButtonText}>
             {isEditing ? 'Save' : 'Edit'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
           {/* Profile Picture Section */}
           <View style={styles.profilePictureSection}>
             <TouchableOpacity
@@ -241,7 +368,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                 {getImageUri() ? (
                   <Image
                     source={{ uri: getImageUri()! }}
-                    style={styles.avatarImage}
+                    style={styles.avatarImage as any}
                     resizeMode="cover"
                     onError={(error) => {
                       console.error('❌ Image load error:', error.nativeEvent.error);
@@ -270,14 +397,40 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
             <Text style={styles.sectionTitle}>Personal Details</Text>
             
             {renderField('First Name', formData.firstName, 'firstName', 'Enter your first name')}
+            {renderField('Middle Name (Optional)', formData.middleName, 'middleName', 'Enter your middle name (optional)')}
             {renderField('Last Name', formData.lastName, 'lastName', 'Enter your last name')}
-            {renderField('Email', formData.email, 'email', 'Enter your email', 'email-address')}
+            {renderField('Suffix (Optional)', formData.suffix, 'suffix', 'Enter suffix (e.g., Jr., Sr., III) - optional')}
+            {/* Email Field - Not Editable */}
+            <View style={styles.fieldContainer}>
+              <View style={styles.emailFieldHeader}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <View style={styles.readOnlyBadge}>
+                  <Text style={styles.readOnlyBadgeText}>Read Only</Text>
+                </View>
+              </View>
+              <View style={styles.emailInputContainer}>
+                <TextInput
+                  style={[styles.fieldInput, styles.emailInputDisabled]}
+                  value={formData.email}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  editable={false}
+                  placeholderTextColor="#A4B0BE"
+                />
+                <View style={styles.emailInfoIcon}>
+                  <Text style={styles.emailInfoText}>ℹ️</Text>
+                </View>
+              </View>
+              <Text style={styles.emailHelperText}>
+                Email cannot be changed. Contact support if you need to update your email address.
+              </Text>
+            </View>
             {renderField('Phone', formData.phone, 'phone', 'Enter your phone number', 'phone-pad')}
             {renderField('Date of Birth', formData.dateOfBirth, 'dateOfBirth', 'MM/DD/YYYY')}
           </View>
 
           {/* Address Information */}
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: '#EFF6FF', borderColor: '#DBEAFE' }]}>
             <Text style={styles.sectionTitle}>Address Information</Text>
             
             {renderField('Address', formData.address, 'address', 'Enter your address')}
@@ -287,28 +440,130 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
           </View>
 
           {/* Account Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Information</Text>
+          <View style={styles.accountSection}>
+            <View style={styles.accountHeader}>
+              <View style={styles.accountIconContainer}>
+                <Text style={styles.accountIcon}>📋</Text>
+              </View>
+              <Text style={styles.accountTitle}>Account Information</Text>
+            </View>
             
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Account Created</Text>
-              <Text style={styles.infoValue}>
-                {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+            <View style={styles.accountCard}>
+              {/* Account Created */}
+              <View style={styles.accountInfoItem}>
+                <View style={styles.accountInfoLeft}>
+                  <View style={styles.accountInfoIconContainer}>
+                    <Text style={styles.accountInfoIcon}>📅</Text>
+                  </View>
+                  <Text style={styles.accountInfoLabel}>Account Created</Text>
+                </View>
+                <Text style={styles.accountInfoValue}>
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  }) : 'N/A'}
               </Text>
             </View>
             
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email Verified</Text>
-              <Text style={[styles.infoValue, { color: user.emailVerified ? '#34C759' : '#FF3B30' }]}>
-                {user.emailVerified ? 'Yes' : 'No'}
+              {/* Email Verified */}
+              <View style={styles.accountInfoItem}>
+                <View style={styles.accountInfoLeft}>
+                  <View style={[styles.accountInfoIconContainer, { backgroundColor: user.emailVerified ? '#D1FAE5' : '#FEE2E2' }]}>
+                    <Text style={styles.accountInfoIcon}>{user.emailVerified ? '✓' : '✗'}</Text>
+                  </View>
+                  <Text style={styles.accountInfoLabel}>Email Verified</Text>
+                </View>
+                <View style={styles.accountInfoRight}>
+                  <View style={[styles.statusBadge, { backgroundColor: user.emailVerified ? '#D1FAE5' : '#FEE2E2' }]}>
+                    <Text style={[styles.statusBadgeText, { color: user.emailVerified ? '#059669' : '#DC2626' }]}>
+                      {user.emailVerified ? 'Verified' : 'Not Verified'}
               </Text>
+                  </View>
+                </View>
             </View>
             
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Profile Complete</Text>
-              <Text style={[styles.infoValue, { color: user.isProfileComplete() ? '#34C759' : '#FF3B30' }]}>
-                {user.isProfileComplete() ? 'Yes' : 'No'}
+              {/* Verification Actions */}
+              {!user.emailVerified && (
+                <View style={styles.verificationActions}>
+                  {onSendVerificationEmail && (
+                    <TouchableOpacity
+                      style={[styles.modernVerifyButton, sendingVerification && styles.modernVerifyButtonDisabled]}
+                      onPress={async () => {
+                        setSendingVerification(true);
+                        try {
+                          const result = await onSendVerificationEmail();
+                          if (result.success) {
+                            Alert.alert(
+                              'Verification Email Sent',
+                              'Please check your email inbox and click the verification link. After verifying, tap "Check Verification" to update your status.'
+                            );
+                          } else {
+                            Alert.alert('Error', result.error || 'Failed to send verification email');
+                          }
+                        } catch (error: any) {
+                          Alert.alert('Error', error.message || 'Failed to send verification email');
+                        } finally {
+                          setSendingVerification(false);
+                        }
+                      }}
+                      disabled={sendingVerification}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.modernVerifyButtonIcon}>✉️</Text>
+                      <Text style={styles.modernVerifyButtonText}>
+                        {sendingVerification ? 'Sending...' : 'Send Verification Email'}
               </Text>
+                    </TouchableOpacity>
+                  )}
+                  {onCheckVerification && (
+                    <TouchableOpacity
+                      style={[styles.modernCheckButton, checkingVerification && styles.modernCheckButtonDisabled]}
+                      onPress={async () => {
+                        setCheckingVerification(true);
+                        try {
+                          const result = await onCheckVerification();
+                          if (result.success) {
+                            if (result.verified) {
+                              Alert.alert('Success', 'Your email has been verified!');
+                            } else {
+                              Alert.alert('Not Verified', 'Your email is not yet verified. Please check your inbox and click the verification link.');
+                            }
+                          } else {
+                            Alert.alert('Error', result.error || 'Failed to check verification status');
+                          }
+                        } catch (error: any) {
+                          Alert.alert('Error', error.message || 'Failed to check verification status');
+                        } finally {
+                          setCheckingVerification(false);
+                        }
+                      }}
+                      disabled={checkingVerification}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.modernCheckButtonIcon}>🔄</Text>
+                      <Text style={styles.modernCheckButtonText}>
+                        {checkingVerification ? 'Checking...' : 'Check Verification'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+              
+              {/* Profile Complete */}
+              <View style={styles.accountInfoItem}>
+                <View style={styles.accountInfoLeft}>
+                  <View style={[styles.accountInfoIconContainer, { backgroundColor: user.isProfileComplete() ? '#D1FAE5' : '#FEE2E2' }]}>
+                    <Text style={styles.accountInfoIcon}>{user.isProfileComplete() ? '✓' : '✗'}</Text>
+                  </View>
+                  <Text style={styles.accountInfoLabel}>Profile Complete</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: user.isProfileComplete() ? '#D1FAE5' : '#FEE2E2' }]}>
+                  <Text style={[styles.statusBadgeText, { color: user.isProfileComplete() ? '#059669' : '#DC2626' }]}>
+                    {user.isProfileComplete() ? 'Complete' : 'Incomplete'}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -324,99 +579,197 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
             </View>
           )}
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
+          {/* Bottom Colored Section */}
+          <View style={styles.bottomColoredSection}>
+            <View style={styles.bottomColoredContent}>
+              <Text style={styles.bottomColoredText}>💡 Tip: Keep your information up to date for better service experience</Text>
+            </View>
+          </View>
+          </View>
         </View>
       </ScrollView>
     </View>
+    </AppLayout>
   );
 };
 
 const styles = StyleSheet.create({
+  successTooltip: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 60,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      pointerEvents: 'none',
+    } : {}),
+  },
+  successTooltipContent: {
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: 600,
+    width: '100%',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+      pointerEvents: 'auto',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    }),
+  },
+  successTooltipIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  successTooltipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  successTooltipClose: {
+    marginLeft: 12,
+    padding: 4,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+    } : {}),
+  },
+  successTooltipCloseText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  errorTooltip: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 60,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      pointerEvents: 'none',
+    } : {}),
+  },
+  errorTooltipContent: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: 600,
+    width: '100%',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+      pointerEvents: 'auto',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 10,
+    }),
+  },
+  errorTooltipIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  errorTooltipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  errorTooltipClose: {
+    marginLeft: 12,
+    padding: 4,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+    } : {}),
+  },
+  errorTooltipCloseText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
     position: 'relative',
-    paddingTop: 10,
-    paddingBottom: 10,
   },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
+  editButtonContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 20,
+    ...(Platform.OS === 'web' ? {
+      marginTop: 10,
+    } : {}),
   },
-  backgroundCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(108, 99, 255, 0.1)',
-    top: -50,
-    right: -50,
+  editButton: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+    } : {}),
   },
-  backgroundCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(108, 99, 255, 0.08)',
-    bottom: 200,
-    left: -30,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
+  editButtonText: {
+    color: '#ffffff',
     fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2D3436',
-  },
-  headerButton: {
-    padding: 8,
-  },
-  headerButtonText: {
-    fontSize: 16,
-    color: '#6C63FF',
     fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? {
+      alignItems: 'center',
+      paddingVertical: 20,
+    } : {}),
+  },
   content: {
     padding: 20,
     paddingTop: 10,
-    paddingBottom: 10,
+    ...(Platform.OS === 'web' ? {
+      paddingBottom: 20,
+      width: '100%',
+      maxWidth: 800,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      marginHorizontal: 'auto',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      marginTop: 20,
+      marginBottom: 20,
+    } : {}),
   },
   profilePictureSection: {
     alignItems: 'center',
     marginBottom: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    marginHorizontal: -20,
+    marginTop: -10,
   },
   avatarContainer: {
     width: 100,
@@ -451,10 +804,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+    borderWidth: 1,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     } : {
@@ -472,7 +825,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   fieldContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   fieldLabel: {
     fontSize: 14,
@@ -490,23 +848,247 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  infoRow: {
+  emailFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  readOnlyBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  readOnlyBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  emailInputContainer: {
+    position: 'relative',
+  },
+  emailInputDisabled: {
+    backgroundColor: '#F3F4F6',
+    color: '#6B7280',
+    borderColor: '#D1D5DB',
+    opacity: 0.7,
+  },
+  emailInfoIcon: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+  },
+  emailInfoText: {
+    fontSize: 16,
+  },
+  emailHelperText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  // Modern Account Information Styles
+  accountSection: {
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: '#FEF3F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  accountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  accountIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  accountIcon: {
+    fontSize: 20,
+  },
+  accountTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  accountCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    }),
+  },
+  accountInfoItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F3F4',
+    borderBottomColor: '#F3F4F6',
   },
-  infoLabel: {
-    fontSize: 16,
-    color: '#636E72',
+  accountInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  infoValue: {
+  accountInfoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  accountInfoIcon: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D3436',
+  },
+  accountInfoLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    flex: 1,
+  },
+  accountInfoRight: {
+    alignItems: 'flex-end',
+  },
+  accountInfoValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  verificationActions: {
+    flexDirection: 'column',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 8,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  modernVerifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6C63FF',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: '#5B52E6',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
+      },
+    } : {}),
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: '#6C63FF',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    } : {}),
+  },
+  modernVerifyButtonDisabled: {
+    opacity: 0.6,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'not-allowed' as any,
+      ':hover': {
+        backgroundColor: '#6C63FF',
+        transform: 'none',
+        boxShadow: 'none',
+      },
+    } as any : {}),
+  },
+  modernVerifyButtonIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  modernVerifyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  modernCheckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: '#059669',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+      },
+    } : {}),
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: '#10B981',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    } : {}),
+  },
+  modernCheckButtonDisabled: {
+    opacity: 0.6,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'not-allowed' as any,
+      ':hover': {
+        backgroundColor: '#10B981',
+        transform: 'none',
+        boxShadow: 'none',
+      },
+    } as any : {}),
+  },
+  modernCheckButtonIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  modernCheckButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -540,6 +1122,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomColoredSection: {
+    marginTop: 30,
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? {
+      marginBottom: 0,
+      boxShadow: '0 2px 8px rgba(108, 99, 255, 0.15)',
+    } : {
+      marginBottom: 20,
+      shadowColor: '#6C63FF',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 3,
+    }),
+  },
+  bottomColoredContent: {
+    backgroundColor: '#F0F4FF',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  bottomColoredText: {
+    fontSize: 14,
+    color: '#6C63FF',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 20,
   },
   bottomSpacing: {
     height: 20,
