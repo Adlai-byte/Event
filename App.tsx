@@ -46,7 +46,6 @@ import { HiringView as ProviderHiringView } from './mvc/views/provider/HiringVie
 import { ProfileView as ProviderProfileView } from './mvc/views/provider/ProfileView';
 import { SettingsView as ProviderSettingsView } from './mvc/views/provider/SettingsView';
 import { PaymentSetupView } from './mvc/views/provider/PaymentSetupView';
-import GoogleLoginWebView from './components/GoogleLoginWebView';
 
 // Get device dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -65,7 +64,6 @@ export default function App(): React.JSX.Element {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [serviceIdToBook, setServiceIdToBook] = useState<string | null>(null);
-  const [showGoogleWebView, setShowGoogleWebView] = useState<boolean>(false);
   const [authController, setAuthController] = useState<AuthController | null>(null);
 
   // Suppress Datadog Browser SDK warnings from third-party services (e.g., PayMongo)
@@ -193,9 +191,6 @@ export default function App(): React.JSX.Element {
     }
     
     try {
-      // Close any open WebView modal first
-      setShowGoogleWebView(false);
-      
       console.log('=== APP: CALLING AUTH CONTROLLER LOGOUT ===');
       const success = await authController.logout();
       console.log('=== APP: LOGOUT RESULT ===', success);
@@ -214,7 +209,6 @@ export default function App(): React.JSX.Element {
     } catch (error) {
       console.error('=== APP: LOGOUT ERROR ===', error);
       // Even if there's an error, redirect to login
-      setShowGoogleWebView(false);
       setViewMode('login');
       setMainView('dashboard');
       return false;
@@ -224,19 +218,6 @@ export default function App(): React.JSX.Element {
   // Wrapper for components that expect void return
   const handleLogoutVoid = async (): Promise<void> => {
     await handleLogout();
-  };
-
-  // Handle Google WebView success
-  const handleGoogleWebViewSuccess = (result: any): void => {
-    setShowGoogleWebView(false);
-    if (!result.success) {
-      Alert.alert('Error', result.error || 'Google authentication failed');
-    }
-  };
-
-  // Handle Google WebView close
-  const handleGoogleWebViewClose = (): void => {
-    setShowGoogleWebView(false);
   };
 
   // Toggle between login and register views
@@ -871,17 +852,6 @@ export default function App(): React.JSX.Element {
       </ScrollView>
       )}
 
-      {/* Google Login WebView Modal */}
-      <Modal
-        visible={showGoogleWebView}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <GoogleLoginWebView
-          onSuccess={handleGoogleWebViewSuccess}
-          onClose={handleGoogleWebViewClose}
-        />
-      </Modal>
     </>
   );
 }
