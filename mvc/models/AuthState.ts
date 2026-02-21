@@ -1,3 +1,5 @@
+import { User } from './User';
+
 // AuthState Model - Represents authentication state
 export class AuthState {
   public isAuthenticated: boolean;

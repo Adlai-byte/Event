@@ -164,16 +164,16 @@ export class ServiceModel {
     const dayOfWeek = this.getDayOfWeek(date);
     const daySlots = this.availability[dayOfWeek];
     
-    if (!daySlots || daySlots.length === 0) return false;
-    
+    if (!Array.isArray(daySlots) || daySlots.length === 0) return false;
+
     // Check if date is blacked out
     const dateStr = this.formatDate(date);
     if (this.availability.blackoutDates.includes(dateStr)) return false;
-    
+
     // Check if time slot is available
-    return daySlots.some(slot => 
-      slot.isAvailable && 
-      slot.startTime <= startTime && 
+    return (daySlots as TimeSlot[]).some(slot =>
+      slot.isAvailable &&
+      slot.startTime <= startTime &&
       slot.endTime >= endTime
     );
   }

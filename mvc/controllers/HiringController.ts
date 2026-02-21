@@ -130,11 +130,7 @@ export class HiringController {
     location?: string
   ): Promise<{ success: boolean; hiringRequests?: HiringRequest[]; error?: string }> {
     try {
-      const hiringRequests = await this.hiringService.getAvailableHiringRequests(
-        category,
-        maxBudget,
-        location
-      );
+      const hiringRequests = await this.hiringService.getAvailableHiringRequests();
       return {
         success: true,
         hiringRequests

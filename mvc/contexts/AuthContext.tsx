@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, delayMs);
       return () => clearTimeout(timeout);
     }
-  }, [authState.isAuthenticated, authState.user?.id, authState.user?.email, authState.user?.role]);
+  }, [authState.isAuthenticated, authState.user?.uid, authState.user?.email, authState.user?.role]);
 
   // Setup notification listeners (mobile only)
   useEffect(() => {

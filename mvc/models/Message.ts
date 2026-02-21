@@ -39,6 +39,8 @@ export interface MessageMetadata {
   bookingId?: string;
   serviceId?: string;
   eventId?: string;
+  hiringRequestId?: string;
+  proposalId?: string;
   actionRequired?: boolean;
   actionType?: string;
   expiresAt?: Date;
