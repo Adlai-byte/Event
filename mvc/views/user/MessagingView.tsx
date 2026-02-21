@@ -13,6 +13,7 @@ import {
   Image,
   Alert
 } from 'react-native';
+import { SkeletonListItem } from '../../components/ui';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
@@ -381,10 +382,22 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 
   if (loading && conversations.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.loadingText}>Loading conversations...</Text>
-      </View>
+      <AppLayout
+        role="user"
+        activeRoute="messages"
+        title="Messages"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
+        <View style={{ padding: 16 }}>
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+        </View>
+      </AppLayout>
     );
   }
   

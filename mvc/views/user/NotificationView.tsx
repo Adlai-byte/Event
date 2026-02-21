@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   RefreshControl,
   Alert,
 } from 'react-native';
+import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 
@@ -290,8 +290,12 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   if (loading) {
     return (
       <AppLayout role="user" activeRoute="notifications" title="Notifications" user={user} onNavigate={onNavigate} onLogout={onLogout}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a55e1" />
+        <View style={{ padding: 16 }}>
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
         </View>
       </AppLayout>
     );

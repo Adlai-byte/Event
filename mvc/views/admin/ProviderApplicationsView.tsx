@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Modal, Image, Platform, TextInput } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
+import { SkeletonListItem } from '../../components/ui';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
+import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { ApplicationDetailsModal } from '../../components/admin/ApplicationDetailsModal';
+import { styles, getResponsiveStyles } from './ProviderApplicationsView.styles';
 
 interface ProviderApplicationsProps {
   user?: UserModel;
@@ -25,6 +26,9 @@ interface ProviderApplication {
 }
 
 export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const responsiveStyles = useMemo(() => getResponsiveStyles(isMobile, screenWidth), [isMobile, screenWidth]);
+
   const [applications, setApplications] = useState<ProviderApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -122,12 +126,10 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
 
   const handleReject = (applicationId: number) => {
     console.log('handleReject called with ID:', applicationId);
-    // Prevent multiple clicks on the same application
     if (processingId === applicationId) {
       console.log('Already processing this application');
       return;
     }
-
     setRejectApplicationId(applicationId);
     setRejectionReason('');
     setShowRejectModal(true);
@@ -243,9 +245,9 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
       onNavigate={onNavigate!}
       onLogout={onLogout!}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Provider Applications</Text>
+      <ScrollView style={styles.container} contentContainerStyle={responsiveStyles.content}>
+        <View style={responsiveStyles.header}>
+          <Text style={responsiveStyles.title}>Provider Applications</Text>
         </View>
 
         {/* Search Bar */}
@@ -260,14 +262,14 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
+        <View style={responsiveStyles.filterContainer}>
           {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
             <TouchableOpacity
               key={status}
-              style={[styles.filterTab, filterStatus === status && styles.filterTabActive]}
+              style={[responsiveStyles.filterTab, filterStatus === status && styles.filterTabActive]}
               onPress={() => setFilterStatus(status)}
             >
-              <Text style={[styles.filterTabText, filterStatus === status && styles.filterTabTextActive]}>
+              <Text style={[responsiveStyles.filterTabText, filterStatus === status && styles.filterTabTextActive]}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -275,9 +277,12 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4a55e1" />
-            <Text style={styles.loadingText}>Loading applications...</Text>
+          <View style={{ padding: 16 }}>
+            <SkeletonListItem />
+            <SkeletonListItem />
+            <SkeletonListItem />
+            <SkeletonListItem />
+            <SkeletonListItem />
           </View>
         ) : filteredApplications.length === 0 ? (
           <View style={styles.emptyState}>
@@ -295,34 +300,34 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
             style={isMobile ? styles.tableScrollView : undefined}
             contentContainerStyle={isMobile ? styles.tableScrollContent : undefined}
           >
-          <View style={styles.tableContainer}>
+          <View style={responsiveStyles.tableContainer}>
             {/* Table Header */}
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, styles.tableColName]}>Name</Text>
-              <Text style={[styles.tableHeaderText, styles.tableColEmail]}>Email</Text>
-              <Text style={[styles.tableHeaderText, styles.tableColStatus]}>Status</Text>
-              <Text style={[styles.tableHeaderText, styles.tableColDate]}>Applied Date</Text>
-              <Text style={[styles.tableHeaderText, styles.tableColActions]}>Actions</Text>
+            <View style={responsiveStyles.tableHeader}>
+              <Text style={[responsiveStyles.tableHeaderText, responsiveStyles.tableColName]}>Name</Text>
+              <Text style={[responsiveStyles.tableHeaderText, responsiveStyles.tableColEmail]}>Email</Text>
+              <Text style={[responsiveStyles.tableHeaderText, responsiveStyles.tableColStatus]}>Status</Text>
+              <Text style={[responsiveStyles.tableHeaderText, responsiveStyles.tableColDate]}>Applied Date</Text>
+              <Text style={[responsiveStyles.tableHeaderText, responsiveStyles.tableColActions]}>Actions</Text>
             </View>
 
             {/* Table Rows */}
             {filteredApplications.map((app, i) => (
-              <View key={app.id} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
-                <View style={styles.tableColName}>
-                  <Text style={styles.tableCell}>{app.name}</Text>
+              <View key={app.id} style={[responsiveStyles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
+                <View style={responsiveStyles.tableColName}>
+                  <Text style={responsiveStyles.tableCell}>{app.name}</Text>
                 </View>
-                <View style={styles.tableColEmail}>
-                  <Text style={styles.tableCell} numberOfLines={1}>{app.email}</Text>
+                <View style={responsiveStyles.tableColEmail}>
+                  <Text style={responsiveStyles.tableCell} numberOfLines={1}>{app.email}</Text>
                 </View>
-                <View style={styles.tableColStatus}>
+                <View style={responsiveStyles.tableColStatus}>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(app.status) + '20' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(app.status) }]}>
                       {getStatusLabel(app.status)}
                     </Text>
                   </View>
                 </View>
-                <View style={styles.tableColDate}>
-                  <Text style={styles.tableCell}>
+                <View style={responsiveStyles.tableColDate}>
+                  <Text style={responsiveStyles.tableCell}>
                     {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: '2-digit',
@@ -330,24 +335,24 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                     }) : 'N/A'}
                   </Text>
                 </View>
-                <View style={styles.tableColActions}>
+                <View style={responsiveStyles.tableColActions}>
                   <View style={styles.actionButtons}>
                     {(app.businessDocument || app.validIdDocument) && (
                       <TouchableOpacity
-                        style={[styles.actionButton, styles.viewDocumentsButton]}
+                        style={[responsiveStyles.actionButton, styles.viewDocumentsButton]}
                         onPress={() => {
                           setSelectedApplication(app);
                           setShowDocumentModal(true);
                         }}
                       >
-                        <Text style={styles.viewDocumentsButtonText}>View Docs</Text>
+                        <Text style={responsiveStyles.viewDocumentsButtonText}>View Docs</Text>
                       </TouchableOpacity>
                     )}
                     {app.status === 'pending' && (
                       <>
                         <TouchableOpacity
                           style={[
-                            styles.actionButton,
+                            responsiveStyles.actionButton,
                             styles.approveButton,
                             processingId === app.id && styles.actionButtonDisabled
                           ]}
@@ -359,13 +364,13 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                           activeOpacity={0.7}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                          <Text style={styles.approveButtonText}>
+                          <Text style={responsiveStyles.approveButtonText}>
                             {processingId === app.id ? 'Processing...' : 'Approve'}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
-                            styles.actionButton,
+                            responsiveStyles.actionButton,
                             styles.rejectButton,
                             processingId === app.id && styles.actionButtonDisabled
                           ]}
@@ -377,7 +382,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                           activeOpacity={0.7}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                          <Text style={styles.rejectButtonText}>
+                          <Text style={responsiveStyles.rejectButtonText}>
                             {processingId === app.id ? 'Processing...' : 'Reject'}
                           </Text>
                         </TouchableOpacity>
@@ -397,664 +402,32 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
           </ScrollView>
         )}
 
-        {/* Document View Modal */}
-        <Modal
-          visible={showDocumentModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowDocumentModal(false)}
-        >
-          <View style={styles.documentModalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Documents - {selectedApplication?.name}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setShowDocumentModal(false)}
-                  style={styles.closeButton}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                {/* Business Document */}
-                {selectedApplication?.businessDocument && (
-                  <View style={styles.documentSection}>
-                    <Text style={styles.documentLabel}>Business/Company Documents</Text>
-                    <Image
-                      source={{ uri: `${getApiBaseUrl()}${selectedApplication.businessDocument}` }}
-                      style={styles.documentImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                )}
-
-                {/* Valid ID Document */}
-                {selectedApplication?.validIdDocument && (
-                  <View style={styles.documentSection}>
-                    <Text style={styles.documentLabel}>Valid ID</Text>
-                    <Image
-                      source={{ uri: `${getApiBaseUrl()}${selectedApplication.validIdDocument}` }}
-                      style={styles.documentImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                )}
-
-                {!selectedApplication?.businessDocument && !selectedApplication?.validIdDocument && (
-                  <Text style={styles.noDocumentsText}>No documents available</Text>
-                )}
-              </ScrollView>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={styles.closeModalButton}
-                  onPress={() => setShowDocumentModal(false)}
-                >
-                  <Text style={styles.closeModalButtonText}>Close</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Approve Confirmation Modal */}
-        <Modal
-          visible={showApproveModal}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => {
-            if (!processingId) {
-              setShowApproveModal(false);
-              setApproveApplicationId(null);
-            }
+        <ApplicationDetailsModal
+          selectedApplication={selectedApplication}
+          showDocumentModal={showDocumentModal}
+          onCloseDocumentModal={() => setShowDocumentModal(false)}
+          showApproveModal={showApproveModal}
+          onCloseApproveModal={() => {
+            setShowApproveModal(false);
+            setApproveApplicationId(null);
           }}
-        >
-          <View style={styles.documentModalOverlay}>
-            <View style={styles.approveModalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Approve Provider Application</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (!processingId) {
-                      setShowApproveModal(false);
-                      setApproveApplicationId(null);
-                    }
-                  }}
-                  style={styles.closeButton}
-                  disabled={!!processingId}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.approveModalBody}>
-                <Text style={styles.approveModalDescription}>
-                  Are you sure you want to approve this provider application? This will grant provider access to the user.
-                </Text>
-              </View>
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, processingId && styles.buttonDisabled]}
-                  onPress={() => {
-                    if (!processingId) {
-                      setShowApproveModal(false);
-                      setApproveApplicationId(null);
-                    }
-                  }}
-                  disabled={!!processingId}
-                >
-                  <Text style={styles.cancelButtonText} allowFontScaling={true} numberOfLines={1}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.approveConfirmButton, processingId && styles.submitButtonDisabled]}
-                  onPress={handleConfirmApprove}
-                  disabled={!!processingId}
-                  activeOpacity={0.7}
-                >
-                  {processingId ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.approveConfirmButtonText} allowFontScaling={true} numberOfLines={1}>Approve</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Reject Application Modal */}
-        <Modal
-          visible={showRejectModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => {
-            if (!processingId) {
-              setShowRejectModal(false);
-              setRejectApplicationId(null);
-              setRejectionReason('');
-            }
+          onConfirmApprove={handleConfirmApprove}
+          showRejectModal={showRejectModal}
+          onCloseRejectModal={() => {
+            setShowRejectModal(false);
+            setRejectApplicationId(null);
+            setRejectionReason('');
           }}
-        >
-          <View style={styles.documentModalOverlay}>
-            <View style={styles.rejectModalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Reject Provider Application</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (!processingId) {
-                      setShowRejectModal(false);
-                      setRejectApplicationId(null);
-                      setRejectionReason('');
-                    }
-                  }}
-                  style={styles.closeButton}
-                  disabled={!!processingId}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.rejectModalBody}>
-                <Text style={styles.rejectModalDescription}>
-                  Please provide a reason for rejecting this provider application. This reason will be sent to the user as a notification.
-                </Text>
-
-                <Text style={styles.rejectModalLabel}>Rejection Reason *</Text>
-                <TextInput
-                  style={styles.rejectReasonInput}
-                  placeholder="Enter the reason for rejection..."
-                  placeholderTextColor={isMobile ? "#64748B" : "#A4B0BE"}
-                  multiline
-                  numberOfLines={6}
-                  value={rejectionReason}
-                  onChangeText={setRejectionReason}
-                  editable={!processingId}
-                  textAlignVertical="top"
-                />
-                <Text style={styles.rejectModalNote}>
-                  This message will be visible to the user in their notifications.
-                </Text>
-              </View>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, processingId && styles.buttonDisabled]}
-                  onPress={() => {
-                    if (!processingId) {
-                      setShowRejectModal(false);
-                      setRejectApplicationId(null);
-                      setRejectionReason('');
-                    }
-                  }}
-                  disabled={!!processingId}
-                >
-                  <Text style={styles.cancelButtonText} allowFontScaling={true} numberOfLines={1}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.rejectConfirmButton,
-                    (!rejectionReason.trim() || processingId) && styles.submitButtonDisabled
-                  ]}
-                  onPress={handleConfirmReject}
-                  disabled={!rejectionReason.trim() || !!processingId}
-                  activeOpacity={0.7}
-                >
-                  {processingId ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.rejectConfirmButtonText} allowFontScaling={true} numberOfLines={1}>Confirm Rejection</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+          onConfirmReject={handleConfirmReject}
+          rejectionReason={rejectionReason}
+          onRejectionReasonChange={setRejectionReason}
+          processingId={processingId}
+          isMobile={isMobile}
+          responsiveStyles={responsiveStyles}
+        />
       </ScrollView>
     </AppLayout>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: isMobile ? 12 : 20,
-  },
-  header: {
-    marginBottom: isMobile ? 16 : 24,
-  },
-  title: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    marginBottom: isMobile ? 12 : 20,
-    backgroundColor: '#FFFFFF',
-    flexWrap: 'wrap',
-    borderRadius: 8,
-    padding: 4,
-  },
-  filterTab: {
-    flex: isMobile ? undefined : 1,
-    minWidth: isMobile ? (screenWidth - 48) / 4 : undefined,
-    paddingVertical: isMobile ? 6 : 8,
-    paddingHorizontal: isMobile ? 8 : 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  filterTabActive: {
-    backgroundColor: '#4a55e1',
-  },
-  filterTabText: {
-    fontSize: isMobile ? 11 : 13,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  filterTabTextActive: {
-    color: '#FFFFFF',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#64748B',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  tableScrollView: {
-    marginTop: 8,
-  },
-  tableScrollContent: {
-    minWidth: 800,
-  },
-  tableContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...(isMobile && { minWidth: 800 }),
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    paddingVertical: isMobile ? 10 : 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  tableHeaderText: {
-    fontSize: isMobile ? 10 : 12,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: isMobile ? 12 : 16,
-    paddingHorizontal: isMobile ? 12 : 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  tableRowAlt: {
-    backgroundColor: '#F8FAFC',
-  },
-  tableCell: {
-    fontSize: isMobile ? 12 : 14,
-    color: '#1E293B',
-  },
-  tableColName: {
-    flex: 1.5,
-    minWidth: isMobile ? 120 : undefined,
-    paddingRight: isMobile ? 8 : 0,
-  },
-  tableColEmail: {
-    flex: 2,
-    minWidth: isMobile ? 150 : undefined,
-    paddingRight: isMobile ? 8 : 0,
-  },
-  tableColStatus: {
-    flex: 1,
-    minWidth: isMobile ? 100 : undefined,
-    paddingRight: isMobile ? 8 : 0,
-  },
-  tableColDate: {
-    flex: 1,
-    minWidth: isMobile ? 100 : undefined,
-    paddingRight: isMobile ? 8 : 0,
-  },
-  tableColActions: {
-    flex: 1.5,
-    minWidth: isMobile ? 200 : undefined,
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    alignItems: 'center',
-  },
-  actionButton: {
-    paddingVertical: isMobile ? 6 : 6,
-    paddingHorizontal: isMobile ? 10 : 12,
-    borderRadius: 6,
-    minWidth: isMobile ? 60 : 70,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
-  approveButton: {
-    backgroundColor: '#10b981',
-  },
-  approveButtonText: {
-    color: '#FFFFFF',
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  rejectButton: {
-    backgroundColor: '#ef4444',
-  },
-  rejectButtonText: {
-    color: '#FFFFFF',
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  approvedText: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  rejectedText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  viewDocumentsButton: {
-    backgroundColor: '#4a55e1',
-    marginRight: 8,
-  },
-  viewDocumentsButtonText: {
-    color: '#FFFFFF',
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  documentModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 800,
-    maxHeight: '90%',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 10,
-    }),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  modalTitle: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    flex: 1,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: screenWidth * 0.6,
-  },
-  documentSection: {
-    marginBottom: 24,
-  },
-  documentLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  documentImage: {
-    width: '100%',
-    height: 400,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  noDocumentsText: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    paddingVertical: 40,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    gap: 12,
-  },
-  closeModalButton: {
-    backgroundColor: '#4a55e1',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  closeModalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rejectModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 500,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 10,
-    }),
-  },
-  approveModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    margin: 20,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 10,
-    }),
-  },
-  approveModalBody: {
-    padding: 20,
-  },
-  approveModalDescription: {
-    fontSize: isMobile ? 16 : 15,
-    color: '#1E293B',
-    lineHeight: isMobile ? 24 : 22,
-  },
-  approveConfirmButton: {
-    flex: 1,
-    minWidth: isMobile ? 120 : undefined,
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    paddingVertical: isMobile ? 18 : 16,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  approveConfirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: isMobile ? 17 : 16,
-    fontWeight: '700',
-    ...(Platform.OS === 'android' && {
-      textShadowColor: 'rgba(0,0,0,0.2)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 1,
-    }),
-  },
-  rejectModalBody: {
-    padding: 20,
-  },
-  rejectModalDescription: {
-    fontSize: isMobile ? 15 : 14,
-    color: isMobile ? '#334155' : '#636E72',
-    lineHeight: isMobile ? 22 : 20,
-    marginBottom: 20,
-  },
-  rejectModalLabel: {
-    fontSize: isMobile ? 15 : 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  rejectReasonInput: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: isMobile ? 16 : 14,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
-    minHeight: 120,
-    textAlignVertical: 'top',
-    marginBottom: 8,
-  },
-  rejectModalNote: {
-    fontSize: isMobile ? 13 : 12,
-    color: isMobile ? '#475569' : '#64748B',
-    fontStyle: 'italic',
-  },
-  rejectConfirmButton: {
-    flex: 1,
-    minWidth: isMobile ? 140 : undefined,
-    backgroundColor: '#ef4444',
-    borderRadius: 12,
-    paddingVertical: isMobile ? 18 : 16,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rejectConfirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: isMobile ? 17 : 16,
-    fontWeight: '700',
-    ...(Platform.OS === 'android' && {
-      textShadowColor: 'rgba(0,0,0,0.2)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 1,
-    }),
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  cancelButton: {
-    flex: 1,
-    minWidth: isMobile ? 120 : undefined,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: isMobile ? 18 : 16,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    color: '#1E293B',
-    fontSize: isMobile ? 17 : 16,
-    fontWeight: '700',
-  },
-  searchContainer: {
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#1E293B',
-  },
-});
 
 export default ProviderApplicationsView;

@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -103,9 +103,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4a55e1" />
-            <Text style={styles.loadingText}>Loading statistics...</Text>
+          <View style={{ padding: 16 }}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </View>
         ) : (
           <>

@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
@@ -124,9 +124,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4a55e1" />
-            <Text style={styles.loadingText}>Loading analytics...</Text>
+          <View style={{ padding: 16 }}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </View>
         ) : (
           <>

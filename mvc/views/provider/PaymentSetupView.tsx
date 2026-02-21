@@ -11,6 +11,7 @@ import {
   Linking,
   Platform
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 import { Feather } from '@expo/vector-icons';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
@@ -235,9 +236,10 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
         onNavigate={(route) => onNavigate?.(route)}
         onLogout={() => onLogout?.()}
       >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C63FF" />
-          <Text style={styles.loadingText}>Loading...</Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
       </AppLayout>
     );

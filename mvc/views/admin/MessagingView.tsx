@@ -11,6 +11,7 @@ import {
   Dimensions,
   ActivityIndicator
 } from 'react-native';
+import { SkeletonListItem } from '../../components/ui';
 import { MessagingController } from '../../controllers/MessagingController';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
@@ -296,9 +297,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
         onNavigate={onNavigate!}
         onLogout={onLogout!}
       >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a55e1" />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
         </View>
       </AppLayout>
     );

@@ -6,10 +6,10 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   Dimensions,
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 
@@ -136,8 +136,10 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   if (loading) {
     return (
       <AppLayout role="user" activeRoute="dashboard" title="Provider Profile" user={user} onNavigate={onNavigate} onLogout={onLogout}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a55e1" />
+        <View style={{ padding: 16 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
       </AppLayout>
     );

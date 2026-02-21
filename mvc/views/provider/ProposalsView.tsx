@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
-  ActivityIndicator,
   TextInput,
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
@@ -246,9 +246,10 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             </ScrollView>
 
             {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4a55e1" />
-                <Text style={styles.loadingText}>Loading proposals...</Text>
+              <View style={{ padding: 16 }}>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
               </View>
             ) : (
               <>

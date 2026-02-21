@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SkeletonListItem } from '../../components/ui';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
@@ -278,9 +279,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
         onNavigate={(route) => onNavigate?.(route)}
         onLogout={() => onLogout?.()}
       >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C63FF" />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
+          <SkeletonListItem />
         </View>
       </AppLayout>
     );

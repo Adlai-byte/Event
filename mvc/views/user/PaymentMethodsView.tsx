@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { getShadowStyle } from '../../utils/shadowStyles';
@@ -263,8 +264,10 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   if (loading) {
     return (
       <AppLayout role="user" activeRoute="settings" title="Payment Methods" user={user} onNavigate={onNavigate} onLogout={onLogout}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C63FF" />
+        <View style={{ padding: 16 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
       </AppLayout>
     );
