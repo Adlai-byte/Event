@@ -5,6 +5,13 @@ const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
+function emitNotification(req, userEmail) {
+  const io = req.app.get('io');
+  if (io && userEmail) {
+    io.to(`user:${userEmail}`).emit('new-notification');
+  }
+}
+
 // Get provider applications (for admin)
 router.get('/provider-applications', authMiddleware, async (req, res) => {
     try {
@@ -90,6 +97,7 @@ router.post('/provider-applications/:id/approve', authMiddleware, async (req, re
         );
 
         console.log(`Provider application approved for user ID ${id} (${user.u_email})`);
+        emitNotification(req, user.u_email);
         return res.json({ ok: true, message: 'Provider application approved' });
     } catch (err) {
         console.error('Approve provider failed:', err.code, err.message);
@@ -204,6 +212,7 @@ router.post('/provider-applications/:id/reject', authMiddleware, async (req, res
         }
 
         console.log(`Provider application rejected for user ID ${id} (${user.u_email}) with reason`);
+        emitNotification(req, user.u_email);
         return res.json({ ok: true, message: 'Provider application rejected' });
     } catch (err) {
         console.error('Reject provider failed:', err.code, err.message);

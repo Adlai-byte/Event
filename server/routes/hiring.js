@@ -3,6 +3,15 @@ const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
+// Helper: emit hiring-update + new-notification via Socket.io
+function emitHiringUpdate(req, userEmail) {
+  const io = req.app.get('io');
+  if (io && userEmail) {
+    io.to(`user:${userEmail}`).emit('hiring-update');
+    io.to(`user:${userEmail}`).emit('new-notification');
+  }
+}
+
 // ============================================
 // HIRING API ENDPOINTS
 // ============================================
@@ -366,6 +375,24 @@ router.put('/hiring/requests/:id', async (req, res) => {
             }
         }
 
+        // Emit socket event to client if status changed
+        if (updates.status !== undefined) {
+            try {
+                const [emailRows] = await pool.query(
+                    `SELECT u.u_email AS clientEmail
+                     FROM hiring_request hr
+                     INNER JOIN user u ON hr.hr_client_id = u.iduser
+                     WHERE hr.idhiring_request = ?`,
+                    [id]
+                );
+                if (emailRows.length > 0) {
+                    emitHiringUpdate(req, emailRows[0].clientEmail);
+                }
+            } catch (socketErr) {
+                console.error('Socket emission failed (non-critical):', socketErr);
+            }
+        }
+
         return res.json({ ok: true, message: 'Hiring request updated successfully' });
     } catch (err) {
         console.error('Update hiring request failed:', err);
@@ -543,6 +570,25 @@ router.post('/hiring/proposals/:id/accept', async (req, res) => {
 
             await pool.query('COMMIT');
 
+            // Emit socket events to client and accepted provider
+            try {
+                const [emailRows] = await pool.query(
+                    `SELECT
+                        (SELECT u.u_email FROM user u WHERE u.iduser = hr.hr_client_id) AS clientEmail,
+                        (SELECT u.u_email FROM user u WHERE u.iduser = p.p_provider_id) AS providerEmail
+                     FROM proposal p
+                     INNER JOIN hiring_request hr ON p.p_hiring_request_id = hr.idhiring_request
+                     WHERE p.idproposal = ?`,
+                    [proposalId]
+                );
+                if (emailRows.length > 0) {
+                    emitHiringUpdate(req, emailRows[0].clientEmail);
+                    emitHiringUpdate(req, emailRows[0].providerEmail);
+                }
+            } catch (socketErr) {
+                console.error('Socket emission failed (non-critical):', socketErr);
+            }
+
             return res.json({ ok: true, message: 'Proposal accepted successfully' });
         } catch (err) {
             await pool.query('ROLLBACK');
@@ -565,6 +611,22 @@ router.post('/hiring/proposals/:id/reject', async (req, res) => {
             'UPDATE proposal SET p_status = ?, p_client_feedback = ? WHERE idproposal = ?',
             ['rejected', reason || 'Proposal rejected', proposalId]
         );
+
+        // Emit socket event to rejected provider
+        try {
+            const [emailRows] = await pool.query(
+                `SELECT u.u_email AS providerEmail
+                 FROM proposal p
+                 INNER JOIN user u ON p.p_provider_id = u.iduser
+                 WHERE p.idproposal = ?`,
+                [proposalId]
+            );
+            if (emailRows.length > 0) {
+                emitHiringUpdate(req, emailRows[0].providerEmail);
+            }
+        } catch (socketErr) {
+            console.error('Socket emission failed (non-critical):', socketErr);
+        }
 
         return res.json({ ok: true, message: 'Proposal rejected successfully' });
     } catch (err) {
@@ -1317,6 +1379,13 @@ router.put('/provider/job-applications/:id/schedule-interview', async (req, res)
             }
         }
 
+        // Emit socket event to applicant
+        try {
+            emitHiringUpdate(req, applicantEmail);
+        } catch (socketErr) {
+            console.error('Socket emission failed (non-critical):', socketErr);
+        }
+
         return res.json({ ok: true, message: 'Interview scheduled successfully' });
     } catch (err) {
         console.error('Schedule interview failed:', err);
@@ -1373,6 +1442,19 @@ router.put('/provider/job-applications/:id/reject', async (req, res) => {
              WHERE idjob_application = ?`,
             [rejectionNote.trim(), applicationId]
         );
+
+        // Emit socket event to applicant
+        try {
+            const [appRows] = await pool.query(
+                'SELECT ja_user_email FROM job_application WHERE idjob_application = ?',
+                [applicationId]
+            );
+            if (appRows.length > 0) {
+                emitHiringUpdate(req, appRows[0].ja_user_email);
+            }
+        } catch (socketErr) {
+            console.error('Socket emission failed (non-critical):', socketErr);
+        }
 
         return res.json({ ok: true, message: 'Application rejected successfully' });
     } catch (err) {
@@ -1449,6 +1531,19 @@ router.put('/provider/job-applications/:id/accept', async (req, res) => {
              WHERE idjob_application = ?`,
             [hireNote.trim(), applicationId]
         );
+
+        // Emit socket event to applicant
+        try {
+            const [appRows] = await pool.query(
+                'SELECT ja_user_email FROM job_application WHERE idjob_application = ?',
+                [applicationId]
+            );
+            if (appRows.length > 0) {
+                emitHiringUpdate(req, appRows[0].ja_user_email);
+            }
+        } catch (socketErr) {
+            console.error('Socket emission failed (non-critical):', socketErr);
+        }
 
         return res.json({ ok: true, message: 'Applicant hired successfully' });
     } catch (err) {

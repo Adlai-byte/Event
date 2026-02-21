@@ -8,6 +8,15 @@ const { generateInvoicePDF } = require('../services/invoice');
 // BOOKINGS API ENDPOINTS
 // ============================================
 
+// Helper: emit socket events to notify both parties of a booking change
+function emitBookingUpdate(req, userEmail) {
+  const io = req.app.get('io');
+  if (io && userEmail) {
+    io.to(`user:${userEmail}`).emit('booking-update');
+    io.to(`user:${userEmail}`).emit('new-notification');
+  }
+}
+
 // Get all bookings
 router.get('/bookings', async (req, res) => {
     try {
@@ -1007,6 +1016,24 @@ router.post('/bookings/:bookingId/payment/complete', async (req, res) => {
 
         console.log('Payment marked as completed for booking:', bookingId);
 
+        // Emit socket events to both client and provider
+        emitBookingUpdate(req, userEmail);
+        try {
+            const [providerRow] = await pool.query(`
+                SELECT DISTINCT p.u_email as provider_email
+                FROM booking_service bs
+                INNER JOIN service s ON bs.bs_service_id = s.idservice
+                INNER JOIN user p ON s.s_provider_id = p.iduser
+                WHERE bs.bs_booking_id = ?
+                LIMIT 1
+            `, [bookingId]);
+            if (providerRow.length > 0 && providerRow[0].provider_email !== userEmail) {
+                emitBookingUpdate(req, providerRow[0].provider_email);
+            }
+        } catch (socketErr) {
+            console.error('Socket emit failed (non-critical):', socketErr);
+        }
+
         return res.json({
             ok: true,
             message: 'Payment marked as completed',
@@ -1182,6 +1209,23 @@ router.post('/provider/bookings/:bookingId/mark-payment-paid', async (req, res) 
         }
 
         console.log(`Cash payment marked as paid for booking ${bookingId} by provider ${providerEmail}`);
+
+        // Emit socket events to both provider and client
+        emitBookingUpdate(req, providerEmail);
+        try {
+            const [clientRow] = await pool.query(`
+                SELECT u.u_email as client_email
+                FROM booking b
+                INNER JOIN user u ON b.b_client_id = u.iduser
+                WHERE b.idbooking = ?
+                LIMIT 1
+            `, [bookingId]);
+            if (clientRow.length > 0 && clientRow[0].client_email !== providerEmail) {
+                emitBookingUpdate(req, clientRow[0].client_email);
+            }
+        } catch (socketErr) {
+            console.error('Socket emit failed (non-critical):', socketErr);
+        }
 
         // Get payment details for invoice
         const [paymentRows] = await pool.query(
@@ -2212,6 +2256,12 @@ router.post('/bookings/:id/status', async (req, res) => {
                 ).catch(err => console.error('Failed to send push notification to provider:', err));
                 }
                 }
+            }
+
+            // Emit socket events to both client and provider
+            emitBookingUpdate(req, booking.client_email);
+            if (booking.provider_email && booking.provider_email !== booking.client_email) {
+                emitBookingUpdate(req, booking.provider_email);
             }
         }
 
