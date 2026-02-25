@@ -6,6 +6,10 @@ const path = require('path');
 const fs = require('fs');
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
+const { searchLimiter } = require('../middleware/rateLimiter');
+const { serviceValidation } = require('../middleware/validationSchemas');
+const { validate } = require('../middleware/validate');
 
 // Uploads directory - same resolution as index.js
 const uploadsDir = process.env.UPLOADS_DIR
@@ -534,7 +538,7 @@ router.get('/services/:id/available-slots', async (req, res) => {
 });
 
 // Create service
-router.post('/services', async (req, res) => {
+router.post('/services', authMiddleware, requireRole('provider', 'admin'), serviceValidation, validate, async (req, res) => {
     const { providerId, providerEmail, name, description, category, basePrice, pricingType, duration, maxCapacity, city, state, address, latitude, longitude, image } = req.body || {};
 
     // Validate required fields
@@ -745,7 +749,7 @@ router.post('/services', async (req, res) => {
 });
 
 // Update service status (activate/deactivate)
-router.post('/services/:id/status', async (req, res) => {
+router.post('/services/:id/status', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const id = Number(req.params.id);
     const { isActive } = req.body || {};
     if (!Number.isFinite(id) || typeof isActive !== 'boolean') {
@@ -762,7 +766,7 @@ router.post('/services/:id/status', async (req, res) => {
 });
 
 // Update service
-router.put('/services/:id', async (req, res) => {
+router.put('/services/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
         return res.status(400).json({ ok: false, error: 'Invalid service ID' });
@@ -1039,7 +1043,7 @@ router.get('/services/:serviceId/reviews', async (req, res) => {
 });
 
 // Get provider profile
-router.get('/provider/profile', async (req, res) => {
+router.get('/provider/profile', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.email;
 
     if (!providerEmail) {
@@ -1160,7 +1164,7 @@ router.get('/provider/profile', async (req, res) => {
 });
 
 // Search providers
-router.get('/providers/search', async (req, res) => {
+router.get('/providers/search', searchLimiter, async (req, res) => {
     const search = req.query.search;
 
     if (!search || !search.trim()) {
@@ -1237,7 +1241,7 @@ router.get('/providers/search', async (req, res) => {
 });
 
 // Get provider services by email
-router.get('/provider/services', async (req, res) => {
+router.get('/provider/services', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.email;
 
     if (!providerEmail) {
@@ -1336,7 +1340,7 @@ router.get('/provider/services', async (req, res) => {
 });
 
 // Get provider's PayMongo payment link
-router.get('/provider/payment-link', async (req, res) => {
+router.get('/provider/payment-link', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.providerEmail;
 
     if (!providerEmail) {
@@ -1375,7 +1379,7 @@ router.get('/provider/payment-link', async (req, res) => {
 });
 
 // Update provider's PayMongo payment link
-router.post('/provider/payment-link', async (req, res) => {
+router.post('/provider/payment-link', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const { providerEmail, paymentLink } = req.body || {};
 
     if (!providerEmail) {
@@ -1435,7 +1439,7 @@ router.post('/provider/payment-link', async (req, res) => {
 });
 
 // Save provider's PayMongo credentials
-router.post('/provider/paymongo-credentials', async (req, res) => {
+router.post('/provider/paymongo-credentials', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const { providerEmail, secretKey, publicKey, mode } = req.body || {};
 
     if (!providerEmail) {
@@ -1535,7 +1539,7 @@ router.post('/provider/paymongo-credentials', async (req, res) => {
 });
 
 // Get provider's PayMongo credentials
-router.get('/provider/paymongo-credentials', async (req, res) => {
+router.get('/provider/paymongo-credentials', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.providerEmail;
 
     if (!providerEmail) {

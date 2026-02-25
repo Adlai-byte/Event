@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
 
 function emitNotification(req, userEmail) {
   const io = req.app.get('io');
@@ -13,7 +14,7 @@ function emitNotification(req, userEmail) {
 }
 
 // Get provider applications (for admin)
-router.get('/provider-applications', authMiddleware, async (req, res) => {
+router.get('/provider-applications', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const pool = getPool();
         // Check if column exists, if not return empty array
@@ -65,7 +66,7 @@ router.get('/provider-applications', authMiddleware, async (req, res) => {
 });
 
 // Approve provider application
-router.post('/provider-applications/:id/approve', authMiddleware, async (req, res) => {
+router.post('/provider-applications/:id/approve', authMiddleware, requireRole('admin'), async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
         return res.status(400).json({ ok: false, error: 'Invalid user ID' });
@@ -106,7 +107,7 @@ router.post('/provider-applications/:id/approve', authMiddleware, async (req, re
 });
 
 // Reject provider application
-router.post('/provider-applications/:id/reject', authMiddleware, async (req, res) => {
+router.post('/provider-applications/:id/reject', authMiddleware, requireRole('admin'), async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
         return res.status(400).json({ ok: false, error: 'Invalid user ID' });
@@ -221,7 +222,7 @@ router.post('/provider-applications/:id/reject', authMiddleware, async (req, res
 });
 
 // Get admin analytics data
-router.get('/analytics', authMiddleware, async (req, res) => {
+router.get('/analytics', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const pool = getPool();
 

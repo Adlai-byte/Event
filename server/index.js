@@ -9,9 +9,11 @@ const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
 const { setupSocket } = require('./socket');
+const helmet = require('helmet');
 const logger = require('./lib/logger');
 const requestId = require('./middleware/requestId');
 const requestLogger = require('./middleware/requestLogger');
+const { apiLimiter, registerLimiter } = require('./middleware/rateLimiter');
 
 // Route modules
 const adminRoutes = require('./routes/admin');
@@ -39,9 +41,19 @@ if (!fs.existsSync(uploadsDir)) {
     logger.debug('Uploads directory exists', { path: uploadsDir });
 }
 
+// Security headers via Helmet
+app.use(helmet({
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false, // CSP managed separately for flexibility
+}));
+
 // Request ID and logging middleware
 app.use(requestId);
 app.use(requestLogger);
+
+// Global rate limiter (200 req/min per IP)
+app.use(apiLimiter);
 
 // CORS configuration
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
@@ -56,13 +68,6 @@ app.use(cors({
     exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Request-Id'],
     maxAge: 86400,
 }));
-
-// Set Cross-Origin-Opener-Policy for payment/OAuth popups
-app.use((req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
-    next();
-});
 
 // Body parser with reduced limit (was 50mb, now 10mb)
 app.use(express.json({ limit: '10mb' }));

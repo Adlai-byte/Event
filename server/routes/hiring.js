@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
+const { hiringRequestValidation } = require('../middleware/validationSchemas');
+const { validate } = require('../middleware/validate');
 
 // Helper: emit hiring-update + new-notification via Socket.io
 function emitHiringUpdate(req, userEmail) {
@@ -17,7 +20,7 @@ function emitHiringUpdate(req, userEmail) {
 // ============================================
 
 // Create hiring request
-router.post('/hiring/requests', async (req, res) => {
+router.post('/hiring/requests', authMiddleware, hiringRequestValidation, validate, async (req, res) => {
     try {
         const pool = getPool();
         const {
@@ -118,7 +121,7 @@ router.post('/hiring/requests', async (req, res) => {
 });
 
 // Get hiring requests
-router.get('/hiring/requests', async (req, res) => {
+router.get('/hiring/requests', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const { clientId, providerId, status, serviceId, maxBudget, location, hiringRequestId } = req.query;
@@ -213,7 +216,7 @@ router.get('/hiring/requests', async (req, res) => {
 });
 
 // Get single hiring request
-router.get('/hiring/requests/:id', async (req, res) => {
+router.get('/hiring/requests/:id', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const id = parseInt(req.params.id);
@@ -273,7 +276,7 @@ router.get('/hiring/requests/:id', async (req, res) => {
 });
 
 // Update hiring request
-router.put('/hiring/requests/:id', async (req, res) => {
+router.put('/hiring/requests/:id', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const id = parseInt(req.params.id);
@@ -401,7 +404,7 @@ router.put('/hiring/requests/:id', async (req, res) => {
 });
 
 // Create proposal
-router.post('/hiring/proposals', async (req, res) => {
+router.post('/hiring/proposals', authMiddleware, requireRole('provider'), async (req, res) => {
     try {
         const pool = getPool();
         const {
@@ -473,7 +476,7 @@ router.post('/hiring/proposals', async (req, res) => {
 });
 
 // Get proposals
-router.get('/hiring/proposals', async (req, res) => {
+router.get('/hiring/proposals', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const { providerId, hiringRequestId, proposalId } = req.query;
@@ -536,7 +539,7 @@ router.get('/hiring/proposals', async (req, res) => {
 });
 
 // Accept proposal
-router.post('/hiring/proposals/:id/accept', async (req, res) => {
+router.post('/hiring/proposals/:id/accept', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const proposalId = parseInt(req.params.id);
@@ -601,7 +604,7 @@ router.post('/hiring/proposals/:id/accept', async (req, res) => {
 });
 
 // Reject proposal
-router.post('/hiring/proposals/:id/reject', async (req, res) => {
+router.post('/hiring/proposals/:id/reject', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const proposalId = parseInt(req.params.id);
@@ -640,7 +643,7 @@ router.post('/hiring/proposals/:id/reject', async (req, res) => {
 // ============================================
 
 // Create provider job posting table if it doesn't exist
-router.get('/provider/job-postings/init-table', async (req, res) => {
+router.get('/provider/job-postings/init-table', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         await pool.query(`
@@ -667,7 +670,7 @@ router.get('/provider/job-postings/init-table', async (req, res) => {
 });
 
 // Get all job postings for a provider
-router.get('/provider/job-postings', async (req, res) => {
+router.get('/provider/job-postings', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const { providerEmail } = req.query;
@@ -744,7 +747,7 @@ router.get('/provider/job-postings', async (req, res) => {
 });
 
 // Create a new job posting
-router.post('/provider/job-postings', async (req, res) => {
+router.post('/provider/job-postings', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const { providerEmail, jobTitle, description, deadlineDate, jobType } = req.body;
@@ -815,7 +818,7 @@ router.post('/provider/job-postings', async (req, res) => {
 });
 
 // Update a job posting
-router.put('/provider/job-postings/:id', async (req, res) => {
+router.put('/provider/job-postings/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const jobPostingId = parseInt(req.params.id);
@@ -875,7 +878,7 @@ router.put('/provider/job-postings/:id', async (req, res) => {
 });
 
 // Delete a job posting
-router.delete('/provider/job-postings/:id', async (req, res) => {
+router.delete('/provider/job-postings/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const jobPostingId = parseInt(req.params.id);
@@ -1023,7 +1026,7 @@ router.get('/job-applications/init-table', async (req, res) => {
 });
 
 // Submit job application
-router.post('/job-applications', async (req, res) => {
+router.post('/job-applications', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const { jobPostingId, userEmail, resumeFile, resumeFileName } = req.body;
@@ -1086,7 +1089,7 @@ router.post('/job-applications', async (req, res) => {
 });
 
 // Get job applications for a provider's job postings
-router.get('/provider/job-applications', async (req, res) => {
+router.get('/provider/job-applications', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const { providerEmail, jobPostingId } = req.query;
@@ -1169,7 +1172,7 @@ router.get('/provider/job-applications', async (req, res) => {
 });
 
 // Schedule interview for a job application
-router.put('/provider/job-applications/:id/schedule-interview', async (req, res) => {
+router.put('/provider/job-applications/:id/schedule-interview', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const applicationId = parseInt(req.params.id);
@@ -1394,7 +1397,7 @@ router.put('/provider/job-applications/:id/schedule-interview', async (req, res)
 });
 
 // Reject a job application with a note
-router.put('/provider/job-applications/:id/reject', async (req, res) => {
+router.put('/provider/job-applications/:id/reject', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const applicationId = parseInt(req.params.id);
@@ -1464,7 +1467,7 @@ router.put('/provider/job-applications/:id/reject', async (req, res) => {
 });
 
 // Accept/Hire applicant after interview
-router.put('/provider/job-applications/:id/accept', async (req, res) => {
+router.put('/provider/job-applications/:id/accept', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const applicationId = parseInt(req.params.id);
@@ -1553,7 +1556,7 @@ router.put('/provider/job-applications/:id/accept', async (req, res) => {
 });
 
 // Get job applications for a user
-router.get('/user/job-applications', async (req, res) => {
+router.get('/user/job-applications', authMiddleware, async (req, res) => {
     try {
         const pool = getPool();
         const { userEmail } = req.query;
@@ -1629,7 +1632,7 @@ router.get('/user/job-applications', async (req, res) => {
 });
 
 // Download resume for a job application
-router.get('/provider/job-applications/:id/resume', async (req, res) => {
+router.get('/provider/job-applications/:id/resume', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     try {
         const pool = getPool();
         const applicationId = parseInt(req.params.id);

@@ -3,6 +3,11 @@ const router = express.Router();
 const { getPool } = require('../db');
 const { createPaymentLink, createCheckoutSession } = require('../services/paymongo');
 const { generateInvoicePDF } = require('../services/invoice');
+const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
+const { paymentLimiter } = require('../middleware/rateLimiter');
+const { createBookingValidation, paymentMethodValidation } = require('../middleware/validationSchemas');
+const { validate } = require('../middleware/validate');
 
 // ============================================
 // BOOKINGS API ENDPOINTS
@@ -18,7 +23,7 @@ function emitBookingUpdate(req, userEmail) {
 }
 
 // Get all bookings
-router.get('/bookings', async (req, res) => {
+router.get('/bookings', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query(`
@@ -49,7 +54,7 @@ router.get('/bookings', async (req, res) => {
 });
 
 // Get user's bookings
-router.get('/user/bookings', async (req, res) => {
+router.get('/user/bookings', authMiddleware, async (req, res) => {
     const email = req.query.email;
     if (!email) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -124,7 +129,7 @@ router.get('/user/bookings', async (req, res) => {
 });
 
 // Get user's bookings count
-router.get('/user/bookings/count', async (req, res) => {
+router.get('/user/bookings/count', authMiddleware, async (req, res) => {
     const email = req.query.email;
     if (!email) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -148,7 +153,7 @@ router.get('/user/bookings/count', async (req, res) => {
 });
 
 // Get user payment methods
-router.get('/user/payment-methods', async (req, res) => {
+router.get('/user/payment-methods', authMiddleware, async (req, res) => {
     const email = req.query.email;
 
     if (!email) {
@@ -188,7 +193,7 @@ router.get('/user/payment-methods', async (req, res) => {
 });
 
 // Add payment method
-router.post('/user/payment-methods', async (req, res) => {
+router.post('/user/payment-methods', authMiddleware, paymentMethodValidation, validate, async (req, res) => {
     const { userEmail, type, account_name, account_number, is_default } = req.body || {};
 
     if (!userEmail || !type || !account_name || !account_number) {
@@ -229,7 +234,7 @@ router.post('/user/payment-methods', async (req, res) => {
 });
 
 // Set default payment method
-router.post('/user/payment-methods/:id/set-default', async (req, res) => {
+router.post('/user/payment-methods/:id/set-default', authMiddleware, async (req, res) => {
     const id = Number(req.params.id);
     const { userEmail } = req.body || {};
 
@@ -276,7 +281,7 @@ router.post('/user/payment-methods/:id/set-default', async (req, res) => {
 });
 
 // Delete payment method
-router.delete('/user/payment-methods/:id', async (req, res) => {
+router.delete('/user/payment-methods/:id', authMiddleware, async (req, res) => {
     const id = Number(req.params.id);
     const { userEmail } = req.body || {};
 
@@ -321,7 +326,7 @@ router.delete('/user/payment-methods/:id', async (req, res) => {
 // ============================================
 
 // Create PayMongo payment using API
-router.post('/bookings/:bookingId/pay', async (req, res) => {
+router.post('/bookings/:bookingId/pay', authMiddleware, paymentLimiter, async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const { userEmail } = req.body || {};
 
@@ -612,7 +617,7 @@ router.post('/bookings/:bookingId/pay', async (req, res) => {
 });
 
 // Process cash payment
-router.post('/bookings/:bookingId/pay-cash', async (req, res) => {
+router.post('/bookings/:bookingId/pay-cash', authMiddleware, paymentLimiter, async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const { userEmail } = req.body || {};
 
@@ -964,7 +969,7 @@ router.get('/payments/paymongo/failed', async (req, res) => {
 });
 
 // Mark payment as completed (can be called manually or via webhook)
-router.post('/bookings/:bookingId/payment/complete', async (req, res) => {
+router.post('/bookings/:bookingId/payment/complete', authMiddleware, paymentLimiter, async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const { userEmail } = req.body || {};
 
@@ -1050,7 +1055,7 @@ router.post('/bookings/:bookingId/payment/complete', async (req, res) => {
 
 // Get provider's bookings (bookings for services owned by the provider)
 // Get provider bookings with client details
-router.get('/provider/bookings', async (req, res) => {
+router.get('/provider/bookings', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerId = req.query.providerId; // Firebase UID
     const providerEmail = req.query.providerEmail;
 
@@ -1154,7 +1159,7 @@ router.get('/provider/bookings', async (req, res) => {
 });
 
 // Mark cash payment as paid (for providers)
-router.post('/provider/bookings/:bookingId/mark-payment-paid', async (req, res) => {
+router.post('/provider/bookings/:bookingId/mark-payment-paid', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const { providerEmail } = req.body || {};
 
@@ -1245,7 +1250,7 @@ router.post('/provider/bookings/:bookingId/mark-payment-paid', async (req, res) 
 });
 
 // Generate and download invoice PDF
-router.get('/provider/bookings/:bookingId/invoice', async (req, res) => {
+router.get('/provider/bookings/:bookingId/invoice', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const providerEmail = req.query.providerEmail;
 
@@ -1391,7 +1396,7 @@ router.get('/provider/bookings/:bookingId/invoice', async (req, res) => {
 });
 
 // Generate and download invoice PDF for user
-router.get('/user/bookings/:bookingId/invoice', async (req, res) => {
+router.get('/user/bookings/:bookingId/invoice', authMiddleware, async (req, res) => {
     const bookingId = parseInt(req.params.bookingId);
     const userEmail = req.query.userEmail;
 
@@ -1537,7 +1542,7 @@ router.get('/user/bookings/:bookingId/invoice', async (req, res) => {
 });
 
 // Get booking by ID
-router.get('/bookings/:id', async (req, res) => {
+router.get('/bookings/:id', authMiddleware, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
         return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
@@ -1574,7 +1579,7 @@ router.get('/bookings/:id', async (req, res) => {
 });
 
 // Create a new booking
-router.post('/bookings', async (req, res) => {
+router.post('/bookings', authMiddleware, createBookingValidation, validate, async (req, res) => {
     const { clientEmail, serviceId, eventName, eventDate, startTime, endTime, location, attendees, notes } = req.body || {};
 
     if (!clientEmail || !serviceId || !eventName || !eventDate || !startTime || !endTime || !location) {
@@ -1825,7 +1830,7 @@ router.post('/bookings', async (req, res) => {
 // ============================================
 
 // Submit a rating for a service in a completed booking
-router.post('/bookings/:bookingId/services/:serviceId/rate', async (req, res) => {
+router.post('/bookings/:bookingId/services/:serviceId/rate', authMiddleware, async (req, res) => {
     const bookingId = Number(req.params.bookingId);
     const serviceId = Number(req.params.serviceId);
     const { userEmail, rating, comment } = req.body || {};
@@ -1970,7 +1975,7 @@ router.get('/bookings/:bookingId/services/:serviceId/rating', async (req, res) =
 });
 
 // Update booking status
-router.post('/bookings/:id/status', async (req, res) => {
+router.post('/bookings/:id/status', authMiddleware, async (req, res) => {
     const id = Number(req.params.id);
     const { status, userEmail, cancellation_reason } = req.body || {};
     const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
@@ -2273,7 +2278,7 @@ router.post('/bookings/:id/status', async (req, res) => {
 });
 
 // Update booking details
-router.put('/bookings/:id', async (req, res) => {
+router.put('/bookings/:id', authMiddleware, async (req, res) => {
     const id = Number(req.params.id);
     const { userEmail, eventName, eventDate, startTime, endTime, location, attendees, notes } = req.body || {};
 

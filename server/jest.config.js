@@ -16,5 +16,7 @@ module.exports = {
       statements: 30,
     },
   },
-  setupFilesAfterSetup: ['<rootDir>/jest.setup.js'],
+
+  forceExit: true,
+  testTimeout: 10000,
 };

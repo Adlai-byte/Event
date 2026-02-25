@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
 
 // Helper function to calculate package price from items
 function calculatePackagePrice(pkg, paxCount = null, removedItemIds = []) {
@@ -132,7 +133,7 @@ router.get('/packages/:id', async (req, res) => {
 });
 
 // Create package with categories and items
-router.post('/services/:serviceId/packages', async (req, res) => {
+router.post('/services/:serviceId/packages', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const serviceId = Number(req.params.serviceId);
     if (!Number.isFinite(serviceId)) {
         return res.status(400).json({ ok: false, error: 'Invalid service ID' });
@@ -229,7 +230,7 @@ router.post('/services/:serviceId/packages', async (req, res) => {
 });
 
 // Update package
-router.put('/packages/:id', async (req, res) => {
+router.put('/packages/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const packageId = Number(req.params.id);
     if (!Number.isFinite(packageId)) {
         return res.status(400).json({ ok: false, error: 'Invalid package ID' });
@@ -363,7 +364,7 @@ router.put('/packages/:id', async (req, res) => {
 });
 
 // Delete package
-router.delete('/packages/:id', async (req, res) => {
+router.delete('/packages/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const packageId = Number(req.params.id);
     if (!Number.isFinite(packageId)) {
         return res.status(400).json({ ok: false, error: 'Invalid package ID' });
@@ -385,7 +386,7 @@ router.delete('/packages/:id', async (req, res) => {
 });
 
 // Add category to package
-router.post('/packages/:id/categories', async (req, res) => {
+router.post('/packages/:id/categories', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const packageId = Number(req.params.id);
     if (!Number.isFinite(packageId)) {
         return res.status(400).json({ ok: false, error: 'Invalid package ID' });
@@ -422,7 +423,7 @@ router.post('/packages/:id/categories', async (req, res) => {
 });
 
 // Update category
-router.put('/categories/:id', async (req, res) => {
+router.put('/categories/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const categoryId = Number(req.params.id);
     if (!Number.isFinite(categoryId)) {
         return res.status(400).json({ ok: false, error: 'Invalid category ID' });
@@ -471,7 +472,7 @@ router.put('/categories/:id', async (req, res) => {
 });
 
 // Delete category
-router.delete('/categories/:id', async (req, res) => {
+router.delete('/categories/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const categoryId = Number(req.params.id);
     if (!Number.isFinite(categoryId)) {
         return res.status(400).json({ ok: false, error: 'Invalid category ID' });
@@ -493,7 +494,7 @@ router.delete('/categories/:id', async (req, res) => {
 });
 
 // Add item to category
-router.post('/categories/:id/items', async (req, res) => {
+router.post('/categories/:id/items', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const categoryId = Number(req.params.id);
     if (!Number.isFinite(categoryId)) {
         return res.status(400).json({ ok: false, error: 'Invalid category ID' });
@@ -540,7 +541,7 @@ router.post('/categories/:id/items', async (req, res) => {
 });
 
 // Bulk add/update items to category
-router.post('/categories/:id/items/bulk', async (req, res) => {
+router.post('/categories/:id/items/bulk', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const categoryId = Number(req.params.id);
     if (!Number.isFinite(categoryId)) {
         return res.status(400).json({ ok: false, error: 'Invalid category ID' });
@@ -605,7 +606,7 @@ router.post('/categories/:id/items/bulk', async (req, res) => {
 });
 
 // Update item
-router.put('/items/:id', async (req, res) => {
+router.put('/items/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const itemId = Number(req.params.id);
     if (!Number.isFinite(itemId)) {
         return res.status(400).json({ ok: false, error: 'Invalid item ID' });
@@ -670,7 +671,7 @@ router.put('/items/:id', async (req, res) => {
 });
 
 // Delete item
-router.delete('/items/:id', async (req, res) => {
+router.delete('/items/:id', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const itemId = Number(req.params.id);
     if (!Number.isFinite(itemId)) {
         return res.status(400).json({ ok: false, error: 'Invalid item ID' });
@@ -785,7 +786,7 @@ router.get('/packages/:id/calculate-price', async (req, res) => {
 });
 
 // Save booking package (called when creating a booking with a package)
-router.post('/bookings/:bookingId/package', async (req, res) => {
+router.post('/bookings/:bookingId/package', authMiddleware, async (req, res) => {
     const bookingId = Number(req.params.bookingId);
     if (!Number.isFinite(bookingId)) {
         return res.status(400).json({ ok: false, error: 'Invalid booking ID' });
@@ -871,7 +872,7 @@ router.post('/bookings/:bookingId/package', async (req, res) => {
 });
 
 // Get booking package details
-router.get('/bookings/:bookingId/package', async (req, res) => {
+router.get('/bookings/:bookingId/package', authMiddleware, async (req, res) => {
     const bookingId = Number(req.params.bookingId);
     if (!Number.isFinite(bookingId)) {
         return res.status(400).json({ ok: false, error: 'Invalid booking ID' });

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
+const { sendMessageValidation } = require('../middleware/validationSchemas');
+const { validate } = require('../middleware/validate');
 
 function emitNotification(req, userEmail) {
   const io = req.app.get('io');
@@ -16,7 +19,7 @@ function emitNotification(req, userEmail) {
 // ============================================
 
 // Get unread messages count for a user
-router.get('/user/messages/count', async (req, res) => {
+router.get('/user/messages/count', authMiddleware, async (req, res) => {
     const email = req.query.email;
     if (!email) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -42,7 +45,7 @@ router.get('/user/messages/count', async (req, res) => {
 });
 
 // Get or create conversation for a booking
-router.post('/bookings/:id/conversation', async (req, res) => {
+router.post('/bookings/:id/conversation', authMiddleware, async (req, res) => {
     const bookingId = Number(req.params.id);
     const { userEmail } = req.body || {};
 
@@ -166,7 +169,7 @@ router.get('/bookings/:id/provider', async (req, res) => {
 });
 
 // Get user conversations
-router.get('/user/conversations', async (req, res) => {
+router.get('/user/conversations', authMiddleware, async (req, res) => {
     const email = req.query.email;
     if (!email) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -227,7 +230,7 @@ router.get('/user/conversations', async (req, res) => {
 });
 
 // Get conversation messages
-router.get('/conversations/:id/messages', async (req, res) => {
+router.get('/conversations/:id/messages', authMiddleware, async (req, res) => {
     const conversationId = Number(req.params.id);
     if (!Number.isFinite(conversationId)) {
         return res.status(400).json({ ok: false, error: 'Invalid conversation ID' });
@@ -252,7 +255,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
 });
 
 // Send message
-router.post('/conversations/:id/messages', async (req, res) => {
+router.post('/conversations/:id/messages', authMiddleware, sendMessageValidation, validate, async (req, res) => {
     const conversationId = Number(req.params.id);
     const { userEmail, content } = req.body || {};
 
@@ -404,7 +407,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
 });
 
 // Mark messages as read
-router.post('/conversations/:id/read', async (req, res) => {
+router.post('/conversations/:id/read', authMiddleware, async (req, res) => {
     const conversationId = Number(req.params.id);
     const { userEmail } = req.body || {};
 

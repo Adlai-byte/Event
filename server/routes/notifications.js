@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
 
 // ============================================
 // PUSH NOTIFICATIONS API ENDPOINTS
 // ============================================
 
 // Register push notification token
-router.post('/notifications/register-token', async (req, res) => {
+router.post('/notifications/register-token', authMiddleware, async (req, res) => {
     const { userId, userEmail, pushToken, platform, subscriptionData } = req.body || {};
 
     console.log('Push token registration request received:');
@@ -228,7 +229,7 @@ global.sendPushNotification = sendPushNotification;
 // ============================================
 
 // Get user notifications (includes both notification table entries and system messages from conversations)
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', authMiddleware, async (req, res) => {
     const userEmail = req.query.email;
     if (!userEmail) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -334,7 +335,7 @@ router.get('/notifications', async (req, res) => {
 });
 
 // Get unread notification count (includes both notification table and system messages)
-router.get('/notifications/unread-count', async (req, res) => {
+router.get('/notifications/unread-count', authMiddleware, async (req, res) => {
     const userEmail = req.query.email;
     if (!userEmail) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -414,7 +415,7 @@ router.get('/notifications/unread-count', async (req, res) => {
 });
 
 // Mark notification as read
-router.post('/notifications/:id/read', async (req, res) => {
+router.post('/notifications/:id/read', authMiddleware, async (req, res) => {
     const notificationId = req.params.id;
     const userEmail = req.query.email;
 
@@ -460,7 +461,7 @@ router.post('/notifications/:id/read', async (req, res) => {
 });
 
 // Mark all notifications as read (includes both notification table and system messages)
-router.post('/notifications/mark-all-read', async (req, res) => {
+router.post('/notifications/mark-all-read', authMiddleware, async (req, res) => {
     const userEmail = req.query.email;
 
     if (!userEmail) {
@@ -520,7 +521,7 @@ router.post('/notifications/mark-all-read', async (req, res) => {
 });
 
 // Test endpoint to send push notification manually
-router.post('/notifications/test-push', async (req, res) => {
+router.post('/notifications/test-push', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const { userEmail, title, body } = req.body;
 
@@ -563,7 +564,7 @@ router.post('/notifications/test-push', async (req, res) => {
 });
 
 // Get push tokens for a user (for debugging)
-router.get('/notifications/push-tokens/:email', async (req, res) => {
+router.get('/notifications/push-tokens/:email', authMiddleware, async (req, res) => {
     try {
         const userEmail = req.params.email;
         const pool = getPool();
@@ -585,7 +586,7 @@ router.get('/notifications/push-tokens/:email', async (req, res) => {
 });
 
 // Delete push tokens for a user (for testing - to clear old tokens)
-router.delete('/notifications/push-tokens/:email', async (req, res) => {
+router.delete('/notifications/push-tokens/:email', authMiddleware, async (req, res) => {
     try {
         const userEmail = req.params.email;
         const pool = getPool();

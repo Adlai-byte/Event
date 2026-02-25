@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
 
 // ============================================
 // PROVIDER DASHBOARD STATS API ENDPOINT
 // ============================================
 
 // Get provider dashboard statistics
-router.get('/provider/dashboard/stats', async (req, res) => {
+router.get('/provider/dashboard/stats', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.providerEmail;
     const providerId = req.query.providerId; // Firebase UID (fallback)
 
@@ -153,7 +154,7 @@ router.get('/provider/dashboard/stats', async (req, res) => {
 // ============================================
 
 // Get provider's recent activity
-router.get('/provider/activity', async (req, res) => {
+router.get('/provider/activity', authMiddleware, requireRole('provider', 'admin'), async (req, res) => {
     const providerEmail = req.query.providerEmail;
     const providerId = req.query.providerId;
     const limit = parseInt(req.query.limit) || 10;
@@ -294,7 +295,7 @@ router.get('/provider/activity', async (req, res) => {
 // ============================================
 
 // Get dashboard statistics
-router.get('/dashboard/stats', async (req, res) => {
+router.get('/dashboard/stats', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const pool = getPool();
 

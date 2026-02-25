@@ -5,6 +5,10 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
+const { registerLimiter, authLimiter } = require('../middleware/rateLimiter');
+const { registerValidation, updateUserValidation } = require('../middleware/validationSchemas');
+const { validate } = require('../middleware/validate');
 
 // Uploads directory - same resolution as index.js
 const uploadsDir = process.env.UPLOADS_DIR
@@ -222,7 +226,7 @@ function saveProfilePicture(base64String, userId) {
 // ============================================
 
 // Debug: list users (limited columns)
-router.get('/users', async (_req, res) => {
+router.get('/users', authMiddleware, requireRole('admin'), async (_req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query("SELECT iduser, u_fname, u_lname, u_email, IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role FROM `user` ORDER BY iduser DESC LIMIT 50");
@@ -234,7 +238,7 @@ router.get('/users', async (_req, res) => {
 });
 
 // Check user by email (blocked status and role)
-router.get('/users/by-email', async (req, res) => {
+router.get('/users/by-email', authMiddleware, async (req, res) => {
     const email = (req.query.email || '').toString();
     if (!email) return res.status(400).json({ ok: false, error: 'Email required' });
     try {
@@ -315,7 +319,7 @@ router.get('/users/by-email', async (req, res) => {
 });
 
 // Get user provider status and rejection reason
-router.get('/user/provider-status', async (req, res) => {
+router.get('/user/provider-status', authMiddleware, async (req, res) => {
     const email = req.query.email;
     if (!email) {
         return res.status(400).json({ ok: false, error: 'Email required' });
@@ -374,7 +378,7 @@ router.post('/users', async (req, res) => {
 
 // Apply as provider endpoint - now creates pending application with documents
 // IMPORTANT: This route must come BEFORE /users/:id/block to avoid route conflicts
-router.post('/users/apply-provider', async (req, res) => {
+router.post('/users/apply-provider', authMiddleware, async (req, res) => {
     console.log('📥 POST /api/users/apply-provider - Request received');
     console.log('📍 Request URL:', req.url);
     console.log('📍 Request method:', req.method);
@@ -662,7 +666,7 @@ router.post('/users/apply-provider', async (req, res) => {
 });
 
 // Block / Unblock user (ensure u_disabled column exists)
-router.post('/users/:id/block', async (req, res) => {
+router.post('/users/:id/block', authMiddleware, requireRole('admin'), async (req, res) => {
     const id = Number(req.params.id);
     const { blocked } = req.body || {};
     if (!Number.isFinite(id) || typeof blocked !== 'boolean') {
@@ -689,7 +693,7 @@ router.post('/users/:id/block', async (req, res) => {
 });
 
 // Update user information
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', authMiddleware, updateUserValidation, validate, async (req, res) => {
     const id = Number(req.params.id);
     const { firstName, middleName, lastName, suffix, email, password, phone, dateOfBirth, address, city, state, zipCode, profilePicture } = req.body || {};
     if (!Number.isFinite(id)) {
@@ -951,7 +955,7 @@ router.put('/users/:id', async (req, res) => {
 });
 
 // Register endpoint: inserts into MySQL `event.user`
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, registerValidation, validate, async (req, res) => {
 	const {
 		firstName,
 		middleName = '',
