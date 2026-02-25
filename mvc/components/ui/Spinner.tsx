@@ -13,7 +13,7 @@ interface SpinnerProps {
 
 export function Spinner({ message, size = 'large', fullPage = false }: SpinnerProps) {
   return (
-    <View style={[styles.container, fullPage && styles.fullPage]}>
+    <View style={[styles.container, fullPage && styles.fullPage]} accessibilityRole="progressbar" accessibilityLabel={message || 'Loading'}>
       <ActivityIndicator size={size} color={semantic.primary} />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>

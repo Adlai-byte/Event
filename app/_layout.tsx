@@ -1,9 +1,13 @@
 // app/_layout.tsx — Root layout wrapping entire app with AuthProvider
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../mvc/contexts/AuthContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../mvc/services/queryClient';
+import { setupReactNativeFocusManager } from '../mvc/services/queryFocusManager';
+import { AuthProvider, useAuth } from '../mvc/contexts/AuthContext';
+import { useSocket } from '../mvc/hooks/useSocket';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -40,13 +44,28 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+/** Connects the socket when a user is authenticated. Must be inside AuthProvider + QueryClientProvider. */
+function SocketManager() {
+  const { authState } = useAuth();
+  useSocket(authState?.user?.email);
+  return null;
+}
+
 export default function RootLayout() {
+  useEffect(() => {
+    const cleanup = setupReactNativeFocusManager();
+    return cleanup;
+  }, []);
+
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <Slot />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SocketManager />
+          <StatusBar style="auto" />
+          <Slot />
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

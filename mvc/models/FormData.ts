@@ -14,8 +14,9 @@ export class LoginFormData {
 
   public getEmailError(): string | null {
     if (!this.email.trim()) return 'Email is required';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.email)) return 'Please enter a valid email address';
+    // Stricter email validation: requires proper domain and TLD (at least 2 characters)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(this.email.trim())) return 'Please enter a valid email address';
     return null;
   }
 
@@ -100,8 +101,9 @@ export class RegisterFormData {
 
   public getEmailError(): string | null {
     if (!this.email.trim()) return 'Email is required';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.email)) return 'Please enter a valid email address';
+    // Stricter email validation: requires proper domain and TLD (at least 2 characters)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(this.email.trim())) return 'Please enter a valid email address';
     return null;
   }
 

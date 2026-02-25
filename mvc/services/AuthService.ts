@@ -3,12 +3,16 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   sendPasswordResetEmail,
+  sendEmailVerification,
+  reload,
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   updateProfile,
+  updateEmail,
+  verifyBeforeUpdateEmail,
   User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from './firebase';
@@ -182,20 +186,36 @@ class AuthService {
           }
         }
 
-        // Use redirect directly for web (more reliable, avoids COOP issues)
-        // Popup can be blocked by Cross-Origin-Opener-Policy or popup blockers
+        // Try popup first (better UX)
         try {
           const provider = new GoogleAuthProvider();
-          await signInWithRedirect(this.auth, provider);
-          
-          // The page will redirect, so return a pending state
+          const result = await signInWithPopup(this.auth, provider);
           return {
-            success: false,
-            error: 'Redirecting to Google sign-in...'
+            success: true,
+            user: result.user
           };
-        } catch (redirectError: any) {
-          console.error('Google redirect error:', redirectError);
-          throw redirectError;
+        } catch (popupError: any) {
+          // If popup fails (e.g., blocked by COOP policy or popup blocker), use redirect
+          console.log('Popup failed, falling back to redirect:', popupError.message);
+          
+          // Check if it's a COOP-related error or popup blocked
+          if (popupError.message?.includes('Cross-Origin-Opener-Policy') || 
+              popupError.code === 'auth/popup-blocked' ||
+              popupError.code === 'auth/popup-closed-by-user') {
+            
+            // Use redirect as fallback
+            const provider = new GoogleAuthProvider();
+            await signInWithRedirect(this.auth, provider);
+            
+            // The page will redirect, so return a pending state
+            return {
+              success: false,
+              error: 'Redirecting to Google sign-in...'
+            };
+          } else {
+            // Other popup errors - return the error
+            throw popupError;
+          }
         }
       } else {
         // Mobile version - use React Native Google Sign-In
@@ -289,6 +309,151 @@ class AuthService {
   // Get current user
   getCurrentUser(): FirebaseUser | null {
     return this.auth.currentUser;
+  }
+
+  // Send email verification
+  async sendEmailVerification(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const user = this.auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'No user is currently signed in' };
+      }
+
+      if (user.emailVerified) {
+        return { success: false, error: 'Email is already verified' };
+      }
+
+      await sendEmailVerification(user);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Send email verification error:', error);
+      return { 
+        success: false, 
+        error: this.getErrorMessage(error.code) || error.message || 'Failed to send verification email' 
+      };
+    }
+  }
+
+  // Reload user to get updated email verification status
+  async reloadUser(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const user = this.auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'No user is currently signed in' };
+      }
+
+      await reload(user);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Reload user error:', error);
+      return { 
+        success: false, 
+        error: this.getErrorMessage(error.code) || error.message || 'Failed to reload user' 
+      };
+    }
+  }
+
+  // Update email in Firebase Authentication
+  async updateUserEmail(newEmail: string): Promise<{ success: boolean; error?: string; message?: string }> {
+    try {
+      const user = this.auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'No user is currently signed in' };
+      }
+
+      if (!newEmail || !newEmail.trim()) {
+        return { success: false, error: 'Email is required' };
+      }
+
+      // Validate email format - stricter validation
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(newEmail.trim())) {
+        return { success: false, error: 'Invalid email format' };
+      }
+
+      // Check if email is the same
+      if (user.email === newEmail.trim()) {
+        return { success: true }; // No change needed
+      }
+
+      // Firebase requires the current email to be verified before changing it
+      if (!user.emailVerified) {
+        return { 
+          success: false, 
+          error: 'Please verify your current email address before changing it. Check your inbox for a verification email, or use the "Send Verification Email" button in your Account Information section.' 
+        };
+      }
+
+      // Try verifyBeforeUpdateEmail first (doesn't require recent login, more secure)
+      // This sends a verification email to the new address
+      try {
+        await verifyBeforeUpdateEmail(user, newEmail.trim());
+        console.log('✅ Verification email sent to new email address:', newEmail.trim());
+        return { 
+          success: true,
+          message: 'A verification email has been sent to your new email address. Please check your inbox and click the verification link to complete the email change. Your email will be updated in Firebase after you verify the new address.'
+        };
+      } catch (verifyError: any) {
+        console.error('verifyBeforeUpdateEmail error:', verifyError.code, verifyError.message);
+        
+        // If verifyBeforeUpdateEmail fails with 400 or other errors, 
+        // it might not be configured or user needs re-authentication
+        // In this case, we'll update the database but inform user about Firebase
+        if (verifyError.code === 'auth/requires-recent-login' || 
+            verifyError.code === 'auth/operation-not-allowed' ||
+            verifyError.code?.includes('400') ||
+            verifyError.message?.includes('400')) {
+          // Return success but with a message that database will be updated
+          // and they need to verify through Firebase
+          return {
+            success: true,
+            message: `Your email will be updated in the database. However, to update your email in Firebase Authentication, please log out and log back in, then try changing your email again. Alternatively, you can verify your new email through Firebase's email verification system.`
+          };
+        }
+        
+        // For other errors, throw to be handled below
+        throw verifyError;
+      }
+    } catch (error: any) {
+      console.error('Update email error:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/operation-not-allowed') {
+        // This usually means email change is disabled in Firebase settings
+        // But the error message might say to verify email, so check that first
+        if (error.message?.toLowerCase().includes('verify')) {
+          return { 
+            success: false, 
+            error: 'Please verify your current email address before changing it. Check your inbox for a verification email, or use the "Send Verification Email" button in your Account Information section.' 
+          };
+        }
+        return { 
+          success: false, 
+          error: 'Email change is not allowed. Please contact support or check your Firebase project settings.' 
+        };
+      }
+      
+      // Handle unverified email error
+      if (error.code === 'auth/requires-recent-login') {
+        return { 
+          success: false, 
+          error: 'For security, please log out and log back in before changing your email address.' 
+        };
+      }
+      
+      // Handle email verification requirement
+      if (error.message?.toLowerCase().includes('verify') || error.message?.toLowerCase().includes('verification')) {
+        return { 
+          success: false, 
+          error: 'Please verify your current email address before changing it. Check your inbox for a verification email, or use the "Send Verification Email" button in your Account Information section.' 
+        };
+      }
+      
+      return { 
+        success: false, 
+        error: this.getErrorMessage(error.code) || error.message || 'Failed to update email' 
+      };
+    }
   }
 
   // Listen to authentication state changes

@@ -10,6 +10,7 @@ interface CardProps {
   padding?: keyof typeof spacing;
   shadowLevel?: 'sm' | 'md' | 'lg' | 'xl';
   style?: ViewStyle;
+  accessibilityLabel?: string;
 }
 
 export function Card({
@@ -17,6 +18,7 @@ export function Card({
   padding = 'lg',
   shadowLevel = 'md',
   style,
+  accessibilityLabel,
 }: CardProps) {
   return (
     <View
@@ -26,6 +28,7 @@ export function Card({
         { padding: spacing[padding] },
         style,
       ]}
+      accessibilityLabel={accessibilityLabel}
     >
       {children}
     </View>

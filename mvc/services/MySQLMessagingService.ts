@@ -1,9 +1,11 @@
 import { getApiBaseUrl } from './api';
 import { Message, Conversation } from '../models/Message';
+import { getSocket } from './socketClient';
 
 export class MySQLMessagingService {
   private static instance: MySQLMessagingService;
   private pollingIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private socketCleanups: Map<string, () => void> = new Map();
 
   private constructor() {}
 
@@ -14,12 +16,11 @@ export class MySQLMessagingService {
     return MySQLMessagingService.instance;
   }
 
-  // Get user conversations from MySQL API
   async getUserConversations(userEmail: string): Promise<Conversation[]> {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/user/conversations?email=${encodeURIComponent(userEmail)}`);
       const data = await resp.json();
-      
+
       if (data.ok && data.conversations) {
         return data.conversations.map((conv: any) => ({
           id: conv.idconversation.toString(),
@@ -49,18 +50,17 @@ export class MySQLMessagingService {
     }
   }
 
-  // Get conversation messages from MySQL API
   async getConversationMessages(conversationId: string): Promise<Message[]> {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/conversations/${conversationId}/messages`);
       const data = await resp.json();
-      
+
       if (data.ok && data.messages) {
         return data.messages.map((msg: any) => ({
           id: msg.idmessage.toString(),
           conversationId: msg.m_conversation_id.toString(),
           senderId: msg.m_sender_id.toString(),
-          receiverId: '', // Will be determined from conversation participants
+          receiverId: '',
           content: msg.m_content,
           messageType: msg.m_message_type || 'text',
           timestamp: msg.m_created_at ? new Date(msg.m_created_at) : new Date(),
@@ -79,7 +79,6 @@ export class MySQLMessagingService {
     }
   }
 
-  // Send message via MySQL API
   async sendMessage(
     conversationId: string,
     userEmail: string,
@@ -88,44 +87,27 @@ export class MySQLMessagingService {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/conversations/${conversationId}/messages`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail,
-          content: content.trim(),
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, content: content.trim() }),
       });
 
       const data = await resp.json();
 
       if (resp.ok && data.ok && data.message) {
-        return {
-          success: true,
-          messageId: data.message.idmessage.toString(),
-        };
+        return { success: true, messageId: data.message.idmessage.toString() };
       }
-      return {
-        success: false,
-        error: data.error || 'Failed to send message',
-      };
+      return { success: false, error: data.error || 'Failed to send message' };
     } catch (error: any) {
       console.error('Error sending message:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to send message',
-      };
+      return { success: false, error: error.message || 'Failed to send message' };
     }
   }
 
-  // Mark messages as read
   async markMessagesAsRead(conversationId: string, userEmail: string): Promise<{ success: boolean; error?: string }> {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/conversations/${conversationId}/read`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail }),
       });
 
@@ -137,87 +119,93 @@ export class MySQLMessagingService {
     }
   }
 
-  // Subscribe to conversation messages (polling-based)
   subscribeToConversationMessages(
     conversationId: string,
     userEmail: string,
     callback: (messages: Message[]) => void,
     interval: number = 2000
   ): () => void {
-    // Clear existing interval if any
-    if (this.pollingIntervals.has(conversationId)) {
-      clearInterval(this.pollingIntervals.get(conversationId)!);
-    }
+    this.unsubscribeKey(conversationId);
 
     // Load initial messages
     this.getConversationMessages(conversationId).then(callback);
 
-    // Set up polling
-    const intervalId = setInterval(async () => {
-      const messages = await this.getConversationMessages(conversationId);
-      callback(messages);
-    }, interval);
+    const socket = getSocket();
+    if (socket?.connected) {
+      // Socket-based: join conversation room and listen for new messages
+      socket.emit('join-conversation', conversationId);
 
-    this.pollingIntervals.set(conversationId, intervalId);
+      const onNewMessage = (data: { conversationId: string }) => {
+        if (data.conversationId === conversationId) {
+          this.getConversationMessages(conversationId).then(callback);
+        }
+      };
+      socket.on('new-message', onNewMessage);
 
-    // Return unsubscribe function
-    return () => {
-      if (this.pollingIntervals.has(conversationId)) {
-        clearInterval(this.pollingIntervals.get(conversationId)!);
-        this.pollingIntervals.delete(conversationId);
-      }
-    };
+      this.socketCleanups.set(conversationId, () => {
+        socket.off('new-message', onNewMessage);
+        socket.emit('leave-conversation', conversationId);
+      });
+    } else {
+      // Fallback: polling when socket unavailable
+      const intervalId = setInterval(async () => {
+        const messages = await this.getConversationMessages(conversationId);
+        callback(messages);
+      }, interval);
+      this.pollingIntervals.set(conversationId, intervalId);
+    }
+
+    return () => this.unsubscribeKey(conversationId);
   }
 
-  // Subscribe to user conversations (polling-based)
   subscribeToUserConversations(
     userEmail: string,
     callback: (conversations: Conversation[]) => void,
     interval: number = 3000
   ): () => void {
     const key = `conversations_${userEmail}`;
-    
-    // Clear existing interval if any
-    if (this.pollingIntervals.has(key)) {
-      clearInterval(this.pollingIntervals.get(key)!);
-    }
+    this.unsubscribeKey(key);
 
     // Load initial conversations
     this.getUserConversations(userEmail).then(callback);
 
-    // Set up polling
-    const intervalId = setInterval(async () => {
-      const conversations = await this.getUserConversations(userEmail);
-      callback(conversations);
-    }, interval);
+    const socket = getSocket();
+    if (socket?.connected) {
+      const onUnreadUpdate = () => {
+        this.getUserConversations(userEmail).then(callback);
+      };
+      socket.on('unread-update', onUnreadUpdate);
 
-    this.pollingIntervals.set(key, intervalId);
+      this.socketCleanups.set(key, () => {
+        socket.off('unread-update', onUnreadUpdate);
+      });
+    } else {
+      // Fallback: polling
+      const intervalId = setInterval(async () => {
+        const conversations = await this.getUserConversations(userEmail);
+        callback(conversations);
+      }, interval);
+      this.pollingIntervals.set(key, intervalId);
+    }
 
-    // Return unsubscribe function
-    return () => {
-      if (this.pollingIntervals.has(key)) {
-        clearInterval(this.pollingIntervals.get(key)!);
-        this.pollingIntervals.delete(key);
-      }
-    };
+    return () => this.unsubscribeKey(key);
+  }
+
+  private unsubscribeKey(key: string): void {
+    if (this.pollingIntervals.has(key)) {
+      clearInterval(this.pollingIntervals.get(key)!);
+      this.pollingIntervals.delete(key);
+    }
+    if (this.socketCleanups.has(key)) {
+      this.socketCleanups.get(key)!();
+      this.socketCleanups.delete(key);
+    }
   }
 
   cleanup(): void {
-    // Clear all polling intervals
-    this.pollingIntervals.forEach((intervalId) => {
-      clearInterval(intervalId);
-    });
+    this.pollingIntervals.forEach((intervalId) => clearInterval(intervalId));
     this.pollingIntervals.clear();
+    this.socketCleanups.forEach((cleanup) => cleanup());
+    this.socketCleanups.clear();
   }
 }
-
-
-
-
-
-
-
-
-
-
-

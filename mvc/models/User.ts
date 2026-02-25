@@ -11,6 +11,7 @@ export class User {
   public firstName?: string;
   public middleName?: string;
   public lastName?: string;
+  public suffix?: string;
   public phone?: string;
   public dateOfBirth?: string;
   public address?: string;
@@ -30,6 +31,7 @@ export class User {
     firstName?: string,
     middleName?: string,
     lastName?: string,
+    suffix?: string,
     phone?: string,
     dateOfBirth?: string,
     address?: string,
@@ -48,6 +50,7 @@ export class User {
     this.firstName = firstName;
     this.middleName = middleName;
     this.lastName = lastName;
+    this.suffix = suffix;
     this.phone = phone;
     this.dateOfBirth = dateOfBirth;
     this.address = address;
@@ -70,6 +73,41 @@ export class User {
 
   public isProfileComplete(): boolean {
     return !!(this.displayName && this.email);
+  }
+
+  public isPersonalInfoComplete(): boolean {
+    // Check if required personal details are filled
+    const hasPersonalDetails = !!(
+      this.firstName && 
+      this.firstName.trim() !== '' &&
+      this.lastName && 
+      this.lastName.trim() !== '' &&
+      this.phone && 
+      this.phone.trim() !== '' &&
+      this.dateOfBirth && 
+      this.dateOfBirth.trim() !== ''
+    );
+    return hasPersonalDetails;
+  }
+
+  public isAddressComplete(): boolean {
+    // Check if required address information is filled
+    const hasAddress = !!(
+      this.address && 
+      this.address.trim() !== '' &&
+      this.city && 
+      this.city.trim() !== '' &&
+      this.state && 
+      this.state.trim() !== '' &&
+      this.zipCode && 
+      this.zipCode.trim() !== ''
+    );
+    return hasAddress;
+  }
+
+  public isBookingInfoComplete(): boolean {
+    // Check if both personal details and address are complete
+    return this.isPersonalInfoComplete() && this.isAddressComplete();
   }
 
   public getInitials(): string {
@@ -104,6 +142,7 @@ export class User {
       firstName: this.firstName,
       middleName: this.middleName,
       lastName: this.lastName,
+      suffix: this.suffix,
       phone: this.phone,
       dateOfBirth: this.dateOfBirth,
       address: this.address,

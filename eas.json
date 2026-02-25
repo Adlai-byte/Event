@@ -1,18 +1,36 @@
 {
   "cli": {
-    "version": ">= 15.0.15",
+    "version": ">= 16.28.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "applicationArchivePath": "android/app/build/outputs/apk/release/app-release.apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://72.62.64.59:3001"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk",
+        "applicationArchivePath": "android/app/build/outputs/apk/release/app-release.apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://72.62.64.59:3001"
+      }
     }
   },
   "submit": {

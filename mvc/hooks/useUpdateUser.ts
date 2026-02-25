@@ -1,7 +1,8 @@
 // mvc/hooks/useUpdateUser.ts
 import { useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
-import { getApiBaseUrl } from '../services/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../services/apiClient';
 import { User } from '../models/User';
 import AuthService from '../services/AuthService';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,9 +14,10 @@ import { useAuth } from '../contexts/AuthContext';
  */
 export function useUpdateUser() {
   const { authState, setAuthState, updateUserEmail, checkEmailVerification } = useAuth();
+  const queryClient = useQueryClient();
 
-  const saveUser = useCallback(async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
-    try {
+  const updateMutation = useMutation({
+    mutationFn: async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
       if (!authState.user?.email) {
         if (Platform.OS === 'web') return { success: false, error: 'User email not found' };
         Alert.alert('Error', 'User email not found');
@@ -42,38 +44,25 @@ export function useUpdateUser() {
       }
 
       // Fetch user ID from email
-      const emailQuery = encodeURIComponent(emailChanged ? updatedUser.email.trim() : authState.user.email);
-      const userResp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${emailQuery}`);
-      if (!userResp.ok) throw new Error('Failed to fetch user ID');
-      const userData = await userResp.json();
+      const emailQuery = emailChanged ? updatedUser.email.trim() : authState.user.email;
+      const userData = await apiClient.get('/api/users/by-email', { email: emailQuery });
       if (!userData.ok || !userData.exists || !userData.id) throw new Error('User not found in database');
 
       // Update user in database
-      const updateResp = await fetch(`${getApiBaseUrl()}/api/users/${userData.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: updatedUser.firstName || authState.user.firstName || '',
-          middleName: updatedUser.middleName || authState.user.middleName || '',
-          lastName: updatedUser.lastName || authState.user.lastName || '',
-          suffix: (updatedUser as any).suffix || '',
-          email: updatedUser.email || authState.user.email || '',
-          phone: updatedUser.phone || authState.user.phone || '',
-          dateOfBirth: updatedUser.dateOfBirth || authState.user.dateOfBirth || '',
-          address: updatedUser.address || authState.user.address || '',
-          city: updatedUser.city || authState.user.city || '',
-          state: updatedUser.state || authState.user.state || '',
-          zipCode: updatedUser.zipCode || authState.user.zipCode || '',
-          profilePicture: updatedUser.profilePicture || undefined,
-        }),
+      const updateData = await apiClient.put(`/api/users/${userData.id}`, {
+        firstName: updatedUser.firstName || authState.user.firstName || '',
+        middleName: updatedUser.middleName || authState.user.middleName || '',
+        lastName: updatedUser.lastName || authState.user.lastName || '',
+        suffix: (updatedUser as any).suffix || '',
+        email: updatedUser.email || authState.user.email || '',
+        phone: updatedUser.phone || authState.user.phone || '',
+        dateOfBirth: updatedUser.dateOfBirth || authState.user.dateOfBirth || '',
+        address: updatedUser.address || authState.user.address || '',
+        city: updatedUser.city || authState.user.city || '',
+        state: updatedUser.state || authState.user.state || '',
+        zipCode: updatedUser.zipCode || authState.user.zipCode || '',
+        profilePicture: updatedUser.profilePicture || undefined,
       });
-
-      if (!updateResp.ok) {
-        const errData = await updateResp.json();
-        throw new Error(errData.error || 'Failed to update user');
-      }
-
-      const updateData = await updateResp.json();
 
       // Refresh auth state with updated user data
       if (emailChanged) {
@@ -81,11 +70,8 @@ export function useUpdateUser() {
       }
 
       const refreshEmail = emailChanged ? updatedUser.email.trim() : authState.user.email;
-      const refreshResp = await fetch(
-        `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(refreshEmail)}`
-      );
-      if (refreshResp.ok) {
-        const refreshData = await refreshResp.json();
+      try {
+        const refreshData = await apiClient.get('/api/users/by-email', { email: refreshEmail });
         if (refreshData.ok && refreshData.exists) {
           const firebaseUser = AuthService.getCurrentUser();
           const finalEmail = firebaseUser?.email || refreshEmail;
@@ -117,9 +103,20 @@ export function useUpdateUser() {
           );
           setAuthState(prev => prev.setUser(updatedObj));
         }
+      } catch {
+        // Refresh failed, but update succeeded — don't throw
       }
 
       return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+    },
+  });
+
+  const saveUser = useCallback(async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
+    try {
+      return await updateMutation.mutateAsync(updatedUser);
     } catch (error: any) {
       console.error('Error updating user:', error);
       const msg = error.message || 'Failed to update personal information';
@@ -127,7 +124,7 @@ export function useUpdateUser() {
       Alert.alert('Error', msg);
       return false;
     }
-  }, [authState.user, updateUserEmail, checkEmailVerification, setAuthState]);
+  }, [updateMutation]);
 
   return { saveUser };
 }

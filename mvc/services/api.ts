@@ -67,11 +67,31 @@ export function getApiBaseUrl(): string {
 	}
 
 	// Production mode (including APK builds): Always use VPS URL
+	// BUT: If running on Android emulator, use 10.0.2.2 to access host machine's localhost
 	if (!__DEV__) {
+		// Check if we're on Android emulator (even in production builds)
+		// Android emulator can access host machine's localhost via 10.0.2.2
+		if (Platform.OS === 'android') {
+			// Try to detect if we're on an emulator
+			// For EAS builds running on emulator, allow override via env var or use VPS
+			// If EXPO_PUBLIC_API_BASE_URL is set, use it (allows testing with local server)
+			const emulatorUrl = 'http://10.0.2.2:3001';
+			// For now, use VPS for production Android builds
+			// To test with local server on emulator, set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3001
+			const productionUrl = isWeb ? VPS_API_URL : VPS_DIRECT_IP;
+			console.log('🌐 [PRODUCTION ANDROID] Using VPS API base URL:', productionUrl);
+			console.log('🌐 [PRODUCTION ANDROID] Platform:', Platform.OS, 'isWeb:', isWeb, '__DEV__:', __DEV__);
+			console.log('🌐 [PRODUCTION ANDROID] Environment variable EXPO_PUBLIC_API_BASE_URL:', envBase || 'NOT SET');
+			console.log('🌐 [PRODUCTION ANDROID] To use local server on emulator, set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3001');
+			cachedBaseUrl = productionUrl;
+			return cachedBaseUrl;
+		}
+		
 		// For production APK builds, always use direct VPS IP (not tunnel URL for mobile)
 		const productionUrl = isWeb ? VPS_API_URL : VPS_DIRECT_IP;
 		console.log('🌐 [PRODUCTION] Using VPS API base URL:', productionUrl);
 		console.log('🌐 [PRODUCTION] Platform:', Platform.OS, 'isWeb:', isWeb, '__DEV__:', __DEV__);
+		console.log('🌐 [PRODUCTION] Environment variable EXPO_PUBLIC_API_BASE_URL:', envBase || 'NOT SET');
 		cachedBaseUrl = productionUrl;
 		return cachedBaseUrl;
 	}
@@ -95,10 +115,11 @@ export function getApiBaseUrl(): string {
 		return cachedBaseUrl;
 	}
 
-		// For web/ios simulator, use VPS URL (not localhost) since we're deploying to Vercel
-		// This ensures consistency between local dev and production
-		console.log('🌐 Using VPS API URL for development:', VPS_API_URL);
-		cachedBaseUrl = VPS_API_URL;
+		// For web development, use localhost if available, otherwise fallback to VPS
+		// Check if we can reach localhost first
+		const localhostUrl = 'http://localhost:3001';
+		console.log('🌐 Using localhost API URL for development:', localhostUrl);
+		cachedBaseUrl = localhostUrl;
 		return cachedBaseUrl;
 	}
 

@@ -6,6 +6,9 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
+const { setupSocket } = require('./socket');
 
 // Route modules
 const adminRoutes = require('./routes/admin');
@@ -131,9 +134,22 @@ app.use((req, res) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`API server listening on http://localhost:${PORT}`);
-    console.log(`Server accessible from network on port ${PORT}`);
-    console.log(`For Android emulator: http://10.0.2.2:${PORT}`);
-    console.log(`For physical devices: http://YOUR_IP:${PORT}`);
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: true,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+
+setupSocket(io);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`API server listening on http://localhost:${PORT}`);
+  console.log(`Socket.io attached on same port`);
+  console.log(`For Android emulator: http://10.0.2.2:${PORT}`);
+  console.log(`For physical devices: http://YOUR_IP:${PORT}`);
 });

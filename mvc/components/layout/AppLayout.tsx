@@ -1,9 +1,10 @@
 // mvc/components/layout/AppLayout.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Modal, Pressable } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { semantic, spacing } from '../../theme';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
@@ -60,45 +61,26 @@ export function AppLayout({
 }: AppLayoutProps) {
   const { isMobile } = useBreakpoints();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [notificationCount, setNotificationCount] = useState(0);
 
-  // Shared unread message count - fetched ONCE here instead of in every view
-  const loadUnreadMessages = useCallback(async () => {
-    if (!user?.email) return;
-    try {
-      const res = await fetch(
-        `${getApiBaseUrl()}/api/user/messages/count?email=${encodeURIComponent(user.email)}`
-      );
-      const data = await res.json();
-      if (data.ok) setUnreadMessages(data.count || 0);
-    } catch {
-      // Silently ignore fetch errors
-    }
-  }, [user?.email]);
+  const { data: unreadMessages = 0 } = useQuery({
+    queryKey: ['unread-messages', user?.email],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; count?: number }>('/api/user/messages/count', { email: user!.email });
+      return data.ok ? (data.count || 0) : 0;
+    },
+    enabled: !!user?.email,
+    refetchInterval: 60000,
+  });
 
-  const loadNotificationCount = useCallback(async () => {
-    if (!user?.email) return;
-    try {
-      const res = await fetch(
-        `${getApiBaseUrl()}/api/notifications/unread-count?email=${encodeURIComponent(user.email)}`
-      );
-      const data = await res.json();
-      if (data.ok) setNotificationCount(data.count || 0);
-    } catch {
-      // Silently ignore fetch errors
-    }
-  }, [user?.email]);
-
-  useEffect(() => {
-    loadUnreadMessages();
-    loadNotificationCount();
-    const interval = setInterval(() => {
-      loadUnreadMessages();
-      loadNotificationCount();
-    }, 30000); // Poll every 30s instead of 2-3s
-    return () => clearInterval(interval);
-  }, [loadUnreadMessages, loadNotificationCount]);
+  const { data: notificationCount = 0 } = useQuery({
+    queryKey: ['unread-notifications', user?.email],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; count?: number }>('/api/notifications/unread-count', { email: user!.email });
+      return data.ok ? (data.count || 0) : 0;
+    },
+    enabled: !!user?.email,
+    refetchInterval: 60000,
+  });
 
   const handleNavigate = (route: string) => {
     setSidebarOpen(false);
@@ -154,7 +136,7 @@ export function AppLayout({
       {/* Mobile sidebar drawer */}
       <Modal visible={sidebarOpen} transparent animationType="none">
         <View style={styles.drawerOverlay}>
-          <Pressable style={styles.drawerBackdrop} onPress={() => setSidebarOpen(false)} />
+          <Pressable style={styles.drawerBackdrop} onPress={() => setSidebarOpen(false)} accessibilityLabel="Close menu" />
           <Sidebar
             role={role}
             activeRoute={activeRoute}

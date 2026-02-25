@@ -3,6 +3,14 @@ const router = express.Router();
 const { getPool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
+function emitNotification(req, userEmail) {
+  const io = req.app.get('io');
+  if (io && userEmail) {
+    io.to(`user:${userEmail}`).emit('new-notification');
+    io.to(`user:${userEmail}`).emit('unread-update');
+  }
+}
+
 // ============================================
 // MESSAGING API ENDPOINTS
 // ============================================
@@ -375,6 +383,19 @@ router.post('/conversations/:id/messages', async (req, res) => {
             }
         }
 
+        // Emit socket events for real-time updates
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`conversation:${conversationId}`).emit('new-message', {
+            conversationId: conversationId.toString(),
+            message: messageRows[0],
+          });
+
+          if (otherUserRows.length > 0) {
+            emitNotification(req, otherUserRows[0].u_email);
+          }
+        }
+
         return res.json({ ok: true, message: messageRows[0] });
     } catch (err) {
         console.error('Send message failed:', err.code, err.message);
@@ -413,6 +434,12 @@ router.post('/conversations/:id/read', async (req, res) => {
             SET cp_unread_count = 0
             WHERE cp_conversation_id = ? AND cp_user_id = ?
         `, [conversationId, userId]);
+
+        // Emit socket event for unread count update
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user:${userEmail}`).emit('unread-update');
+        }
 
         return res.json({ ok: true });
     } catch (err) {

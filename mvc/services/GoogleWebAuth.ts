@@ -8,26 +8,50 @@ import * as Crypto from 'expo-crypto';
 // Complete the auth session properly
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth Web Client ID
-// IMPORTANT: Get this from Firebase Console:
-// 1. Go to Firebase Console > Authentication > Sign-in method > Google
-// 2. Click on the Web SDK configuration
-// 3. Copy the "Web client ID" (not the client secret)
-// Format: XXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com
+// Google OAuth Client IDs
+// IMPORTANT: Different client IDs for different platforms
 // 
-// Then either:
-// - Set EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID environment variable, OR
-// - Replace the value below with your actual Web Client ID
-const GOOGLE_OAUTH_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID || 
-  '950286370545-9n9f7nkm4kt21onhp40r4vqbsc1bghsg.apps.googleusercontent.com'; // Web Client ID from Google Cloud Console
+// Web Client ID: For web platform OAuth
+// Android Client ID: For mobile (Android/iOS) OAuth - accepts custom URL schemes
+//
+// Get these from Google Cloud Console:
+// 1. Web Client: APIs & Services > Credentials > OAuth 2.0 Client IDs > Web client
+// 2. Android Client: APIs & Services > Credentials > OAuth 2.0 Client IDs > Android client
 
-// Validate client ID format
-if (!GOOGLE_OAUTH_CLIENT_ID.includes('.apps.googleusercontent.com')) {
-  console.warn('⚠️ WARNING: Google OAuth Client ID may be incorrect. Please verify it in Firebase Console.');
+// Web Client ID (for web platform)
+const GOOGLE_OAUTH_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_WEB_CLIENT_ID || 
+  '491966036189-6ulchqr6k0e0da1ibbu62jj3n0efnoek.apps.googleusercontent.com';
+
+// Android Client ID (for mobile platforms - accepts custom URL schemes like com.event://)
+const GOOGLE_OAUTH_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_ANDROID_CLIENT_ID || 
+  '491966036189-e4267fbeuf9vi2mval0qp3cra8besmti.apps.googleusercontent.com';
+
+// Get the appropriate client ID based on platform
+const getGoogleOAuthClientId = (): string => {
+  if (Platform.OS === 'web') {
+    return GOOGLE_OAUTH_WEB_CLIENT_ID;
+  }
+  // For mobile (Android/iOS), use Android Client ID
+  // Android OAuth clients accept custom URL schemes
+  return GOOGLE_OAUTH_ANDROID_CLIENT_ID;
+};
+
+// For backward compatibility, export the function result
+const GOOGLE_OAUTH_CLIENT_ID = getGoogleOAuthClientId();
+
+// Validate client IDs format
+if (!GOOGLE_OAUTH_WEB_CLIENT_ID.includes('.apps.googleusercontent.com')) {
+  console.warn('⚠️ WARNING: Google OAuth Web Client ID may be incorrect.');
+}
+if (!GOOGLE_OAUTH_ANDROID_CLIENT_ID.includes('.apps.googleusercontent.com')) {
+  console.warn('⚠️ WARNING: Google OAuth Android Client ID may be incorrect.');
 }
 
-// Log client ID on module load (for debugging)
-console.log('🔑 Google OAuth Client ID configured:', GOOGLE_OAUTH_CLIENT_ID.substring(0, 20) + '...');
+// Log client IDs on module load (for debugging)
+console.log('🔑 Google OAuth Client IDs configured:');
+console.log('   Web:', GOOGLE_OAUTH_WEB_CLIENT_ID.substring(0, 30) + '...');
+console.log('   Android:', GOOGLE_OAUTH_ANDROID_CLIENT_ID.substring(0, 30) + '...');
+console.log('   Using for', Platform.OS + ':', getGoogleOAuthClientId().substring(0, 30) + '...');
 
 // Types
 interface AuthCallbackResult {
@@ -96,13 +120,14 @@ class GoogleWebAuth {
       path: 'oauth',
     });
 
-    const request = new AuthSession.AuthRequest({
-      clientId: GOOGLE_OAUTH_CLIENT_ID,
-      scopes: ['openid', 'profile', 'email'],
-      responseType: AuthSession.ResponseType.Code,
-      redirectUri,
-      extraParams: {},
-    });
+      const clientId = getGoogleOAuthClientId();
+      const request = new AuthSession.AuthRequest({
+        clientId: clientId,
+        scopes: ['openid', 'profile', 'email'],
+        responseType: AuthSession.ResponseType.Code,
+        redirectUri,
+        extraParams: {},
+      });
 
     // Get the authorization URL
     const authUrl = await request.makeAuthUrlAsync(discovery);
@@ -117,15 +142,16 @@ class GoogleWebAuth {
       const discovery = await this.getDiscovery();
       
       // Exchange authorization code for tokens
-      const tokenResponse = await AuthSession.exchangeCodeAsync(
-        {
-          clientId: GOOGLE_OAUTH_CLIENT_ID,
-          code,
-          redirectUri,
-          extraParams: {},
-        },
-        discovery
-      );
+          const clientId = getGoogleOAuthClientId();
+          const tokenResponse = await AuthSession.exchangeCodeAsync(
+            {
+              clientId: clientId,
+              code,
+              redirectUri,
+              extraParams: {},
+            },
+            discovery
+          );
 
       if (tokenResponse.idToken) {
         // Create Firebase credential from Google ID token
@@ -186,9 +212,13 @@ class GoogleWebAuth {
   // Perform Google Sign-In using expo-auth-session (Mobile)
   async signInWithGoogleMobile(): Promise<GoogleSignInResult> {
     try {
+      // Get the appropriate client ID for this platform
+      const clientId = getGoogleOAuthClientId();
+      
       console.log('Starting Google OAuth flow...');
-      console.log('Client ID:', GOOGLE_OAUTH_CLIENT_ID);
       console.log('Platform:', Platform.OS);
+      console.log('Client ID:', clientId);
+      console.log('Client Type:', Platform.OS === 'web' ? 'Web' : 'Android (supports custom schemes)');
       
       const discovery = await this.getDiscovery();
       console.log('Discovery document fetched:', discovery?.authorizationEndpoint);
@@ -198,79 +228,17 @@ class GoogleWebAuth {
         throw new Error('Invalid Google OAuth discovery document. Please check your network connection.');
       }
       
-      // For mobile OAuth, Google Cloud Console requires HTTPS redirect URIs
-      // Manually construct HTTPS proxy URI since useProxy doesn't work in development
-      // Format: https://auth.expo.io/@projectId/slug
-      const projectId = '829882ad-1d3e-4e96-a69f-50a779b1fdc8'; // From app.json extra.eas.projectId
-      const projectSlug = 'Event'; // From app.json expo.slug
-      const httpsProxyUri = `https://auth.expo.io/@${projectId}/${projectSlug}`;
+      // IMPORTANT: Android OAuth clients require a custom URL scheme (com.event://oauth)
+      // They do NOT accept exp:// URLs from Expo Go
+      // We must force the use of com.event://oauth scheme
       
-      // Try to get redirect URI from makeRedirectUri first
-      let redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'com.event',
-        path: 'oauth',
-        useProxy: true,
-      });
+      // Force use of custom scheme - Android OAuth clients require this
+      // Even in Expo Go, we need to use com.event://oauth (not exp://)
+      const redirectUri = 'com.event://oauth';
       
-      // If we got exp:// or custom scheme, use HTTPS proxy instead
-      if (!redirectUri.startsWith('https://')) {
-        console.log('⚠️ makeRedirectUri returned non-HTTPS URI, using manual HTTPS proxy URI');
-        redirectUri = httpsProxyUri;
-      }
-      
-      // Log what type of URI we got
-      if (redirectUri.startsWith('https://')) {
-        console.log('✅ Using HTTPS proxy redirect URI (works with Google Cloud Console)');
-      } else {
-        console.warn('⚠️ Using non-HTTPS URI - this may not work with Google Cloud Console');
-        console.warn('⚠️ Falling back to HTTPS proxy URI');
-        redirectUri = httpsProxyUri;
-      }
-      
-      console.log('');
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('🔗 REDIRECT URI CONFIGURATION');
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('📋 Redirect URI being used:', redirectUri);
-      console.log('');
-      
-      if (redirectUri.startsWith('https://')) {
-        console.log('✅ This is an HTTPS URI - PERFECT for Google Cloud Console!');
-        console.log('');
-        console.log('📝 HAKBANG-HAKBANG:');
-        console.log('1. Pumunta sa: https://console.cloud.google.com/apis/credentials');
-        console.log('2. Piliin ang project: e-vent-aa93e (dropdown sa taas)');
-        console.log('3. Hanapin ang "Web client 1" (OAuth 2.0 Client ID)');
-        console.log('4. I-click ang EDIT (pencil icon)');
-        console.log('5. Scroll sa "Authorized redirect URIs"');
-        console.log('6. I-click ang + ADD URI');
-        console.log('7. Idagdag ang EXACT na URI na ito:');
-        console.log('   ', redirectUri);
-        console.log('8. I-click ang SAVE');
-        console.log('');
-        console.log('🔐 OAuth Consent Screen (IMPORTANTE!):');
-        console.log('1. Pumunta sa: https://console.cloud.google.com/apis/credentials/consent');
-        console.log('2. Piliin ang project: e-vent-aa93e');
-        console.log('3. I-check kung naka-configure na:');
-        console.log('   - User Type: External (o Internal kung G Suite)');
-        console.log('   - App name: "Event"');
-        console.log('   - User support email: I-lagay ang email mo');
-        console.log('   - Developer contact: I-lagay ang email mo');
-        console.log('4. Kung "Testing" mode, i-add ang email mo sa "Test users"');
-        console.log('5. I-click ang SAVE');
-        console.log('');
-        console.log('9. Maghintay ng 2-3 minuto');
-        console.log('10. Subukan ulit ang Google login');
-      } else {
-        console.log('⚠️ WARNING: Using custom scheme - Google Cloud Console requires HTTPS!');
-        console.log('⚠️ You need to set up a custom HTTPS redirect server or use Expo EAS');
-        console.log('⚠️ For now, try using Expo Go which provides HTTPS proxy automatically');
-      }
-      
-      console.log('');
-      console.log('🔑 Your Web Client ID:', GOOGLE_OAUTH_CLIENT_ID);
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('');
+      console.log('✅ Using custom URL scheme (required for Android OAuth client):', redirectUri);
+      console.log('💡 Android OAuth clients require custom schemes like com.event://oauth');
+      console.log('   This scheme is configured in app.json and AndroidManifest.xml');
       
       // Store redirect URI for error messages
       (this as any)._currentRedirectUri = redirectUri;
@@ -280,9 +248,9 @@ class GoogleWebAuth {
         Crypto.CryptoDigestAlgorithm.SHA256,
         Math.random().toString()
       );
-
+      
       const request = new AuthSession.AuthRequest({
-        clientId: GOOGLE_OAUTH_CLIENT_ID,
+        clientId: clientId,
         scopes: ['openid', 'profile', 'email'],
         responseType: AuthSession.ResponseType.Code,
         redirectUri,
@@ -297,7 +265,7 @@ class GoogleWebAuth {
         const authUrl = await request.makeAuthUrlAsync(discovery);
         console.log('🔗 Full Authorization URL:', authUrl);
         console.log('📋 OAuth Parameters:');
-        console.log('  - Client ID:', GOOGLE_OAUTH_CLIENT_ID);
+        console.log('  - Client ID:', clientId);
         console.log('  - Redirect URI:', redirectUri);
         console.log('  - Scopes:', ['openid', 'profile', 'email'].join(' '));
         console.log('  - Response Type:', AuthSession.ResponseType.Code);
@@ -328,202 +296,62 @@ class GoogleWebAuth {
       
       // Build the authorization URL first
       const authUrl = await request.makeAuthUrlAsync(discovery);
+      console.log('🔗 Opening OAuth URL in Chrome:', authUrl.substring(0, 100) + '...');
       
-      // Log the full authorization URL for debugging (truncated for security)
-      console.log('🔗 Full Authorization URL:', authUrl.substring(0, 150) + '...');
-      console.log('🔗 Redirect URI in URL:', redirectUri);
-      
-      // CRITICAL: Verify redirect URI is in the authorization URL
-      if (!authUrl.includes(encodeURIComponent(redirectUri))) {
-        console.error('❌ ERROR: Redirect URI mismatch!');
-        console.error('Expected redirect URI:', redirectUri);
-        console.error('Check the authorization URL above');
-        throw new Error('Redirect URI mismatch in OAuth request');
-      }
-      
-      console.log('🌐 Starting OAuth authentication...');
-      console.log('📱 Using Expo proxy for OAuth flow (handles redirects automatically)');
-      console.log('📱 After authentication, you will be redirected back to the app');
-      console.log('');
-      console.log('⚠️ IMPORTANT: If you get a 404 error, make sure this EXACT redirect URI is in Google Cloud Console:');
-      console.log('   ', redirectUri);
-      console.log('');
-      
-      // Use AuthRequest.promptAsync() for better Expo proxy support
-      // This automatically handles Expo proxy redirects (https://auth.expo.io/...)
-      // WebBrowser.openAuthSessionAsync doesn't handle proxy redirects as well
-      const result = await request.promptAsync(discovery, {
+      // Configure browser options - ALWAYS use Chrome on Android
+      const browserOptions: any = {
         showInRecents: true,
-        // Use external browser for better user experience
-        useProxy: true, // This ensures Expo proxy is used
-      });
-
-      console.log('📱 OAuth result type:', result.type);
-      console.log('📱 OAuth result:', JSON.stringify(result, null, 2));
+        preferEphemeralSession: false, // Allow browser to handle redirects properly
+        createTask: true, // Create a new task (important for Chrome)
+      };
       
-      // Log detailed information for debugging
-      if (result.type === 'cancel') {
-        console.log('❌ User cancelled the OAuth flow');
-      } else if (result.type === 'dismiss') {
-        console.log('❌ User dismissed the OAuth flow');
-      } else if (result.type === 'success') {
-        console.log('✅ OAuth flow completed successfully');
-      } else {
-        console.log('⚠️ Unexpected OAuth result type:', result.type);
-        // Check for error params
-        if ('params' in result && result.params) {
-          const params = result.params as any;
-          if (params.error) {
-            console.error('❌ OAuth Error:', params.error);
-            console.error('❌ Error Description:', params.error_description || 'No description');
-            console.error('❌ Error URI:', params.error_uri || 'No URI');
+      // On Android, ALWAYS explicitly use Chrome browser
+      if (Platform.OS === 'android') {
+        // Force Chrome browser package
+        browserOptions.browserPackage = 'com.android.chrome';
+        browserOptions.browserArguments = []; // Clear any default arguments
+        console.log('🔵 FORCING Chrome browser (com.android.chrome) for OAuth on Android');
+        
+        // Set browser controls color for better UX
+        browserOptions.controlsColor = '#4a55e1';
+        
+          // Try to open Chrome directly first as a fallback
+        try {
+          // Check if we can use WebBrowser.openBrowserAsync directly with Chrome
+          const canOpen = await WebBrowser.getCustomTabsSupportingBrowsersAsync();
+          console.log('Available browsers:', canOpen);
+          
+          if (canOpen && Object.keys(canOpen).length > 0) {
+            console.log('✅ Custom tabs supported, using Chrome');
           }
+        } catch (browserCheckError) {
+          console.log('Browser check error (continuing anyway):', browserCheckError);
         }
       }
+      
+      // Start the authentication flow - this will open Chrome on Android
+      console.log('🚀 Opening OAuth in browser with options:', {
+        browserPackage: browserOptions.browserPackage || 'default',
+        showInRecents: browserOptions.showInRecents,
+        preferEphemeralSession: browserOptions.preferEphemeralSession
+      });
+      
+      const result = await request.promptAsync(discovery, browserOptions);
 
-      // Handle the result from promptAsync - it might return tokens directly or a callback URL
-      if (result.type === 'success') {
-        // Check if promptAsync already returned tokens (some configurations do this)
-        if ('authentication' in result && result.authentication) {
-          console.log('✅ promptAsync returned tokens directly');
-          const auth = result.authentication;
-          
-          if (auth.idToken) {
-            console.log('Creating Firebase credential from ID token...');
-            const credential = GoogleAuthProvider.credential(auth.idToken);
-            
-            if (!credential) {
-              throw new Error('Failed to create authentication credential.');
-            }
-            
-            console.log('Signing in to Firebase...');
-            const userCredential = await signInWithCredential(this.auth, credential);
-            
-            return {
-              success: true,
-              user: userCredential.user
-            };
-          }
-        }
-        
-        // Otherwise, handle callback URL (manual token exchange)
-        // promptAsync returns params with code, or url with callback
-        if (result.params && result.params.code) {
-          // Extract code from params
-          const code = result.params.code as string;
-          const error = result.params.error as string | undefined;
-          
-          if (error) {
-            throw new Error(`Google authentication failed: ${error}`);
-          }
-          
-          console.log('✅ Authorization code received from promptAsync, exchanging for tokens...');
-          console.log('🔑 Using redirect URI for token exchange:', redirectUri);
-          
-          try {
-            const tokenResponse = await AuthSession.exchangeCodeAsync(
-              {
-                clientId: GOOGLE_OAUTH_CLIENT_ID,
-                code: code,
-                redirectUri,
-                extraParams: {},
-              },
-              discovery
-            );
-            
-            if (tokenResponse.idToken) {
-              console.log('Creating Firebase credential...');
-              const credential = GoogleAuthProvider.credential(tokenResponse.idToken);
-              
-              if (!credential) {
-                throw new Error('Failed to create authentication credential.');
-              }
-              
-              console.log('Signing in to Firebase...');
-              const userCredential = await signInWithCredential(this.auth, credential);
-              
-              return {
-                success: true,
-                user: userCredential.user
-              };
-            }
-          } catch (exchangeError: any) {
-            console.error('Token exchange error:', exchangeError);
-            throw exchangeError;
-          }
-        } else if (result.url) {
-          console.log('✅ Received callback URL from OAuth flow');
-          console.log('🔗 Callback URL:', result.url);
-          console.log('🔗 Original Redirect URI used:', redirectUri);
-          
-          // Check if callback URL is from Expo proxy
-          if (result.url.includes('auth.expo.io')) {
-            console.log('📋 Callback is from Expo proxy (auth.expo.io)');
-            console.log('📋 This means Google successfully redirected to Expo proxy');
-            console.log('📋 Expo proxy should now redirect to your app...');
-          }
-          
-          // Parse the callback URL to extract the authorization code
-          // Handle both http/https URLs and deep link URLs (com.event://)
-          let code: string | null = null;
-        let error: string | null = null;
-        let errorDescription: string | null = null;
-        
-        try {
-          // Try to parse as standard URL first
-          const url = new URL(result.url);
-          code = url.searchParams.get('code');
-          error = url.searchParams.get('error');
-          errorDescription = url.searchParams.get('error_description');
-          
-          console.log('📋 Parsed URL parameters:');
-          console.log('  - Code:', code ? '✅ Present' : '❌ Missing');
-          console.log('  - Error:', error || 'None');
-          console.log('  - Error Description:', errorDescription || 'None');
-        } catch (urlError) {
-          // If URL parsing fails, it might be a deep link (com.event://oauth?code=...)
-          // Parse manually using string methods
-          console.log('⚠️ Standard URL parsing failed, trying deep link format...');
-          console.log('URL parsing error:', urlError);
-          
-          // Extract query parameters from deep link
-          const queryString = result.url.split('?')[1] || result.url.split('#')[1] || '';
-          const params = new URLSearchParams(queryString);
-          code = params.get('code');
-          error = params.get('error');
-          errorDescription = params.get('error_description');
-          
-          console.log('📋 Parsed deep link parameters:');
-          console.log('  - Code:', code ? '✅ Present' : '❌ Missing');
-          console.log('  - Error:', error || 'None');
-        }
-        
-        if (error) {
-          console.error('❌ OAuth error from Google:', error);
-          console.error('Error description:', errorDescription);
-          throw new Error(`Google authentication failed: ${errorDescription || error}`);
-        }
-        
-        if (!code) {
-          console.error('❌ No authorization code in callback URL');
-          console.error('Full callback URL:', result.url);
-          console.error('This might mean:');
-          console.error('  1. The redirect URI in Google Cloud Console doesn\'t match');
-          console.error('  2. The OAuth consent screen is not configured');
-          console.error('  3. The user cancelled the authentication');
-          throw new Error('No authorization code received. Please check your Google Cloud Console configuration.');
-        }
-        
-        console.log('✅ Authorization code received, exchanging for tokens...');
-        console.log('🔑 Using redirect URI for token exchange:', redirectUri);
+      console.log('OAuth result type:', result.type);
+      console.log('OAuth result:', result);
+
+      if (result.type === 'success' && 'params' in result && result.params && 'code' in result.params && result.params.code) {
+        console.log('Authorization code received, exchanging for tokens...');
         try {
           // Exchange code for tokens
-          // IMPORTANT: Use the EXACT same redirectUri that was used in the authorization request
+          const code = typeof result.params.code === 'string' ? result.params.code : String(result.params.code);
+          const clientId = getGoogleOAuthClientId();
           const tokenResponse = await AuthSession.exchangeCodeAsync(
             {
-              clientId: GOOGLE_OAUTH_CLIENT_ID,
+              clientId: clientId,
               code: code,
-              redirectUri, // Must match the redirect URI used in authorization request
+              redirectUri,
               extraParams: {},
             },
             discovery
@@ -579,86 +407,86 @@ class GoogleWebAuth {
           } else if (exchangeError.error === 'invalid_grant') {
             throw new Error('Invalid authorization code. The code may have expired. Please try again.');
           } else if (exchangeError.error === 'redirect_uri_mismatch') {
-            const currentUri = (this as any)._currentRedirectUri || redirectUri;
             throw new Error(
-              `❌ 404 Error: Redirect URI not configured!\n\n` +
-              `📋 Add this EXACT redirect URI to Google Cloud Console:\n` +
-              `${currentUri}\n\n` +
-              `🔧 HAKBANG-HAKBANG:\n` +
-              `1. Pumunta sa: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Piliin ang project: e-vent-aa93e\n` +
-              `3. Hanapin ang OAuth 2.0 Client ID (Web Client ID mula sa Firebase)\n` +
-              `4. I-click ang EDIT\n` +
-              `5. Scroll sa "Authorized redirect URIs"\n` +
-              `6. I-click ang + ADD URI\n` +
-              `7. Idagdag ang EXACT na URI na ito: ${currentUri}\n` +
-              `8. I-click ang SAVE\n` +
-              `9. Maghintay ng 2-3 minuto, tapos subukan ulit\n\n` +
-              `💡 TIP: Kopyahin ang EXACT na URI mula sa console logs.`
+              `❌ Redirect URI Mismatch!\n\n` +
+              `The redirect URI is not registered in Google Cloud Console.\n\n` +
+              `📋 SOLUTION: Verify this redirect URI exists:\n` +
+              `https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n\n` +
+              `🔧 Steps:\n` +
+              `1. Go to: https://console.cloud.google.com/apis/credentials\n` +
+              `2. Project: e-vent-aa93e\n` +
+              `3. Find OAuth Client: ${getGoogleOAuthClientId().substring(0, 30)}...\n` +
+              `4. Click Edit → Check "Authorized redirect URIs"\n` +
+              `5. Ensure this URI exists: https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n` +
+              `6. If missing, add it and SAVE → Wait 1-2 minutes → Try again`
             );
           } else if (exchangeError.message?.includes('404') || 
                      exchangeError.errorDescription?.includes('404') ||
                      exchangeError.errorDescription?.includes('not found')) {
-            const currentUri = (this as any)._currentRedirectUri || redirectUri;
             throw new Error(
-              `❌ 404 Error: Redirect URI not found!\n\n` +
-              `📋 Add this EXACT redirect URI to Google Cloud Console:\n` +
-              `${currentUri}\n\n` +
-              `🔧 HAKBANG-HAKBANG:\n` +
-              `1. Pumunta sa: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Piliin ang project: e-vent-aa93e\n` +
-              `3. Hanapin ang OAuth 2.0 Client ID (Web Client ID)\n` +
-              `4. I-click ang EDIT\n` +
-              `5. Scroll sa "Authorized redirect URIs"\n` +
-              `6. I-click ang + ADD URI\n` +
-              `7. Idagdag ang EXACT na URI: ${currentUri}\n` +
-              `8. I-click ang SAVE\n` +
-              `9. Maghintay ng 2-3 minuto, tapos subukan ulit\n\n` +
-              `💡 TIP: Kopyahin ang EXACT na URI mula sa console logs.`
+              `❌ 404 Error: Redirect URI Not Found!\n\n` +
+              `Verify this redirect URI exists in Google Cloud Console:\n` +
+              `https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n\n` +
+              `🔧 Quick Fix:\n` +
+              `1. https://console.cloud.google.com/apis/credentials\n` +
+              `2. Project: e-vent-aa93e → OAuth Client → Edit\n` +
+              `3. Check "Authorized redirect URIs" section\n` +
+              `4. Ensure this URI exists: https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n` +
+              `5. If missing, add it → Save → Wait 1-2 min → Retry`
             );
           } else {
             throw new Error(exchangeError.errorDescription || exchangeError.message || 'Token exchange failed');
           }
         }
-        } // Close the else if (result.url) block
-      } // Close the if (result.type === 'success') block
-      
-      else if (result.type === 'cancel') {
-        console.log('User cancelled OAuth flow in Chrome browser');
+      } else if (result.type === 'cancel') {
+        console.log('User cancelled OAuth flow');
         return {
           success: false,
           error: 'Google sign-in was cancelled.'
         };
-      } else if (result.type === 'dismiss') {
-        console.log('User dismissed OAuth flow in Chrome browser');
-        return {
-          success: false,
-          error: 'Google sign-in was dismissed.'
-        };
-      } else {
-        console.error('Unexpected OAuth result type:', result.type);
+      } else if (result.type === 'error') {
+        const errorParams = 'params' in result ? result.params : null;
+        const errorObj = 'error' in result ? result.error : null;
+        console.error('OAuth error:', errorObj);
         console.error('Error params:', errorParams);
+        
+        // Check for OAuth 2.0 policy compliance errors
+        if (errorParams && typeof errorParams === 'object' && 'error' in errorParams) {
+          const errorCode = errorParams.error;
+          if (errorCode === 'invalid_request' || 
+              (typeof errorCode === 'string' && errorCode.includes('policy'))) {
+            throw new Error(
+              '❌ OAuth 2.0 Policy Compliance Error\n\n' +
+              'Your app needs to be configured in Google Cloud Console OAuth consent screen.\n\n' +
+              '🔧 Fix Steps:\n' +
+              '1. Go to: https://console.cloud.google.com/apis/credentials/consent\n' +
+              '2. Select project: e-vent-aa93e\n' +
+              '3. Configure OAuth consent screen:\n' +
+              '   - User Type: External (for testing) or Internal (for Google Workspace)\n' +
+              '   - App name: E-Vent (or your app name)\n' +
+              '   - User support email: Your email\n' +
+              '   - Developer contact: Your email\n' +
+              '4. Add scopes: email, profile, openid\n' +
+              '5. Add test users (if External): Add your email (kylealonzo276@gmail.com)\n' +
+              '6. Save and continue\n' +
+              '7. Wait a few minutes, then try again\n\n' +
+              '💡 For production, you may need to submit for verification.'
+            );
+          }
+        }
         
         // Check for specific error types
         if (errorParams && typeof errorParams === 'object' && 'error' in errorParams && errorParams.error === 'access_denied') {
           throw new Error('Google sign-in was denied. Please try again.');
         } else if (errorParams && typeof errorParams === 'object' && 'error' in errorParams && errorParams.error === 'redirect_uri_mismatch') {
-          const currentUri = (this as any)._currentRedirectUri || redirectUri;
           throw new Error(
-            `❌ 404 Error: Redirect URI not configured!\n\n` +
-            `📋 Add this EXACT redirect URI to Google Cloud Console:\n` +
-            `${currentUri}\n\n` +
-            `🔧 HAKBANG-HAKBANG:\n` +
-            `1. Pumunta sa: https://console.cloud.google.com/apis/credentials\n` +
-            `2. Piliin ang project: e-vent-aa93e\n` +
-            `3. Hanapin ang OAuth 2.0 Client ID (Web Client ID)\n` +
-            `4. I-click ang EDIT\n` +
-            `5. Scroll sa "Authorized redirect URIs"\n` +
-            `6. I-click ang + ADD URI\n` +
-            `7. Idagdag ang EXACT na URI: ${currentUri}\n` +
-            `8. I-click ang SAVE\n` +
-            `9. Maghintay ng 2-3 minuto, tapos subukan ulit\n\n` +
-            `💡 TIP: Kopyahin ang EXACT na URI mula sa console logs.`
+            `❌ Redirect URI Mismatch!\n\n` +
+            `Verify this redirect URI exists:\n` +
+            `https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n\n` +
+            `🔧 Fix: https://console.cloud.google.com/apis/credentials\n` +
+            `   → Project: e-vent-aa93e → OAuth Client → Edit\n` +
+            `   → Check "Authorized redirect URIs"\n` +
+            `   → Ensure: https://e-vent-aa93e.firebaseapp.com/__/auth/handler exists`
           );
         } else if (errorParams && typeof errorParams === 'object' && 'error' in errorParams && errorParams.error === 'invalid_client') {
           throw new Error('Invalid OAuth client ID. Please check your Google OAuth configuration in Firebase Console.');
@@ -666,22 +494,16 @@ class GoogleWebAuth {
                    (typeof errorParams.error_description === 'string' && (errorParams.error_description.includes('404') || errorParams.error_description.includes('not found')))) ||
                    (errorObj && typeof errorObj === 'object' && 'message' in errorObj && typeof errorObj.message === 'string' && errorObj.message.includes('404'))) {
           // Specific 404 error handling
-          const currentUri = (this as any)._currentRedirectUri || redirectUri;
           throw new Error(
-            `❌ 404 Error: Redirect URI not found!\n\n` +
-            `📋 Add this EXACT redirect URI to Google Cloud Console:\n` +
-            `${currentUri}\n\n` +
-            `🔧 HAKBANG-HAKBANG:\n` +
-            `1. Pumunta sa: https://console.cloud.google.com/apis/credentials\n` +
-            `2. Piliin ang project: e-vent-aa93e\n` +
-            `3. Hanapin ang OAuth 2.0 Client ID (Web Client ID)\n` +
-            `4. I-click ang EDIT\n` +
-            `5. Scroll sa "Authorized redirect URIs"\n` +
-            `6. I-click ang + ADD URI\n` +
-            `7. Idagdag ang EXACT na URI: ${currentUri}\n` +
-            `8. I-click ang SAVE\n` +
-            `9. Maghintay ng 2-3 minuto, tapos subukan ulit\n\n` +
-            `💡 TIP: Kopyahin ang EXACT na URI mula sa console logs.`
+            `❌ 404 Error: Redirect URI Not Found!\n\n` +
+            `Verify this redirect URI exists:\n` +
+            `https://e-vent-aa93e.firebaseapp.com/__/auth/handler\n\n` +
+            `🔧 Steps:\n` +
+            `1. https://console.cloud.google.com/apis/credentials\n` +
+            `2. Project: e-vent-aa93e → OAuth Client → Edit\n` +
+            `3. Check "Authorized redirect URIs"\n` +
+            `4. Ensure: https://e-vent-aa93e.firebaseapp.com/__/auth/handler exists\n` +
+            `5. If missing, add it → Save → Wait 1-2 min → Retry`
           );
         }
         
@@ -690,6 +512,32 @@ class GoogleWebAuth {
                             (errorParams && typeof errorParams === 'object' && 'error' in errorParams ? errorParams.error : null) ||
                             'Authentication failed';
         throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Authentication failed');
+      } else if (result.type === 'dismiss') {
+        console.log('OAuth flow was dismissed');
+        return {
+          success: false,
+          error: 'Google sign-in was cancelled.'
+        };
+      } else {
+        console.error('Unexpected OAuth result:', result);
+        console.error('Result type:', result.type);
+        
+        const errorParams = 'params' in result ? result.params : null;
+        const errorObj = 'error' in result ? result.error : null;
+        console.error('Result params:', errorParams);
+        console.error('Result error:', errorObj);
+        
+        // Check if there's a specific error in params
+        if (errorParams && typeof errorParams === 'object' && 'error' in errorParams) {
+          const errorMsg = ('error_description' in errorParams ? errorParams.error_description : null) || 
+                          (errorParams.error || null);
+          throw new Error((typeof errorMsg === 'string' ? errorMsg : null) || 'Authentication failed. Please check your OAuth configuration.');
+        }
+        
+        const errorMessage = (errorObj && typeof errorObj === 'object' && 'message' in errorObj ? errorObj.message : null) ||
+                            (errorParams && typeof errorParams === 'object' && 'error' in errorParams ? errorParams.error : null) ||
+                            'Authentication not found. Please try again.';
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Authentication not found. Please try again.');
       }
     } catch (error: any) {
       console.error('Mobile Google sign-in error:', error);

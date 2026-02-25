@@ -15,14 +15,15 @@ interface FirebaseConfig {
 }
 
 // Firebase configuration
+// Using "E Vent" web app configuration
 const firebaseConfig: FirebaseConfig = {
   apiKey: "AIzaSyAiXugYzFj5T4cG4TAd__bkzsAKRopuhuc",
   authDomain: "e-vent-aa93e.firebaseapp.com",
   projectId: "e-vent-aa93e",
   storageBucket: "e-vent-aa93e.firebasestorage.app",
   messagingSenderId: "491966036189",
-  appId: "1:491966036189:web:3f1e5ff7ae9fe214d8c334",
-  measurementId: "G-NBTGC2332X"
+  appId: "1:491966036189:web:3f1e5ff7ae9fe214d8c334", // E Vent web app
+  measurementId: "G-NBTGC2332X" // E Vent web app measurement ID
 };
 
 // Initialize Firebase
