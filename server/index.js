@@ -14,6 +14,7 @@ const logger = require('./lib/logger');
 const requestId = require('./middleware/requestId');
 const requestLogger = require('./middleware/requestLogger');
 const { apiLimiter, registerLimiter } = require('./middleware/rateLimiter');
+const { sendSuccess, sendError } = require('./lib/response');
 
 // Route modules
 const adminRoutes = require('./routes/admin');
@@ -128,16 +129,13 @@ app.get('/', (_req, res) => {
 
 // Health check
 app.get('/api/health', (_req, res) => {
-    return res.json({ ok: true, timestamp: new Date().toISOString() });
+    return sendSuccess(res, { timestamp: new Date().toISOString() });
 });
 
 // 404 handler
 app.use((req, res) => {
     logger.debug('Route not found', { method: req.method, path: req.path, requestId: req.requestId });
-    res.status(404).json({
-        ok: false,
-        error: `Route not found: ${req.method} ${req.path}`,
-    });
+    sendError(res, 'NOT_FOUND', `Route not found: ${req.method} ${req.path}`, 404);
 });
 
 // Global error handler
@@ -149,10 +147,8 @@ app.use((err, req, res, _next) => {
         url: req.originalUrl,
         requestId: req.requestId,
     });
-    res.status(err.status || 500).json({
-        ok: false,
-        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    });
+    const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
+    sendError(res, 'SERVER_ERROR', message, err.status || 500);
 });
 
 // Export app for testing (before listen)

@@ -1,18 +1,19 @@
-// Simple MySQL connection pool for the `event` database
-// Uses mysql2/promise and tests the connection on first import
+// MySQL connection pool for the `event` database
+// Uses mysql2/promise with configurable pool settings
 
-// Load environment variables
 const path = require('path');
-// Load .env from root directory (parent of server)
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const mysql = require('mysql2/promise');
+const logger = require('./lib/logger');
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_NAME = process.env.DB_NAME || 'event';
 const DB_PORT = Number(process.env.DB_PORT || 3306);
+const DB_POOL_SIZE = Number(process.env.DB_POOL_SIZE || 50);
+const DB_QUEUE_LIMIT = Number(process.env.DB_QUEUE_LIMIT || 100);
 
 let pool;
 
@@ -25,26 +26,33 @@ function getPool() {
 			database: DB_NAME,
 			port: DB_PORT,
 			waitForConnections: true,
-			connectionLimit: 10,
-			queueLimit: 0,
+			connectionLimit: DB_POOL_SIZE,
+			queueLimit: DB_QUEUE_LIMIT,
+			connectTimeout: 5000,
+			idleTimeout: 60000,
+			enableKeepAlive: true,
+			keepAliveInitialDelay: 30000,
 		});
-		// fire-and-forget a quick connection test
+
+		// Connection test on first pool creation
 		(async () => {
 			try {
 				const connection = await pool.getConnection();
 				await connection.ping();
 				connection.release();
-				console.log('successfully connected to database');
+				logger.info('Database connected', {
+					host: DB_HOST,
+					database: DB_NAME,
+					poolSize: DB_POOL_SIZE,
+				});
 			} catch (error) {
-				console.error('database connection failed:', error.message);
+				logger.error('Database connection failed', { error: error.message });
 			}
 		})();
 	}
 	return pool;
 }
 
-module.exports = {
-	getPool,
-};
+module.exports = { getPool };
 
 

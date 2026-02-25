@@ -6,7 +6,7 @@ describe('Health Check', () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
-    expect(res.body.timestamp).toBeDefined();
+    expect(res.body.data.timestamp).toBeDefined();
   });
 
   it('GET / should return welcome message', async () => {
@@ -19,6 +19,7 @@ describe('Health Check', () => {
     const res = await request(app).get('/api/nonexistent');
     expect(res.status).toBe(404);
     expect(res.body.ok).toBe(false);
+    expect(res.body.code).toBe('NOT_FOUND');
     expect(res.body.error).toContain('Route not found');
   });
 });
