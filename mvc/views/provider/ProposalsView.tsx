@@ -203,15 +203,19 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'my-proposals' && styles.tabButtonActive]}
             onPress={() => setActiveTab('my-proposals')}
+            accessibilityRole="button"
+            accessibilityLabel="My proposals tab"
           >
             <Text style={[styles.tabButtonText, activeTab === 'my-proposals' && styles.tabButtonTextActive]}>My Proposals</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabButton, activeTab === 'available-requests' && styles.tabButtonActive]}
             onPress={() => setActiveTab('available-requests')}
+            accessibilityRole="button"
+            accessibilityLabel="Available requests tab"
           >
             <Text style={[styles.tabButtonText, activeTab === 'available-requests' && styles.tabButtonTextActive]}>Available Requests</Text>
           </TouchableOpacity>
@@ -227,6 +231,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholderTextColor="#94A3B8"
+                accessibilityLabel="Search proposals"
               />
             </View>
 
@@ -237,6 +242,8 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   key={status}
                   style={[styles.filterChip, filterStatus === status && styles.filterChipActive]}
                   onPress={() => setFilterStatus(status)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by ${status}`}
                 >
                   <Text style={[styles.filterChipText, filterStatus === status && styles.filterChipTextActive]}>
                     {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
@@ -301,8 +308,10 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
                       <View style={styles.proposalActions}>
                         {proposal.status === 'submitted' && (
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             style={[styles.actionButton, styles.withdrawButton]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Withdraw proposal ${proposal.title}`}
                             onPress={() => {
                               Alert.alert('Withdraw Proposal', 'Are you sure you want to withdraw this proposal?', [
                                 { text: 'Cancel', style: 'cancel' },
@@ -332,6 +341,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholderTextColor="#94A3B8"
+                accessibilityLabel="Search hiring requests"
               />
             </View>
 
@@ -374,8 +384,10 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                     </View>
                   </View>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.submitProposalButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Submit proposal for ${request.title}`}
                     onPress={() => {
                       setNewProposal({...newProposal, hiringRequestId: request.id});
                       setShowProposalForm(true);
@@ -395,49 +407,56 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Submit Proposal</Text>
-                <TouchableOpacity onPress={() => setShowProposalForm(false)}>
+                <TouchableOpacity onPress={() => setShowProposalForm(false)} accessibilityRole="button" accessibilityLabel="Close proposal form">
                   <Text style={styles.modalClose}>✕</Text>
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.modalBody}>
                 <Text style={styles.formLabel}>Proposal Title *</Text>
-                <TextInput 
+                <TextInput
                   style={styles.formInput}
                   placeholder="Enter proposal title"
                   value={newProposal.title}
                   onChangeText={(text) => setNewProposal({...newProposal, title: text})}
+                  accessibilityLabel="Proposal title"
                 />
 
                 <Text style={styles.formLabel}>Description</Text>
-                <TextInput 
+                <TextInput
                   style={[styles.formInput, styles.textArea]}
                   placeholder="Describe your proposal"
                   multiline
                   numberOfLines={4}
                   value={newProposal.description}
                   onChangeText={(text) => setNewProposal({...newProposal, description: text})}
+                  accessibilityLabel="Proposal description"
                 />
 
                 <Text style={styles.formLabel}>Proposed Budget (₱) *</Text>
-                <TextInput 
+                <TextInput
                   style={styles.formInput}
                   placeholder="Enter proposed budget"
                   keyboardType="numeric"
                   value={newProposal.proposedBudget}
                   onChangeText={(text) => setNewProposal({...newProposal, proposedBudget: text})}
+                  accessibilityLabel="Proposed budget"
                 />
 
                 <View style={styles.modalActions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.modalButton, styles.cancelModalButton]}
                     onPress={() => setShowProposalForm(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel proposal"
                   >
                     <Text style={styles.modalButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.modalButton, styles.submitModalButton]}
                     onPress={handleSubmitProposal}
+                    accessibilityRole="button"
+                    accessibilityLabel="Submit proposal"
                   >
                     <Text style={[styles.modalButtonText, styles.submitModalButtonText]}>Submit</Text>
                   </TouchableOpacity>

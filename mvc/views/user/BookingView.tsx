@@ -294,6 +294,8 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 key={filter}
                 style={[styles.filterButton, activeFilter === filter && styles.filterButtonActive]}
                 onPress={() => setActiveFilter(filter)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${filter}`}
               >
                 <Text style={[styles.filterButtonText, activeFilter === filter && styles.filterButtonTextActive]}>
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}

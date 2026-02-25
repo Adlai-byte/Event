@@ -258,6 +258,7 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#94A3B8"
+            accessibilityLabel="Search applications"
           />
         </View>
 
@@ -268,6 +269,8 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
               key={status}
               style={[responsiveStyles.filterTab, filterStatus === status && styles.filterTabActive]}
               onPress={() => setFilterStatus(status)}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${status}`}
             >
               <Text style={[responsiveStyles.filterTabText, filterStatus === status && styles.filterTabTextActive]}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -344,6 +347,8 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                           setSelectedApplication(app);
                           setShowDocumentModal(true);
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`View documents for ${app.name}`}
                       >
                         <Text style={responsiveStyles.viewDocumentsButtonText}>View Docs</Text>
                       </TouchableOpacity>
@@ -363,6 +368,8 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                           disabled={processingId === app.id}
                           activeOpacity={0.7}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Approve ${app.name}`}
                         >
                           <Text style={responsiveStyles.approveButtonText}>
                             {processingId === app.id ? 'Processing...' : 'Approve'}
@@ -381,6 +388,8 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({ 
                           disabled={processingId === app.id}
                           activeOpacity={0.7}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Reject ${app.name}`}
                         >
                           <Text style={responsiveStyles.rejectButtonText}>
                             {processingId === app.id ? 'Processing...' : 'Reject'}

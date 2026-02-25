@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,717 +6,518 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
-  Dimensions,
   Platform,
-  Image
+  ScrollView,
+  KeyboardAvoidingView,
+  Image,
 } from 'react-native';
-import { LoginFormData } from '../models/FormData';
 import { AuthState } from '../models/AuthState';
+import { LoginFormData } from '../models/FormData';
+import { getShadowStyle } from '../utils/shadowStyles';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface LoginViewProps {
   authState: AuthState;
   onLogin: (formData: LoginFormData) => Promise<{ success: boolean; error?: string }>;
   onRegister: () => void;
-  onForgotPassword: (email: string) => Promise<boolean>;
-  onGoogleLogin: () => Promise<boolean>;
+  onForgotPassword?: (email: string) => Promise<boolean>;
+  onGoogleLogin?: () => Promise<boolean>;
 }
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const isTablet = screenWidth >= 768;
-const isMobile = screenWidth < 768;
-const isMobileWeb = Platform.OS === 'web' && screenWidth < 768;
 
 export const LoginView: React.FC<LoginViewProps> = ({
   authState,
   onLogin,
   onRegister,
   onForgotPassword,
-  onGoogleLogin
+  onGoogleLogin,
 }) => {
-  const [formData, setFormData] = useState<LoginFormData>(new LoginFormData());
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const { screenWidth, screenHeight, isMobile, isTablet, isDesktop } = useBreakpoints();
+  const showSplitLayout = screenWidth >= 1024 && Platform.OS === 'web';
+  const [formData, setFormData] = useState(new LoginFormData());
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
-  // Clear field errors when user starts typing
-  const clearFieldError = (fieldName: string): void => {
-    if (fieldErrors[fieldName]) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldName];
-        return newErrors;
-      });
+  const handleEmailChange = (text: string) => {
+    setFormData(new LoginFormData(text, formData.password));
+    if (errors.email) {
+      const newErrors = { ...errors };
+      delete newErrors.email;
+      setErrors(newErrors);
     }
   };
 
-  const handleLogin = async (): Promise<void> => {
-    const errors = formData.getErrors();
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-
-    const result = await onLogin(formData);
-    console.log('Login result:', result);
-    if (result.success) {
-      setFormData(new LoginFormData());
-      setFieldErrors({});
-    } else if (result.error) {
-      console.log('Login error:', result.error);
-      // Show specific error messages as popups
-      if (result.error.includes('Account not found')) {
-        Alert.alert(
-          'Account Not Found',
-          'No account found with this email address. Please check your email or register for a new account.',
-          [
-            { text: 'OK', style: 'default' },
-            { text: 'Register', style: 'default', onPress: onRegister }
-          ]
-        );
-      } else if (result.error.includes('Invalid password')) {
-        Alert.alert('Invalid Password', 'The password you entered is incorrect. Please try again.');
-      } else {
-        Alert.alert('Login Error', result.error);
-      }
+  const handlePasswordChange = (text: string) => {
+    setFormData(new LoginFormData(formData.email, text));
+    if (errors.password) {
+      const newErrors = { ...errors };
+      delete newErrors.password;
+      setErrors(newErrors);
     }
   };
 
-  const handleForgotPassword = async (): Promise<void> => {
-    if (!formData.email.trim()) {
-      Alert.alert('Error', 'Please enter your email address first');
-      return;
-    }
+  const validateForm = (): boolean => {
+    const formErrors = formData.getErrors();
+    setErrors(formErrors);
+    return Object.keys(formErrors).length === 0;
+  };
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim())) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
 
-    setIsResettingPassword(true);
+    setIsSubmitting(true);
     try {
-      const success = await onForgotPassword(formData.email.trim());
-      if (success) {
-        Alert.alert(
-          'Password Reset Email Sent',
-          'Check your inbox for instructions to reset your password. If you don\'t see the email, check your spam folder.',
-          [{ text: 'OK', style: 'default' }]
-        );
-      } else {
-        // Error message will be shown in the error container from authState
-        if (!authState.error) {
-          Alert.alert(
-            'Password Reset Failed',
-            'Unable to send password reset email. Please check your email address and try again.'
-          );
-        }
+      const result = await onLogin(formData);
+      if (!result.success && result.error) {
+        setErrors({ submit: result.error });
       }
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'An error occurred while sending the password reset email. Please try again.'
-      );
+      setErrors({ submit: error.message || 'An error occurred. Please try again.' });
     } finally {
-      setIsResettingPassword(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleGoogleLogin = async (): Promise<void> => {
-    const success = await onGoogleLogin();
-    if (!success && authState.error) {
-      Alert.alert('Google Login', authState.error);
+  const handleForgotPasswordSubmit = async () => {
+    if (!forgotPasswordEmail.trim()) {
+      setErrors({ forgotPassword: 'Please enter your email address' });
+      return;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(forgotPasswordEmail.trim())) {
+      setErrors({ forgotPassword: 'Please enter a valid email address' });
+      return;
+    }
+
+    if (!onForgotPassword) return;
+
+    setForgotPasswordLoading(true);
+    try {
+      const success = await onForgotPassword(forgotPasswordEmail.trim());
+      if (success) {
+        setShowForgotPassword(false);
+        setForgotPasswordEmail('');
+        setErrors({});
+      } else {
+        setErrors({ forgotPassword: 'Failed to send password reset email. Please try again.' });
+      }
+    } catch (error: any) {
+      setErrors({ forgotPassword: error.message || 'An error occurred. Please try again.' });
+    } finally {
+      setForgotPasswordLoading(false);
     }
   };
 
-  const isWeb = Platform.OS === 'web';
+  const handleGoogleLogin = async () => {
+    if (!onGoogleLogin) return;
+    setIsSubmitting(true);
+    try {
+      await onGoogleLogin();
+    } catch (error) {
+      console.error('Google login error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  return (
-    <View style={styles.container}>
-      {/* Background Design */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundCircle3} />
-        {isWeb ? (
-          <View style={styles.backgroundGradientWeb} />
-        ) : (
-        <View style={styles.backgroundGradient} />
-        )}
-      </View>
-      
-      {/* Web: Centered Card Container */}
-      {isWeb ? (
-        <View style={styles.webCardContainer}>
-          <View style={styles.webCardContent}>
-      {/* Logo */}
+  const displayError = authState.error || errors.submit;
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+    splitRow: {
+      flex: 1,
+      flexDirection: 'row',
+      minHeight: screenHeight,
+    },
+    formSection: {
+      flex: 1,
+      maxWidth: isTablet ? 480 : 520,
+      backgroundColor: '#FFFFFF',
+      justifyContent: 'center',
+    },
+    welcomeSection: {
+      flex: 1,
+    },
+    welcomePanel: {
+      flex: 1,
+      position: 'relative',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 48,
+      ...(Platform.OS === 'web' ? {
+        backgroundImage: 'linear-gradient(135deg, #EC4899 0%, #A855F7 50%, #6D28D9 100%)',
+      } : {
+        backgroundColor: '#7C3AED',
+      }),
+    },
+    decoCircle1: {
+      position: 'absolute', width: 280, height: 280, borderRadius: 140,
+      backgroundColor: 'rgba(255,255,255,0.08)', top: '10%', right: '-10%',
+    },
+    decoCircle2: {
+      position: 'absolute', width: 160, height: 160, borderRadius: 80,
+      backgroundColor: 'rgba(255,255,255,0.06)', bottom: '25%', left: '-5%',
+    },
+    decoCircle3: {
+      position: 'absolute', width: 80, height: 80, borderRadius: 40,
+      backgroundColor: 'rgba(255,255,255,0.1)', top: '40%', left: '15%',
+    },
+    decoRing: {
+      position: 'absolute', width: 320, height: 320, borderRadius: 160,
+      borderWidth: 2, borderColor: 'rgba(255,255,255,0.12)',
+      top: '50%', left: '50%', marginLeft: -160, marginTop: -160,
+    },
+    welcomeContent: { zIndex: 1, alignItems: 'center', maxWidth: 380 },
+    welcomeTitle: {
+      fontSize: isTablet ? 28 : 32, fontWeight: '800', color: '#FFFFFF',
+      marginBottom: 16, textAlign: 'center', letterSpacing: -0.5,
+    },
+    welcomeSubtitle: {
+      fontSize: isTablet ? 16 : 18, color: 'rgba(255,255,255,0.9)',
+      textAlign: 'center', lineHeight: 28,
+    },
+    containerMobile: { flex: 1, position: 'relative', backgroundColor: 'transparent' },
+    mobileGradientBg: {
+      ...StyleSheet.absoluteFillObject,
+      ...(Platform.OS === 'web' ? {
+        backgroundImage: 'linear-gradient(180deg, #EC4899 0%, #A855F7 40%, #6D28D9 100%)',
+      } as any : { backgroundColor: '#7C3AED' }),
+    },
+    decoCircleMobile: {
+      position: 'absolute', width: 200, height: 200, borderRadius: 100,
+      backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -60,
+    },
+    scrollMobile: { flex: 1, backgroundColor: 'transparent' },
+    scrollContentMobile: {
+      flexGrow: 1, justifyContent: 'center', alignItems: 'stretch',
+      paddingTop: Platform.OS === 'ios' ? 56 : 48, paddingBottom: 32,
+      paddingHorizontal: 24, minHeight: screenHeight, backgroundColor: 'transparent',
+    },
+    scrollContent: {
+      flexGrow: 1, justifyContent: 'center', alignItems: 'center',
+      paddingVertical: 40, paddingHorizontal: 32, minHeight: screenHeight,
+    },
+    card: {
+      width: '100%', maxWidth: isMobile ? '100%' : 440,
+      backgroundColor: isMobile ? 'transparent' : '#FFFFFF',
+      borderRadius: isMobile ? 0 : 28,
+      padding: isMobile ? 24 : 40,
+      borderWidth: isMobile ? 0 : 1,
+      borderColor: 'rgba(226, 232, 240, 0.8)',
+      ...(isMobile ? {} : Platform.OS === 'web' ? {
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+      } : {
+        shadowColor: '#0f172a', shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.06, shadowRadius: 24, elevation: 8,
+      }),
+    },
+    logoContainer: {
+      alignItems: 'center', marginBottom: 24,
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+    },
+    logoImage: { width: isMobile ? 110 : 130, height: isMobile ? 36 : 44 },
+    header: { marginBottom: 28, alignItems: 'center' },
+    title: {
+      fontSize: isMobile ? 28 : 32, fontWeight: '800',
+      color: isMobile ? '#FFFFFF' : '#0F172A', marginBottom: 8, letterSpacing: -0.6,
+    },
+    subtitle: {
+      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569',
+      textAlign: 'center', lineHeight: 24, paddingHorizontal: 8,
+    },
+    errorContainer: {
+      backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+      borderRadius: 14, padding: 14, marginBottom: 20,
+    },
+    errorText: { color: '#B91C1C', fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
+    inputContainer: { marginBottom: 20 },
+    label: {
+      fontSize: isMobile ? 15 : 14, fontWeight: '600',
+      color: isMobile ? '#FFFFFF' : '#1E293B', marginBottom: 8,
+    },
+    input: {
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      borderRadius: 14, paddingHorizontal: 18,
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
+    },
+    inputError: { borderColor: '#EF4444', backgroundColor: '#FFFBFB' },
+    passwordContainer: { position: 'relative' },
+    passwordInput: {
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      borderRadius: 14, paddingHorizontal: 18, paddingRight: 52,
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
+    },
+    eyeButton: { position: 'absolute', right: 14, top: '50%', transform: [{ translateY: -14 }], padding: 8 },
+    eyeButtonText: { fontSize: 22 },
+    fieldError: { color: '#B91C1C', fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
+    forgotPasswordLink: { alignSelf: 'flex-end', marginBottom: 22, marginTop: -2 },
+    forgotPasswordLinkText: { color: isMobile ? '#FFFFFF' : '#A855F7', fontSize: isMobile ? 15 : 14, fontWeight: '600' },
+    primaryButton: {
+      backgroundColor: isMobile ? '#FFFFFF' : '#7C3AED',
+      borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
+      alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+      ...(Platform.OS === 'web' && !isMobile ? { cursor: 'pointer', transition: 'all 0.2s ease', backgroundImage: 'linear-gradient(135deg, #EC4899 0%, #A855F7 100%)', backgroundColor: 'transparent' } : {}),
+      ...(Platform.OS === 'web' && isMobile ? { boxShadow: 'none' as any } : {}),
+    },
+    primaryButtonDisabled: { opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) },
+    primaryButtonText: { color: isMobile ? '#7C3AED' : '#FFFFFF', fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+    dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
+    googleButton: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
+      paddingVertical: Platform.OS === 'web' ? 16 : 18, marginBottom: 24,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+    },
+    googleButtonIcon: { fontSize: 20, marginRight: 12 },
+    googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
+    registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' },
+    registerText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569' },
+    registerLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? '#FFFFFF' : '#A855F7', fontWeight: '700' },
+    forgotPasswordContainer: { marginTop: 8 },
+    forgotPasswordTitle: { fontSize: isMobile ? 22 : 24, fontWeight: '700', color: '#0F172A', marginBottom: 8, textAlign: 'center' },
+    forgotPasswordSubtitle: { fontSize: isMobile ? 15 : 14, color: '#475569', textAlign: 'center', marginBottom: 24, lineHeight: 22 },
+    forgotPasswordActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+    forgotPasswordButton: { flex: 1 },
+    secondaryButton: {
+      backgroundColor: '#F1F5F9', borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
+      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0',
+      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+    },
+    secondaryButtonText: { color: '#1E293B', fontSize: isMobile ? 17 : 16, fontWeight: '600' },
+  }), [screenWidth, screenHeight, isMobile, isTablet, isDesktop]);
+
+  const formCardContent = (
+    <View style={styles.card}>
       <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/logo.png')} 
-                style={styles.logoImage as any}
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logoImage}
           resizeMode="contain"
         />
       </View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to continue to your account</Text>
+      </View>
 
-      {/* Welcome Message */}
-      <Text style={styles.welcomeText}>
-        Welcome back! Please log in to your account.
-      </Text>
-
-      {/* Error Message for Login Errors */}
-      {authState.error && (
+      {displayError && (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorMessage}>
-            {authState.error.includes('Account not found') 
-              ? 'No account found with this email address. Please check your email or register for a new account.'
-              : authState.error.includes('Invalid password')
-              ? 'Invalid password. Please check your password and try again.'
-              : authState.error
-            }
-          </Text>
+          <Text style={styles.errorText}>{displayError}</Text>
         </View>
       )}
 
-      {/* Login/Register Toggle */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity 
-          style={[styles.toggleButton, styles.activeToggleButton]} 
-                onPress={() => {}}
-        >
-          <Text style={[styles.toggleText, styles.activeToggleText]}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.toggleButton]} 
-          onPress={onRegister}
-        >
-          <Text style={styles.toggleText}>Register</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Email Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Email {fieldErrors.email && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.email && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>✉️</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="you@example.com"
-            value={formData.email}
-            onChangeText={(text: string) => {
-              setFormData(new LoginFormData(text, formData.password));
-              clearFieldError('email');
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+      {errors.forgotPassword && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errors.forgotPassword}</Text>
         </View>
-        {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
-      </View>
+      )}
 
-      {/* Password Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Password {fieldErrors.password && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.password && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>🔒</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={formData.password}
-            onChangeText={(text: string) => {
-              setFormData(new LoginFormData(formData.email, text));
-              clearFieldError('password');
-            }}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
-            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
-          </TouchableOpacity>
-        </View>
-        {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
-      </View>
-
-      {/* Forgot Password */}
-      <TouchableOpacity 
-        style={[styles.forgotPassword, isResettingPassword && styles.forgotPasswordDisabled]} 
-        onPress={handleForgotPassword}
-        disabled={isResettingPassword}
-      >
-        {isResettingPassword ? (
-          <View style={styles.forgotPasswordLoading}>
-            <ActivityIndicator size="small" color="#4a55e1" style={styles.loadingSpinner} />
-            <Text style={styles.forgotPasswordText}>Sending reset email...</Text>
+      {showForgotPassword ? (
+        <View style={styles.forgotPasswordContainer}>
+          <Text style={styles.forgotPasswordTitle}>Reset Password</Text>
+          <Text style={styles.forgotPasswordSubtitle}>
+            Enter your email address and we'll send you a link to reset your password.
+          </Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={[styles.input, errors.forgotPassword && styles.inputError]}
+              placeholder="Enter your email"
+              placeholderTextColor="#94A3B8"
+              value={forgotPasswordEmail}
+              onChangeText={(text) => {
+                setForgotPasswordEmail(text);
+                if (errors.forgotPassword) {
+                  setErrors({ ...errors, forgotPassword: '' });
+                }
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!forgotPasswordLoading}
+              accessibilityLabel="Email address for password reset"
+            />
           </View>
-        ) : (
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-        )}
-      </TouchableOpacity>
-
-      {/* Login Button */}
-      <TouchableOpacity 
-        style={styles.loginButton} 
-        onPress={handleLogin}
-      >
-        <Text style={styles.loginButtonText}>Log In</Text>
-      </TouchableOpacity>
-
-      {/* OR Separator */}
-      <View style={styles.orSeparator}>
-        <View style={styles.separatorLine} />
-        <Text style={styles.orText}>OR CONTINUE WITH</Text>
-        <View style={styles.separatorLine} />
-      </View>
-
-      {/* Google Button */}
-      <TouchableOpacity 
-        style={styles.googleButton} 
-        onPress={handleGoogleLogin}
-      >
-        <Text style={styles.googleIcon}>G</Text>
-        <Text style={styles.googleButtonText}>Google</Text>
-      </TouchableOpacity>
-
+          <View style={styles.forgotPasswordActions}>
+            <TouchableOpacity
+              style={[styles.secondaryButton, styles.forgotPasswordButton]}
+              onPress={() => {
+                setShowForgotPassword(false);
+                setForgotPasswordEmail('');
+                setErrors({});
+              }}
+              disabled={forgotPasswordLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel password reset"
+            >
+              <Text style={styles.secondaryButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.primaryButton, styles.forgotPasswordButton]}
+              onPress={handleForgotPasswordSubmit}
+              disabled={forgotPasswordLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Send password reset link"
+            >
+              {forgotPasswordLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Send Reset Link</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       ) : (
         <>
-          {/* Mobile: Full Screen Layout */}
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/logo.png')} 
-              style={styles.logoImage as any}
-              resizeMode="contain"
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="Enter your email"
+              placeholderTextColor="#94A3B8"
+              value={formData.email}
+              onChangeText={handleEmailChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSubmitting && !authState.isLoading}
+              accessibilityLabel="Email address"
             />
+            {errors.email && (
+              <Text style={styles.fieldError}>{errors.email}</Text>
+            )}
           </View>
-
-          {/* Welcome Message */}
-          <Text style={styles.welcomeText}>
-            Welcome back! Please log in to your account.
-          </Text>
-
-          {/* Error Message for Login Errors */}
-          {authState.error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorIcon}>⚠️</Text>
-              <Text style={styles.errorMessage}>
-                {authState.error.includes('Account not found') 
-                  ? 'No account found with this email address. Please check your email or register for a new account.'
-                  : authState.error.includes('Invalid password')
-                  ? 'Invalid password. Please check your password and try again.'
-                  : authState.error
-                }
-              </Text>
-            </View>
-          )}
-
-          {/* Login/Register Toggle */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity 
-              style={[styles.toggleButton, styles.activeToggleButton]} 
-              onPress={() => {}}
-            >
-              <Text style={[styles.toggleText, styles.activeToggleText]}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toggleButton]} 
-              onPress={onRegister}
-            >
-              <Text style={styles.toggleText}>Register</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Email {fieldErrors.email && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.email && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>✉️</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.passwordContainer}>
               <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
-                value={formData.email}
-                onChangeText={(text: string) => {
-                  setFormData(new LoginFormData(text, formData.password));
-                  clearFieldError('email');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
-          </View>
-
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Password {fieldErrors.password && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.password && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
+                style={[styles.passwordInput, errors.password && styles.inputError]}
+                placeholder="Enter your password"
+                placeholderTextColor="#94A3B8"
                 value={formData.password}
-                onChangeText={(text: string) => {
-                  setFormData(new LoginFormData(formData.email, text));
-                  clearFieldError('password');
-                }}
+                onChangeText={handlePasswordChange}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Password"
               />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
-                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Text style={styles.eyeButtonText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
               </TouchableOpacity>
             </View>
-            {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
+            {errors.password && (
+              <Text style={styles.fieldError}>{errors.password}</Text>
+            )}
           </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity 
-            style={[styles.forgotPassword, isResettingPassword && styles.forgotPasswordDisabled]} 
-            onPress={handleForgotPassword}
-            disabled={isResettingPassword}
+          {onForgotPassword && (
+            <TouchableOpacity
+              style={styles.forgotPasswordLink}
+              onPress={() => setShowForgotPassword(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
+            >
+              <Text style={styles.forgotPasswordLinkText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.primaryButton, (isSubmitting || authState.isLoading) && styles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || authState.isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
           >
-            {isResettingPassword ? (
-              <View style={styles.forgotPasswordLoading}>
-                <ActivityIndicator size="small" color="#4a55e1" style={styles.loadingSpinner} />
-                <Text style={styles.forgotPasswordText}>Sending reset email...</Text>
-              </View>
+            {isSubmitting || authState.isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={styles.primaryButtonText}>Sign In</Text>
             )}
           </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity 
-            style={styles.loginButton} 
-            onPress={handleLogin}
-          >
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-
-          {/* OR Separator */}
-          <View style={styles.orSeparator}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.orText}>OR CONTINUE WITH</Text>
-            <View style={styles.separatorLine} />
+          <View style={styles.registerContainer}>
+            <Text style={styles.registerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={onRegister} disabled={isSubmitting || authState.isLoading} accessibilityRole="button" accessibilityLabel="Go to sign up">
+              <Text style={styles.registerLink}>Sign Up</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Google Button */}
-          <TouchableOpacity 
-            style={styles.googleButton} 
-            onPress={handleGoogleLogin}
-          >
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleButtonText}>Google</Text>
-          </TouchableOpacity>
         </>
       )}
     </View>
   );
+
+  const WelcomePanel = () => (
+    <View style={styles.welcomePanel}>
+      {/* Decorative shapes */}
+      <View style={styles.decoCircle1} />
+      <View style={styles.decoCircle2} />
+      <View style={styles.decoCircle3} />
+      <View style={styles.decoRing} />
+      <View style={styles.welcomeContent}>
+        <Text style={styles.welcomeTitle}>Welcome to E-VENT</Text>
+        <Text style={styles.welcomeSubtitle}>Sign in to access your account and discover events and services near you.</Text>
+      </View>
+    </View>
+  );
+
+  if (!showSplitLayout) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.containerMobile}
+      >
+        <View style={styles.mobileGradientBg} pointerEvents="none" />
+        <View style={styles.decoCircleMobile} pointerEvents="none" />
+        <ScrollView
+          style={styles.scrollMobile}
+          contentContainerStyle={styles.scrollContentMobile}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {formCardContent}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <View style={styles.splitRow}>
+        <View style={styles.formSection}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formCardContent}
+          </ScrollView>
+        </View>
+        <View style={styles.welcomeSection}>
+          <WelcomePanel />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: isMobile ? 16 : 0,
-    position: 'relative',
-    ...(Platform.OS === 'web' ? {
-      justifyContent: isMobileWeb ? 'flex-start' : 'center',
-      alignItems: 'center',
-      minHeight: screenHeight,
-    } : {}),
-  },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-  backgroundCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(74, 85, 225, 0.1)',
-    top: -50,
-    right: -50,
-  },
-  backgroundCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(74, 85, 225, 0.15)',
-    bottom: 100,
-    left: -30,
-  },
-  backgroundCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(74, 85, 225, 0.08)',
-    top: '40%',
-    right: 20,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f0f2f5',
-  },
-  backgroundGradientWeb: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    ...(Platform.OS === 'web' ? {
-      backgroundImage: 'linear-gradient(135deg, #f0f2f5 0%, #e8f0fe 100%)',
-    } : {}),
-  },
-  webCardContainer: {
-    width: isMobileWeb ? '100%' : '90%',
-    maxWidth: isMobileWeb ? '100%' : 480,
-    backgroundColor: '#fff',
-    borderRadius: isMobileWeb ? 0 : 16,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: isMobileWeb ? 'none' : '0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)',
-    } : {}),
-  },
-  webCardContent: {
-    padding: isMobileWeb ? 24 : 40,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: isMobile || isMobileWeb ? 20 : 0,
-    marginBottom: isMobile || isMobileWeb ? 16 : 20,
-  },
-  logoImage: {
-    width: isMobile || isMobileWeb ? 100 : 120,
-    height: isMobile || isMobileWeb ? 100 : 120,
-  },
-  welcomeText: {
-    fontSize: isMobile || isMobileWeb ? 15 : 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: isMobile || isMobileWeb ? 16 : 20,
-    fontWeight: '400',
-    paddingHorizontal: isMobile || isMobileWeb ? 8 : 0,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3CD',
-    borderColor: '#FFEAA7',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: isTablet ? 15 : 12,
-    marginBottom: isTablet ? 20 : 15,
-  },
-  errorIcon: {
-    fontSize: isTablet ? 20 : 18,
-    marginRight: isTablet ? 12 : 10,
-  },
-  errorMessage: {
-    flex: 1,
-    fontSize: isTablet ? 16 : 14,
-    color: '#856404',
-    fontWeight: '500',
-    lineHeight: isTablet ? 22 : 20,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f0f2f5',
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: isMobileWeb ? 16 : 20,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: isMobileWeb ? 8 : 10,
-    paddingHorizontal: isMobileWeb ? 12 : 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  activeToggleButton: {
-    backgroundColor: '#4a55e1',
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  activeToggleText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  inputField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: isMobileWeb ? 12 : 14,
-    paddingVertical: isMobileWeb ? 10 : 12,
-    backgroundColor: '#f9f9f9',
-  },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 10,
-    color: '#aaa',
-  },
-  eyeButton: {
-    marginLeft: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  eyeText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  input: {
-    flex: 1,
-    fontSize: isMobile || isMobileWeb ? 16 : (isTablet ? 18 : 16),
-    color: '#333',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 20,
-  },
-  forgotPasswordDisabled: {
-    opacity: 0.6,
-  },
-  forgotPasswordLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loadingSpinner: {
-    marginRight: 8,
-  },
-  forgotPasswordText: {
-    color: '#4a55e1',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  loginButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: isMobileWeb ? 12 : 14,
-    borderRadius: 10,
-    marginBottom: 20,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: isMobileWeb ? '0 2px 8px rgba(99, 102, 241, 0.25)' : '0 4px 12px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(99, 102, 241, 0.2)',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } : {
-      shadowColor: '#6366F1',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 6,
-    }),
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: isMobileWeb ? 15 : 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  orSeparator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#eee',
-  },
-  orText: {
-    color: '#999',
-    marginHorizontal: 12,
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    paddingVertical: isMobileWeb ? 10 : 12,
-    borderRadius: 10,
-    marginBottom: 0,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } : {}),
-  },
-  googleIcon: {
-    fontSize: isMobileWeb ? 18 : 20,
-    fontWeight: 'bold',
-    marginRight: 10,
-    color: '#333',
-  },
-  googleButtonText: {
-    fontSize: isMobile || isMobileWeb ? 15 : 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  requiredAsterisk: {
-    color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inputFieldError: {
-    borderColor: '#FF3B30',
-    borderWidth: 2,
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-});
-
-
-
-
-
-
-
-
-
-
-

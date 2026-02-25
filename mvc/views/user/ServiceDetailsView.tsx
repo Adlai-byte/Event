@@ -175,6 +175,8 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             style={styles.viewProfileButton}
             onPress={() => onNavigateToProviderProfile(service.provider_email!)}
             activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="View provider profile"
           >
             <Text style={styles.viewProfileButtonIcon}>👤</Text>
             <Text style={styles.viewProfileButtonText}>View Profile</Text>
@@ -185,6 +187,8 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             style={[styles.modernBookButton, !(service?.provider_email && onNavigateToProviderProfile) && styles.modernBookButtonFull]}
             onPress={() => onBookNow(serviceId)}
             activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Book this service"
           >
             <Text style={styles.modernBookButtonIcon}>📅</Text>
             <Text style={styles.modernBookButtonText}>Book Now</Text>

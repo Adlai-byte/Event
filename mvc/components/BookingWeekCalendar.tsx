@@ -28,6 +28,9 @@ interface BookingWeekCalendarProps {
   onDateSelect: (date: string) => void;
   onTimeSlotClick?: (date: string, hour: number, minute: number) => void;
   noSlotsDates?: string[]; // Dates with no available slots
+  isPerDayMode?: boolean; // For per-day services (24 hours)
+  selectedDays?: string[]; // Selected days for per-day mode
+  allDatesSlots?: Record<string, TimeSlot[]>; // Pre-loaded slots for all dates
 }
 
 export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
@@ -40,6 +43,9 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
   onDateSelect,
   onTimeSlotClick,
   noSlotsDates = [],
+  isPerDayMode = false,
+  selectedDays = [],
+  allDatesSlots = {},
 }) => {
   // Ensure currentWeek is a valid Date
   const safeCurrentWeek = currentWeek instanceof Date && !isNaN(currentWeek.getTime()) 
@@ -89,44 +95,57 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
   // Get available slots for a specific day
   const getSlotsForDay = (date: Date): TimeSlot[] => {
     const dateStr = date.toISOString().split('T')[0];
+    if (isPerDayMode) return []; // Don't show slots in per-day mode
     if (selectedDate !== dateStr) return [];
     return availableSlots.filter(slot => slot.available === true);
   };
+  
+  // Check if a day is selected (for per-day mode)
+  const isDaySelectedForPerDay = (date: Date): boolean => {
+    if (!isPerDayMode) return false;
+    const dateStr = date.toISOString().split('T')[0];
+    return selectedDays.includes(dateStr);
+  };
 
   // Check if a specific hour is booked/unavailable
+  // Now checks pre-loaded slots for all dates, not just selected date
   const isHourBooked = (date: Date, hour: number): boolean => {
     const dateStr = date.toISOString().split('T')[0];
     
-    // Only check for selected date (when slots are loaded)
-    if (selectedDate && selectedDate === dateStr && availableSlots.length > 0) {
-      // Check if this hour has any available slots
-      // The API only returns available slots, so if an hour should have slots but doesn't, it's booked
-      const hourStart = `${hour.toString().padStart(2, '0')}:00:00`;
-      const hourEnd = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+    // Check pre-loaded slots for this date first
+    const dateSlots = allDatesSlots[dateStr] || [];
+    
+    // If no pre-loaded slots, check selected date slots (fallback)
+    const slotsToCheck = dateSlots.length > 0 ? dateSlots : 
+      (selectedDate === dateStr ? availableSlots : []);
+    
+    if (slotsToCheck.length > 0) {
+      // Check if any slot in this hour is marked as unavailable (booked)
+      const hourStart = `${hour.toString().padStart(2, '0')}:00`;
+      const hourEnd = `${(hour + 1).toString().padStart(2, '0')}:00`;
       
-      // Check if any available slot overlaps with this hour
-      const hasAvailableSlot = availableSlots.some(slot => {
-        if (!slot.available) return false;
+      // Check if any unavailable slot overlaps with this hour
+      const hasBookedSlot = slotsToCheck.some(slot => {
+        // Only check slots that are unavailable (booked)
+        if (slot.available) return false;
         
-        const slotStart = slot.start.split(':').map(Number);
-        const slotEnd = slot.end.split(':').map(Number);
+        // Parse slot times (format: HH:MM or HH:MM:SS)
+        const slotStartParts = slot.start.split(':').map(Number);
+        const slotEndParts = slot.end.split(':').map(Number);
         const hourStartParts = hourStart.split(':').map(Number);
         const hourEndParts = hourEnd.split(':').map(Number);
         
-        const slotStartMin = slotStart[0] * 60 + slotStart[1];
-        const slotEndMin = slotEnd[0] * 60 + slotEnd[1];
-        const hourStartMin = hourStartParts[0] * 60 + hourStartParts[1];
-        const hourEndMin = hourEndParts[0] * 60 + hourEndParts[1];
+        const slotStartMin = slotStartParts[0] * 60 + (slotStartParts[1] || 0);
+        const slotEndMin = slotEndParts[0] * 60 + (slotEndParts[1] || 0);
+        const hourStartMin = hourStartParts[0] * 60 + (hourStartParts[1] || 0);
+        const hourEndMin = hourEndParts[0] * 60 + (hourEndParts[1] || 0);
         
-        // Check if hour overlaps with available slot
+        // Check if hour overlaps with booked slot
+        // Two intervals overlap if: hourStart < slotEnd AND hourEnd > slotStart
         return (hourStartMin < slotEndMin) && (hourEndMin > slotStartMin);
       });
       
-      // If hour is within service hours (9 AM - 6 PM typically) but has no available slots, it's likely booked
-      // Service hours are typically 9 AM - 6 PM, but we check 8 AM - 7 PM for the calendar display
-      if (hour >= 9 && hour < 18 && !hasAvailableSlot) {
-        return true; // Likely booked
-      }
+      return hasBookedSlot;
     }
     
     return false;
@@ -256,10 +275,17 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
   };
 
   // Check if a time slot is selected (by checking if any selected slot overlaps with this hour)
+  // IMPORTANT: Only check slots for the currently selected date
   const isHourSelected = (date: Date, hour: number): boolean => {
     const dateStr = date.toISOString().split('T')[0];
-    if (selectedDate !== dateStr) return false;
     
+    // Only check if this is the selected date
+    // This prevents slots from other dates from appearing as selected
+    if (!selectedDate || selectedDate !== dateStr) {
+      return false; // Not the selected date, so no slots can be selected
+    }
+    
+    // Only check selected slots if we're on the selected date
     return selectedSlots.some(slot => {
       const slotStartHour = parseInt(slot.start.split(':')[0]);
       const slotEndHour = parseInt(slot.end.split(':')[0]);
@@ -363,16 +389,16 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
     <View style={styles.container}>
       {/* Header with Navigation */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={goToPreviousWeek} style={styles.navButton}>
+        <TouchableOpacity onPress={goToPreviousWeek} style={styles.navButton} accessibilityRole="button" accessibilityLabel="Previous week">
           <Text style={styles.navButtonText}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.monthYear}>{getMonthYear()}</Text>
         </View>
-        <TouchableOpacity onPress={goToNextWeek} style={styles.navButton}>
+        <TouchableOpacity onPress={goToNextWeek} style={styles.navButton} accessibilityRole="button" accessibilityLabel="Next week">
           <Text style={styles.navButtonText}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={goToToday} style={styles.todayButton}>
+        <TouchableOpacity onPress={goToToday} style={styles.todayButton} accessibilityRole="button" accessibilityLabel="Go to today">
           <Text style={styles.todayButtonText}>Today</Text>
         </TouchableOpacity>
       </View>
@@ -413,19 +439,28 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                      style={[
                        styles.dayHeader,
                        selected && styles.dayHeaderSelected,
+                       isPerDayMode && isDaySelectedForPerDay(day) && styles.dayHeaderSelected,
                        noSlots && styles.dayHeaderNoSlots,
                        isPast && styles.dayHeaderPast
                      ]}
                      onPress={() => {
                        if (!noSlots && !isPast) {
+                         if (isPerDayMode) {
+                           // In per-day mode, just select the day (handled by parent)
+                           onDateSelect(dateStr);
+                         } else {
                          onDateSelect(dateStr);
+                         }
                        }
                      }}
                      disabled={noSlots || isPast}
+                     accessibilityRole="button"
+                     accessibilityLabel={`Select ${formatDateHeader(day)} ${day.getDate()}`}
                    >
                      <Text style={[
                        styles.dayName,
                        selected && styles.dayNameSelected,
+                       isPerDayMode && isDaySelectedForPerDay(day) && styles.dayNameSelected,
                        noSlots && styles.dayNameNoSlots,
                        isPast && styles.dayNamePast
                      ]}>
@@ -434,17 +469,24 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                      <Text style={[
                        styles.dayNumber,
                        selected && styles.dayNumberSelected,
+                       isPerDayMode && isDaySelectedForPerDay(day) && styles.dayNumberSelected,
                        noSlots && styles.dayNumberNoSlots,
                        isPast && styles.dayNumberPast
                      ]}>
                        {day.getDate()}
                      </Text>
+                     {isPerDayMode && isDaySelectedForPerDay(day) && (
+                       <View style={styles.perDayCheckmark}>
+                         <Text style={styles.perDayCheckmarkText}>✓</Text>
+                       </View>
+                     )}
                    </TouchableOpacity>
                  );
                })}
              </View>
 
-             {/* Calendar Grid */}
+             {/* Calendar Grid - Hide time slots in per-day mode */}
+             {!isPerDayMode && (
              <View style={styles.calendarGrid}>
                {weekDays.map((day, dayIndex) => {
                  const dateStr = day.toISOString().split('T')[0];
@@ -498,6 +540,8 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                             }}
                             disabled={!isClickable || dateHasNoSlots || isPast}
                             activeOpacity={dateHasNoSlots || isPast ? 1 : 0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${formatTime(hour)} time slot${isHourBookedState ? ', taken' : isHourSelectedState ? ', selected' : ''}`}
                           >
                             {isHourSelectedState && (
                               <View style={styles.hourCellIndicator} />
@@ -523,6 +567,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                 );
               })}
             </View>
+            )}
           </ScrollView>
         </View>
       </ScrollView>
@@ -669,6 +714,22 @@ const styles = StyleSheet.create({
   },
   dayNumberPast: {
     color: '#9E9E9E', // Gray text for past dates
+  },
+  perDayCheckmark: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#4f46e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  perDayCheckmarkText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   calendarGrid: {
     flexDirection: 'row',

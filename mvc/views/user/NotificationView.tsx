@@ -227,6 +227,8 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
           }
         }}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`${isUnread ? 'Unread notification: ' : ''}${notification.n_title}`}
       >
         <View style={styles.notificationContent}>
           {/* Icon with colored background */}
@@ -315,6 +317,8 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
           <TouchableOpacity
             onPress={markAllAsRead}
             style={styles.markAllReadButton}
+            accessibilityRole="button"
+            accessibilityLabel="Mark all notifications as read"
           >
             <Text style={styles.markAllReadText}>Mark all read</Text>
           </TouchableOpacity>

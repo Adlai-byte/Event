@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,771 +6,591 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
-  Dimensions,
-  Alert,
   Platform,
-  Image
+  ScrollView,
+  KeyboardAvoidingView,
+  Image,
 } from 'react-native';
-import { RegisterFormData } from '../../models/FormData';
 import { AuthState } from '../../models/AuthState';
+import { RegisterFormData } from '../../models/FormData';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface RegisterViewProps {
   authState: AuthState;
   onRegister: (formData: RegisterFormData) => Promise<{ success: boolean; error?: string }>;
   onLogin: () => void;
+  onGoogleLogin?: () => Promise<boolean>;
 }
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const isTablet = screenWidth >= 768;
-const isMobile = screenWidth < 768;
 
 export const RegisterView: React.FC<RegisterViewProps> = ({
   authState,
   onRegister,
-  onLogin
+  onLogin,
+  onGoogleLogin,
 }) => {
-  const [formData, setFormData] = useState<RegisterFormData>(new RegisterFormData());
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const { screenWidth, screenHeight, isMobile, isTablet, isDesktop } = useBreakpoints();
+  const stackNameFields = screenWidth < 400;
+  const [formData, setFormData] = useState(new RegisterFormData());
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Clear field errors when user starts typing
-  const clearFieldError = (fieldName: string): void => {
-    if (fieldErrors[fieldName]) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldName];
-        return newErrors;
-      });
+  const handleFieldChange = (field: keyof RegisterFormData, value: string) => {
+    const newFormData = new RegisterFormData(
+      field === 'firstName' ? value : formData.firstName,
+      field === 'middleName' ? value : formData.middleName,
+      field === 'lastName' ? value : formData.lastName,
+      field === 'suffix' ? value : formData.suffix,
+      field === 'email' ? value : formData.email,
+      field === 'password' ? value : formData.password,
+      field === 'confirmPassword' ? value : formData.confirmPassword
+    );
+    setFormData(newFormData);
+    
+    // Clear error for this field
+    if (errors[field]) {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+      setErrors(newErrors);
     }
   };
 
-  const handleRegister = async (): Promise<void> => {
-    const errors = formData.getErrors();
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
+  const validateForm = (): boolean => {
+    const formErrors = formData.getErrors();
+    setErrors(formErrors);
+    return Object.keys(formErrors).length === 0;
+  };
 
-    const result = await onRegister(formData);
-    console.log('Register result:', result);
-    if (result.success) {
-      setFormData(new RegisterFormData());
-      setFieldErrors({});
-      Alert.alert(
-        'Registration Successful',
-        'Your account has been created and saved to the database.',
-        [
-          { text: 'OK', style: 'default', onPress: onLogin }
-        ]
-      );
-    } else if (result.error) {
-      console.log('Register error:', result.error);
-      const msg = result.error.toLowerCase();
-      // If email already exists, show inline error above First Name label
-      if (msg.includes('already exists') || msg.includes('already in use') || msg.includes('already registered')) {
-        setFieldErrors(prev => ({ ...prev, emailExists: 'Email already exists' }));
-      } else {
-        Alert.alert('Registration Error', result.error);
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await onRegister(formData);
+      if (!result.success && result.error) {
+        setErrors({ submit: result.error });
       }
+    } catch (error: any) {
+      setErrors({ submit: error.message || 'An error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const isWeb = Platform.OS === 'web';
+  const handleGoogleLogin = async () => {
+    if (!onGoogleLogin) return;
+    setIsSubmitting(true);
+    try {
+      await onGoogleLogin();
+    } catch (error) {
+      console.error('Google login error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Background Design */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundCircle3} />
-        {isWeb ? (
-          <View style={styles.backgroundGradientWeb} />
-        ) : (
-        <View style={styles.backgroundGradient} />
-        )}
-      </View>
-      
-      {/* Web: Centered Card Container */}
-      {isWeb ? (
-        <View style={styles.webCardContainer}>
-          <View style={styles.webCardContent}>
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../../assets/logo.png')} 
-                style={styles.logoImage as any}
-          resizeMode="contain"
-        />
-      </View>
+  const displayError = authState.error || errors.submit;
 
-      {/* Welcome Message */}
-      <Text style={styles.welcomeText}>
-        Create your account to get started.
-      </Text>
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#F1F5F9' },
+    containerMobile: { flex: 1, position: 'relative', backgroundColor: 'transparent' },
+    mobileGradientBg: {
+      ...StyleSheet.absoluteFillObject,
+      ...(Platform.OS === 'web' ? {
+        backgroundImage: 'linear-gradient(180deg, #EC4899 0%, #A855F7 40%, #6D28D9 100%)',
+      } as any : { backgroundColor: '#7C3AED' }),
+    },
+    decoCircleMobile: {
+      position: 'absolute', width: 200, height: 200, borderRadius: 100,
+      backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -60,
+    },
+    scrollMobile: { flex: 1, backgroundColor: 'transparent' },
+    scrollContentMobile: {
+      flexGrow: 1, justifyContent: 'center', alignItems: 'stretch',
+      paddingTop: Platform.OS === 'ios' ? 56 : 48, paddingBottom: 32,
+      paddingHorizontal: screenWidth <= 380 ? 12 : 24,
+      minHeight: screenHeight, backgroundColor: 'transparent',
+    },
+    scrollContent: {
+      flexGrow: 1, justifyContent: 'center', alignItems: 'center',
+      paddingVertical: Platform.OS === 'web' ? 48 : 24,
+      paddingHorizontal: isMobile ? 20 : 32,
+      minHeight: Platform.OS === 'web' ? screenHeight : undefined,
+    },
+    card: {
+      width: '100%', maxWidth: isMobile ? '100%' : isTablet ? 480 : 440,
+      backgroundColor: isMobile ? 'transparent' : '#FFFFFF',
+      borderRadius: isMobile ? 0 : 28,
+      padding: isMobile ? (screenWidth <= 380 ? 16 : 24) : 40,
+      borderWidth: isMobile ? 0 : 1,
+      borderColor: 'rgba(226, 232, 240, 0.8)',
+      ...(isMobile ? {} : Platform.OS === 'web' ? {
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+      } : {
+        shadowColor: '#0f172a', shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.06, shadowRadius: 24, elevation: 8,
+      }),
+    },
+    logoContainer: {
+      alignItems: 'center', marginBottom: 24,
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+    },
+    logoImage: { width: isMobile ? 110 : 130, height: isMobile ? 36 : 44 },
+    header: { marginBottom: 28, alignItems: 'center' },
+    title: {
+      fontSize: isMobile ? 28 : 32, fontWeight: '800',
+      color: isMobile ? '#FFFFFF' : '#0F172A', marginBottom: 8, letterSpacing: -0.6,
+    },
+    subtitle: {
+      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569',
+      textAlign: 'center', lineHeight: 24, paddingHorizontal: 8,
+    },
+    errorContainer: {
+      backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+      borderRadius: 14, padding: 14, marginBottom: 20,
+    },
+    errorText: { color: '#B91C1C', fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
+    row: {
+      flexDirection: stackNameFields ? 'column' : 'row',
+      width: '100%',
+    },
+    inputContainer: { marginBottom: 20, flex: 1 },
+    halfWidth: { flex: 1 },
+    label: {
+      fontSize: isMobile ? 15 : 14, fontWeight: '600',
+      color: isMobile ? '#FFFFFF' : '#1E293B', marginBottom: 8,
+    },
+    input: {
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      borderRadius: 14, paddingHorizontal: 18,
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
+    },
+    inputError: { borderColor: '#EF4444', backgroundColor: '#FFFBFB' },
+    passwordContainer: { position: 'relative' },
+    passwordInput: {
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      borderRadius: 14, paddingHorizontal: 18, paddingRight: 52,
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
+    },
+    eyeButton: { position: 'absolute', right: 14, top: '50%', transform: [{ translateY: -14 }], padding: 8 },
+    eyeButtonText: { fontSize: 22 },
+    fieldError: { color: '#B91C1C', fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
+    primaryButton: {
+      backgroundColor: '#6366F1', borderRadius: 14,
+      paddingVertical: isMobile ? 18 : 16, alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+    },
+    primaryButtonDisabled: { opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) },
+    primaryButtonText: { color: '#FFFFFF', fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+    dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
+    googleButton: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
+      paddingVertical: Platform.OS === 'web' ? 16 : 18, marginBottom: 24,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+    },
+    googleButtonIcon: { fontSize: 20, marginRight: 12 },
+    googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
+    loginContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' },
+    loginText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569' },
+    loginLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? '#E0E7FF' : '#6366F1', fontWeight: '700' },
+  }), [screenWidth, screenHeight, isMobile, isTablet, isDesktop, stackNameFields]);
 
-      {/* Error Message for Already Registered Email */}
-      {authState.error && authState.error.includes('already registered') && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorMessage}>
-            This email is already registered. Please use a different email or try logging in instead.
-          </Text>
-        </View>
-      )}
-
-      {/* Login/Register Toggle */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity 
-          style={[styles.toggleButton]} 
-          onPress={onLogin}
-        >
-          <Text style={styles.toggleText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.toggleButton, styles.activeToggleButton]} 
-                onPress={() => {}}
-        >
-          <Text style={[styles.toggleText, styles.activeToggleText]}>Register</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Name Inputs */}
-      <View style={styles.inputGroup}>
-        {fieldErrors.emailExists && (
-          <Text style={styles.errorText}>{fieldErrors.emailExists}</Text>
-        )}
-        <Text style={styles.label}>
-          First Name {fieldErrors.firstName && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.firstName && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>👤</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your first name"
-            value={formData.firstName}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(text, formData.middleName, formData.lastName, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-              clearFieldError('firstName');
-            }}
-            autoCapitalize="words"
-          />
-        </View>
-        {fieldErrors.firstName && <Text style={styles.errorText}>{fieldErrors.firstName}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Middle Name (optional)</Text>
-        <View style={styles.inputField}>
-          <Text style={styles.inputIcon}>👤</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your middle name"
-            value={formData.middleName}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, text, formData.lastName, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-            }}
-            autoCapitalize="words"
-          />
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Last Name {fieldErrors.lastName && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.lastName && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>👤</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your last name"
-            value={formData.lastName}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, formData.middleName, text, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-              clearFieldError('lastName');
-            }}
-            autoCapitalize="words"
-          />
-        </View>
-        {fieldErrors.lastName && <Text style={styles.errorText}>{fieldErrors.lastName}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Suffix (optional)</Text>
-        <View style={styles.inputField}>
-          <Text style={styles.inputIcon}>👤</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Jr., Sr., III, etc."
-            value={formData.suffix}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, text, formData.email, formData.password, formData.confirmPassword));
-            }}
-            autoCapitalize="characters"
-          />
-        </View>
-      </View>
-
-      {/* Email Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Email {fieldErrors.email && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.email && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>✉️</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="you@example.com"
-            value={formData.email}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, text, formData.password, formData.confirmPassword));
-              clearFieldError('email');
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-        {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
-      </View>
-
-      {/* Password Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Password {fieldErrors.password && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.password && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>🔒</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={formData.password}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, formData.email, text, formData.confirmPassword));
-              clearFieldError('password');
-            }}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
-            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
-          </TouchableOpacity>
-        </View>
-        {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
-      </View>
-
-      {/* Confirm Password Input */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Confirm Password {fieldErrors.confirmPassword && <Text style={styles.requiredAsterisk}>*</Text>}
-        </Text>
-        <View style={[styles.inputField, fieldErrors.confirmPassword && styles.inputFieldError]}>
-          <Text style={styles.inputIcon}>🔒</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={formData.confirmPassword}
-            onChangeText={(text: string) => {
-              setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, formData.email, formData.password, text));
-              clearFieldError('confirmPassword');
-            }}
-            secureTextEntry={!showConfirmPassword}
-          />
-          <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPassword(prev => !prev)}>
-            <Text style={styles.eyeText}>{showConfirmPassword ? '🙈' : '👁️'}</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Password match indicator */}
-        {formData.confirmPassword.length > 0 && !fieldErrors.confirmPassword && (
-          <Text style={[
-            styles.passwordMatchText,
-            formData.password === formData.confirmPassword ? styles.passwordMatch : styles.passwordMismatch
-          ]}>
-            {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
-          </Text>
-        )}
-        {fieldErrors.confirmPassword && <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>}
-      </View>
-
-      {/* Register Button */}
-      <TouchableOpacity 
-        style={[styles.registerButton, authState.isLoading && styles.disabledButton]} 
-        onPress={handleRegister}
-        disabled={authState.isLoading}
+  if (isMobile) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.containerMobile}
       >
-        {authState.isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.registerButtonText}>Register</Text>
-        )}
-      </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <>
-          {/* Mobile: Full Screen Layout */}
+        <View style={styles.mobileGradientBg} pointerEvents="none" />
+        <View style={styles.decoCircleMobile} pointerEvents="none" />
+        <ScrollView
+          style={styles.scrollMobile}
+          contentContainerStyle={styles.scrollContentMobile}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
           {/* Logo */}
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../../assets/logo.png')} 
-              style={styles.logoImage as any}
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logoImage}
               resizeMode="contain"
             />
           </View>
 
-          {/* Welcome Message */}
-          <Text style={styles.welcomeText}>
-            Create your account to get started.
-          </Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Sign up to get started with your account</Text>
+          </View>
 
-          {/* Error Message for Already Registered Email */}
-          {authState.error && authState.error.includes('already registered') && (
+          {/* Error Message */}
+          {displayError && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorIcon}>⚠️</Text>
-              <Text style={styles.errorMessage}>
-                This email is already registered. Please use a different email or try logging in instead.
-              </Text>
+              <Text style={styles.errorText}>{displayError}</Text>
             </View>
           )}
 
-          {/* Login/Register Toggle */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity 
-              style={[styles.toggleButton]} 
-              onPress={onLogin}
-            >
-              <Text style={styles.toggleText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toggleButton, styles.activeToggleButton]} 
-              onPress={() => {}}
-            >
-              <Text style={[styles.toggleText, styles.activeToggleText]}>Register</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Name Inputs */}
-          <View style={styles.inputGroup}>
-            {fieldErrors.emailExists && (
-              <Text style={styles.errorText}>{fieldErrors.emailExists}</Text>
-            )}
-            <Text style={styles.label}>
-              First Name {fieldErrors.firstName && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.firstName && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>👤</Text>
+          {/* Name Fields Row */}
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginRight: 8 }]}>
+              <Text style={styles.label}>First Name *</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Enter your first name"
+                style={[styles.input, errors.firstName && styles.inputError]}
+                placeholder="John"
+                placeholderTextColor="#94A3B8"
                 value={formData.firstName}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(text, formData.middleName, formData.lastName, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-                  clearFieldError('firstName');
-                }}
+                onChangeText={(text) => handleFieldChange('firstName', text)}
                 autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="First name"
               />
+              {errors.firstName && (
+                <Text style={styles.fieldError}>{errors.firstName}</Text>
+              )}
             </View>
-            {fieldErrors.firstName && <Text style={styles.errorText}>{fieldErrors.firstName}</Text>}
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Middle Name (optional)</Text>
-            <View style={styles.inputField}>
-              <Text style={styles.inputIcon}>👤</Text>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginLeft: 8 }]}>
+              <Text style={styles.label}>Last Name *</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Enter your middle name"
-                value={formData.middleName}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, text, formData.lastName, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-                }}
-                autoCapitalize="words"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Last Name {fieldErrors.lastName && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.lastName && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>👤</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your last name"
+                style={[styles.input, errors.lastName && styles.inputError]}
+                placeholder="Doe"
+                placeholderTextColor="#94A3B8"
                 value={formData.lastName}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, formData.middleName, text, formData.suffix, formData.email, formData.password, formData.confirmPassword));
-                  clearFieldError('lastName');
-                }}
+                onChangeText={(text) => handleFieldChange('lastName', text)}
                 autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Last name"
               />
+              {errors.lastName && (
+                <Text style={styles.fieldError}>{errors.lastName}</Text>
+              )}
             </View>
-            {fieldErrors.lastName && <Text style={styles.errorText}>{fieldErrors.lastName}</Text>}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Suffix (optional)</Text>
-            <View style={styles.inputField}>
-              <Text style={styles.inputIcon}>👤</Text>
+          {/* Middle Name and Suffix Row */}
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginRight: 8 }]}>
+              <Text style={styles.label}>Middle Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Jr., Sr., III, etc."
+                placeholder="Middle (optional)"
+                placeholderTextColor="#94A3B8"
+                value={formData.middleName}
+                onChangeText={(text) => handleFieldChange('middleName', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Middle name"
+              />
+            </View>
+
+            <View style={[styles.inputContainer, styles.halfWidth, { marginLeft: 8 }]}>
+              <Text style={styles.label}>Suffix</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Jr., Sr., etc. (optional)"
+                placeholderTextColor="#94A3B8"
                 value={formData.suffix}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, text, formData.email, formData.password, formData.confirmPassword));
-                }}
-                autoCapitalize="characters"
+                onChangeText={(text) => handleFieldChange('suffix', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Name suffix"
               />
             </View>
           </View>
 
           {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Email {fieldErrors.email && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.email && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>✉️</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
-                value={formData.email}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, text, formData.password, formData.confirmPassword));
-                  clearFieldError('email');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address *</Text>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="john.doe@example.com"
+              placeholderTextColor="#94A3B8"
+              value={formData.email}
+              onChangeText={(text) => handleFieldChange('email', text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSubmitting && !authState.isLoading}
+              accessibilityLabel="Email address"
+            />
+            {errors.email && (
+              <Text style={styles.fieldError}>{errors.email}</Text>
+            )}
           </View>
 
           {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Password {fieldErrors.password && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.password && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>🔒</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password *</Text>
+            <View style={styles.passwordContainer}>
               <TextInput
-                style={styles.input}
-                placeholder="••••••••"
+                style={[styles.passwordInput, errors.password && styles.inputError]}
+                placeholder="At least 6 characters"
+                placeholderTextColor="#94A3B8"
                 value={formData.password}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, formData.email, text, formData.confirmPassword));
-                  clearFieldError('password');
-                }}
+                onChangeText={(text) => handleFieldChange('password', text)}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Password"
               />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
-                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Text style={styles.eyeButtonText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
               </TouchableOpacity>
             </View>
-            {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
+            {errors.password && (
+              <Text style={styles.fieldError}>{errors.password}</Text>
+            )}
           </View>
 
           {/* Confirm Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Confirm Password {fieldErrors.confirmPassword && <Text style={styles.requiredAsterisk}>*</Text>}
-            </Text>
-            <View style={[styles.inputField, fieldErrors.confirmPassword && styles.inputFieldError]}>
-              <Text style={styles.inputIcon}>🔒</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Confirm Password *</Text>
+            <View style={styles.passwordContainer}>
               <TextInput
-                style={styles.input}
-                placeholder="••••••••"
+                style={[styles.passwordInput, errors.confirmPassword && styles.inputError]}
+                placeholder="Re-enter your password"
+                placeholderTextColor="#94A3B8"
                 value={formData.confirmPassword}
-                onChangeText={(text: string) => {
-                  setFormData(new RegisterFormData(formData.firstName, formData.middleName, formData.lastName, formData.suffix, formData.email, formData.password, text));
-                  clearFieldError('confirmPassword');
-                }}
+                onChangeText={(text) => handleFieldChange('confirmPassword', text)}
                 secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Confirm password"
               />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPassword(prev => !prev)}>
-                <Text style={styles.eyeText}>{showConfirmPassword ? '🙈' : '👁️'}</Text>
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              >
+                <Text style={styles.eyeButtonText}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
               </TouchableOpacity>
             </View>
-            {/* Password match indicator */}
-            {formData.confirmPassword.length > 0 && !fieldErrors.confirmPassword && (
-              <Text style={[
-                styles.passwordMatchText,
-                formData.password === formData.confirmPassword ? styles.passwordMatch : styles.passwordMismatch
-              ]}>
-                {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
-              </Text>
+            {errors.confirmPassword && (
+              <Text style={styles.fieldError}>{errors.confirmPassword}</Text>
             )}
-            {fieldErrors.confirmPassword && <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>}
           </View>
 
-          {/* Register Button */}
-          <TouchableOpacity 
-            style={[styles.registerButton, authState.isLoading && styles.disabledButton]} 
-            onPress={handleRegister}
-            disabled={authState.isLoading}
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.primaryButton, (isSubmitting || authState.isLoading) && styles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || authState.isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
           >
-            {authState.isLoading ? (
-              <ActivityIndicator color="#fff" />
+            {isSubmitting || authState.isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.registerButtonText}>Register</Text>
+              <Text style={styles.primaryButtonText}>Create Account</Text>
             )}
           </TouchableOpacity>
-        </>
-      )}
-    </ScrollView>
+
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={onLogin} disabled={isSubmitting || authState.isLoading} accessibilityRole="button" accessibilityLabel="Go to sign in">
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.card}>
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Sign up to get started with your account</Text>
+          </View>
+          {displayError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{displayError}</Text>
+            </View>
+          )}
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginRight: 8 }]}>
+              <Text style={styles.label}>First Name *</Text>
+              <TextInput
+                style={[styles.input, errors.firstName && styles.inputError]}
+                placeholder="John"
+                placeholderTextColor="#94A3B8"
+                value={formData.firstName}
+                onChangeText={(text) => handleFieldChange('firstName', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="First name"
+              />
+              {errors.firstName && <Text style={styles.fieldError}>{errors.firstName}</Text>}
+            </View>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginLeft: 8 }]}>
+              <Text style={styles.label}>Last Name *</Text>
+              <TextInput
+                style={[styles.input, errors.lastName && styles.inputError]}
+                placeholder="Doe"
+                placeholderTextColor="#94A3B8"
+                value={formData.lastName}
+                onChangeText={(text) => handleFieldChange('lastName', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Last name"
+              />
+              {errors.lastName && <Text style={styles.fieldError}>{errors.lastName}</Text>}
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginRight: 8 }]}>
+              <Text style={styles.label}>Middle Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Middle (optional)"
+                placeholderTextColor="#94A3B8"
+                value={formData.middleName}
+                onChangeText={(text) => handleFieldChange('middleName', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Middle name"
+              />
+            </View>
+            <View style={[styles.inputContainer, styles.halfWidth, { marginLeft: 8 }]}>
+              <Text style={styles.label}>Suffix</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Jr., Sr., etc. (optional)"
+                placeholderTextColor="#94A3B8"
+                value={formData.suffix}
+                onChangeText={(text) => handleFieldChange('suffix', text)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Name suffix"
+              />
+            </View>
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address *</Text>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="john.doe@example.com"
+              placeholderTextColor="#94A3B8"
+              value={formData.email}
+              onChangeText={(text) => handleFieldChange('email', text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSubmitting && !authState.isLoading}
+              accessibilityLabel="Email address"
+            />
+            {errors.email && <Text style={styles.fieldError}>{errors.email}</Text>}
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.passwordInput, errors.password && styles.inputError]}
+                placeholder="At least 6 characters"
+                placeholderTextColor="#94A3B8"
+                value={formData.password}
+                onChangeText={(text) => handleFieldChange('password', text)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Password"
+              />
+              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
+                <Text style={styles.eyeButtonText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.password && <Text style={styles.fieldError}>{errors.password}</Text>}
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Confirm Password *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.passwordInput, errors.confirmPassword && styles.inputError]}
+                placeholder="Re-enter your password"
+                placeholderTextColor="#94A3B8"
+                value={formData.confirmPassword}
+                onChangeText={(text) => handleFieldChange('confirmPassword', text)}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting && !authState.isLoading}
+                accessibilityLabel="Confirm password"
+              />
+              <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPassword(!showConfirmPassword)} accessibilityRole="button" accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
+                <Text style={styles.eyeButtonText}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword && <Text style={styles.fieldError}>{errors.confirmPassword}</Text>}
+          </View>
+          <TouchableOpacity
+            style={[styles.primaryButton, (isSubmitting || authState.isLoading) && styles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || authState.isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+          >
+            {isSubmitting || authState.isLoading ? (
+              <ActivityIndicator color={isMobile ? '#7C3AED' : '#FFFFFF'} size="small" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Create Account</Text>
+            )}
+          </TouchableOpacity>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={onLogin} disabled={isSubmitting || authState.isLoading} accessibilityRole="button" accessibilityLabel="Go to sign in">
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: 'relative',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: isMobile ? 16 : 0,
-    paddingBottom: isMobile ? 40 : 20,
-    position: 'relative',
-    ...(Platform.OS === 'web' ? {
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: screenHeight,
-    } : {}),
-  },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-  backgroundCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(74, 85, 225, 0.1)',
-    top: -50,
-    right: -50,
-  },
-  backgroundCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(74, 85, 225, 0.15)',
-    bottom: 100,
-    left: -30,
-  },
-  backgroundCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(74, 85, 225, 0.08)',
-    top: '40%',
-    right: 20,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#f0f2f5',
-  },
-  backgroundGradientWeb: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    ...(Platform.OS === 'web' ? {
-      backgroundImage: 'linear-gradient(135deg, #f0f2f5 0%, #e8f0fe 100%)',
-    } : {}),
-  },
-  webCardContainer: {
-    width: '90%',
-    maxWidth: 520,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginVertical: 20,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)',
-    } : {}),
-  },
-  webCardContent: {
-    padding: 40,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: isMobile ? 20 : 0,
-    marginBottom: isMobile ? 16 : 20,
-  },
-  logoImage: {
-    width: isMobile ? 100 : 120,
-    height: isMobile ? 100 : 120,
-  },
-  welcomeText: {
-    fontSize: isMobile ? 15 : 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: isMobile ? 16 : 20,
-    fontWeight: '400',
-    paddingHorizontal: isMobile ? 8 : 0,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3CD',
-    borderColor: '#FFEAA7',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: isTablet ? 15 : 12,
-    marginBottom: isTablet ? 20 : 15,
-  },
-  errorIcon: {
-    fontSize: isTablet ? 20 : 18,
-    marginRight: isTablet ? 12 : 10,
-  },
-  errorMessage: {
-    flex: 1,
-    fontSize: isTablet ? 16 : 14,
-    color: '#856404',
-    fontWeight: '500',
-    lineHeight: isTablet ? 22 : 20,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f0f2f5',
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 20,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  activeToggleButton: {
-    backgroundColor: '#4a55e1',
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  activeToggleText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  inputField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 10,
-    color: '#aaa',
-  },
-  eyeButton: {
-    marginLeft: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  eyeText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  input: {
-    flex: 1,
-    fontSize: isMobile ? 16 : (isTablet ? 18 : 16),
-    color: '#333',
-  },
-  registerButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginBottom: 0,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(99, 102, 241, 0.2)',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } : {
-      shadowColor: '#6366F1',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 6,
-    }),
-  },
-  registerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  passwordMatchText: {
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-  passwordMatch: {
-    color: '#34C759',
-  },
-  passwordMismatch: {
-    color: '#FF3B30',
-  },
-  requiredAsterisk: {
-    color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inputFieldError: {
-    borderColor: '#FF3B30',
-    borderWidth: 2,
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-});
-
-
-
-
-
-
-
-
-
-
-

@@ -83,6 +83,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
               jobPostingsHook.resetForm();
               jobPostingsHook.setShowPostModal(true);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Post new job"
           >
             <Text style={styles.postButtonText}>+ Post Job</Text>
           </TouchableOpacity>
@@ -93,6 +95,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'postings' && styles.tabButtonActive]}
             onPress={() => setActiveTab('postings')}
+            accessibilityRole="button"
+            accessibilityLabel="Job postings tab"
           >
             <Text style={[styles.tabButtonText, activeTab === 'postings' && styles.tabButtonTextActive]}>
               Job Postings
@@ -101,6 +105,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'applications' && styles.tabButtonActive]}
             onPress={() => setActiveTab('applications')}
+            accessibilityRole="button"
+            accessibilityLabel="Applications tab"
           >
             <Text style={[styles.tabButtonText, activeTab === 'applications' && styles.tabButtonTextActive]}>
               Applications ({applicationsHook.applications.length})
@@ -116,6 +122,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                 key={status}
                 style={[styles.filterChip, jobPostingsHook.filterStatus === status && styles.filterChipActive]}
                 onPress={() => jobPostingsHook.setFilterStatus(status)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${status}`}
               >
                 <Text style={[styles.filterChipText, jobPostingsHook.filterStatus === status && styles.filterChipTextActive]}>
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -194,12 +202,16 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                           <TouchableOpacity
                             style={[styles.tableActionButton, styles.editButton]}
                             onPress={() => jobPostingsHook.handleEditJob(job)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit job ${job.jobTitle}`}
                           >
                             <Text style={styles.tableActionButtonText}>✏️ Edit</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.tableActionButton, styles.deleteButton]}
                             onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete job ${job.jobTitle}`}
                           >
                             <Text style={styles.tableActionButtonText}>🗑️ Delete</Text>
                           </TouchableOpacity>
@@ -207,6 +219,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                             <TouchableOpacity
                               style={[styles.tableActionButton, styles.toggleButton]}
                               onPress={() => jobPostingsHook.handleToggleStatus(job)}
+                              accessibilityRole="button"
+                              accessibilityLabel={job.status === 'active' ? `Close job ${job.jobTitle}` : `Reopen job ${job.jobTitle}`}
                             >
                               <Text style={styles.tableActionButtonText}>
                                 {job.status === 'active' ? '🔒 Close' : '🔓 Reopen'}
@@ -252,12 +266,16 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                         <TouchableOpacity
                           style={[styles.tableActionButton, styles.editButton]}
                           onPress={() => jobPostingsHook.handleEditJob(job)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Edit job ${job.jobTitle}`}
                         >
                           <Text style={styles.tableActionButtonText}>✏️ Edit</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.tableActionButton, styles.deleteButton]}
                           onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete job ${job.jobTitle}`}
                         >
                           <Text style={styles.tableActionButtonText}>🗑️ Delete</Text>
                         </TouchableOpacity>
@@ -265,6 +283,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
                           <TouchableOpacity
                             style={[styles.tableActionButton, styles.toggleButton]}
                             onPress={() => jobPostingsHook.handleToggleStatus(job)}
+                            accessibilityRole="button"
+                            accessibilityLabel={job.status === 'active' ? `Close job ${job.jobTitle}` : `Reopen job ${job.jobTitle}`}
                           >
                             <Text style={styles.tableActionButtonText}>
                               {job.status === 'active' ? '🔒 Close' : '🔓 Reopen'}

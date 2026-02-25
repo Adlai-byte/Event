@@ -252,6 +252,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
         key={conversation.id}
         style={[styles.conversationItem, hasUnread && styles.unreadConversation]}
         onPress={() => setSelectedConversation(conversation)}
+        accessibilityRole="button"
+        accessibilityLabel={`Conversation with User ${otherParticipantId.substring(0, 8)}${hasUnread ? `, ${conversation.unreadCount} unread` : ''}`}
       >
         <View style={styles.conversationAvatar}>
           <Text style={styles.conversationAvatarText}>
@@ -342,9 +344,10 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholderTextColor="#94A3B8"
+                accessibilityLabel="Search conversations"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
                   <Text style={styles.clearIcon}>✕</Text>
                 </TouchableOpacity>
               )}
@@ -353,6 +356,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               <TouchableOpacity
                 style={[styles.filterButton, filterType === 'all' && styles.filterButtonActive]}
                 onPress={() => setFilterType('all')}
+                accessibilityRole="button"
+                accessibilityLabel="Filter all conversations"
               >
                 <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>
                   All
@@ -361,6 +366,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               <TouchableOpacity
                 style={[styles.filterButton, filterType === 'unread' && styles.filterButtonActive]}
                 onPress={() => setFilterType('unread')}
+                accessibilityRole="button"
+                accessibilityLabel="Filter unread conversations"
               >
                 <Text style={[styles.filterText, filterType === 'unread' && styles.filterTextActive]}>
                   Unread
@@ -369,6 +376,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               <TouchableOpacity
                 style={[styles.filterButton, filterType === 'recent' && styles.filterButtonActive]}
                 onPress={() => setFilterType('recent')}
+                accessibilityRole="button"
+                accessibilityLabel="Filter recent conversations"
               >
                 <Text style={[styles.filterText, filterType === 'recent' && styles.filterTextActive]}>
                   Recent
@@ -405,6 +414,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
             <TouchableOpacity
               onPress={() => setSelectedConversation(null)}
               style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Back to conversations"
             >
               <Text style={styles.backButtonText}>← Back</Text>
             </TouchableOpacity>
@@ -441,6 +452,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               multiline
               maxLength={1000}
               placeholderTextColor="#94A3B8"
+              accessibilityLabel="Message input"
             />
             <TouchableOpacity
               onPress={handleSendMessage}
@@ -449,6 +461,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 (!messageText.trim() || sending) && styles.sendButtonDisabled
               ]}
               disabled={!messageText.trim() || sending}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />

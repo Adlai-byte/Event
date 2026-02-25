@@ -138,17 +138,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy</Text>
           
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Privacy policy">
             <Text style={styles.settingButtonText}>Privacy Policy</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Terms of service">
             <Text style={styles.settingButtonText}>Terms of Service</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Data and privacy">
             <Text style={styles.settingButtonText}>Data & Privacy</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
@@ -158,17 +158,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           
-          <TouchableOpacity style={styles.settingButton} onPress={() => onNavigate?.('profile')}>
+          <TouchableOpacity style={styles.settingButton} onPress={() => onNavigate?.('profile')} accessibilityRole="button" accessibilityLabel="Edit profile">
             <Text style={styles.settingButtonText}>Edit Profile</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Change password">
             <Text style={styles.settingButtonText}>Change Password</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Payment methods">
             <Text style={styles.settingButtonText}>Payment Methods</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>

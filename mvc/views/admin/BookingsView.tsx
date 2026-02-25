@@ -108,6 +108,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#94A3B8"
+              accessibilityLabel="Search bookings"
             />
           </View>
 
@@ -118,6 +119,8 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                 key={status}
                 style={[styles.statusChip, filterStatus === status && styles.statusChipActive]}
                 onPress={() => setFilterStatus(status)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${status}`}
               >
                 <Text style={[styles.statusChipText, filterStatus === status && styles.statusChipTextActive]}>
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -175,12 +178,16 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => Alert.alert('View Details', `Booking ID: ${booking.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View details for ${booking.eventName}`}
                 >
                   <Text style={styles.actionButtonText}>View Details</Text>
                 </TouchableOpacity>
                 {booking.status === 'pending' && (
                   <TouchableOpacity
                     style={[styles.actionButton, styles.confirmButton]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Confirm ${booking.eventName}`}
                     onPress={async () => {
                       Alert.alert('Confirm Booking', 'Are you sure you want to confirm this booking?', [
                         { text: 'Cancel', style: 'cancel' },
@@ -214,6 +221,8 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                   <TouchableOpacity
                     style={[styles.actionButton, styles.cancelButton]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Cancel ${booking.eventName}`}
                     onPress={async () => {
                       Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
                         { text: 'No', style: 'cancel' },

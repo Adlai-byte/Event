@@ -141,7 +141,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 <View style={[styles.glowOverlay, { backgroundColor: '#4a55e1' }]} />
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
-                  <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')}>
+                  <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')} accessibilityRole="button" accessibilityLabel="View analytics details">
                     <Text style={styles.ctaText}>View Details</Text>
                   </TouchableOpacity>
                 </View>
@@ -211,7 +211,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             <View style={styles.quickActionsCard}>
               <Text style={styles.cardTitle}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
-                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('user')}>
+                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('user')} accessibilityRole="button" accessibilityLabel="Manage users">
                   <Text style={styles.quickActionIcon}>👤</Text>
                   <Text style={styles.quickActionLabel}>Manage Users</Text>
                 </TouchableOpacity>
@@ -222,7 +222,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             <View style={styles.cardWide}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Recent Activity</Text>
-                <TouchableOpacity style={styles.ctaButton}>
+                <TouchableOpacity style={styles.ctaButton} accessibilityRole="button" accessibilityLabel="View all recent activity">
                   <Text style={styles.ctaText}>View All</Text>
                 </TouchableOpacity>
               </View>

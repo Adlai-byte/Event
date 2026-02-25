@@ -266,6 +266,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
           <TouchableOpacity
             style={[styles.tab, activeTab === 'api' && styles.tabActive]}
             onPress={() => setActiveTab('api')}
+            accessibilityRole="button"
+            accessibilityLabel="API credentials tab"
           >
             <Text style={[styles.tabText, activeTab === 'api' && styles.tabTextActive]}>
               API Credentials
@@ -274,6 +276,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
           <TouchableOpacity
             style={[styles.tab, activeTab === 'link' && styles.tabActive]}
             onPress={() => setActiveTab('link')}
+            accessibilityRole="button"
+            accessibilityLabel="Payment link tab"
           >
             <Text style={[styles.tabText, activeTab === 'link' && styles.tabTextActive]}>
               Payment Link
@@ -308,10 +312,13 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                   autoCapitalize="none"
                   autoCorrect={false}
                   secureTextEntry={!showSecretKey}
+                  accessibilityLabel="Secret key"
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowSecretKey(!showSecretKey)}
+                  accessibilityRole="button"
+                  accessibilityLabel={showSecretKey ? 'Hide secret key' : 'Show secret key'}
                 >
                   <Feather
                     name={showSecretKey ? 'eye-off' : 'eye'}
@@ -342,10 +349,13 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                   autoCapitalize="none"
                   autoCorrect={false}
                   secureTextEntry={!showPublicKey}
+                  accessibilityLabel="Public key"
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowPublicKey(!showPublicKey)}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPublicKey ? 'Hide public key' : 'Show public key'}
                 >
                   <Feather
                     name={showPublicKey ? 'eye-off' : 'eye'}
@@ -370,6 +380,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                 <TouchableOpacity
                   style={[styles.radio, mode === 'live' && styles.radioActive]}
                   onPress={() => setMode('live')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Live mode"
                 >
                   <Text style={[styles.radioText, mode === 'live' && styles.radioTextActive]}>
                     Live
@@ -378,6 +390,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                 <TouchableOpacity
                   style={[styles.radio, mode === 'test' && styles.radioActive]}
                   onPress={() => setMode('test')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Test mode"
                 >
                   <Text style={[styles.radioText, mode === 'test' && styles.radioTextActive]}>
                     Test
@@ -394,6 +408,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
               style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
               onPress={handleSaveCredentials}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save API credentials"
             >
               {saving ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -428,6 +444,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
+                accessibilityLabel="Payment link URL"
               />
               <Text style={styles.helperText}>
                 Enter your complete PayMongo payment page URL
@@ -440,6 +457,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                 style={[styles.button, styles.testButton]}
                 onPress={handleTestLink}
                 disabled={!paymentLink.trim() || saving}
+                accessibilityRole="button"
+                accessibilityLabel="Test payment link"
               >
                 <Text style={styles.testButtonText}>Test Link</Text>
               </TouchableOpacity>
@@ -448,6 +467,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                 style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
                 onPress={handleSaveLink}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Save payment link"
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />

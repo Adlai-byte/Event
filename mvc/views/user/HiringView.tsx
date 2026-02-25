@@ -51,6 +51,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
             h.setActiveTab('jobPostings');
             h.loadJobPostings();
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Job postings tab"
         >
           <Text style={[styles.modernTabText, h.activeTab === 'jobPostings' && styles.modernActiveTabText]}>
             Job Postings
@@ -59,6 +61,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
         <TouchableOpacity
           style={[styles.modernTab, h.activeTab === 'myApplications' && styles.modernActiveTab]}
           onPress={() => h.setActiveTab('myApplications')}
+          accessibilityRole="button"
+          accessibilityLabel="My applications tab"
         >
           <Text style={[styles.modernTabText, h.activeTab === 'myApplications' && styles.modernActiveTabText]}>
             My Applications
@@ -68,6 +72,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
         <TouchableOpacity
             style={[styles.modernTab, h.activeTab === 'proposals' && styles.modernActiveTab]}
           onPress={() => h.setActiveTab('proposals')}
+          accessibilityRole="button"
+          accessibilityLabel="My proposals tab"
         >
             <Text style={[styles.modernTabText, h.activeTab === 'proposals' && styles.modernActiveTabText]}>
             My Proposals
@@ -94,6 +100,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
             }}
               onSubmitEditing={() => h.loadJobPostings()}
               returnKeyType="search"
+              accessibilityLabel="Search job postings"
             />
             {h.jobPostingSearch.length > 0 && (
               <TouchableOpacity
@@ -102,6 +109,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   h.loadJobPostings();
                 }}
                 style={styles.clearSearchButton}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
               >
                 <Text style={styles.clearSearchText}>{'\u2715'}</Text>
               </TouchableOpacity>
@@ -187,11 +196,11 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => h.setShowCreateForm(false)}>
+            <TouchableOpacity onPress={() => h.setShowCreateForm(false)} accessibilityRole="button" accessibilityLabel="Cancel creating hiring request">
               <Text style={styles.modalCloseButton}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Create Hiring Request</Text>
-            <TouchableOpacity onPress={h.handleCreateHiringRequest}>
+            <TouchableOpacity onPress={h.handleCreateHiringRequest} accessibilityRole="button" accessibilityLabel="Create hiring request">
               <Text style={styles.modalSaveButton}>Create</Text>
             </TouchableOpacity>
           </View>
@@ -203,6 +212,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.title}
               onChangeText={h.setTitle}
               placeholder="Enter job title"
+              accessibilityLabel="Job title"
             />
 
             <Text style={styles.formLabel}>Description *</Text>
@@ -213,6 +223,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Describe the job requirements"
               multiline
               numberOfLines={4}
+              accessibilityLabel="Job description"
             />
 
             <Text style={styles.formLabel}>Service ID (Optional)</Text>
@@ -221,6 +232,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.serviceId}
               onChangeText={h.setServiceId}
               placeholder="Enter service ID"
+              accessibilityLabel="Service ID"
             />
 
             {userType === 'client' && h.bookings.length > 0 && (
@@ -230,6 +242,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   <TouchableOpacity
                     style={[styles.eventOption, !h.eventId && styles.eventOptionSelected]}
                     onPress={() => h.setEventId('')}
+                    accessibilityRole="button"
+                    accessibilityLabel="No linked event"
                   >
                     <Text style={styles.eventOptionText}>None</Text>
                   </TouchableOpacity>
@@ -241,6 +255,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                         h.eventId === booking.idbooking.toString() && styles.eventOptionSelected
                       ]}
                       onPress={() => h.setEventId(booking.idbooking.toString())}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Link to event ${booking.b_event_name}`}
                     >
                       <Text style={styles.eventOptionText}>{booking.b_event_name}</Text>
                       <Text style={styles.eventOptionDate}>
@@ -261,6 +277,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   onChangeText={h.setMinBudget}
                   placeholder="0"
                   keyboardType="numeric"
+                  accessibilityLabel="Minimum budget"
                 />
               </View>
               <View style={styles.budgetInput}>
@@ -271,6 +288,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   onChangeText={h.setMaxBudget}
                   placeholder="1000"
                   keyboardType="numeric"
+                  accessibilityLabel="Maximum budget"
                 />
               </View>
             </View>
@@ -283,6 +301,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   value={h.startDate}
                   onChangeText={h.setStartDate}
                   placeholder="YYYY-MM-DD"
+                  accessibilityLabel="Start date"
                 />
               </View>
               <View style={styles.dateInput}>
@@ -292,6 +311,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   value={h.endDate}
                   onChangeText={h.setEndDate}
                   placeholder="YYYY-MM-DD"
+                  accessibilityLabel="End date"
                 />
               </View>
             </View>
@@ -306,6 +326,8 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                     h.locationType === type && styles.locationTypeButtonActive
                   ]}
                   onPress={() => h.setLocationType(type)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Location type: ${type}`}
                 >
                   <Text style={[
                     styles.locationTypeText,
@@ -323,6 +345,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.city}
               onChangeText={h.setCity}
               placeholder="Enter city"
+              accessibilityLabel="City"
             />
 
             <Text style={styles.formLabel}>State/Province *</Text>
@@ -331,6 +354,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.state}
               onChangeText={h.setState}
               placeholder="Enter state or province"
+              accessibilityLabel="State or province"
             />
 
             <Text style={styles.formLabel}>Address (Optional)</Text>
@@ -339,6 +363,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.address}
               onChangeText={h.setAddress}
               placeholder="Enter full address"
+              accessibilityLabel="Address"
             />
 
             <Text style={styles.formLabel}>Requirements (comma-separated)</Text>
@@ -349,6 +374,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Requirement 1, Requirement 2, ..."
               multiline
               numberOfLines={3}
+              accessibilityLabel="Requirements"
             />
 
             <Text style={styles.formLabel}>Required Skills (comma-separated)</Text>
@@ -359,6 +385,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Skill 1, Skill 2, ..."
               multiline
               numberOfLines={3}
+              accessibilityLabel="Required skills"
             />
           </ScrollView>
         </View>
@@ -372,11 +399,11 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => h.setShowProposalForm(false)}>
+            <TouchableOpacity onPress={() => h.setShowProposalForm(false)} accessibilityRole="button" accessibilityLabel="Cancel proposal submission">
               <Text style={styles.modalCloseButton}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Submit Proposal</Text>
-            <TouchableOpacity onPress={h.handleSubmitProposal}>
+            <TouchableOpacity onPress={h.handleSubmitProposal} accessibilityRole="button" accessibilityLabel="Submit proposal">
               <Text style={styles.modalSaveButton}>Submit</Text>
             </TouchableOpacity>
           </View>
@@ -388,6 +415,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               value={h.proposalTitle}
               onChangeText={h.setProposalTitle}
               placeholder="Enter proposal title"
+              accessibilityLabel="Proposal title"
             />
 
             <Text style={styles.formLabel}>Description *</Text>
@@ -398,6 +426,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Describe your approach and qualifications"
               multiline
               numberOfLines={4}
+              accessibilityLabel="Proposal description"
             />
 
             <Text style={styles.formLabel}>Proposed Budget *</Text>
@@ -407,6 +436,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               onChangeText={h.setProposedBudget}
               placeholder="1000"
               keyboardType="numeric"
+              accessibilityLabel="Proposed budget"
             />
 
             <View style={styles.dateContainer}>
@@ -417,6 +447,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   value={h.proposalStartDate}
                   onChangeText={h.setProposalStartDate}
                   placeholder="YYYY-MM-DD"
+                  accessibilityLabel="Proposal start date"
                 />
               </View>
               <View style={styles.dateInput}>
@@ -426,6 +457,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                   value={h.proposalEndDate}
                   onChangeText={h.setProposalEndDate}
                   placeholder="YYYY-MM-DD"
+                  accessibilityLabel="Proposal end date"
                 />
               </View>
             </View>
@@ -438,6 +470,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Deliverable 1, Deliverable 2, ..."
               multiline
               numberOfLines={3}
+              accessibilityLabel="Deliverables"
             />
 
             <Text style={styles.formLabel}>Terms (comma-separated)</Text>
@@ -448,6 +481,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
               placeholder="Term 1, Term 2, ..."
               multiline
               numberOfLines={3}
+              accessibilityLabel="Terms"
             />
           </ScrollView>
         </View>
@@ -461,7 +495,7 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => h.setShowProposalsModal(false)}>
+            <TouchableOpacity onPress={() => h.setShowProposalsModal(false)} accessibilityRole="button" accessibilityLabel="Close proposals modal">
               <Text style={styles.modalCloseButton}>Close</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
@@ -513,12 +547,16 @@ export const HiringView: React.FC<HiringViewProps> = ({ userId, userEmail, userT
                       <TouchableOpacity
                         onPress={() => h.handleAcceptProposal(proposal.id, proposal.hiringRequestId)}
                         style={styles.acceptButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Accept proposal"
                       >
                         <Text style={styles.acceptButtonText}>Accept</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => h.handleRejectProposal(proposal.id)}
                         style={styles.rejectButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Reject proposal"
                       >
                         <Text style={styles.rejectButtonText}>Reject</Text>
                       </TouchableOpacity>

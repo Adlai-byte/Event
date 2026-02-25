@@ -234,6 +234,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
         key={conversation.id}
         style={[styles.conversationItem, hasUnread && styles.unreadConversation]}
         onPress={() => setSelectedConversation(conversation)}
+        accessibilityRole="button"
+        accessibilityLabel={`Conversation with ${displayName}${hasUnread ? `, ${conversation.unreadCount} unread` : ''}`}
       >
         <View style={styles.conversationAvatar}>
           <Text style={styles.conversationAvatarText}>
@@ -335,6 +337,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
               <TouchableOpacity
                 onPress={() => setSelectedConversation(null)}
                 style={styles.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back to conversations"
               >
                 <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
@@ -360,6 +364,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
                 placeholder="Type a message..."
                 multiline
                 maxLength={1000}
+                accessibilityLabel="Message input"
               />
               <TouchableOpacity
                 onPress={handleSendMessage}
@@ -368,6 +373,8 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
                   (!messageText.trim() || sending) && styles.sendButtonDisabled
                 ]}
                 disabled={!messageText.trim() || sending}
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
               >
                 {sending ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />

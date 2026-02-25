@@ -247,6 +247,8 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleSetDefault(method.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Set ${method.account_name} as default`}
           >
             <Text style={styles.actionButtonText}>Set as Default</Text>
           </TouchableOpacity>
@@ -254,6 +256,8 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}
           onPress={() => handleDelete(method.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${method.account_name} payment method`}
         >
           <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Remove</Text>
         </TouchableOpacity>
@@ -283,6 +287,8 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
               style={[styles.addButton, getShadowStyle(0.1, 4, 2)]}
               onPress={handleAddGCash}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Link GCash account"
             >
               <Text style={styles.addButtonIcon}>📱</Text>
               <View style={styles.addButtonTextContainer}>
@@ -307,6 +313,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
                 value={formData.account_name}
                 onChangeText={(text) => setFormData({ ...formData, account_name: text })}
                 autoCapitalize="words"
+                accessibilityLabel="Account name"
               />
 
               <Text style={styles.label}>GCash Mobile Number</Text>
@@ -317,6 +324,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
                 onChangeText={(text) => setFormData({ ...formData, account_number: text })}
                 keyboardType="phone-pad"
                 maxLength={13}
+                accessibilityLabel="GCash mobile number"
               />
               <Text style={styles.hintText}>
                 Enter your 11-digit GCash mobile number (e.g., 09123456789)
@@ -329,6 +337,8 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
                     setShowAddForm(false);
                     setFormData({ account_name: '', account_number: '' });
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel linking GCash account"
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -336,6 +346,8 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
                   style={[styles.formButton, styles.submitButton]}
                   onPress={handleSubmit}
                   disabled={submitting}
+                  accessibilityRole="button"
+                  accessibilityLabel="Link GCash account"
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />

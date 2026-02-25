@@ -226,7 +226,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
               <View style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: '#4a55e1' }]}>
                 <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#4a55e1', paddingBottom: 12 }]}>
                   <Text style={[styles.cardTitle, { color: '#4a55e1' }]}>Booking Overview</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#4a55e1' }]} onPress={() => onNavigate?.('bookings')}>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#4a55e1' }]} onPress={() => onNavigate?.('bookings')} accessibilityRole="button" accessibilityLabel="View all bookings">
                   <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
                 </TouchableOpacity>
               </View>
@@ -297,23 +297,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             <View style={[styles.quickActionsCard, { borderTopWidth: 4, borderTopColor: '#f59e0b' }]}>
               <Text style={[styles.cardTitle, { color: '#f59e0b' }]}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
-                <TouchableOpacity 
-                  style={[styles.quickActionBtn, { backgroundColor: '#4a55e1', borderColor: '#4a55e1' }]} 
+                <TouchableOpacity
+                  style={[styles.quickActionBtn, { backgroundColor: '#4a55e1', borderColor: '#4a55e1' }]}
                   onPress={() => onNavigate?.('services')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add service"
                 >
                   <Text style={styles.quickActionIcon}>➕</Text>
                   <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Add Service</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.quickActionBtn, { backgroundColor: '#10b981', borderColor: '#10b981' }]} 
+                <TouchableOpacity
+                  style={[styles.quickActionBtn, { backgroundColor: '#10b981', borderColor: '#10b981' }]}
                   onPress={() => onNavigate?.('bookings')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View bookings"
                 >
                   <Text style={styles.quickActionIcon}>📅</Text>
                   <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>View Bookings</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.quickActionBtn, { backgroundColor: '#ef4444', borderColor: '#ef4444' }]} 
+                <TouchableOpacity
+                  style={[styles.quickActionBtn, { backgroundColor: '#ef4444', borderColor: '#ef4444' }]}
                   onPress={() => onNavigate?.('hiring')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View hiring"
                 >
                   <Text style={styles.quickActionIcon}>💼</Text>
                   <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Hiring</Text>
@@ -325,7 +331,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             <View style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: '#10b981' }]}>
               <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#10b981', paddingBottom: 12 }]}>
                 <Text style={[styles.cardTitle, { color: '#10b981' }]}>Recent Activity</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#10b981' }]}>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#10b981' }]} accessibilityRole="button" accessibilityLabel="View all recent activity">
                   <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
                 </TouchableOpacity>
               </View>

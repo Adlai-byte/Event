@@ -107,7 +107,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ user, onNavigate, on
     onPress: () => void,
     isDestructive: boolean = false
   ) => (
-    <TouchableOpacity style={styles.actionItem} onPress={onPress}>
+    <TouchableOpacity style={styles.actionItem} onPress={onPress} accessibilityRole="button" accessibilityLabel={title}>
       <View style={styles.settingLeft}>
         <Text style={[styles.settingIcon, isDestructive && styles.destructiveIcon]}>
           {icon}

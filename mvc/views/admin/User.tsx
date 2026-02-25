@@ -226,12 +226,16 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('list')}
+                accessibilityRole="button"
+                accessibilityLabel="View all users tab"
               >
                 <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>View All</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('add')}
+                accessibilityRole="button"
+                accessibilityLabel="Add user tab"
               >
                 <Text style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}>Add User</Text>
               </TouchableOpacity>
@@ -243,7 +247,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               {errorMessage ? (
                 <View style={styles.errorMessage}>
                   <Text style={styles.errorMessageText}>{errorMessage}</Text>
-                  <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton}>
+                  <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton} accessibilityRole="button" accessibilityLabel="Dismiss error">
                     <Text style={styles.errorCloseText}>×</Text>
                   </TouchableOpacity>
                 </View>
@@ -259,6 +263,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEditFirstName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Edit first name"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
                   <TextInput
@@ -268,6 +273,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEditMiddleName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Edit middle name"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
                   <TextInput
@@ -277,6 +283,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEditLastName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Edit last name"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
                   <TextInput
@@ -286,6 +293,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEditSuffix}
                     autoCapitalize="characters"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Edit suffix"
                   />
                   <Text style={styles.formLabel}>Email</Text>
                   <TextInput
@@ -296,6 +304,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Edit email"
                   />
                   <Text style={styles.formLabel}>New Password (leave blank to keep current)</Text>
                   <View style={styles.passwordRow}>
@@ -306,8 +315,9 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       onChangeText={setEditPassword}
                       secureTextEntry={!showEditPassword}
                       placeholderTextColor="#94A3B8"
+                      accessibilityLabel="New password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditPassword(prev => !prev)}>
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditPassword ? 'Hide password' : 'Show password'}>
                       <Text style={styles.eyeText}>{showEditPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
@@ -320,16 +330,17 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       onChangeText={setEditConfirmPassword}
                       secureTextEntry={!showEditConfirm}
                       placeholderTextColor="#94A3B8"
+                      accessibilityLabel="Confirm new password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditConfirm(prev => !prev)}>
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditConfirm ? 'Hide confirm password' : 'Show confirm password'}>
                       <Text style={styles.eyeText}>{showEditConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.editButtonRow}>
-                    <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
+                    <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel edit">
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.updateButton} onPress={handleUpdateUser}>
+                    <TouchableOpacity style={styles.updateButton} onPress={handleUpdateUser} accessibilityRole="button" accessibilityLabel="Update user">
                       <Text style={styles.updateButtonText}>Update User</Text>
                     </TouchableOpacity>
                   </View>
@@ -344,6 +355,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setFirstName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="First name"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
                   <TextInput
@@ -353,6 +365,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setMiddleName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Middle name"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
                   <TextInput
@@ -362,6 +375,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setLastName}
                     autoCapitalize="words"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Last name"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
                   <TextInput
@@ -371,6 +385,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setSuffix}
                     autoCapitalize="characters"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Suffix"
                   />
                   <Text style={styles.formLabel}>Email</Text>
                   <TextInput
@@ -381,6 +396,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#94A3B8"
+                    accessibilityLabel="Email"
                   />
                   <Text style={styles.formLabel}>Password</Text>
                   <View style={styles.passwordRow}>
@@ -391,8 +407,9 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                       placeholderTextColor="#94A3B8"
+                      accessibilityLabel="Password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)}>
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
                       <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
@@ -405,12 +422,13 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       onChangeText={setConfirmPassword}
                       secureTextEntry={!showConfirm}
                       placeholderTextColor="#94A3B8"
+                      accessibilityLabel="Confirm password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(prev => !prev)}>
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>
                       <Text style={styles.eyeText}>{showConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
-                  <TouchableOpacity style={styles.addButtonLarge} onPress={async () => {
+                  <TouchableOpacity style={styles.addButtonLarge} accessibilityRole="button" accessibilityLabel="Add user" onPress={async () => {
                     // Clear previous error message
                     setErrorMessage('');
 
@@ -451,7 +469,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               {successMessage ? (
                 <View style={styles.successMessage}>
                   <Text style={styles.successMessageText}>{successMessage}</Text>
-                  <TouchableOpacity onPress={() => setSuccessMessage('')} style={styles.successCloseButton}>
+                  <TouchableOpacity onPress={() => setSuccessMessage('')} style={styles.successCloseButton} accessibilityRole="button" accessibilityLabel="Dismiss success message">
                     <Text style={styles.successCloseText}>×</Text>
                   </TouchableOpacity>
                 </View>
@@ -465,6 +483,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholderTextColor="#94A3B8"
+                  accessibilityLabel="Search users"
                 />
               </View>
 
@@ -489,10 +508,10 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         </View>
                       </View>
                       <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-                    <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)}>
+                    <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)} accessibilityRole="button" accessibilityLabel={`Edit ${u.name}`}>
                       <Text style={styles.editButtonText}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} onPress={async () => {
+                    <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} accessibilityRole="button" accessibilityLabel={u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`} onPress={async () => {
                       try {
                         const r = await fetch(`${getApiBaseUrl()}/api/users`);
                         const j = await r.json();
@@ -540,7 +559,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)}>
                           <Text style={styles.editButtonText}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} onPress={async () => {
+                        <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} accessibilityRole="button" accessibilityLabel={u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`} onPress={async () => {
                           try {
                             const r = await fetch(`${getApiBaseUrl()}/api/users`);
                             const j = await r.json();
