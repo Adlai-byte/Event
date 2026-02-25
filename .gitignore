@@ -30,13 +30,59 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Environment files (NEVER commit secrets)
+.env
+.env.local
 .env*.local
+.env.production
+.env.staging
 
-# typescript
+# Firebase credentials
+e-vent-aa93e-*.json
+google-services.json
+GoogleService-Info.plist
+
+# Binaries and archives
+*.exe
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Build artifacts
+*.apk
+*.ipa
+*.aab
+build/
+.gradle/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# TypeScript
 *.tsbuildinfo
 
+# Vercel
 .vercel
 
-.vercel
-.env*.local
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Temp files
+*.lnk
+*.tmp
+
+# Playwright
+.playwright-mcp/
+
+# Upload directories (keep structure, ignore content)
+server/uploads/images/*
+!server/uploads/images/.gitkeep

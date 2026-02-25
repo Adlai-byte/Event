@@ -1,0 +1,9 @@
+node_modules/
+dist/
+web-build/
+.expo/
+android/
+ios/
+*.lock
+package-lock.json
+server/node_modules/

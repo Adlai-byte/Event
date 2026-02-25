@@ -1,0 +1,4 @@
+{
+  "mvc/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+  "app/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"]
+}
