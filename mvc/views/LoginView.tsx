@@ -15,6 +15,7 @@ import { AuthState } from '../models/AuthState';
 import { LoginFormData } from '../models/FormData';
 import { getShadowStyle } from '../utils/shadowStyles';
 import { useBreakpoints } from '../hooks/useBreakpoints';
+import { colors, semantic } from '../theme';
 
 interface LoginViewProps {
   authState: AuthState;
@@ -139,7 +140,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     formSection: {
       flex: 1,
       maxWidth: isTablet ? 480 : 520,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: semantic.surface,
       justifyContent: 'center',
     },
     welcomeSection: {
@@ -176,7 +177,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     },
     welcomeContent: { zIndex: 1, alignItems: 'center', maxWidth: 380 },
     welcomeTitle: {
-      fontSize: isTablet ? 28 : 32, fontWeight: '800', color: '#FFFFFF',
+      fontSize: isTablet ? 28 : 32, fontWeight: '800', color: semantic.surface,
       marginBottom: 16, textAlign: 'center', letterSpacing: -0.5,
     },
     welcomeSubtitle: {
@@ -206,7 +207,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     },
     card: {
       width: '100%', maxWidth: isMobile ? '100%' : 440,
-      backgroundColor: isMobile ? 'transparent' : '#FFFFFF',
+      backgroundColor: isMobile ? 'transparent' : semantic.surface,
       borderRadius: isMobile ? 0 : 28,
       padding: isMobile ? 24 : 40,
       borderWidth: isMobile ? 0 : 1,
@@ -214,7 +215,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       ...(isMobile ? {} : Platform.OS === 'web' ? {
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
       } : {
-        shadowColor: '#0f172a', shadowOffset: { width: 0, height: 12 },
+        shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.06, shadowRadius: 24, elevation: 8,
       }),
     },
@@ -226,47 +227,47 @@ export const LoginView: React.FC<LoginViewProps> = ({
     header: { marginBottom: 28, alignItems: 'center' },
     title: {
       fontSize: isMobile ? 28 : 32, fontWeight: '800',
-      color: isMobile ? '#FFFFFF' : '#0F172A', marginBottom: 8, letterSpacing: -0.6,
+      color: isMobile ? semantic.surface : colors.neutral[900], marginBottom: 8, letterSpacing: -0.6,
     },
     subtitle: {
-      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569',
+      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600],
       textAlign: 'center', lineHeight: 24, paddingHorizontal: 8,
     },
     errorContainer: {
-      backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+      backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: colors.error[100],
       borderRadius: 14, padding: 14, marginBottom: 20,
     },
-    errorText: { color: '#B91C1C', fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
+    errorText: { color: colors.error[700], fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
     inputContainer: { marginBottom: 20 },
     label: {
       fontSize: isMobile ? 15 : 14, fontWeight: '600',
-      color: isMobile ? '#FFFFFF' : '#1E293B', marginBottom: 8,
+      color: isMobile ? semantic.surface : semantic.textPrimary, marginBottom: 8,
     },
     input: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
       borderRadius: 14, paddingHorizontal: 18,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
       ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
       ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
     },
-    inputError: { borderColor: '#EF4444', backgroundColor: '#FFFBFB' },
+    inputError: { borderColor: semantic.error, backgroundColor: '#FFFBFB' },
     passwordContainer: { position: 'relative' },
     passwordInput: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
       borderRadius: 14, paddingHorizontal: 18, paddingRight: 52,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
       ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
       ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
     },
     eyeButton: { position: 'absolute', right: 14, top: '50%', transform: [{ translateY: -14 }], padding: 8 },
     eyeButtonText: { fontSize: 22 },
-    fieldError: { color: '#B91C1C', fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
+    fieldError: { color: colors.error[700], fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
     forgotPasswordLink: { alignSelf: 'flex-end', marginBottom: 22, marginTop: -2 },
-    forgotPasswordLinkText: { color: isMobile ? '#FFFFFF' : '#A855F7', fontSize: isMobile ? 15 : 14, fontWeight: '600' },
+    forgotPasswordLinkText: { color: isMobile ? semantic.surface : '#A855F7', fontSize: isMobile ? 15 : 14, fontWeight: '600' },
     primaryButton: {
-      backgroundColor: isMobile ? '#FFFFFF' : '#7C3AED',
+      backgroundColor: isMobile ? semantic.surface : '#7C3AED',
       borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
       alignItems: 'center', justifyContent: 'center', marginBottom: 20,
       ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
@@ -274,32 +275,32 @@ export const LoginView: React.FC<LoginViewProps> = ({
       ...(Platform.OS === 'web' && isMobile ? { boxShadow: 'none' as any } : {}),
     },
     primaryButtonDisabled: { opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) },
-    primaryButtonText: { color: isMobile ? '#7C3AED' : '#FFFFFF', fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
+    primaryButtonText: { color: isMobile ? '#7C3AED' : semantic.surface, fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
     divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
-    dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+    dividerLine: { flex: 1, height: 1, backgroundColor: semantic.border },
     dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
     googleButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
+      backgroundColor: semantic.surface, borderWidth: 1, borderColor: semantic.border, borderRadius: 12,
       paddingVertical: Platform.OS === 'web' ? 16 : 18, marginBottom: 24,
       ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
     },
     googleButtonIcon: { fontSize: 20, marginRight: 12 },
     googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
     registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' },
-    registerText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569' },
-    registerLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? '#FFFFFF' : '#A855F7', fontWeight: '700' },
+    registerText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600] },
+    registerLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? semantic.surface : '#A855F7', fontWeight: '700' },
     forgotPasswordContainer: { marginTop: 8 },
-    forgotPasswordTitle: { fontSize: isMobile ? 22 : 24, fontWeight: '700', color: '#0F172A', marginBottom: 8, textAlign: 'center' },
-    forgotPasswordSubtitle: { fontSize: isMobile ? 15 : 14, color: '#475569', textAlign: 'center', marginBottom: 24, lineHeight: 22 },
+    forgotPasswordTitle: { fontSize: isMobile ? 22 : 24, fontWeight: '700', color: colors.neutral[900], marginBottom: 8, textAlign: 'center' },
+    forgotPasswordSubtitle: { fontSize: isMobile ? 15 : 14, color: colors.neutral[600], textAlign: 'center', marginBottom: 24, lineHeight: 22 },
     forgotPasswordActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
     forgotPasswordButton: { flex: 1 },
     secondaryButton: {
-      backgroundColor: '#F1F5F9', borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
-      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0',
+      backgroundColor: semantic.background, borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
+      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: semantic.border,
       ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
     },
-    secondaryButtonText: { color: '#1E293B', fontSize: isMobile ? 17 : 16, fontWeight: '600' },
+    secondaryButtonText: { color: semantic.textPrimary, fontSize: isMobile ? 17 : 16, fontWeight: '600' },
   }), [screenWidth, screenHeight, isMobile, isTablet, isDesktop]);
 
   const formCardContent = (
@@ -339,7 +340,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <TextInput
               style={[styles.input, errors.forgotPassword && styles.inputError]}
               placeholder="Enter your email"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               value={forgotPasswordEmail}
               onChangeText={(text) => {
                 setForgotPasswordEmail(text);
@@ -376,7 +377,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               accessibilityLabel="Send password reset link"
             >
               {forgotPasswordLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={semantic.surface} size="small" />
               ) : (
                 <Text style={styles.primaryButtonText}>Send Reset Link</Text>
               )}
@@ -390,7 +391,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder="Enter your email"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               value={formData.email}
               onChangeText={handleEmailChange}
               keyboardType="email-address"
@@ -409,7 +410,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <TextInput
                 style={[styles.passwordInput, errors.password && styles.inputError]}
                 placeholder="Enter your password"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.password}
                 onChangeText={handlePasswordChange}
                 secureTextEntry={!showPassword}
@@ -449,7 +450,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             accessibilityLabel="Sign in"
           >
             {isSubmitting || authState.isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={semantic.surface} size="small" />
             ) : (
               <Text style={styles.primaryButtonText}>Sign In</Text>
             )}

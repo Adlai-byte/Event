@@ -1,0 +1,769 @@
+import { StyleSheet } from 'react-native';
+import { colors, semantic } from '../../theme';
+
+/**
+ * Styles for ServicesView and its sub-components.
+ * Extracted from the original monolithic ServicesView.tsx.
+ *
+ * NOTE: isMobile / screenWidth are passed in at creation time so styles
+ * can be responsive. Call createStyles(isMobile, screenWidth) once inside
+ * your component and use the returned object.
+ */
+export const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#EEF1F5',
+    },
+    content: {
+      padding: isMobile ? 12 : 20,
+      paddingBottom: isMobile ? 20 : 20,
+    },
+    card: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      elevation: 2,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      marginBottom: isMobile ? 12 : 20,
+      backgroundColor: semantic.surface,
+      flexWrap: 'wrap',
+      borderRadius: 8,
+      padding: 4,
+    },
+    tabButton: {
+      flex: isMobile ? undefined : 0,
+      minWidth: isMobile ? (screenWidth - 48) / 2 : 120,
+      paddingVertical: isMobile ? 8 : 8,
+      paddingHorizontal: isMobile ? 12 : 16,
+      borderRadius: 6,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabButtonActive: {
+      backgroundColor: semantic.primary,
+      elevation: 2,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    tabButtonText: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    tabButtonTextActive: {
+      color: semantic.surface,
+      fontWeight: '700',
+    },
+    searchContainer: {
+      marginBottom: 16,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: semantic.background,
+      marginBottom: 12,
+    },
+    categoryFilter: {
+      marginBottom: 12,
+    },
+    categoryChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: colors.neutral[100],
+      marginRight: 8,
+    },
+    categoryChipActive: {
+      backgroundColor: semantic.primary,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    categoryChipTextActive: {
+      color: semantic.surface,
+    },
+    serviceCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    serviceCardAlt: {
+      backgroundColor: semantic.background,
+    },
+    serviceInfo: {
+      flex: 1,
+    },
+    serviceHeader: {
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: 'space-between',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      marginBottom: 8,
+      gap: isMobile ? 8 : 0,
+    },
+    serviceName: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      flex: 1,
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    statusActive: {
+      backgroundColor: colors.success[50],
+    },
+    statusInactive: {
+      backgroundColor: colors.error[50],
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: '600',
+      textTransform: 'capitalize',
+    },
+    serviceDescription: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+      marginBottom: 8,
+    },
+    serviceMeta: {
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      gap: isMobile ? 6 : 12,
+    },
+    serviceCategory: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      textTransform: 'capitalize',
+    },
+    servicePrice: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+    },
+    serviceRating: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+    },
+    serviceActions: {
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: isMobile ? 6 : 8,
+      marginTop: 12,
+      justifyContent: 'center',
+    },
+    actionButton: {
+      paddingVertical: isMobile ? 10 : 8,
+      paddingHorizontal: isMobile ? 16 : 12,
+      borderRadius: 6,
+      minWidth: isMobile ? '100%' as any : 100,
+    },
+    activateButton: {
+      backgroundColor: '#16A34A',
+    },
+    deactivateButton: {
+      backgroundColor: colors.error[600],
+    },
+    actionButtonText: {
+      color: semantic.surface,
+      fontWeight: '700',
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    editButton: {
+      paddingVertical: isMobile ? 8 : 6,
+      paddingHorizontal: isMobile ? 12 : 10,
+      borderRadius: 4,
+      backgroundColor: semantic.primary,
+      minWidth: isMobile ? 70 : 80,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    editButtonText: {
+      color: semantic.surface,
+      fontWeight: '600',
+      fontSize: isMobile ? 10 : 11,
+      textAlign: 'center',
+    },
+    emptyState: {
+      paddingVertical: 40,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      color: semantic.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    emptyStateSubtext: {
+      color: semantic.textMuted,
+      fontSize: 14,
+    },
+    // Table Styles
+    tableScrollContainer: {
+      marginTop: 16,
+      ...(isMobile && {
+        maxHeight: '100%' as any,
+      }),
+    },
+    tableScrollContent: {
+      ...(isMobile && {
+        minWidth: 800,
+      }),
+    },
+    tableContainer: {
+      backgroundColor: semantic.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      overflow: 'hidden',
+      ...(isMobile ? {
+        width: 800,
+      } : {
+        width: '100%' as any,
+      }),
+    },
+    tableHeader: {
+      flexDirection: 'row',
+      backgroundColor: semantic.background,
+      borderBottomWidth: 2,
+      borderBottomColor: semantic.border,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+    },
+    tableHeaderText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral[100],
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      backgroundColor: semantic.surface,
+    },
+    tableRowAlt: {
+      backgroundColor: semantic.background,
+    },
+    tableCell: {
+      fontSize: 14,
+      color: semantic.textPrimary,
+    },
+    tableColImage: {
+      flex: 0.8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tableColName: {
+      flex: 2,
+    },
+    tableColCategory: {
+      flex: 1.2,
+    },
+    tableColPrice: {
+      flex: 1,
+    },
+    tableColRating: {
+      flex: 1.2,
+    },
+    tableColStatus: {
+      flex: 1,
+      alignItems: 'flex-start',
+    },
+    tableColActions: {
+      flex: 1.5,
+      alignItems: 'flex-start',
+    },
+    tableImage: {
+      width: 50,
+      height: 50,
+      borderRadius: 6,
+      resizeMode: 'cover',
+      backgroundColor: colors.neutral[100],
+    },
+    tableImagePlaceholder: {
+      width: 50,
+      height: 50,
+      borderRadius: 6,
+      backgroundColor: colors.neutral[100],
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tableImagePlaceholderText: {
+      fontSize: 20,
+    },
+    tableActions: {
+      flexDirection: 'row',
+      gap: isMobile ? 4 : 6,
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    },
+    tableActionButton: {
+      paddingVertical: isMobile ? 8 : 6,
+      paddingHorizontal: isMobile ? 12 : 10,
+      borderRadius: 4,
+      minWidth: isMobile ? 70 : 80,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tableActionButtonText: {
+      color: semantic.surface,
+      fontWeight: '600',
+      fontSize: isMobile ? 10 : 11,
+      textAlign: 'center',
+    },
+    addForm: {
+      marginTop: 16,
+    },
+    formTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 20,
+    },
+    formLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    addInputFull: {
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: semantic.background,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+    },
+    formRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    formCol: {
+      flex: 1,
+    },
+    addInput: {
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: semantic.background,
+    },
+    categoryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 8,
+      marginBottom: 12,
+    },
+    categoryOption: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      backgroundColor: colors.neutral[100],
+      marginRight: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    categoryOptionSelected: {
+      backgroundColor: semantic.primary,
+      borderColor: semantic.primary,
+    },
+    categoryOptionText: {
+      fontSize: 13,
+      color: semantic.textPrimary,
+      fontWeight: '600',
+    },
+    categoryOptionTextSelected: {
+      color: semantic.surface,
+    },
+    addButtonLarge: {
+      backgroundColor: semantic.primary,
+      paddingVertical: 15,
+      paddingHorizontal: 32,
+      borderRadius: 8,
+      marginTop: 24,
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+    },
+    addButtonDisabled: {
+      backgroundColor: semantic.textMuted,
+      opacity: 0.7,
+    },
+    addButtonText: {
+      color: semantic.surface,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    imageUploadButton: {
+      borderWidth: 2,
+      borderColor: semantic.primary,
+      borderStyle: 'dashed',
+      borderRadius: 8,
+      paddingVertical: 20,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: semantic.background,
+      marginTop: 8,
+    },
+    imageUploadText: {
+      color: semantic.primary,
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    imagePreviewContainer: {
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    imagePreview: {
+      width: '100%',
+      height: 200,
+      borderRadius: 8,
+      resizeMode: 'cover',
+      backgroundColor: colors.neutral[100],
+      minHeight: 200,
+    },
+    removeImageButton: {
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      backgroundColor: semantic.error,
+      borderRadius: 6,
+      alignSelf: 'flex-start',
+    },
+    removeImageText: {
+      color: semantic.surface,
+      fontWeight: '600',
+      fontSize: 12,
+    },
+    mapContainer: {
+      height: isMobile ? 250 : 300,
+      minHeight: isMobile ? 250 : 300,
+      width: '100%',
+      borderRadius: 8,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: semantic.border,
+      marginTop: 8,
+      marginBottom: 8,
+      backgroundColor: semantic.background,
+    },
+    map: {
+      width: '100%',
+      height: '100%',
+      minHeight: isMobile ? 250 : 300,
+      backgroundColor: semantic.background,
+    },
+    mapLoadingContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: semantic.background,
+      zIndex: 1,
+    },
+    mapLoadingText: {
+      marginTop: 10,
+      color: semantic.textSecondary,
+      fontSize: 14,
+    },
+    mapHint: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      marginBottom: 8,
+      fontStyle: 'italic',
+    },
+    addressText: {
+      fontSize: 13,
+      color: semantic.textPrimary,
+      backgroundColor: semantic.background,
+      padding: 10,
+      borderRadius: 6,
+      marginTop: 8,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    addressPlaceholder: {
+      fontSize: 12,
+      color: semantic.textMuted,
+      fontStyle: 'italic',
+      padding: 10,
+      backgroundColor: semantic.background,
+      borderRadius: 6,
+      marginTop: 8,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderStyle: 'dashed',
+    },
+    durationTypeContainer: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    durationTypeButton: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: semantic.background,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      alignItems: 'center',
+    },
+    durationTypeButtonActive: {
+      backgroundColor: semantic.primary,
+      borderColor: semantic.primary,
+    },
+    durationTypeText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: semantic.textSecondary,
+    },
+    durationTypeTextActive: {
+      color: semantic.surface,
+      fontWeight: '600',
+    },
+    successMessage: {
+      backgroundColor: semantic.success,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    successMessageText: {
+      color: semantic.surface,
+      fontSize: 14,
+      fontWeight: '600',
+      flex: 1,
+    },
+    successCloseButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    successCloseText: {
+      color: semantic.surface,
+      fontSize: 20,
+      fontWeight: 'bold',
+      lineHeight: 20,
+    },
+    errorMessage: {
+      backgroundColor: semantic.error,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    errorMessageText: {
+      color: semantic.surface,
+      fontSize: 14,
+      fontWeight: '600',
+      flex: 1,
+    },
+    errorCloseButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    errorCloseText: {
+      color: semantic.surface,
+      fontSize: 20,
+      fontWeight: 'bold',
+      lineHeight: 20,
+    },
+    // Packages tab styles
+    packagesContainer: {
+      flex: 1,
+    },
+    loadingContainer: {
+      padding: 40,
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    servicePackageSection: {
+      marginBottom: 24,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+      paddingBottom: 20,
+    },
+    servicePackageHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    servicePackageInfo: {
+      flex: 1,
+    },
+    servicePackageName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#1F2937',
+    },
+    servicePackageCategory: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      marginTop: 2,
+    },
+    createPackageButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      backgroundColor: semantic.primary,
+      borderRadius: 8,
+    },
+    createPackageIcon: {
+      fontSize: 16,
+      color: semantic.surface,
+      marginRight: 6,
+    },
+    createPackageText: {
+      fontSize: 13,
+      color: semantic.surface,
+      fontWeight: '500',
+    },
+    packagesList: {
+      marginTop: 8,
+    },
+    packageCard: {
+      backgroundColor: '#F9FAFB',
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    packageCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    packageCardInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    packageCardName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#1F2937',
+    },
+    packageCardDescription: {
+      fontSize: 13,
+      color: semantic.textSecondary,
+      marginTop: 4,
+    },
+    packageCardPrice: {
+      alignItems: 'flex-end',
+    },
+    packagePriceLabel: {
+      fontSize: 11,
+      color: '#9CA3AF',
+      textTransform: 'uppercase',
+    },
+    packagePriceValue: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.success[600],
+    },
+    packageDiscount: {
+      fontSize: 11,
+      color: colors.error[600],
+      fontWeight: '500',
+    },
+    packageCardMeta: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    packageMetaText: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+    },
+    packageCardActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    packageActionButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 6,
+    },
+    packageEditButton: {
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: '#D1D5DB',
+    },
+    packageEditButtonText: {
+      fontSize: 13,
+      color: '#374151',
+      fontWeight: '500',
+    },
+    packageDeleteButton: {
+      backgroundColor: colors.error[50],
+      borderWidth: 1,
+      borderColor: colors.error[100],
+    },
+    packageDeleteButtonText: {
+      fontSize: 13,
+      color: colors.error[600],
+      fontWeight: '500',
+    },
+    noPackages: {
+      padding: 20,
+      alignItems: 'center',
+      backgroundColor: '#F9FAFB',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderStyle: 'dashed',
+    },
+    noPackagesText: {
+      fontSize: 14,
+      color: '#9CA3AF',
+    },
+  });

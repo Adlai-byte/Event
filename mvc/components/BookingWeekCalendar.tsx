@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { colors, semantic } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -578,7 +579,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
   },
   header: {
     flexDirection: 'row',
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
   },
   navButton: {
     width: 44, // Better touch target for mobile
@@ -682,7 +683,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   dayHeaderPast: {
-    backgroundColor: '#FFFFFF', // White background for past dates
+    backgroundColor: semantic.surface,
   },
   dayName: {
     fontSize: 11,
@@ -722,12 +723,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#4f46e5',
+    backgroundColor: semantic.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   perDayCheckmarkText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -745,7 +746,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEBEE', // Light red background for days with no slots
   },
   dayColumnPast: {
-    backgroundColor: '#FFFFFF', // White background for past dates
+    backgroundColor: semantic.surface,
   },
   noAvailableTimeContainer: {
     position: 'absolute',
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
@@ -785,7 +786,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E9', // Green background for available
   },
   hourCellClickable: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   hourCellDaySelected: {
     backgroundColor: '#F0F7FF',
@@ -800,7 +801,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   hourCellPast: {
-    backgroundColor: '#FFFFFF', // White background for past dates
+    backgroundColor: semantic.surface,
     opacity: 0.5,
   },
   hourCellSelected: {
@@ -861,11 +862,11 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   slotTitleSelected: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   slotSelectedText: {
     fontSize: 9,
-    color: '#FFFFFF',
+    color: semantic.surface,
     opacity: 0.9,
   },
 });

@@ -13,6 +13,7 @@ import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -180,13 +181,13 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'submitted': return '#f59e0b';
-      case 'under_review': return '#4a55e1';
-      case 'accepted': return '#10b981';
-      case 'rejected': return '#ef4444';
+      case 'submitted': return semantic.warning;
+      case 'under_review': return semantic.primary;
+      case 'accepted': return semantic.success;
+      case 'rejected': return semantic.error;
       case 'revised': return '#8b5cf6';
-      case 'withdrawn': return '#64748B';
-      default: return '#64748B';
+      case 'withdrawn': return semantic.textSecondary;
+      default: return semantic.textSecondary;
     }
   };
 
@@ -230,7 +231,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                 placeholder="Search proposals by title, description, client, or hiring request..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 accessibilityLabel="Search proposals"
               />
             </View>
@@ -340,7 +341,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                 placeholder="Search hiring requests by title, description, or city..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 accessibilityLabel="Search hiring requests"
               />
             </View>
@@ -357,7 +358,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   <View style={styles.requestHeader}>
                     <Text style={styles.requestTitle}>{request.title}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
-                      <Text style={[styles.statusText, { color: '#10b981' }]}>OPEN</Text>
+                      <Text style={[styles.statusText, { color: semantic.success }]}>OPEN</Text>
                     </View>
                   </View>
 
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     marginBottom: isMobile ? 12 : 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     flexWrap: 'wrap',
     borderRadius: 8,
     padding: 4,
@@ -497,20 +498,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     elevation: 2,
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   tabButtonText: {
     fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '600',
   },
   tabButtonTextActive: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontWeight: '700',
   },
   filterContainer: {
@@ -520,22 +521,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   filterChipActive: {
-    backgroundColor: '#4a55e1',
-    borderColor: '#4a55e1',
+    backgroundColor: semantic.primary,
+    borderColor: semantic.primary,
   },
   filterChipText: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -545,10 +546,10 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   proposalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginBottom: 16,
@@ -571,12 +572,12 @@ const styles = StyleSheet.create({
   proposalTitle: {
     fontSize: isMobile ? 16 : 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   proposalHiringRequest: {
     fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -589,7 +590,7 @@ const styles = StyleSheet.create({
   },
   proposalDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: semantic.border,
   },
   proposalDetailRow: {
     flexDirection: isMobile ? 'column' : 'row',
@@ -607,25 +608,25 @@ const styles = StyleSheet.create({
   },
   proposalDetailLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '600',
   },
   proposalDetailValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
   proposalBudget: {
     fontWeight: '700',
-    color: '#4a55e1',
+    color: semantic.primary,
   },
   proposalActions: {
     flexDirection: 'row',
     gap: 8,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: semantic.border,
   },
   actionButton: {
     flex: 1,
@@ -635,18 +636,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewButton: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
   },
   withdrawButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: semantic.error,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 14,
     fontWeight: '600',
   },
   requestCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -665,12 +666,12 @@ const styles = StyleSheet.create({
   requestTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     flex: 1,
   },
   requestDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -678,7 +679,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: semantic.border,
   },
   requestDetailRow: {
     flexDirection: 'row',
@@ -687,23 +688,23 @@ const styles = StyleSheet.create({
   },
   requestDetailLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '600',
   },
   requestDetailValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
   submitProposalButton: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   submitProposalButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -719,12 +720,12 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   modalOverlay: {
     position: 'absolute',
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     width: '90%',
     maxHeight: '80%',
@@ -748,16 +749,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   modalClose: {
     fontSize: 24,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   modalBody: {
     padding: 16,
@@ -765,31 +766,31 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginTop: 12,
     marginBottom: 6,
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     borderRadius: 6,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
   },
   searchContainer: {
     marginBottom: 16,
     paddingHorizontal: 16,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   textArea: {
     height: 100,
@@ -807,18 +808,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelModalButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: semantic.background,
   },
   submitModalButton: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
   },
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   submitModalButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
 });
 

@@ -12,6 +12,7 @@ import {
 import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 interface Notification {
   idnotification: number | string; // Can be number or "system_123" format
@@ -159,15 +160,15 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
       case 'provider_application_rejected':
         return {
           icon: '✕',
-          iconBg: '#FEE2E2',
-          iconColor: '#DC2626',
+          iconBg: colors.error[50],
+          iconColor: colors.error[600],
           borderColor: '#FECACA',
         };
       case 'provider_application_approved':
         return {
           icon: '✓',
-          iconBg: '#D1FAE5',
-          iconColor: '#059669',
+          iconBg: colors.success[50],
+          iconColor: colors.success[600],
           borderColor: '#A7F3D0',
         };
       case 'booking_confirmed':
@@ -180,15 +181,15 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
       case 'booking_cancelled':
         return {
           icon: '🚫',
-          iconBg: '#FEE2E2',
-          iconColor: '#DC2626',
+          iconBg: colors.error[50],
+          iconColor: colors.error[600],
           borderColor: '#FECACA',
         };
       default:
         return {
           icon: '🔔',
           iconBg: '#EFF6FF',
-          iconColor: '#4a55e1',
+          iconColor: semantic.primary,
           borderColor: '#DBEAFE',
         };
     }
@@ -334,8 +335,8 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={['#4a55e1']}
-              tintColor="#4a55e1"
+              colors={[semantic.primary]}
+              tintColor={semantic.primary}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -374,9 +375,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: isMobile ? 16 : 24,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: semantic.border,
   },
   unreadCountContainer: {
     flexDirection: 'row',
@@ -385,11 +386,11 @@ const styles = StyleSheet.create({
   },
   unreadLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     fontWeight: '500',
   },
   headerBadge: {
-    backgroundColor: '#EF4444',
+    backgroundColor: semantic.error,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -401,24 +402,24 @@ const styles = StyleSheet.create({
   headerBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   markAllReadButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: semantic.background,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
       ':hover': {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: semantic.border,
       },
     }),
   },
   markAllReadText: {
     fontSize: isMobile ? 13 : 14,
-    color: '#4a55e1',
+    color: semantic.primary,
     fontWeight: '600',
   },
   contentWrapper: {
@@ -442,12 +443,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   notificationItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 16,
     padding: isMobile ? 16 : 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: semantic.border,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
       cursor: 'pointer',
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
   unreadNotification: {
     backgroundColor: '#F0F9FF',
     borderLeftWidth: 4,
-    borderLeftColor: '#4a55e1',
+    borderLeftColor: semantic.primary,
     borderColor: '#BFDBFE',
   },
   notificationContent: {
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: isMobile ? 16 : 18,
     fontWeight: '600',
-    color: '#111827',
+    color: semantic.textPrimary,
     flex: 1,
     letterSpacing: -0.3,
   },
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
   },
   notificationMessage: {
     fontSize: isMobile ? 14 : 15,
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   unreadMessage: {
-    color: '#111827',
+    color: semantic.textPrimary,
     fontWeight: '500',
   },
   reasonContainer: {
@@ -531,12 +532,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#E5E7EB',
+    borderLeftColor: semantic.border,
   },
   reasonLabel: {
     fontSize: isMobile ? 12 : 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: semantic.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -549,7 +550,7 @@ const styles = StyleSheet.create({
   },
   reapplyText: {
     fontSize: isMobile ? 13 : 14,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     fontStyle: 'italic',
     marginBottom: 8,
     lineHeight: isMobile ? 18 : 20,
@@ -571,7 +572,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: semantic.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -582,13 +583,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: isMobile ? 24 : 28,
     fontWeight: '700',
-    color: '#111827',
+    color: semantic.textPrimary,
     marginBottom: 12,
     letterSpacing: -0.5,
   },
   emptyText: {
     fontSize: isMobile ? 15 : 16,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     textAlign: 'center',
     lineHeight: isMobile ? 22 : 24,
   },

@@ -4,6 +4,7 @@ import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import UserService, { AdminUserRow } from '../../services/UserService';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -262,7 +263,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={editFirstName}
                     onChangeText={setEditFirstName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Edit first name"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
@@ -272,7 +273,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={editMiddleName}
                     onChangeText={setEditMiddleName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Edit middle name"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
@@ -282,7 +283,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={editLastName}
                     onChangeText={setEditLastName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Edit last name"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
@@ -292,7 +293,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={editSuffix}
                     onChangeText={setEditSuffix}
                     autoCapitalize="characters"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Edit suffix"
                   />
                   <Text style={styles.formLabel}>Email</Text>
@@ -303,7 +304,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEditEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Edit email"
                   />
                   <Text style={styles.formLabel}>New Password (leave blank to keep current)</Text>
@@ -314,7 +315,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       value={editPassword}
                       onChangeText={setEditPassword}
                       secureTextEntry={!showEditPassword}
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="New password"
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditPassword ? 'Hide password' : 'Show password'}>
@@ -329,7 +330,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       value={editConfirmPassword}
                       onChangeText={setEditConfirmPassword}
                       secureTextEntry={!showEditConfirm}
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Confirm new password"
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditConfirm ? 'Hide confirm password' : 'Show confirm password'}>
@@ -354,7 +355,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={firstName}
                     onChangeText={setFirstName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="First name"
                   />
                   <Text style={styles.formLabel}>Middle Name (optional)</Text>
@@ -364,7 +365,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={middleName}
                     onChangeText={setMiddleName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Middle name"
                   />
                   <Text style={styles.formLabel}>Last Name</Text>
@@ -374,7 +375,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={lastName}
                     onChangeText={setLastName}
                     autoCapitalize="words"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Last name"
                   />
                   <Text style={styles.formLabel}>Suffix (optional)</Text>
@@ -384,7 +385,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     value={suffix}
                     onChangeText={setSuffix}
                     autoCapitalize="characters"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Suffix"
                   />
                   <Text style={styles.formLabel}>Email</Text>
@@ -395,7 +396,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={semantic.textMuted}
                     accessibilityLabel="Email"
                   />
                   <Text style={styles.formLabel}>Password</Text>
@@ -406,7 +407,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Password"
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
@@ -421,7 +422,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       secureTextEntry={!showConfirm}
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Confirm password"
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>
@@ -482,7 +483,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   placeholder="Search by name, email, role, or status..."
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={semantic.textMuted}
                   accessibilityLabel="Search users"
                 />
               </View>
@@ -503,8 +504,8 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                   <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
                   <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
                       <View style={[styles.tdStatus, { flex: 1 }]}>
-                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? '#D1FAE5' : '#FEE2E2' }]}>
-                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : '#DC2626' }]}>{u.status}</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? colors.success[50] : colors.error[50] }]}>
+                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : colors.error[600] }]}>{u.status}</Text>
                         </View>
                       </View>
                       <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
@@ -551,8 +552,8 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
                       <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
                       <View style={[styles.tdStatus, { flex: 1 }]}>
-                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? '#D1FAE5' : '#FEE2E2' }]}>
-                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : '#DC2626' }]}>{u.status}</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? colors.success[50] : colors.error[50] }]}>
+                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : colors.error[600] }]}>{u.status}</Text>
                         </View>
                       </View>
                       <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
@@ -607,12 +608,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   tabContainer: {
     flexDirection: 'row',
     marginBottom: isMobile ? 12 : 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     flexWrap: 'wrap',
     borderRadius: 8,
     padding: 4,
@@ -628,31 +629,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     elevation: 2,
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   tabButtonText: {
     fontSize: isMobile ? 12 : 13,
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '600',
   },
   tabButtonTextActive: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontWeight: '700',
   },
   formLabel: {
     fontSize: isMobile ? 13 : 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginTop: isMobile ? 12 : 16,
     marginBottom: isMobile ? 6 : 8,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 16 : 24,
     elevation: 2,
@@ -661,21 +662,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: semantic.background,
   },
   searchContainer: {
     marginBottom: 16,
     marginTop: 8,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none' as any,
       cursor: 'text' as any,
@@ -685,7 +686,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   tableContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     overflow: 'hidden',
     ...(isMobile && { minWidth: 700 }),
@@ -697,14 +698,14 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     paddingVertical: isMobile ? 12 : 14,
     paddingHorizontal: 16,
     borderBottomWidth: 2,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   th: {
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontSize: isMobile ? 11 : 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -715,14 +716,14 @@ const styles = StyleSheet.create({
     paddingVertical: isMobile ? 14 : 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: semantic.background,
     alignItems: 'center',
   },
   rowAlt: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
   },
   td: {
-    color: '#1E293B',
+    color: semantic.textPrimary,
     fontSize: isMobile ? 13 : 14,
     fontWeight: '500',
   },
@@ -742,22 +743,22 @@ const styles = StyleSheet.create({
   },
   addInputFull: {
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     borderRadius: 8,
     paddingVertical: isMobile ? 12 : 14,
     paddingHorizontal: isMobile ? 14 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     fontSize: isMobile ? 14 : 15,
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   addButtonText: {
-    color: '#fff',
+    color: semantic.surface,
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.5,
   },
   addButtonLarge: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     paddingVertical: 15,
     paddingHorizontal: 32,
     borderRadius: 8,
@@ -766,7 +767,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     minWidth: 150,
     elevation: 2,
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -775,9 +776,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     paddingRight: 8,
   },
   eyeButton: {
@@ -788,7 +789,7 @@ const styles = StyleSheet.create({
   },
   eyeText: {
     fontSize: 18,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   actionButton: {
     paddingVertical: isMobile ? 8 : 8,
@@ -804,12 +805,12 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   actionButtonText: {
-    color: '#fff',
+    color: semantic.surface,
     fontWeight: '600',
     fontSize: isMobile ? 11 : 12,
   },
   blockButton: {
-    backgroundColor: '#DC2626',
+    backgroundColor: colors.error[600],
   },
   unblockButton: {
     backgroundColor: '#16A34A',
@@ -818,30 +819,30 @@ const styles = StyleSheet.create({
     paddingVertical: isMobile ? 8 : 8,
     paddingHorizontal: isMobile ? 14 : 16,
     borderRadius: 6,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     minWidth: isMobile ? 70 : 80,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 1,
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
   editButtonText: {
-    color: '#fff',
+    color: semantic.surface,
     fontWeight: '600',
     fontSize: isMobile ? 11 : 12,
   },
   formTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 20,
     marginTop: 8,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   editButtonRow: {
     flexDirection: 'row',
@@ -853,12 +854,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: semantic.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   cancelButtonText: {
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -866,15 +867,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
   },
   updateButtonText: {
-    color: '#fff',
+    color: semantic.surface,
     fontWeight: '700',
     fontSize: 14,
   },
   successMessage: {
-    backgroundColor: '#10b981',
+    backgroundColor: semantic.success,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -883,7 +884,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   successMessageText: {
-    color: '#fff',
+    color: semantic.surface,
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
@@ -893,13 +894,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   successCloseText: {
-    color: '#fff',
+    color: semantic.surface,
     fontSize: 20,
     fontWeight: 'bold',
     lineHeight: 20,
   },
   errorMessage: {
-    backgroundColor: '#ef4444',
+    backgroundColor: semantic.error,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -908,7 +909,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   errorMessageText: {
-    color: '#fff',
+    color: semantic.surface,
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
@@ -918,7 +919,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   errorCloseText: {
-    color: '#fff',
+    color: semantic.surface,
     fontSize: 20,
     fontWeight: 'bold',
     lineHeight: 20,

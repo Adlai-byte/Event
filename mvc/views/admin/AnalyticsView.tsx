@@ -4,6 +4,7 @@ import { SkeletonCard } from '../../components/ui';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isMobile = screenWidth < 768;
@@ -97,14 +98,14 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
                 value={analytics.activeUsers.value.toLocaleString()}
                 change={`${analytics.activeUsers.change}%`}
                 trend={analytics.activeUsers.trend}
-                glowColor="#4a55e1"
+                glowColor={semantic.primary}
               />
               <StatCard
                 title="Total Bookings"
                 value={analytics.totalBookings.value.toLocaleString()}
                 change={`${analytics.totalBookings.change}%`}
                 trend={analytics.totalBookings.trend}
-                glowColor="#10b981"
+                glowColor={semantic.success}
               />
             </View>
 
@@ -130,7 +131,7 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
 
             {/* Top Services */}
             <View style={[styles.card, styles.cardGlowOrange]}>
-              <View style={[styles.glowOverlay, { backgroundColor: '#f59e0b' }]} />
+              <View style={[styles.glowOverlay, { backgroundColor: semantic.warning }]} />
               <Text style={styles.cardTitle}>Top Performing Services</Text>
               <View style={styles.topServicesList}>
                 {analytics.topServices.length > 0 ? (
@@ -193,20 +194,20 @@ const styles = StyleSheet.create({
     marginBottom: isMobile ? 16 : 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   headerTitle: {
     fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
-    textShadowColor: '#4a55e1',
+    textShadowColor: semantic.primary,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
   headerSubtitle: {
     fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
     }),
   },
   statCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginRight: isMobile ? 6 : 12,
@@ -243,13 +244,13 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: isMobile ? 11 : 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: isMobile ? 6 : 8,
   },
   statValue: {
     fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   statChange: {
@@ -257,13 +258,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statChangeUp: {
-    color: '#10b981',
+    color: semantic.success,
   },
   statChangeDown: {
-    color: '#ef4444',
+    color: semantic.error,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginBottom: isMobile ? 12 : 16,
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
   },
   cardGlowOrange: {
-    shadowColor: '#f59e0b',
+    shadowColor: semantic.warning,
     elevation: 8,
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: isMobile ? 14 : 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: isMobile ? 12 : 16,
   },
   growthContainer: {
@@ -307,13 +308,13 @@ const styles = StyleSheet.create({
   },
   growthLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: 8,
   },
   growthValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   topServicesList: {
     marginTop: 8,
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: semantic.background,
   },
   topServiceLeft: {
     flex: 1,
@@ -332,12 +333,12 @@ const styles = StyleSheet.create({
   topServiceName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   topServiceBookings: {
     fontSize: 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   distributionContainer: {
     marginTop: 8,
@@ -358,17 +359,17 @@ const styles = StyleSheet.create({
   },
   distributionLabel: {
     fontSize: 13,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     flex: 1,
   },
   distributionCount: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   distributionBar: {
     height: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: semantic.background,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -395,23 +396,23 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#ef4444',
+    color: semantic.error,
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 14,
     fontWeight: '600',
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     textAlign: 'center',
     paddingVertical: 20,
   },

@@ -10,6 +10,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { colors, semantic } from '../theme';
 
 interface TimeSlot {
   start: string;
@@ -247,7 +248,9 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
           {!isWeb && <View style={styles.dragHandle} />}
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Select Time</Text>
+            <Text style={styles.headerTitle}>
+              {hideDuration ? 'Select Pickup Time' : 'Select Time'}
+            </Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeButton}
@@ -260,7 +263,9 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Start Time Dropdown */}
             <View style={styles.section}>
-              <Text style={[styles.label, { fontSize: labelFontSize }]}>Start Time</Text>
+              <Text style={[styles.label, { fontSize: labelFontSize }]}>
+                {hideDuration ? 'Pickup Time' : 'Start Time'}
+              </Text>
               <View style={[styles.pickerContainer, { maxHeight: pickerMaxHeight }]}>
                 <ScrollView
                   style={[styles.pickerScrollView, { maxHeight: pickerMaxHeight }]}
@@ -384,7 +389,7 @@ const styles = StyleSheet.create({
     padding: Platform.OS === 'web' ? 20 : 0,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderTopLeftRadius: Platform.OS === 'web' ? 16 : 20,
     borderTopRightRadius: Platform.OS === 'web' ? 16 : 20,
     width: Platform.OS === 'web' ? 'auto' : '100%',
@@ -416,12 +421,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   closeButton: {
     width: 32,
@@ -433,7 +438,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#636E72',
+    color: semantic.textSecondary,
     fontWeight: 'bold',
   },
   content: {
@@ -447,14 +452,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D3436',
+    color: semantic.textPrimary,
     marginBottom: 12,
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
     overflow: 'hidden',
     minHeight: Platform.OS === 'web' ? 240 : 240,
     ...(Platform.OS === 'web' && {
@@ -465,14 +470,14 @@ const styles = StyleSheet.create({
     maxHeight: Platform.OS === 'web' ? 280 : 200,
     ...(Platform.OS === 'web' && {
       scrollbarWidth: 'thin',
-      scrollbarColor: '#C1C1C1 #F8F9FA',
+      scrollbarColor: `#C1C1C1 ${semantic.background}`,
     }),
   },
   pickerItem: {
     paddingVertical: Platform.OS === 'web' ? 16 : 18,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
     minHeight: 56,
     justifyContent: 'center',
   },
@@ -481,16 +486,16 @@ const styles = StyleSheet.create({
   },
   pickerItemText: {
     fontSize: 17,
-    color: '#2D3436',
+    color: semantic.textPrimary,
     fontWeight: '500',
   },
   pickerItemTextSelected: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontWeight: '600',
   },
   endTimeDisplay: {
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -540,7 +545,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: semantic.border,
   },
   confirmButton: {
     backgroundColor: '#4285F4',
@@ -563,7 +568,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,

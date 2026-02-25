@@ -18,6 +18,7 @@ import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width } = Dimensions.get('window');
 const isMobile = width < 768;
@@ -377,7 +378,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
                 accessibilityLabel="Send message"
               >
                 {sending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={semantic.surface} />
                 ) : (
                   <Text style={styles.sendButtonText}>Send</Text>
                 )}
@@ -393,18 +394,18 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6C63FF',
+    color: semantic.primary,
   },
   conversationsContainer: {
     flex: 1,
@@ -415,22 +416,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: isMobile ? 12 : 20,
     paddingVertical: isMobile ? 12 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: isMobile ? 14 : 16,
-    color: '#6C63FF',
+    color: semantic.primary,
     fontWeight: '600',
   },
   headerTitle: {
     fontSize: isMobile ? 18 : 20,
     fontWeight: 'bold',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   unreadHeaderBadge: {
     backgroundColor: '#F44336',
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadHeaderCount: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -452,9 +453,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
   },
   unreadConversation: {
     backgroundColor: '#F0F8FF',
@@ -463,13 +464,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   conversationAvatarText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -485,7 +486,7 @@ const styles = StyleSheet.create({
   conversationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   conversationTime: {
     fontSize: 12,
@@ -493,11 +494,11 @@ const styles = StyleSheet.create({
   },
   conversationPreview: {
     fontSize: 14,
-    color: '#636E72',
+    color: semantic.textSecondary,
   },
   unreadPreview: {
     fontWeight: '600',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   unreadBadge: {
     position: 'absolute',
@@ -511,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadCount: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#636E72',
+    color: semantic.textSecondary,
     marginBottom: 8,
   },
   emptyStateSubtext: {
@@ -541,18 +542,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
   },
   chatTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   messagesContent: {
     padding: 16,
@@ -573,11 +574,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   ownMessageBubble: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
     borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomLeftRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -594,10 +595,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   ownMessageText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   otherMessageText: {
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   messageTime: {
     fontSize: 12,
@@ -617,8 +618,8 @@ const styles = StyleSheet.create({
   },
   systemMessageText: {
     fontSize: 14,
-    color: '#636E72',
-    backgroundColor: '#E9ECEF',
+    color: semantic.textSecondary,
+    backgroundColor: semantic.border,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -633,13 +634,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: semantic.border,
   },
   messageInput: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   sendButton: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 20,
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#A4B0BE',
   },
   sendButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: '600',
   },

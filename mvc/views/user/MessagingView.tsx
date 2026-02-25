@@ -18,6 +18,7 @@ import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const isMobile = width < 768 || Platform.OS !== 'web';
@@ -492,7 +493,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
                     accessibilityLabel="Send message"
                   >
                     {sending ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={semantic.surface} />
                     ) : (
                       <Text style={styles.sendButtonText}>Send</Text>
                     )}
@@ -598,7 +599,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
                 accessibilityLabel="Send message"
               >
                 {sending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={semantic.surface} />
                 ) : (
                   <Text style={styles.sendButtonText}>Send</Text>
                 )}
@@ -618,7 +619,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : '#F8F9FA',
+    backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
     paddingTop: Platform.OS === 'web' ? 20 : 10,
     paddingBottom: Platform.OS === 'web' ? 20 : 10,
     ...(Platform.OS === 'web' ? {
@@ -631,7 +632,7 @@ const styles = StyleSheet.create({
     width: Platform.OS === 'web' ? '90%' : '100%',
     maxWidth: Platform.OS === 'web' ? 1200 : '100%',
     height: Platform.OS === 'web' ? (screenHeight * 0.85) : '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: Platform.OS === 'web' ? 16 : 0,
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? {
@@ -642,19 +643,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6C63FF',
+    color: semantic.primary,
   },
   conversationsContainer: {
     flex: Platform.OS === 'web' ? 0.4 : 1,
     width: Platform.OS === 'web' ? 350 : '100%',
     borderRightWidth: Platform.OS === 'web' ? 1 : 0,
-    borderRightColor: Platform.OS === 'web' ? '#E5E7EB' : 'transparent',
-    backgroundColor: '#FFFFFF',
+    borderRightColor: Platform.OS === 'web' ? semantic.border : 'transparent',
+    backgroundColor: semantic.surface,
     paddingTop: Platform.OS === 'web' ? 0 : 30,
   },
   conversationsList: {
@@ -664,9 +665,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: Platform.OS === 'web' ? 14 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: semantic.border,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
       transition: 'background-color 0.2s ease',
@@ -679,13 +680,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   conversationAvatarText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -701,7 +702,7 @@ const styles = StyleSheet.create({
   conversationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   conversationTime: {
     fontSize: 12,
@@ -709,11 +710,11 @@ const styles = StyleSheet.create({
   },
   conversationPreview: {
     fontSize: 14,
-    color: '#636E72',
+    color: semantic.textSecondary,
   },
   unreadPreview: {
     fontWeight: '600',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   unreadBadge: {
     position: 'absolute',
@@ -727,7 +728,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadCount: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -745,13 +746,13 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: semantic.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -768,7 +769,7 @@ const styles = StyleSheet.create({
   },
   emptyChatText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     fontWeight: '500',
   },
   chatContainer: {
@@ -782,9 +783,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
     paddingVertical: Platform.OS === 'web' ? 18 : 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: semantic.border,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
     } : {}),
@@ -792,7 +793,7 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   backButton: {
     paddingVertical: 4,
@@ -800,12 +801,12 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#4a55e1',
+    color: semantic.primary,
     fontWeight: '600',
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   messagesContent: {
     padding: 16,
@@ -826,11 +827,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   ownMessageBubble: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
     borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomLeftRadius: 4,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
@@ -851,10 +852,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   ownMessageText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   otherMessageText: {
-    color: '#2D3436',
+    color: semantic.textPrimary,
   },
   messageTime: {
     fontSize: 12,
@@ -874,8 +875,8 @@ const styles = StyleSheet.create({
   },
   systemMessageText: {
     fontSize: 14,
-    color: '#636E72',
-    backgroundColor: '#E9ECEF',
+    color: semantic.textSecondary,
+    backgroundColor: semantic.border,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -896,7 +897,7 @@ const styles = StyleSheet.create({
   },
   attachmentName: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontWeight: '500',
   },
   attachmentSize: {
@@ -909,13 +910,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
     paddingTop: Platform.OS === 'web' ? 16 : 12,
     paddingBottom: Platform.OS === 'web' ? 20 : 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: semantic.border,
   },
   messageInput: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: semantic.background,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: (Platform.OS as string) === 'web' ? 14 : 12,
@@ -923,7 +924,7 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: semantic.border,
     ...((Platform.OS as string) === 'web' ? {
       outlineWidth: 0,
       outlineStyle: 'none' as any,
@@ -931,7 +932,7 @@ const styles = StyleSheet.create({
     } : {}),
   },
   sendButton: {
-    backgroundColor: '#4f46e5',
+    backgroundColor: semantic.primary,
     paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
     paddingVertical: Platform.OS === 'web' ? 14 : 12,
     borderRadius: 24,
@@ -946,7 +947,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#A4B0BE',
   },
   sendButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: '600',
   },

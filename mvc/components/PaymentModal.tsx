@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { getApiBaseUrl } from '../services/api';
 import { getShadowStyle } from '../utils/shadowStyles';
+import { colors, semantic } from '../theme';
 
 
 interface PaymentModalProps {
@@ -382,7 +383,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   header: {
     flexDirection: 'row',
@@ -390,9 +391,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: semantic.border,
     ...getShadowStyle(0.1, 2, 1),
   },
   closeButton: {
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 24,
-    color: '#636E72',
+    color: semantic.textSecondary,
     fontWeight: '300',
   },
   headerTitle: {
@@ -420,14 +421,14 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#636E72',
+    color: semantic.textSecondary,
   },
   content: {
     flex: 1,
     padding: 20,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: 20,
     marginBottom: 24,
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#636E72',
+    color: semantic.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: semantic.border,
   },
   totalLabel: {
     fontSize: 16,
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#10b981',
+    color: semantic.success,
   },
   paymentSection: {
     marginBottom: 24,
@@ -496,13 +497,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: semantic.border,
     ...getShadowStyle(0.1, -2, 2),
   },
   payButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: semantic.success,
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -513,12 +514,12 @@ const styles = StyleSheet.create({
     ...getShadowStyle(0, 0, 0),
   },
   payButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: 'bold',
   },
   errorCard: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error[50],
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -530,7 +531,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: '#DC2626',
+    color: colors.error[600],
     fontWeight: '600',
     flex: 1,
   },
@@ -539,7 +540,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   errorCloseText: {
-    color: '#DC2626',
+    color: colors.error[600],
     fontSize: 20,
     fontWeight: 'bold',
     lineHeight: 20,
@@ -548,15 +549,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   paymentMethodCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: semantic.border,
     ...getShadowStyle(0.1, 2, 2),
   },
   paymentMethodCardActive: {
-    borderColor: '#6C63FF',
+    borderColor: semantic.primary,
     backgroundColor: '#F5F3FF',
   },
   paymentMethodContent: {
@@ -577,11 +578,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   paymentMethodTitleActive: {
-    color: '#6C63FF',
+    color: semantic.primary,
   },
   paymentMethodDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: semantic.textSecondary,
     lineHeight: 20,
   },
   paymentMethodDescriptionActive: {
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#6C63FF',
+    borderColor: semantic.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#6C63FF',
+    backgroundColor: semantic.primary,
   },
   cashInfoCard: {
     backgroundColor: '#F0FDF4',

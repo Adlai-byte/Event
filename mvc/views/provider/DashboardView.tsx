@@ -14,6 +14,7 @@ const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 interface DashboardViewProps {
   user?: User;
@@ -202,90 +203,90 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                 title="Services" 
                 value={stats.totalServices.toString()} 
                 icon="🎯" 
-                color="#4a55e1"
+                color={semantic.primary}
                 subtitle={`${stats.activeServices} active`}
               />
               <MetricCard 
                 title="Bookings" 
                 value={stats.totalBookings.toString()} 
                 icon="📅" 
-                color="#10b981"
+                color={semantic.success}
                 subtitle={`${stats.pendingBookings} pending`}
               />
               <MetricCard 
                 title="Revenue" 
                 value={`₱ ${stats.monthlyRevenue.toLocaleString()}`} 
                 icon="💰" 
-                color="#f59e0b"
+                color={semantic.warning}
                 subtitle={`₱ ${stats.totalRevenue.toLocaleString()} total`}
               />
             </View>
 
             {/* Quick Stats Row */}
             <View style={styles.row}>
-              <View style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: '#4a55e1' }]}>
-                <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#4a55e1', paddingBottom: 12 }]}>
-                  <Text style={[styles.cardTitle, { color: '#4a55e1' }]}>Booking Overview</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#4a55e1' }]} onPress={() => onNavigate?.('bookings')} accessibilityRole="button" accessibilityLabel="View all bookings">
-                  <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
+              <View style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: semantic.primary }]}>
+                <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: semantic.primary, paddingBottom: 12 }]}>
+                  <Text style={[styles.cardTitle, { color: semantic.primary }]}>Booking Overview</Text>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: semantic.primary }]} onPress={() => onNavigate?.('bookings')} accessibilityRole="button" accessibilityLabel="View all bookings">
+                  <Text style={[styles.ctaText, { color: semantic.surface }]}>View All</Text>
                 </TouchableOpacity>
               </View>
                 {/* Booking status breakdown */}
                 <View style={styles.bookingBreakdown}>
-                  <View style={[styles.bookingStat, { backgroundColor: '#FEF3C7', borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#f59e0b' }]} />
+                  <View style={[styles.bookingStat, { backgroundColor: colors.warning[50], borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.warning }]} />
                     <Text style={[styles.bookingStatLabel, { color: '#92400E', fontWeight: '600' }]}>Pending</Text>
-                    <Text style={[styles.bookingStatValue, { color: '#f59e0b' }]}>{stats.pendingBookings}</Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.warning }]}>{stats.pendingBookings}</Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: '#D1FAE5', borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#10b981' }]} />
+                  <View style={[styles.bookingStat, { backgroundColor: colors.success[50], borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.success }]} />
                     <Text style={[styles.bookingStatLabel, { color: '#065F46', fontWeight: '600' }]}>Confirmed</Text>
-                    <Text style={[styles.bookingStatValue, { color: '#10b981' }]}>{stats.confirmedBookings}</Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.success }]}>{stats.confirmedBookings}</Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: '#E0E7FF', borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#4a55e1' }]} />
+                  <View style={[styles.bookingStat, { backgroundColor: colors.primary[100], borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.primary }]} />
                     <Text style={[styles.bookingStatLabel, { color: '#3730A3', fontWeight: '600' }]}>Completed</Text>
-                    <Text style={[styles.bookingStatValue, { color: '#4a55e1' }]}>{stats.completedBookings}</Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.primary }]}>{stats.completedBookings}</Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: '#FEE2E2', borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: '#ef4444' }]} />
+                  <View style={[styles.bookingStat, { backgroundColor: colors.error[50], borderRadius: 8, padding: 12 }]}>
+                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.error }]} />
                     <Text style={[styles.bookingStatLabel, { color: '#991B1B', fontWeight: '600' }]}>Cancelled</Text>
-                    <Text style={[styles.bookingStatValue, { color: '#ef4444' }]}>{stats.cancelledBookings}</Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.error }]}>{stats.cancelledBookings}</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.cardRightCol}>
                 {/* Performance Summary */}
-                <View style={[styles.progressCard, { borderTopWidth: 4, borderTopColor: '#4a55e1' }]}>
+                <View style={[styles.progressCard, { borderTopWidth: 4, borderTopColor: semantic.primary }]}>
                   <Text style={styles.cardTitle}>Performance</Text>
                   <View style={styles.activityList}>
-                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: '#4a55e1', width: 12, height: 12 }]} />
+                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: semantic.primary, width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#4a55e1', fontWeight: '600' }]}>Average Rating</Text>
-                        <Text style={[styles.activityValue, { color: '#4a55e1', fontSize: 16 }]}>⭐ {stats.averageRating.toFixed(1)}</Text>
+                        <Text style={[styles.activityText, { color: semantic.primary, fontWeight: '600' }]}>Average Rating</Text>
+                        <Text style={[styles.activityValue, { color: semantic.primary, fontSize: 16 }]}>⭐ {stats.averageRating.toFixed(1)}</Text>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: '#10b981', width: 12, height: 12 }]} />
+                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: semantic.success, width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#10b981', fontWeight: '600' }]}>Active Services</Text>
-                        <Text style={[styles.activityValue, { color: '#10b981', fontSize: 16 }]}>{stats.activeServices}</Text>
+                        <Text style={[styles.activityText, { color: semantic.success, fontWeight: '600' }]}>Active Services</Text>
+                        <Text style={[styles.activityValue, { color: semantic.success, fontSize: 16 }]}>{stats.activeServices}</Text>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: '#f59e0b', width: 12, height: 12 }]} />
+                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: semantic.warning, width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#f59e0b', fontWeight: '600' }]}>This Month Revenue</Text>
-                        <Text style={[styles.activityValue, { color: '#f59e0b', fontSize: 16 }]}>₱ {stats.monthlyRevenue.toLocaleString()}</Text>
+                        <Text style={[styles.activityText, { color: semantic.warning, fontWeight: '600' }]}>This Month Revenue</Text>
+                        <Text style={[styles.activityValue, { color: semantic.warning, fontSize: 16 }]}>₱ {stats.monthlyRevenue.toLocaleString()}</Text>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: '#ef4444', width: 12, height: 12 }]} />
+                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                      <View style={[styles.activityDot, { backgroundColor: semantic.error, width: 12, height: 12 }]} />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#ef4444', fontWeight: '600' }]}>Active Proposals</Text>
-                        <Text style={[styles.activityValue, { color: '#ef4444', fontSize: 16 }]}>{stats.activeProposals}</Text>
+                        <Text style={[styles.activityText, { color: semantic.error, fontWeight: '600' }]}>Active Proposals</Text>
+                        <Text style={[styles.activityValue, { color: semantic.error, fontSize: 16 }]}>{stats.activeProposals}</Text>
                       </View>
                     </View>
                   </View>
@@ -294,62 +295,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             </View>
 
             {/* Quick Actions */}
-            <View style={[styles.quickActionsCard, { borderTopWidth: 4, borderTopColor: '#f59e0b' }]}>
-              <Text style={[styles.cardTitle, { color: '#f59e0b' }]}>Quick Actions</Text>
+            <View style={[styles.quickActionsCard, { borderTopWidth: 4, borderTopColor: semantic.warning }]}>
+              <Text style={[styles.cardTitle, { color: semantic.warning }]}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: '#4a55e1', borderColor: '#4a55e1' }]}
+                  style={[styles.quickActionBtn, { backgroundColor: semantic.primary, borderColor: semantic.primary }]}
                   onPress={() => onNavigate?.('services')}
                   accessibilityRole="button"
                   accessibilityLabel="Add service"
                 >
                   <Text style={styles.quickActionIcon}>➕</Text>
-                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Add Service</Text>
+                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>Add Service</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: '#10b981', borderColor: '#10b981' }]}
+                  style={[styles.quickActionBtn, { backgroundColor: semantic.success, borderColor: semantic.success }]}
                   onPress={() => onNavigate?.('bookings')}
                   accessibilityRole="button"
                   accessibilityLabel="View bookings"
                 >
                   <Text style={styles.quickActionIcon}>📅</Text>
-                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>View Bookings</Text>
+                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>View Bookings</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: '#ef4444', borderColor: '#ef4444' }]}
+                  style={[styles.quickActionBtn, { backgroundColor: semantic.error, borderColor: semantic.error }]}
                   onPress={() => onNavigate?.('hiring')}
                   accessibilityRole="button"
                   accessibilityLabel="View hiring"
                 >
                   <Text style={styles.quickActionIcon}>💼</Text>
-                  <Text style={[styles.quickActionLabel, { color: '#FFFFFF' }]}>Hiring</Text>
+                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>Hiring</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Recent Activity */}
-            <View style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: '#10b981' }]}>
-              <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: '#10b981', paddingBottom: 12 }]}>
-                <Text style={[styles.cardTitle, { color: '#10b981' }]}>Recent Activity</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: '#10b981' }]} accessibilityRole="button" accessibilityLabel="View all recent activity">
-                  <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>View All</Text>
+            <View style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: semantic.success }]}>
+              <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: semantic.success, paddingBottom: 12 }]}>
+                <Text style={[styles.cardTitle, { color: semantic.success }]}>Recent Activity</Text>
+                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: semantic.success }]} accessibilityRole="button" accessibilityLabel="View all recent activity">
+                  <Text style={[styles.ctaText, { color: semantic.surface }]}>View All</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.activityTable}>
                 {activities.length > 0 ? (
                   activities.map((activity, index) => {
                     // Determine color based on activity type
-                    let activityColor = '#4a55e1';
-                    let bgColor = '#E0E7FF';
+                    let activityColor: string = semantic.primary;
+                    let bgColor: string = colors.primary[100];
                     if (activity.type?.includes('payment') || activity.description?.toLowerCase().includes('payment')) {
-                      activityColor = '#10b981';
-                      bgColor = '#D1FAE5';
+                      activityColor = semantic.success;
+                      bgColor = colors.success[50];
                     } else if (activity.type?.includes('booking') || activity.description?.toLowerCase().includes('booking')) {
-                      activityColor = '#4a55e1';
-                      bgColor = '#E0E7FF';
+                      activityColor = semantic.primary;
+                      bgColor = colors.primary[100];
                     } else if (activity.type?.includes('service') || activity.description?.toLowerCase().includes('service')) {
-                      activityColor = '#f59e0b';
-                      bgColor = '#FEF3C7';
+                      activityColor = semantic.warning;
+                      bgColor = colors.warning[50];
                     }
                     
                     return (
@@ -359,15 +360,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                       >
                         <View style={[styles.activityDot, { backgroundColor: activityColor, width: 8, height: 8, marginRight: 12 }]} />
                         <Text style={[styles.activityCell, { color: activityColor, fontWeight: '600', flex: 1 }]}>{activity.description}</Text>
-                        <Text style={[styles.activityCell, { color: '#64748B', fontSize: 12 }]}>{formatTimeAgo(activity.created_at)}</Text>
+                        <Text style={[styles.activityCell, { color: semantic.textSecondary, fontSize: 12 }]}>{formatTimeAgo(activity.created_at)}</Text>
                       </View>
                     );
                   })
                 ) : (
                   <>
-                    <View style={[styles.activityRow, { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12 }]}>
-                      <Text style={[styles.activityCell, { color: '#64748B' }]}>No recent activity</Text>
-                      <Text style={[styles.activityCell, { color: '#64748B' }]}>-</Text>
+                    <View style={[styles.activityRow, { backgroundColor: semantic.background, borderRadius: 8, padding: 12 }]}>
+                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>No recent activity</Text>
+                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>-</Text>
                     </View>
                   </>
                 )}
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: isMobile ? 16 : 24,
   },
   loadingContainer: {
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
     }),
   },
   metricCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginRight: isMobile ? 6 : 12,
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
   },
   metricSubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginTop: 4,
   },
   metricHeader: {
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricTitle: {
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   metricDot: {
-    color: '#CBD5E1',
+    color: colors.neutral[300],
     fontSize: 18,
   },
   metricValue: {
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
   },
   cardLarge: {
     flex: isMobile ? 0 : 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginRight: isMobile ? 0 : 12,
@@ -484,10 +485,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   ctaButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: semantic.background,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     marginTop: isMobile ? 12 : 16,
     paddingTop: isMobile ? 12 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: semantic.border,
     flexWrap: isMobile ? 'wrap' : 'nowrap',
   },
   bookingStat: {
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   },
   bookingStatLabel: {
     fontSize: isMobile ? 11 : 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: 4,
   },
   bookingStatValue: {
@@ -549,15 +550,15 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: 13,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   activityValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   quickActionsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginTop: 12,
@@ -574,10 +575,10 @@ const styles = StyleSheet.create({
     }),
   },
   quickActionBtn: {
-    width: isMobile 
-      ? (screenWidth - 48) / 3 
+    width: isMobile
+      ? (screenWidth - 48) / 3
       : (screenWidth - 80) / 4,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     borderRadius: 8,
     padding: isMobile ? 12 : 16,
     alignItems: 'center',
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
     marginLeft: isMobile ? 6 : 0,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: {
     fontSize: isMobile ? 11 : 12,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -613,19 +614,19 @@ const styles = StyleSheet.create({
   },
   activityCell: {
     fontSize: 13,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   cardRightCol: {
     width: isMobile ? '100%' : 200,
   },
   progressCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: 16,
     elevation: 2,
   },
   cardWide: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: 16,
     marginTop: 12,

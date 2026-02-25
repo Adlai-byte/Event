@@ -14,6 +14,7 @@ const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 interface DashboardViewProps {
   user?: User;
@@ -116,21 +117,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 title="Total Users"
                 value={stats.totalUsers.toString()}
                 icon="👥"
-                color="#4a55e1"
+                color={semantic.primary}
                 subtitle={`${stats.activeUsers} active`}
               />
               <MetricCard
                 title="Services"
                 value={stats.totalServices.toString()}
                 icon="🎯"
-                color="#10b981"
+                color={semantic.success}
                 subtitle={`${stats.activeServices} active`}
               />
               <MetricCard
                 title="Bookings"
                 value={stats.totalBookings.toString()}
                 icon="📅"
-                color="#f59e0b"
+                color={semantic.warning}
                 subtitle={`${stats.pendingBookings} pending`}
               />
             </View>
@@ -138,7 +139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             {/* Quick Stats Row */}
             <View style={[styles.row, isMobile && styles.rowMobile]}>
               <View style={[styles.cardLarge, styles.cardGlowBlue]}>
-                <View style={[styles.glowOverlay, { backgroundColor: '#4a55e1' }]} />
+                <View style={[styles.glowOverlay, { backgroundColor: semantic.primary }]} />
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
                   <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')} accessibilityRole="button" accessibilityLabel="View analytics details">
@@ -182,21 +183,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   <Text style={styles.cardTitle}>Activity Summary</Text>
                   <View style={styles.activityList}>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#4a55e1' }]} />
+                      <View style={[styles.activityDot, { backgroundColor: semantic.primary }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>New users this month</Text>
                         <Text style={styles.activityValue}>+{Math.floor(stats.totalUsers * 0.1)}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#10b981' }]} />
+                      <View style={[styles.activityDot, { backgroundColor: semantic.success }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Services added</Text>
                         <Text style={styles.activityValue}>+{Math.floor(stats.totalServices * 0.05)}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: '#f59e0b' }]} />
+                      <View style={[styles.activityDot, { backgroundColor: semantic.warning }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Bookings completed</Text>
                         <Text style={styles.activityValue}>{stats.totalBookings - stats.pendingBookings}</Text>
@@ -264,17 +265,17 @@ const styles = StyleSheet.create({
     marginBottom: isMobile ? 16 : 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   headerTitle: {
     fontSize: isMobile ? 20 : 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
     }),
   },
   metricCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginRight: isMobile ? 6 : 12,
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   },
   metricSubtitle: {
     fontSize: isMobile ? 11 : 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginTop: 4,
   },
   metricHeader: {
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricTitle: {
-    color: '#64748B',
+    color: semantic.textSecondary,
     fontSize: isMobile ? 11 : 12,
     fontWeight: '600',
   },
@@ -329,14 +330,14 @@ const styles = StyleSheet.create({
     fontSize: isMobile ? 12 : 14,
   },
   metricDot: {
-    color: '#CBD5E1',
+    color: colors.neutral[300],
     fontSize: isMobile ? 16 : 18,
   },
   metricValue: {
     marginTop: 8,
     fontSize: isMobile ? 18 : 22,
     fontWeight: '700',
-    color: '#0F172A',
+    color: colors.neutral[900],
   },
   row: {
     flexDirection: 'row',
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
   cardLarge: {
     flex: isMobile ? undefined : 1,
     width: isMobile ? '100%' : undefined,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginRight: isMobile ? 0 : 12,
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardGlowBlue: {
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     elevation: 8,
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -383,10 +384,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: isMobile ? 13 : 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   ctaButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: semantic.background,
     borderRadius: 8,
     paddingHorizontal: isMobile ? 8 : 10,
     paddingVertical: isMobile ? 5 : 6,
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   },
   chartLabel: {
     fontSize: isMobile ? 11 : 12,
-    color: '#64748B',
+    color: semantic.textSecondary,
     marginBottom: isMobile ? 8 : 12,
   },
   barChartContainer: {
@@ -417,11 +418,11 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: isMobile ? 16 : 20,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     borderRadius: 4,
     marginBottom: 4,
     minHeight: 4,
-    shadowColor: '#4a55e1',
+    shadowColor: semantic.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   },
   barLabel: {
     fontSize: isMobile ? 9 : 10,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   activityList: {
     marginTop: isMobile ? 8 : 12,
@@ -453,15 +454,15 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: isMobile ? 12 : 13,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   activityValue: {
     fontSize: isMobile ? 13 : 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   quickActionsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginTop: 12,
@@ -477,14 +478,14 @@ const styles = StyleSheet.create({
     width: isMobile
       ? (screenWidth - 48) / 2
       : (screenWidth - 300) / 4,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     borderRadius: 8,
     padding: isMobile ? 12 : 16,
     alignItems: 'center',
     marginRight: isMobile ? 6 : 12,
     marginBottom: isMobile ? 8 : 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   quickActionIcon: {
     fontSize: isMobile ? 20 : 24,
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: {
     fontSize: isMobile ? 11 : 12,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -504,11 +505,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: isMobile ? 10 : 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: semantic.background,
   },
   activityCell: {
     fontSize: isMobile ? 12 : 13,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   cardRightCol: {
     width: isMobile ? '100%' : 200,
@@ -517,14 +518,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   progressCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     elevation: 2,
   },
   cardWide: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderRadius: 12,
     padding: isMobile ? 12 : 16,
     marginTop: 12,

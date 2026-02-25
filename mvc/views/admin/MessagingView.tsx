@@ -16,6 +16,7 @@ import { MessagingController } from '../../controllers/MessagingController';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
+import { colors, semantic } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -343,7 +344,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 accessibilityLabel="Search conversations"
               />
               {searchQuery.length > 0 && (
@@ -451,7 +452,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               placeholder="Type a message..."
               multiline
               maxLength={1000}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               accessibilityLabel="Message input"
             />
             <TouchableOpacity
@@ -482,12 +483,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: semantic.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#4a55e1',
+    color: semantic.primary,
   },
   conversationsContainer: {
     flex: 1,
@@ -498,22 +499,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   unreadHeaderBadge: {
-    backgroundColor: '#EF4444',
+    backgroundColor: semantic.error,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -521,41 +522,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadHeaderCount: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
   searchContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   searchIcon: {
     fontSize: 16,
     marginRight: 8,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   clearIcon: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: semantic.textMuted,
     padding: 4,
   },
   filterContainer: {
@@ -566,21 +567,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   filterButtonActive: {
-    backgroundColor: '#4a55e1',
-    borderColor: '#4a55e1',
+    backgroundColor: semantic.primary,
+    borderColor: semantic.primary,
   },
   filterText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   conversationsList: {
     flex: 1,
@@ -589,26 +590,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   unreadConversation: {
     backgroundColor: '#F0F9FF',
     borderLeftWidth: 3,
-    borderLeftColor: '#4a55e1',
+    borderLeftColor: semantic.primary,
   },
   conversationAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   conversationAvatarText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -624,25 +625,25 @@ const styles = StyleSheet.create({
   conversationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   conversationTime: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: semantic.textMuted,
   },
   conversationPreview: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
   },
   unreadPreview: {
     fontWeight: '600',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   unreadBadge: {
     position: 'absolute',
     right: 16,
     top: 16,
-    backgroundColor: '#EF4444',
+    backgroundColor: semantic.error,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -650,7 +651,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadCount: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -667,12 +668,12 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1E293B',
+    color: semantic.textPrimary,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#64748B',
+    color: semantic.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 40,
   },
@@ -685,16 +686,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: semantic.border,
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#4a55e1',
+    color: semantic.primary,
     fontWeight: '600',
   },
   chatHeaderInfo: {
@@ -707,29 +708,29 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   chatAvatarText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: 'bold',
   },
   chatTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   chatSubtitle: {
     fontSize: 12,
-    color: '#10B981',
+    color: semantic.success,
     marginTop: 2,
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
   },
   messagesContent: {
     padding: 16,
@@ -750,11 +751,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   ownMessageBubble: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderBottomLeftRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -771,21 +772,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   ownMessageText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
   },
   otherMessageText: {
-    color: '#1E293B',
+    color: semantic.textPrimary,
   },
   messageTime: {
     fontSize: 12,
     marginTop: 4,
   },
   ownMessageTime: {
-    color: '#94A3B8',
+    color: semantic.textMuted,
     textAlign: 'right',
   },
   otherMessageTime: {
-    color: '#94A3B8',
+    color: semantic.textMuted,
     textAlign: 'left',
   },
   systemMessage: {
@@ -794,15 +795,15 @@ const styles = StyleSheet.create({
   },
   systemMessageText: {
     fontSize: 14,
-    color: '#64748B',
-    backgroundColor: '#E2E8F0',
+    color: semantic.textSecondary,
+    backgroundColor: semantic.border,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   systemMessageTime: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: semantic.textMuted,
     marginTop: 2,
   },
   inputContainer: {
@@ -810,34 +811,34 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: semantic.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: semantic.border,
   },
   messageInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: semantic.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     maxHeight: 100,
     marginRight: 12,
-    color: '#1E293B',
+    color: semantic.textPrimary,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: semantic.border,
   },
   sendButton: {
-    backgroundColor: '#4a55e1',
+    backgroundColor: semantic.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 20,
   },
   sendButtonDisabled: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: colors.neutral[300],
   },
   sendButtonText: {
-    color: '#FFFFFF',
+    color: semantic.surface,
     fontSize: 16,
     fontWeight: '600',
   },

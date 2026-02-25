@@ -14,6 +14,7 @@ import {
 import { AuthState } from '../../models/AuthState';
 import { RegisterFormData } from '../../models/FormData';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { colors, semantic } from '../../theme';
 
 interface RegisterViewProps {
   authState: AuthState;
@@ -93,7 +94,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   const displayError = authState.error || errors.submit;
 
   const styles = useMemo(() => StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F1F5F9' },
+    container: { flex: 1, backgroundColor: semantic.background },
     containerMobile: { flex: 1, position: 'relative', backgroundColor: 'transparent' },
     mobileGradientBg: {
       ...StyleSheet.absoluteFillObject,
@@ -120,7 +121,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     },
     card: {
       width: '100%', maxWidth: isMobile ? '100%' : isTablet ? 480 : 440,
-      backgroundColor: isMobile ? 'transparent' : '#FFFFFF',
+      backgroundColor: isMobile ? 'transparent' : semantic.surface,
       borderRadius: isMobile ? 0 : 28,
       padding: isMobile ? (screenWidth <= 380 ? 16 : 24) : 40,
       borderWidth: isMobile ? 0 : 1,
@@ -128,7 +129,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
       ...(isMobile ? {} : Platform.OS === 'web' ? {
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
       } : {
-        shadowColor: '#0f172a', shadowOffset: { width: 0, height: 12 },
+        shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.06, shadowRadius: 24, elevation: 8,
       }),
     },
@@ -140,17 +141,17 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     header: { marginBottom: 28, alignItems: 'center' },
     title: {
       fontSize: isMobile ? 28 : 32, fontWeight: '800',
-      color: isMobile ? '#FFFFFF' : '#0F172A', marginBottom: 8, letterSpacing: -0.6,
+      color: isMobile ? semantic.surface : colors.neutral[900], marginBottom: 8, letterSpacing: -0.6,
     },
     subtitle: {
-      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569',
+      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600],
       textAlign: 'center', lineHeight: 24, paddingHorizontal: 8,
     },
     errorContainer: {
       backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
       borderRadius: 14, padding: 14, marginBottom: 20,
     },
-    errorText: { color: '#B91C1C', fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
+    errorText: { color: colors.error[700], fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
     row: {
       flexDirection: stackNameFields ? 'column' : 'row',
       width: '100%',
@@ -159,50 +160,50 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     halfWidth: { flex: 1 },
     label: {
       fontSize: isMobile ? 15 : 14, fontWeight: '600',
-      color: isMobile ? '#FFFFFF' : '#1E293B', marginBottom: 8,
+      color: isMobile ? semantic.surface : semantic.textPrimary, marginBottom: 8,
     },
     input: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
       borderRadius: 14, paddingHorizontal: 18,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
       ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
       ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
     },
-    inputError: { borderColor: '#EF4444', backgroundColor: '#FFFBFB' },
+    inputError: { borderColor: semantic.error, backgroundColor: '#FFFBFB' },
     passwordContainer: { position: 'relative' },
     passwordInput: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : '#F8FAFC',
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : '#E2E8F0',
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
       borderRadius: 14, paddingHorizontal: 18, paddingRight: 52,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: '#0F172A',
+      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
       ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
       ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
     },
     eyeButton: { position: 'absolute', right: 14, top: '50%', transform: [{ translateY: -14 }], padding: 8 },
     eyeButtonText: { fontSize: 22 },
-    fieldError: { color: '#B91C1C', fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
+    fieldError: { color: colors.error[700], fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
     primaryButton: {
-      backgroundColor: '#6366F1', borderRadius: 14,
+      backgroundColor: semantic.primary, borderRadius: 14,
       paddingVertical: isMobile ? 18 : 16, alignItems: 'center', justifyContent: 'center', marginBottom: 20,
       ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
     },
     primaryButtonDisabled: { opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) },
-    primaryButtonText: { color: '#FFFFFF', fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
+    primaryButtonText: { color: semantic.surface, fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
     divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
-    dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+    dividerLine: { flex: 1, height: 1, backgroundColor: semantic.border },
     dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
     googleButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
+      backgroundColor: semantic.surface, borderWidth: 1, borderColor: semantic.border, borderRadius: 12,
       paddingVertical: Platform.OS === 'web' ? 16 : 18, marginBottom: 24,
       ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
     },
     googleButtonIcon: { fontSize: 20, marginRight: 12 },
     googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
     loginContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' },
-    loginText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : '#475569' },
-    loginLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? '#E0E7FF' : '#6366F1', fontWeight: '700' },
+    loginText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600] },
+    loginLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? colors.primary[100] : semantic.primary, fontWeight: '700' },
   }), [screenWidth, screenHeight, isMobile, isTablet, isDesktop, stackNameFields]);
 
   if (isMobile) {
@@ -249,7 +250,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.input, errors.firstName && styles.inputError]}
                 placeholder="John"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.firstName}
                 onChangeText={(text) => handleFieldChange('firstName', text)}
                 autoCapitalize="words"
@@ -267,7 +268,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.input, errors.lastName && styles.inputError]}
                 placeholder="Doe"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.lastName}
                 onChangeText={(text) => handleFieldChange('lastName', text)}
                 autoCapitalize="words"
@@ -288,7 +289,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Middle (optional)"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.middleName}
                 onChangeText={(text) => handleFieldChange('middleName', text)}
                 autoCapitalize="words"
@@ -303,7 +304,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Jr., Sr., etc. (optional)"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.suffix}
                 onChangeText={(text) => handleFieldChange('suffix', text)}
                 autoCapitalize="words"
@@ -320,7 +321,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder="john.doe@example.com"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               value={formData.email}
               onChangeText={(text) => handleFieldChange('email', text)}
               keyboardType="email-address"
@@ -341,7 +342,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.passwordInput, errors.password && styles.inputError]}
                 placeholder="At least 6 characters"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.password}
                 onChangeText={(text) => handleFieldChange('password', text)}
                 secureTextEntry={!showPassword}
@@ -371,7 +372,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.passwordInput, errors.confirmPassword && styles.inputError]}
                 placeholder="Re-enter your password"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.confirmPassword}
                 onChangeText={(text) => handleFieldChange('confirmPassword', text)}
                 secureTextEntry={!showConfirmPassword}
@@ -403,7 +404,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             accessibilityLabel="Create account"
           >
             {isSubmitting || authState.isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={semantic.surface} size="small" />
             ) : (
               <Text style={styles.primaryButtonText}>Create Account</Text>
             )}
@@ -456,7 +457,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.input, errors.firstName && styles.inputError]}
                 placeholder="John"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.firstName}
                 onChangeText={(text) => handleFieldChange('firstName', text)}
                 autoCapitalize="words"
@@ -471,7 +472,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.input, errors.lastName && styles.inputError]}
                 placeholder="Doe"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.lastName}
                 onChangeText={(text) => handleFieldChange('lastName', text)}
                 autoCapitalize="words"
@@ -488,7 +489,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Middle (optional)"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.middleName}
                 onChangeText={(text) => handleFieldChange('middleName', text)}
                 autoCapitalize="words"
@@ -502,7 +503,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Jr., Sr., etc. (optional)"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.suffix}
                 onChangeText={(text) => handleFieldChange('suffix', text)}
                 autoCapitalize="words"
@@ -517,7 +518,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             <TextInput
               style={[styles.input, errors.email && styles.inputError]}
               placeholder="john.doe@example.com"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               value={formData.email}
               onChangeText={(text) => handleFieldChange('email', text)}
               keyboardType="email-address"
@@ -534,7 +535,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.passwordInput, errors.password && styles.inputError]}
                 placeholder="At least 6 characters"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.password}
                 onChangeText={(text) => handleFieldChange('password', text)}
                 secureTextEntry={!showPassword}
@@ -555,7 +556,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               <TextInput
                 style={[styles.passwordInput, errors.confirmPassword && styles.inputError]}
                 placeholder="Re-enter your password"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={semantic.textMuted}
                 value={formData.confirmPassword}
                 onChangeText={(text) => handleFieldChange('confirmPassword', text)}
                 secureTextEntry={!showConfirmPassword}
@@ -578,7 +579,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             accessibilityLabel="Create account"
           >
             {isSubmitting || authState.isLoading ? (
-              <ActivityIndicator color={isMobile ? '#7C3AED' : '#FFFFFF'} size="small" />
+              <ActivityIndicator color={isMobile ? '#7C3AED' : semantic.surface} size="small" />
             ) : (
               <Text style={styles.primaryButtonText}>Create Account</Text>
             )}
