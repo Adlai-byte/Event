@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, TextInput } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { formatPrice } from '../../utils/serviceHelpers';
 
 interface Service {
@@ -72,9 +73,7 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
                       />
                     ) : (
                       <View style={styles.serviceCardImagePlaceholder}>
-                        <Text style={styles.serviceCardImageText}>
-                          {service.s_name.charAt(0)}
-                        </Text>
+                        <Text style={styles.serviceCardImageText}>{service.s_name.charAt(0)}</Text>
                       </View>
                     )}
                     <View style={styles.serviceCardContent}>
@@ -118,7 +117,8 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
           <View style={styles.sidebarPromo}>
             <Text style={styles.sidebarPromoTitle}>Premium Event Services</Text>
             <Text style={styles.sidebarPromoText}>
-              Discover our curated selection of professional event services. From venues to catering, we have everything you need for your special occasion.
+              Discover our curated selection of professional event services. From venues to
+              catering, we have everything you need for your special occasion.
             </Text>
             <TouchableOpacity style={styles.sidebarPromoButton} onPress={onRegister}>
               <Text style={styles.sidebarPromoButtonText}>Learn More</Text>
@@ -128,20 +128,22 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
           {/* Service Features */}
           <View style={styles.sidebarFeatures}>
             <View style={styles.sidebarFeature}>
-              <Text style={styles.sidebarFeatureIcon}>{'\uD83D\uDEE0\uFE0F'}</Text>
+              <Feather name="headphones" size={24} color="#2563EB" />
               <View style={styles.sidebarFeatureContent}>
                 <Text style={styles.sidebarFeatureTitle}>24/7 Support</Text>
                 <Text style={styles.sidebarFeatureText}>
-                  Our team is available around the clock to assist you with your event planning needs.
+                  Our team is available around the clock to assist you with your event planning
+                  needs.
                 </Text>
               </View>
             </View>
             <View style={styles.sidebarFeature}>
-              <Text style={styles.sidebarFeatureIcon}>{'\uD83D\uDEE1\uFE0F'}</Text>
+              <Feather name="shield" size={24} color="#2563EB" />
               <View style={styles.sidebarFeatureContent}>
                 <Text style={styles.sidebarFeatureTitle}>Best Price Guarantee</Text>
                 <Text style={styles.sidebarFeatureText}>
-                  We guarantee the best prices for all our services. Find a better price? We'll match it.
+                  We guarantee the best prices for all our services. Find a better price? We'll
+                  match it.
                 </Text>
               </View>
             </View>
@@ -156,7 +158,10 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
             <View style={styles.sidebarNewsletterForm}>
               <View style={{ flex: 1 }}>
                 <TextInput
-                  style={[styles.sidebarNewsletterInput, newsletterEmailError && { borderColor: '#ef4444', borderWidth: 1 }]}
+                  style={[
+                    styles.sidebarNewsletterInput,
+                    newsletterEmailError && { borderColor: '#ef4444', borderWidth: 1 },
+                  ]}
                   placeholder="Your email address"
                   placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
@@ -175,7 +180,10 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
                   </Text>
                 )}
               </View>
-              <TouchableOpacity style={styles.sidebarNewsletterButton} onPress={onNewsletterSubscribe}>
+              <TouchableOpacity
+                style={styles.sidebarNewsletterButton}
+                onPress={onNewsletterSubscribe}
+              >
                 <Text style={styles.sidebarNewsletterButtonText}>Subscribe</Text>
               </TouchableOpacity>
             </View>
@@ -210,18 +218,23 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
                   </View>
                 )}
                 <View style={styles.articleCardContent}>
-                  <Text style={styles.articleCardTitle} numberOfLines={2}>{service.s_name}</Text>
+                  <Text style={styles.articleCardTitle} numberOfLines={2}>
+                    {service.s_name}
+                  </Text>
                   <View style={styles.articleCardMeta}>
                     <Text style={styles.articleCardPrice}>
                       {formatPrice(service.s_base_price || 0)}
                     </Text>
                     {service.s_rating &&
-                     typeof service.s_rating === 'number' &&
-                     service.s_rating > 0 && (
-                      <Text style={styles.articleCardRating}>
-                        {'\u2B50'} {Number(service.s_rating).toFixed(1)}
-                      </Text>
-                    )}
+                      typeof service.s_rating === 'number' &&
+                      service.s_rating > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="star" size={14} color="#f59e0b" />
+                          <Text style={styles.articleCardRating}>
+                            {Number(service.s_rating).toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -231,7 +244,6 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
           <Text style={styles.emptyText}>No services available</Text>
         )}
       </View>
-
     </>
   );
 };

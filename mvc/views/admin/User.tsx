@@ -5,19 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Alert,
   TextInput,
   Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import UserService, { AdminUserRow } from '../../services/UserService';
 import { AppLayout } from '../../components/layout';
 import { colors, semantic } from '../../theme';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface AdminUserProps {
   user?: UserModel;
@@ -26,6 +24,9 @@ interface AdminUserProps {
 }
 
 export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [activeTab, setActiveTab] = useState<'list' | 'add'>('list');
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -358,7 +359,11 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       accessibilityRole="button"
                       accessibilityLabel={showEditPassword ? 'Hide password' : 'Show password'}
                     >
-                      <Text style={styles.eyeText}>{showEditPassword ? '🙈' : '👁️'}</Text>
+                      <Feather
+                        name={showEditPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#64748B"
+                      />
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.formLabel}>Confirm New Password</Text>
@@ -380,7 +385,11 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         showEditConfirm ? 'Hide confirm password' : 'Show confirm password'
                       }
                     >
-                      <Text style={styles.eyeText}>{showEditConfirm ? '🙈' : '👁️'}</Text>
+                      <Feather
+                        name={showEditConfirm ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#64748B"
+                      />
                     </TouchableOpacity>
                   </View>
                   <View style={styles.editButtonRow}>
@@ -472,7 +481,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       accessibilityRole="button"
                       accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+                      <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#64748B" />
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.formLabel}>Confirm Password</Text>
@@ -494,7 +503,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         showConfirm ? 'Hide confirm password' : 'Show confirm password'
                       }
                     >
-                      <Text style={styles.eyeText}>{showConfirm ? '🙈' : '👁️'}</Text>
+                      <Feather name={showConfirm ? 'eye-off' : 'eye'} size={20} color="#64748B" />
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity
@@ -821,339 +830,340 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EEF1F5',
-  },
-  content: {
-    padding: isMobile ? 12 : 20,
-    paddingBottom: isMobile ? 20 : 20,
-  },
-  header: {
-    marginBottom: isMobile ? 16 : 24,
-  },
-  title: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: isMobile ? 12 : 20,
-    backgroundColor: semantic.surface,
-    flexWrap: 'wrap',
-    borderRadius: 8,
-    padding: 4,
-  },
-  tabButton: {
-    flex: isMobile ? undefined : 0,
-    minWidth: isMobile ? (screenWidth - 48) / 2 : 120,
-    paddingVertical: isMobile ? 8 : 8,
-    paddingHorizontal: isMobile ? 12 : 16,
-    borderRadius: 6,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabButtonActive: {
-    backgroundColor: semantic.primary,
-    elevation: 2,
-    shadowColor: semantic.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  tabButtonText: {
-    fontSize: isMobile ? 12 : 13,
-    color: semantic.textSecondary,
-    fontWeight: '600',
-  },
-  tabButtonTextActive: {
-    color: semantic.surface,
-    fontWeight: '700',
-  },
-  formLabel: {
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '600',
-    color: semantic.textPrimary,
-    marginTop: isMobile ? 12 : 16,
-    marginBottom: isMobile ? 6 : 8,
-  },
-  card: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 16 : 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: semantic.background,
-  },
-  searchContainer: {
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  searchInput: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: semantic.textPrimary,
-    borderWidth: 1,
-    borderColor: semantic.border,
-    ...(Platform.OS === 'web'
-      ? ({
-          outlineStyle: 'none' as any,
-          cursor: 'text' as any,
-        } as any)
-      : {}),
-  },
-  tableScrollView: {
-    marginTop: 8,
-  },
-  tableContainer: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...(isMobile && { minWidth: 700 }),
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: semantic.background,
-    paddingVertical: isMobile ? 12 : 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: semantic.border,
-  },
-  th: {
-    color: semantic.textSecondary,
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  row: {
-    flexDirection: 'row',
-    paddingVertical: isMobile ? 14 : 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.background,
-    alignItems: 'center',
-  },
-  rowAlt: {
-    backgroundColor: semantic.background,
-  },
-  td: {
-    color: semantic.textPrimary,
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '500',
-  },
-  tdStatus: {
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  addInputFull: {
-    borderWidth: 1.5,
-    borderColor: semantic.border,
-    borderRadius: 8,
-    paddingVertical: isMobile ? 12 : 14,
-    paddingHorizontal: isMobile ? 14 : 16,
-    backgroundColor: semantic.surface,
-    fontSize: isMobile ? 14 : 15,
-    color: semantic.textPrimary,
-  },
-  addButtonText: {
-    color: semantic.surface,
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  addButtonLarge: {
-    backgroundColor: semantic.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginTop: 24,
-    alignItems: 'center',
-    alignSelf: 'center',
-    minWidth: 150,
-    elevation: 2,
-    shadowColor: semantic.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: semantic.border,
-    borderRadius: 8,
-    backgroundColor: semantic.surface,
-    paddingRight: 8,
-  },
-  eyeButton: {
-    marginLeft: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-  },
-  eyeText: {
-    fontSize: 18,
-    color: semantic.textSecondary,
-  },
-  actionButton: {
-    paddingVertical: isMobile ? 8 : 8,
-    paddingHorizontal: isMobile ? 14 : 16,
-    borderRadius: 6,
-    minWidth: isMobile ? 70 : 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  actionButtonText: {
-    color: semantic.surface,
-    fontWeight: '600',
-    fontSize: isMobile ? 11 : 12,
-  },
-  blockButton: {
-    backgroundColor: colors.error[600],
-  },
-  unblockButton: {
-    backgroundColor: '#16A34A',
-  },
-  editButton: {
-    paddingVertical: isMobile ? 8 : 8,
-    paddingHorizontal: isMobile ? 14 : 16,
-    borderRadius: 6,
-    backgroundColor: semantic.primary,
-    minWidth: isMobile ? 70 : 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 1,
-    shadowColor: semantic.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  editButtonText: {
-    color: semantic.surface,
-    fontWeight: '600',
-    fontSize: isMobile ? 11 : 12,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-    marginBottom: 20,
-    marginTop: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  editButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-    justifyContent: 'flex-end',
-  },
-  cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: semantic.background,
-    borderWidth: 1,
-    borderColor: semantic.border,
-  },
-  cancelButtonText: {
-    color: semantic.textSecondary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  updateButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: semantic.primary,
-  },
-  updateButtonText: {
-    color: semantic.surface,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  successMessage: {
-    backgroundColor: semantic.success,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  successMessageText: {
-    color: semantic.surface,
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-  },
-  successCloseButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  successCloseText: {
-    color: semantic.surface,
-    fontSize: 20,
-    fontWeight: 'bold',
-    lineHeight: 20,
-  },
-  errorMessage: {
-    backgroundColor: semantic.error,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  errorMessageText: {
-    color: semantic.surface,
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-  },
-  errorCloseButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  errorCloseText: {
-    color: semantic.surface,
-    fontSize: 20,
-    fontWeight: 'bold',
-    lineHeight: 20,
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#EEF1F5',
+    },
+    content: {
+      padding: isMobile ? 12 : 20,
+      paddingBottom: isMobile ? 20 : 20,
+    },
+    header: {
+      marginBottom: isMobile ? 16 : 24,
+    },
+    title: {
+      fontSize: isMobile ? 20 : 24,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      marginBottom: isMobile ? 12 : 20,
+      backgroundColor: semantic.surface,
+      flexWrap: 'wrap',
+      borderRadius: 8,
+      padding: 4,
+    },
+    tabButton: {
+      flex: isMobile ? undefined : 0,
+      minWidth: isMobile ? (screenWidth - 48) / 2 : 120,
+      paddingVertical: isMobile ? 8 : 8,
+      paddingHorizontal: isMobile ? 12 : 16,
+      borderRadius: 6,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabButtonActive: {
+      backgroundColor: semantic.primary,
+      elevation: 2,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    tabButtonText: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    tabButtonTextActive: {
+      color: semantic.surface,
+      fontWeight: '700',
+    },
+    formLabel: {
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      marginTop: isMobile ? 12 : 16,
+      marginBottom: isMobile ? 6 : 8,
+    },
+    card: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 16 : 24,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      borderWidth: 1,
+      borderColor: semantic.background,
+    },
+    searchContainer: {
+      marginBottom: 16,
+      marginTop: 8,
+    },
+    searchInput: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: semantic.textPrimary,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      ...(Platform.OS === 'web'
+        ? ({
+            outlineStyle: 'none' as any,
+            cursor: 'text' as any,
+          } as any)
+        : {}),
+    },
+    tableScrollView: {
+      marginTop: 8,
+    },
+    tableContainer: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      overflow: 'hidden',
+      ...(isMobile && { minWidth: 700 }),
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+    },
+    tableHeader: {
+      flexDirection: 'row',
+      backgroundColor: semantic.background,
+      paddingVertical: isMobile ? 12 : 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 2,
+      borderBottomColor: semantic.border,
+    },
+    th: {
+      color: semantic.textSecondary,
+      fontSize: isMobile ? 11 : 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    row: {
+      flexDirection: 'row',
+      paddingVertical: isMobile ? 14 : 16,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.background,
+      alignItems: 'center',
+    },
+    rowAlt: {
+      backgroundColor: semantic.background,
+    },
+    td: {
+      color: semantic.textPrimary,
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '500',
+    },
+    tdStatus: {
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+    },
+    statusBadge: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      alignSelf: 'flex-start',
+    },
+    statusText: {
+      fontSize: isMobile ? 11 : 12,
+      fontWeight: '600',
+    },
+    addInputFull: {
+      borderWidth: 1.5,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      paddingVertical: isMobile ? 12 : 14,
+      paddingHorizontal: isMobile ? 14 : 16,
+      backgroundColor: semantic.surface,
+      fontSize: isMobile ? 14 : 15,
+      color: semantic.textPrimary,
+    },
+    addButtonText: {
+      color: semantic.surface,
+      fontWeight: '700',
+      fontSize: 16,
+      letterSpacing: 0.5,
+    },
+    addButtonLarge: {
+      backgroundColor: semantic.primary,
+      paddingVertical: 15,
+      paddingHorizontal: 32,
+      borderRadius: 8,
+      marginTop: 24,
+      alignItems: 'center',
+      alignSelf: 'center',
+      minWidth: 150,
+      elevation: 2,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    passwordRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      backgroundColor: semantic.surface,
+      paddingRight: 8,
+    },
+    eyeButton: {
+      marginLeft: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+      borderRadius: 4,
+    },
+    eyeText: {
+      fontSize: 18,
+      color: semantic.textSecondary,
+    },
+    actionButton: {
+      paddingVertical: isMobile ? 8 : 8,
+      paddingHorizontal: isMobile ? 14 : 16,
+      borderRadius: 6,
+      minWidth: isMobile ? 70 : 80,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+    },
+    actionButtonText: {
+      color: semantic.surface,
+      fontWeight: '600',
+      fontSize: isMobile ? 11 : 12,
+    },
+    blockButton: {
+      backgroundColor: colors.error[600],
+    },
+    unblockButton: {
+      backgroundColor: '#16A34A',
+    },
+    editButton: {
+      paddingVertical: isMobile ? 8 : 8,
+      paddingHorizontal: isMobile ? 14 : 16,
+      borderRadius: 6,
+      backgroundColor: semantic.primary,
+      minWidth: isMobile ? 70 : 80,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 1,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+    },
+    editButtonText: {
+      color: semantic.surface,
+      fontWeight: '600',
+      fontSize: isMobile ? 11 : 12,
+    },
+    formTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 20,
+      marginTop: 8,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    editButtonRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+      justifyContent: 'flex-end',
+    },
+    cancelButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      backgroundColor: semantic.background,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    cancelButtonText: {
+      color: semantic.textSecondary,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    updateButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      backgroundColor: semantic.primary,
+    },
+    updateButtonText: {
+      color: semantic.surface,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    successMessage: {
+      backgroundColor: semantic.success,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    successMessageText: {
+      color: semantic.surface,
+      fontSize: 14,
+      fontWeight: '600',
+      flex: 1,
+    },
+    successCloseButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    successCloseText: {
+      color: semantic.surface,
+      fontSize: 20,
+      fontWeight: 'bold',
+      lineHeight: 20,
+    },
+    errorMessage: {
+      backgroundColor: semantic.error,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    errorMessageText: {
+      color: semantic.surface,
+      fontSize: 14,
+      fontWeight: '600',
+      flex: 1,
+    },
+    errorCloseButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    errorCloseText: {
+      color: semantic.surface,
+      fontSize: 20,
+      fontWeight: 'bold',
+      lineHeight: 20,
+    },
+  });
 
 export default User;

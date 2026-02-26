@@ -1,5 +1,15 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Image, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  Image,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../../services/api';
 import { styles } from '../../views/admin/ProviderApplicationsView.styles';
 
@@ -92,11 +102,8 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
               <Text style={responsiveStyles.modalTitle}>
                 Documents - {selectedApplication?.name}
               </Text>
-              <TouchableOpacity
-                onPress={onCloseDocumentModal}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
+              <TouchableOpacity onPress={onCloseDocumentModal} style={styles.closeButton}>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -131,10 +138,7 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={onCloseDocumentModal}
-              >
+              <TouchableOpacity style={styles.closeModalButton} onPress={onCloseDocumentModal}>
                 <Text style={styles.closeModalButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
@@ -166,12 +170,13 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 style={styles.closeButton}
                 disabled={!!processingId}
               >
-                <Text style={styles.closeButtonText}>✕</Text>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.approveModalBody}>
               <Text style={responsiveStyles.approveModalDescription}>
-                Are you sure you want to approve this provider application? This will grant provider access to the user.
+                Are you sure you want to approve this provider application? This will grant provider
+                access to the user.
               </Text>
             </View>
             <View style={styles.modalFooter}>
@@ -184,10 +189,19 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 }}
                 disabled={!!processingId}
               >
-                <Text style={responsiveStyles.cancelButtonText} allowFontScaling={true} numberOfLines={1}>Cancel</Text>
+                <Text
+                  style={responsiveStyles.cancelButtonText}
+                  allowFontScaling={true}
+                  numberOfLines={1}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[responsiveStyles.approveConfirmButton, processingId && styles.submitButtonDisabled]}
+                style={[
+                  responsiveStyles.approveConfirmButton,
+                  processingId && styles.submitButtonDisabled,
+                ]}
                 onPress={onConfirmApprove}
                 disabled={!!processingId}
                 activeOpacity={0.7}
@@ -195,7 +209,13 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 {processingId ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={responsiveStyles.approveConfirmButtonText} allowFontScaling={true} numberOfLines={1}>Approve</Text>
+                  <Text
+                    style={responsiveStyles.approveConfirmButtonText}
+                    allowFontScaling={true}
+                    numberOfLines={1}
+                  >
+                    Approve
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -227,20 +247,21 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 style={styles.closeButton}
                 disabled={!!processingId}
               >
-                <Text style={styles.closeButtonText}>✕</Text>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.rejectModalBody}>
               <Text style={responsiveStyles.rejectModalDescription}>
-                Please provide a reason for rejecting this provider application. This reason will be sent to the user as a notification.
+                Please provide a reason for rejecting this provider application. This reason will be
+                sent to the user as a notification.
               </Text>
 
               <Text style={responsiveStyles.rejectModalLabel}>Rejection Reason *</Text>
               <TextInput
                 style={[styles.rejectReasonInput, responsiveStyles.rejectReasonInputFontSize]}
                 placeholder="Enter the reason for rejection..."
-                placeholderTextColor={isMobile ? "#64748B" : "#A4B0BE"}
+                placeholderTextColor={isMobile ? '#64748B' : '#A4B0BE'}
                 multiline
                 numberOfLines={6}
                 value={rejectionReason}
@@ -263,12 +284,18 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 }}
                 disabled={!!processingId}
               >
-                <Text style={responsiveStyles.cancelButtonText} allowFontScaling={true} numberOfLines={1}>Cancel</Text>
+                <Text
+                  style={responsiveStyles.cancelButtonText}
+                  allowFontScaling={true}
+                  numberOfLines={1}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   responsiveStyles.rejectConfirmButton,
-                  (!rejectionReason.trim() || processingId) && styles.submitButtonDisabled
+                  (!rejectionReason.trim() || processingId) && styles.submitButtonDisabled,
                 ]}
                 onPress={onConfirmReject}
                 disabled={!rejectionReason.trim() || !!processingId}
@@ -277,7 +304,13 @@ export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = (
                 {processingId ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={responsiveStyles.rejectConfirmButtonText} allowFontScaling={true} numberOfLines={1}>Confirm Rejection</Text>
+                  <Text
+                    style={responsiveStyles.rejectConfirmButtonText}
+                    allowFontScaling={true}
+                    numberOfLines={1}
+                  >
+                    Confirm Rejection
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

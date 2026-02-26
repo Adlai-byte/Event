@@ -1,14 +1,16 @@
 import { getApiBaseUrl } from '../services/api';
 
-/** Map category slug to display emoji */
+/** Map category slug to Feather icon name */
 export const getCategoryIcon = (category: string): string => {
   const icons: Record<string, string> = {
-    photography: '📸',
-    venue: '🏢',
-    music: '🎵',
-    catering: '🍽️',
+    photography: 'camera',
+    venue: 'home',
+    music: 'music',
+    catering: 'coffee',
+    decoration: 'gift',
+    transportation: 'truck',
   };
-  return icons[category?.toLowerCase()] || '🎯';
+  return icons[category?.toLowerCase()] || 'grid';
 };
 
 /** Map category slug to human-readable label */
@@ -24,7 +26,7 @@ export const getCategoryLabel = (category: string): string => {
 
 /** Format a price value as Philippine Peso string */
 export const formatPrice = (price: number | string | null | undefined): string => {
-  const numPrice = typeof price === 'string' ? parseFloat(price) : (price || 0);
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price || 0;
   if (isNaN(numPrice)) return '₱0.00';
   return `₱${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -33,14 +35,16 @@ export const formatPrice = (price: number | string | null | undefined): string =
 export const mapImageUrl = <T extends { primary_image?: string | null }>(item: T): T => ({
   ...item,
   primary_image: item.primary_image
-    ? (item.primary_image.startsWith('/uploads/')
-        ? `${getApiBaseUrl()}${item.primary_image}`
-        : item.primary_image)
+    ? item.primary_image.startsWith('/uploads/')
+      ? `${getApiBaseUrl()}${item.primary_image}`
+      : item.primary_image
     : null,
 });
 
 /** Group an array of items by a key extractor */
-export const groupByProvider = <T extends { provider_email?: string | null; provider_name?: string }>(
+export const groupByProvider = <
+  T extends { provider_email?: string | null; provider_name?: string },
+>(
   items: T[],
 ): Record<string, T[]> => {
   const grouped: Record<string, T[]> = {};

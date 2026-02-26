@@ -1,20 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
 
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { colors, semantic } from '../../theme';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface DashboardViewProps {
   user?: User;
@@ -33,13 +26,16 @@ interface DashboardStats {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
     totalServices: 0,
     activeServices: 0,
     totalBookings: 0,
-    pendingBookings: 0
+    pendingBookings: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -64,8 +60,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
           const usersData = await usersResp.json();
           if (usersData.ok && Array.isArray(usersData.rows)) {
             const totalUsers = usersData.rows.length;
-            const activeUsers = usersData.rows.filter((u: any) => !u.u_disabled || Number(u.u_disabled) === 0).length;
-            setStats(prev => ({ ...prev, totalUsers, activeUsers }));
+            const activeUsers = usersData.rows.filter(
+              (u: any) => !u.u_disabled || Number(u.u_disabled) === 0,
+            ).length;
+            setStats((prev) => ({ ...prev, totalUsers, activeUsers }));
           }
         }
       }
@@ -76,11 +74,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
     }
   };
 
-  const MetricCard = ({ title, value, icon, color, subtitle }: { title: string; value: string; icon?: string; color?: string; subtitle?: string }) => (
+  const MetricCard = ({
+    title,
+    value,
+    icon,
+    color,
+    subtitle,
+  }: {
+    title: string;
+    value: string;
+    icon?: string;
+    color?: string;
+    subtitle?: string;
+  }) => (
     <View style={[styles.metricCard, color && { borderLeftWidth: 4, borderLeftColor: color }]}>
       <View style={styles.metricHeader}>
         <Text style={styles.metricTitle}>{title}</Text>
-        {icon ? <Text style={styles.metricIcon}>{icon}</Text> : <Text style={styles.metricDot}>•</Text>}
+        {icon ? (
+          <Feather
+            name={icon as any}
+            size={isMobile ? 14 : 16}
+            color={color || semantic.textSecondary}
+          />
+        ) : (
+          <Text style={styles.metricDot}>•</Text>
+        )}
       </View>
       <Text style={styles.metricValue}>{value}</Text>
       {subtitle && <Text style={styles.metricSubtitle}>{subtitle}</Text>}
@@ -96,7 +114,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
       onNavigate={onNavigate!}
       onLogout={onLogout!}
     >
-      <ScrollView style={styles.main} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.main}
+        contentContainerStyle={styles.mainContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Welcome */}
         <View style={styles.welcomeSection}>
           <Text style={styles.headerTitle}>Admin Dashboard</Text>
@@ -116,21 +138,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
               <MetricCard
                 title="Total Users"
                 value={stats.totalUsers.toString()}
-                icon="👥"
+                icon="users"
                 color={semantic.primary}
                 subtitle={`${stats.activeUsers} active`}
               />
               <MetricCard
                 title="Services"
                 value={stats.totalServices.toString()}
-                icon="🎯"
+                icon="target"
                 color={semantic.success}
                 subtitle={`${stats.activeServices} active`}
               />
               <MetricCard
                 title="Bookings"
                 value={stats.totalBookings.toString()}
-                icon="📅"
+                icon="calendar"
                 color={semantic.warning}
                 subtitle={`${stats.pendingBookings} pending`}
               />
@@ -142,7 +164,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 <View style={[styles.glowOverlay, { backgroundColor: semantic.primary }]} />
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
-                  <TouchableOpacity style={styles.ctaButton} onPress={() => onNavigate?.('analytics')} accessibilityRole="button" accessibilityLabel="View analytics details">
+                  <TouchableOpacity
+                    style={styles.ctaButton}
+                    onPress={() => onNavigate?.('analytics')}
+                    accessibilityRole="button"
+                    accessibilityLabel="View analytics details"
+                  >
                     <Text style={styles.ctaText}>View Details</Text>
                   </TouchableOpacity>
                 </View>
@@ -150,29 +177,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 <View style={styles.barChart}>
                   <Text style={styles.chartLabel}>Bookings per month</Text>
                   <View style={styles.barChartContainer}>
-                    {stats.monthlyBookings && stats.monthlyBookings.length > 0 ? (
-                      (() => {
-                        const maxBookings = Math.max(...stats.monthlyBookings.map(m => m.bookings), 1);
-                        return stats.monthlyBookings.map((monthData, i) => {
-                          const barHeight = maxBookings > 0
-                            ? Math.max((monthData.bookings / maxBookings) * (isMobile ? 80 : 100), 4)
-                            : 4;
-                          return (
-                            <View key={i} style={styles.barGroup}>
-                              <View style={[styles.bar, { height: barHeight }]} />
-                              <Text style={styles.barLabel}>{monthData.month}</Text>
-                            </View>
+                    {stats.monthlyBookings && stats.monthlyBookings.length > 0
+                      ? (() => {
+                          const maxBookings = Math.max(
+                            ...stats.monthlyBookings.map((m) => m.bookings),
+                            1,
                           );
-                        });
-                      })()
-                    ) : (
-                      Array.from({ length: 12 }).map((_, i) => (
-                      <View key={i} style={styles.barGroup}>
-                          <View style={[styles.bar, { height: 4, opacity: 0.3 }]} />
-                        <Text style={styles.barLabel}>{['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</Text>
-                      </View>
-                      ))
-                    )}
+                          return stats.monthlyBookings.map((monthData, i) => {
+                            const barHeight =
+                              maxBookings > 0
+                                ? Math.max(
+                                    (monthData.bookings / maxBookings) * (isMobile ? 80 : 100),
+                                    4,
+                                  )
+                                : 4;
+                            return (
+                              <View key={i} style={styles.barGroup}>
+                                <View style={[styles.bar, { height: barHeight }]} />
+                                <Text style={styles.barLabel}>{monthData.month}</Text>
+                              </View>
+                            );
+                          });
+                        })()
+                      : Array.from({ length: 12 }).map((_, i) => (
+                          <View key={i} style={styles.barGroup}>
+                            <View style={[styles.bar, { height: 4, opacity: 0.3 }]} />
+                            <Text style={styles.barLabel}>
+                              {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}
+                            </Text>
+                          </View>
+                        ))}
                   </View>
                 </View>
               </View>
@@ -186,21 +220,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                       <View style={[styles.activityDot, { backgroundColor: semantic.primary }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>New users this month</Text>
-                        <Text style={styles.activityValue}>+{Math.floor(stats.totalUsers * 0.1)}</Text>
+                        <Text style={styles.activityValue}>
+                          +{Math.floor(stats.totalUsers * 0.1)}
+                        </Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
                       <View style={[styles.activityDot, { backgroundColor: semantic.success }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Services added</Text>
-                        <Text style={styles.activityValue}>+{Math.floor(stats.totalServices * 0.05)}</Text>
+                        <Text style={styles.activityValue}>
+                          +{Math.floor(stats.totalServices * 0.05)}
+                        </Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
                       <View style={[styles.activityDot, { backgroundColor: semantic.warning }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Bookings completed</Text>
-                        <Text style={styles.activityValue}>{stats.totalBookings - stats.pendingBookings}</Text>
+                        <Text style={styles.activityValue}>
+                          {stats.totalBookings - stats.pendingBookings}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -212,8 +252,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             <View style={styles.quickActionsCard}>
               <Text style={styles.cardTitle}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
-                <TouchableOpacity style={styles.quickActionBtn} onPress={() => onNavigate?.('user')} accessibilityRole="button" accessibilityLabel="Manage users">
-                  <Text style={styles.quickActionIcon}>👤</Text>
+                <TouchableOpacity
+                  style={styles.quickActionBtn}
+                  onPress={() => onNavigate?.('user')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Manage users"
+                >
+                  <Feather name="user" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
                   <Text style={styles.quickActionLabel}>Manage Users</Text>
                 </TouchableOpacity>
               </View>
@@ -223,7 +268,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             <View style={styles.cardWide}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Recent Activity</Text>
-                <TouchableOpacity style={styles.ctaButton} accessibilityRole="button" accessibilityLabel="View all recent activity">
+                <TouchableOpacity
+                  style={styles.ctaButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="View all recent activity"
+                >
                   <Text style={styles.ctaText}>View All</Text>
                 </TouchableOpacity>
               </View>
@@ -253,284 +302,281 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
   );
 };
 
-const styles = StyleSheet.create({
-  main: {
-    flex: 1,
-  },
-  mainContent: {
-    padding: isMobile ? 12 : 20,
-    paddingBottom: isMobile ? 20 : 20,
-  },
-  welcomeSection: {
-    marginBottom: isMobile ? 16 : 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  headerTitle: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: isMobile ? 12 : 14,
-    color: semantic.textSecondary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: semantic.textSecondary,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-    ...(isMobile && {
-      marginLeft: -6,
-      marginRight: -6,
-    }),
-  },
-  metricCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginRight: isMobile ? 6 : 12,
-    marginBottom: isMobile ? 8 : 12,
-    width: isMobile
-      ? (screenWidth - 48) / 2
-      : Math.min(180, (screenWidth - 300) / 4),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  metricSubtitle: {
-    fontSize: isMobile ? 11 : 12,
-    color: semantic.textSecondary,
-    marginTop: 4,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  metricTitle: {
-    color: semantic.textSecondary,
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  metricIcon: {
-    fontSize: isMobile ? 12 : 14,
-  },
-  metricDot: {
-    color: colors.neutral[300],
-    fontSize: isMobile ? 16 : 18,
-  },
-  metricValue: {
-    marginTop: 8,
-    fontSize: isMobile ? 18 : 22,
-    fontWeight: '700',
-    color: colors.neutral[900],
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  rowMobile: {
-    flexDirection: 'column',
-  },
-  cardLarge: {
-    flex: isMobile ? undefined : 1,
-    width: isMobile ? '100%' : undefined,
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginRight: isMobile ? 0 : 12,
-    marginBottom: isMobile ? 12 : 0,
-    elevation: 6,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  cardGlowBlue: {
-    shadowColor: semantic.primary,
-    elevation: 8,
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  glowOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    opacity: 0.6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    flexWrap: isMobile ? 'wrap' : 'nowrap',
-  },
-  cardTitle: {
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  ctaButton: {
-    backgroundColor: semantic.background,
-    borderRadius: 8,
-    paddingHorizontal: isMobile ? 8 : 10,
-    paddingVertical: isMobile ? 5 : 6,
-    marginTop: isMobile ? 4 : 0,
-  },
-  ctaText: {
-    color: '#0EA5E9',
-    fontWeight: '700',
-    fontSize: isMobile ? 11 : 12,
-  },
-  barChart: {
-    marginTop: isMobile ? 12 : 16,
-  },
-  chartLabel: {
-    fontSize: isMobile ? 11 : 12,
-    color: semantic.textSecondary,
-    marginBottom: isMobile ? 8 : 12,
-  },
-  barChartContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: isMobile ? 100 : 120,
-    justifyContent: 'space-around',
-  },
-  barGroup: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  bar: {
-    width: isMobile ? 16 : 20,
-    backgroundColor: semantic.primary,
-    borderRadius: 4,
-    marginBottom: 4,
-    minHeight: 4,
-    shadowColor: semantic.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  barLabel: {
-    fontSize: isMobile ? 9 : 10,
-    color: semantic.textSecondary,
-  },
-  activityList: {
-    marginTop: isMobile ? 8 : 12,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: isMobile ? 12 : 16,
-  },
-  activityDot: {
-    width: isMobile ? 7 : 8,
-    height: isMobile ? 7 : 8,
-    borderRadius: 4,
-    marginRight: isMobile ? 10 : 12,
-  },
-  activityContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  activityText: {
-    fontSize: isMobile ? 12 : 13,
-    color: semantic.textSecondary,
-  },
-  activityValue: {
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  quickActionsCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginTop: 12,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: isMobile ? 8 : 12,
-  },
-  quickActionBtn: {
-    width: isMobile
-      ? (screenWidth - 48) / 2
-      : (screenWidth - 300) / 4,
-    backgroundColor: semantic.background,
-    borderRadius: 8,
-    padding: isMobile ? 12 : 16,
-    alignItems: 'center',
-    marginRight: isMobile ? 6 : 12,
-    marginBottom: isMobile ? 8 : 12,
-    borderWidth: 1,
-    borderColor: semantic.border,
-  },
-  quickActionIcon: {
-    fontSize: isMobile ? 20 : 24,
-    marginBottom: isMobile ? 6 : 8,
-  },
-  quickActionLabel: {
-    fontSize: isMobile ? 11 : 12,
-    color: semantic.textPrimary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  activityTable: {
-    marginTop: isMobile ? 8 : 12,
-  },
-  activityRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: isMobile ? 10 : 12,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.background,
-  },
-  activityCell: {
-    fontSize: isMobile ? 12 : 13,
-    color: semantic.textSecondary,
-  },
-  cardRightCol: {
-    width: isMobile ? '100%' : 200,
-  },
-  cardRightColMobile: {
-    marginTop: 12,
-  },
-  progressCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    elevation: 2,
-  },
-  cardWide: {
-    flex: 1,
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginTop: 12,
-    elevation: 2,
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    main: {
+      flex: 1,
+    },
+    mainContent: {
+      padding: isMobile ? 12 : 20,
+      paddingBottom: isMobile ? 20 : 20,
+    },
+    welcomeSection: {
+      marginBottom: isMobile ? 16 : 24,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    headerTitle: {
+      fontSize: isMobile ? 20 : 24,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 4,
+    },
+    headerSubtitle: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 16,
+      ...(isMobile && {
+        marginLeft: -6,
+        marginRight: -6,
+      }),
+    },
+    metricCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginRight: isMobile ? 6 : 12,
+      marginBottom: isMobile ? 8 : 12,
+      width: isMobile ? (screenWidth - 48) / 2 : Math.min(180, (screenWidth - 300) / 4),
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    metricSubtitle: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textSecondary,
+      marginTop: 4,
+    },
+    metricHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    metricTitle: {
+      color: semantic.textSecondary,
+      fontSize: isMobile ? 11 : 12,
+      fontWeight: '600',
+    },
+    metricIcon: {
+      fontSize: isMobile ? 12 : 14,
+    },
+    metricDot: {
+      color: colors.neutral[300],
+      fontSize: isMobile ? 16 : 18,
+    },
+    metricValue: {
+      marginTop: 8,
+      fontSize: isMobile ? 18 : 22,
+      fontWeight: '700',
+      color: colors.neutral[900],
+    },
+    row: {
+      flexDirection: 'row',
+    },
+    rowMobile: {
+      flexDirection: 'column',
+    },
+    cardLarge: {
+      flex: isMobile ? undefined : 1,
+      width: isMobile ? '100%' : undefined,
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginRight: isMobile ? 0 : 12,
+      marginBottom: isMobile ? 12 : 0,
+      elevation: 6,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    cardGlowBlue: {
+      shadowColor: semantic.primary,
+      elevation: 8,
+      shadowOpacity: 0.3,
+      shadowRadius: 15,
+    },
+    glowOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      opacity: 0.6,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
+    },
+    cardTitle: {
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    ctaButton: {
+      backgroundColor: semantic.background,
+      borderRadius: 8,
+      paddingHorizontal: isMobile ? 8 : 10,
+      paddingVertical: isMobile ? 5 : 6,
+      marginTop: isMobile ? 4 : 0,
+    },
+    ctaText: {
+      color: '#0EA5E9',
+      fontWeight: '700',
+      fontSize: isMobile ? 11 : 12,
+    },
+    barChart: {
+      marginTop: isMobile ? 12 : 16,
+    },
+    chartLabel: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textSecondary,
+      marginBottom: isMobile ? 8 : 12,
+    },
+    barChartContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      height: isMobile ? 100 : 120,
+      justifyContent: 'space-around',
+    },
+    barGroup: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    bar: {
+      width: isMobile ? 16 : 20,
+      backgroundColor: semantic.primary,
+      borderRadius: 4,
+      marginBottom: 4,
+      minHeight: 4,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.4,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    barLabel: {
+      fontSize: isMobile ? 9 : 10,
+      color: semantic.textSecondary,
+    },
+    activityList: {
+      marginTop: isMobile ? 8 : 12,
+    },
+    activityItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: isMobile ? 12 : 16,
+    },
+    activityDot: {
+      width: isMobile ? 7 : 8,
+      height: isMobile ? 7 : 8,
+      borderRadius: 4,
+      marginRight: isMobile ? 10 : 12,
+    },
+    activityContent: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    activityText: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+    },
+    activityValue: {
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    quickActionsCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginTop: 12,
+      marginBottom: 12,
+      elevation: 2,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: isMobile ? 8 : 12,
+    },
+    quickActionBtn: {
+      width: isMobile ? (screenWidth - 48) / 2 : (screenWidth - 300) / 4,
+      backgroundColor: semantic.background,
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      alignItems: 'center',
+      marginRight: isMobile ? 6 : 12,
+      marginBottom: isMobile ? 8 : 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    quickActionIcon: {
+      fontSize: isMobile ? 20 : 24,
+      marginBottom: isMobile ? 6 : 8,
+    },
+    quickActionLabel: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textPrimary,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    activityTable: {
+      marginTop: isMobile ? 8 : 12,
+    },
+    activityRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: isMobile ? 10 : 12,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.background,
+    },
+    activityCell: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+    },
+    cardRightCol: {
+      width: isMobile ? '100%' : 200,
+    },
+    cardRightColMobile: {
+      marginTop: 12,
+    },
+    progressCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      elevation: 2,
+    },
+    cardWide: {
+      flex: 1,
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginTop: 12,
+      elevation: 2,
+    },
+  });
 
 export default DashboardView;

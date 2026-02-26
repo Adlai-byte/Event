@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { ProviderService } from '../../hooks/useServicesList';
 import { createStyles } from '../../views/provider/ServicesView.styles';
 
@@ -62,7 +63,7 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
           />
         ) : (
           <View style={styles.tableImagePlaceholder}>
-            <Text style={styles.tableImagePlaceholderText}>📷</Text>
+            <Feather name="camera" size={20} color="#94a3b8" />
           </View>
         )}
       </View>
@@ -82,9 +83,12 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
         </Text>
       </View>
       <View style={styles.tableColRating}>
-        <Text style={[styles.tableCell, { fontSize: 13 }]}>
-          ⭐ {service.rating} ({service.bookings})
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+          <Feather name="star" size={13} color="#f59e0b" />
+          <Text style={[styles.tableCell, { fontSize: 13 }]}>
+            {service.rating} ({service.bookings})
+          </Text>
+        </View>
       </View>
       <View style={styles.tableColStatus}>
         <View

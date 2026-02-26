@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Image, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getCategoryIcon } from '../../utils/serviceHelpers';
-import { styles } from '../../views/user/ServiceDetailsView.styles';
+import { createStyles } from '../../views/user/ServiceDetailsView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 /* ---- Hero Image (rendered at the top of the scroll area) ---- */
 
@@ -20,6 +22,9 @@ export const ServiceHeroImage: React.FC<ServiceHeroImageProps> = ({
   category,
   rating,
 }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   return (
     <View style={styles.heroImageContainer}>
       {mainImage && !imageError ? (
@@ -31,15 +36,13 @@ export const ServiceHeroImage: React.FC<ServiceHeroImageProps> = ({
         />
       ) : (
         <View style={styles.heroImagePlaceholder}>
-          <Text style={styles.heroImagePlaceholderIcon}>
-            {getCategoryIcon(category)}
-          </Text>
+          <Feather name={getCategoryIcon(category) as any} size={48} color="#94a3b8" />
         </View>
       )}
       {/* Rating Badge Overlay */}
       {rating >= 4.5 && (
         <View style={styles.ratingBadgeOverlay}>
-          <Text style={styles.ratingBadgeIcon}>⭐</Text>
+          <Feather name="star" size={14} color="#f59e0b" />
           <Text style={styles.ratingBadgeText}>Top Rated</Text>
         </View>
       )}
@@ -53,9 +56,10 @@ interface ServicePhotoGalleryProps {
   images: string[];
 }
 
-export const ServicePhotoGallery: React.FC<ServicePhotoGalleryProps> = ({
-  images,
-}) => {
+export const ServicePhotoGallery: React.FC<ServicePhotoGalleryProps> = ({ images }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   if (images.length <= 1) return null;
 
   return (
@@ -69,11 +73,7 @@ export const ServicePhotoGallery: React.FC<ServicePhotoGalleryProps> = ({
       >
         {images.slice(1).map((imageUrl, index) => (
           <View key={index} style={styles.galleryImageContainer}>
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.galleryImage}
-              resizeMode="cover"
-            />
+            <Image source={{ uri: imageUrl }} style={styles.galleryImage} resizeMode="cover" />
           </View>
         ))}
       </ScrollView>

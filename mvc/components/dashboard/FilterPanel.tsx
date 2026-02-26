@@ -1,13 +1,8 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Modal,
-} from 'react-native';
-import { styles } from '../../views/user/DashboardView.styles';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/DashboardView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { getCategoryLabel } from '../../utils/serviceHelpers';
 
 interface FilterPanelProps {
@@ -69,6 +64,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   clearFilters,
   applyFilters,
 }) => {
+  const { isMobile, screenWidth, isMobileWeb } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
+
   return (
     <>
       {/* Filter Panel */}
@@ -77,7 +75,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <View style={styles.filterPanelHeader}>
             <Text style={styles.filterPanelTitle}>Filter Services</Text>
             <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <Text style={styles.filterCloseButton}>{'\u2715'}</Text>
+              <Feather name="x" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -88,20 +86,25 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           >
             {/* Category Selection */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>&#127991;&#65039; Category</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="grid" size={16} color="#2563EB" />
+                <Text style={styles.filterLabel}>Category</Text>
+              </View>
               <View style={styles.categoryButtonsContainer}>
                 <TouchableOpacity
                   style={[
                     styles.categoryFilterButton,
-                    filterCategory === '' && styles.categoryFilterButtonActive
+                    filterCategory === '' && styles.categoryFilterButtonActive,
                   ]}
                   onPress={() => setFilterCategory('')}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.categoryFilterButtonText,
-                    filterCategory === '' && styles.categoryFilterButtonTextActive
-                  ]}>
+                  <Text
+                    style={[
+                      styles.categoryFilterButtonText,
+                      filterCategory === '' && styles.categoryFilterButtonTextActive,
+                    ]}
+                  >
                     All
                   </Text>
                 </TouchableOpacity>
@@ -110,15 +113,17 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     key={category}
                     style={[
                       styles.categoryFilterButton,
-                      filterCategory === category && styles.categoryFilterButtonActive
+                      filterCategory === category && styles.categoryFilterButtonActive,
                     ]}
                     onPress={() => setFilterCategory(category)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[
-                      styles.categoryFilterButtonText,
-                      filterCategory === category && styles.categoryFilterButtonTextActive
-                    ]}>
+                    <Text
+                      style={[
+                        styles.categoryFilterButtonText,
+                        filterCategory === category && styles.categoryFilterButtonTextActive,
+                      ]}
+                    >
                       {getCategoryLabel(category)}
                     </Text>
                   </TouchableOpacity>
@@ -128,7 +133,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
             {/* Price Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>&#128176; Price Range (&#8369;)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="dollar-sign" size={16} color="#2563EB" />
+                <Text style={styles.filterLabel}>Price Range (&#8369;)</Text>
+              </View>
               <View style={styles.priceRangeContainer}>
                 <View style={styles.priceInputContainer}>
                   <Text style={styles.priceLabel}>Min</Text>
@@ -160,7 +168,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
             {/* Location/Area */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>&#128205; Location</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="map-pin" size={16} color="#2563EB" />
+                <Text style={styles.filterLabel}>Location</Text>
+              </View>
               <TextInput
                 style={styles.filterInput}
                 placeholder="City name (e.g., Manila)"
@@ -185,19 +196,27 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
             {/* Rating */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>&#11088; Minimum Rating</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="star" size={16} color="#f59e0b" />
+                <Text style={styles.filterLabel}>Minimum Rating</Text>
+              </View>
               <TouchableOpacity
                 style={styles.ratingDropdownButton}
                 onPress={() => setShowRatingDropdown(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.ratingDropdownText,
-                  !filterMinRating && styles.ratingDropdownPlaceholder
-                ]}>
-                  {filterMinRating ? ratingOptions.find(opt => opt.value === filterMinRating)?.label || filterMinRating : 'Select rating'}
+                <Text
+                  style={[
+                    styles.ratingDropdownText,
+                    !filterMinRating && styles.ratingDropdownPlaceholder,
+                  ]}
+                >
+                  {filterMinRating
+                    ? ratingOptions.find((opt) => opt.value === filterMinRating)?.label ||
+                      filterMinRating
+                    : 'Select rating'}
                 </Text>
-                <Text style={styles.ratingDropdownArrow}>{'\u25BC'}</Text>
+                <Feather name="chevron-down" size={16} color="#64748B" />
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -240,7 +259,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 onPress={() => setShowRatingDropdown(false)}
                 style={styles.ratingModalCloseButton}
               >
-                <Text style={styles.ratingModalCloseText}>{'\u2715'}</Text>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.ratingModalBody}>
@@ -249,7 +268,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   key={option.value}
                   style={[
                     styles.ratingModalItem,
-                    filterMinRating === option.value && styles.ratingModalItemSelected
+                    filterMinRating === option.value && styles.ratingModalItemSelected,
                   ]}
                   onPress={() => {
                     setFilterMinRating(option.value);
@@ -257,14 +276,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.ratingModalItemText,
-                    filterMinRating === option.value && styles.ratingModalItemTextSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.ratingModalItemText,
+                      filterMinRating === option.value && styles.ratingModalItemTextSelected,
+                    ]}
+                  >
                     {option.label}
                   </Text>
                   {filterMinRating === option.value && (
-                    <Text style={styles.ratingModalCheckmark}>{'\u2713'}</Text>
+                    <Feather name="check" size={16} color="#2563EB" />
                   )}
                 </TouchableOpacity>
               ))}

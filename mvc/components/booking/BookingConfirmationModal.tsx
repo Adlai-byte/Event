@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { ServicePackage, calculatePackagePrice, formatPeso } from '../../models/Package';
-import { styles } from '../BookingModal.styles';
+import { createStyles } from '../BookingModal.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 export interface ConfirmBookingData {
   type: 'hourly' | 'perday';
@@ -38,19 +40,17 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
   onCancel,
   onConfirm,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onCancel}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onCancel}>
       <View style={styles.confirmModalOverlay}>
         <View style={styles.confirmModalContent}>
           {/* Header */}
           <View style={styles.confirmModalHeader}>
             <View style={styles.confirmIconContainer}>
-              <Text style={styles.confirmIcon}>✓</Text>
+              <Feather name="check" size={28} color="#fff" />
             </View>
             <Text style={styles.confirmModalTitle}>Confirm Booking</Text>
             <Text style={styles.confirmModalSubtitle}>Please review your booking details</Text>
@@ -63,44 +63,51 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
                 <>
                   <View style={styles.confirmDetailRow}>
                     <View style={styles.confirmDetailIcon}>
-                      <Text style={styles.confirmDetailEmoji}>📅</Text>
+                      <Feather name="calendar" size={18} color="#64748B" />
                     </View>
                     <View style={styles.confirmDetailContent}>
                       <Text style={styles.confirmDetailLabel}>Date</Text>
-                      <Text style={styles.confirmDetailValue}>{confirmBookingData?.date || 'N/A'}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.confirmDetailRow}>
-                    <View style={styles.confirmDetailIcon}>
-                      <Text style={styles.confirmDetailEmoji}>⏰</Text>
-                    </View>
-                    <View style={styles.confirmDetailContent}>
-                      <Text style={styles.confirmDetailLabel}>Time</Text>
                       <Text style={styles.confirmDetailValue}>
-                        {confirmBookingData?.startTime || 'N/A'} - {confirmBookingData?.endTime || 'N/A'}
+                        {confirmBookingData?.date || 'N/A'}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.confirmDetailRow}>
                     <View style={styles.confirmDetailIcon}>
-                      <Text style={styles.confirmDetailEmoji}>⏱️</Text>
+                      <Feather name="clock" size={18} color="#64748B" />
+                    </View>
+                    <View style={styles.confirmDetailContent}>
+                      <Text style={styles.confirmDetailLabel}>Time</Text>
+                      <Text style={styles.confirmDetailValue}>
+                        {confirmBookingData?.startTime || 'N/A'} -{' '}
+                        {confirmBookingData?.endTime || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.confirmDetailRow}>
+                    <View style={styles.confirmDetailIcon}>
+                      <Feather name="clock" size={18} color="#64748B" />
                     </View>
                     <View style={styles.confirmDetailContent}>
                       <Text style={styles.confirmDetailLabel}>Duration</Text>
-                      <Text style={styles.confirmDetailValue}>{confirmBookingData?.duration || 'N/A'}</Text>
+                      <Text style={styles.confirmDetailValue}>
+                        {confirmBookingData?.duration || 'N/A'}
+                      </Text>
                     </View>
                   </View>
 
                   {confirmBookingData?.attendees && (
                     <View style={styles.confirmDetailRow}>
                       <View style={styles.confirmDetailIcon}>
-                        <Text style={styles.confirmDetailEmoji}>👥</Text>
+                        <Feather name="users" size={18} color="#64748B" />
                       </View>
                       <View style={styles.confirmDetailContent}>
                         <Text style={styles.confirmDetailLabel}>Attendees</Text>
-                        <Text style={styles.confirmDetailValue}>{confirmBookingData?.attendees || 0} pax</Text>
+                        <Text style={styles.confirmDetailValue}>
+                          {confirmBookingData?.attendees || 0} pax
+                        </Text>
                       </View>
                     </View>
                   )}
@@ -109,34 +116,41 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
                 <>
                   <View style={styles.confirmDetailRow}>
                     <View style={styles.confirmDetailIcon}>
-                      <Text style={styles.confirmDetailEmoji}>📅</Text>
+                      <Feather name="calendar" size={18} color="#64748B" />
                     </View>
                     <View style={styles.confirmDetailContent}>
                       <Text style={styles.confirmDetailLabel}>Date Range</Text>
                       <Text style={styles.confirmDetailValue}>
-                        {confirmBookingData?.startDate ? new Date(confirmBookingData.startDate).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        }) : 'N/A'} - {confirmBookingData?.endDate ? new Date(confirmBookingData.endDate).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        }) : 'N/A'}
+                        {confirmBookingData?.startDate
+                          ? new Date(confirmBookingData.startDate).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : 'N/A'}{' '}
+                        -{' '}
+                        {confirmBookingData?.endDate
+                          ? new Date(confirmBookingData.endDate).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : 'N/A'}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.confirmDetailRow}>
                     <View style={styles.confirmDetailIcon}>
-                      <Text style={styles.confirmDetailEmoji}>📊</Text>
+                      <Feather name="bar-chart-2" size={18} color="#64748B" />
                     </View>
                     <View style={styles.confirmDetailContent}>
                       <Text style={styles.confirmDetailLabel}>Days</Text>
                       <Text style={styles.confirmDetailValue}>
-                        {confirmBookingData?.days || 0} day{(confirmBookingData?.days || 0) !== 1 ? 's' : ''}
+                        {confirmBookingData?.days || 0} day
+                        {(confirmBookingData?.days || 0) !== 1 ? 's' : ''}
                       </Text>
                     </View>
                   </View>
@@ -147,25 +161,27 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
               {selectedPackage && (
                 <View style={styles.confirmPackageCard}>
                   <View style={styles.confirmPackageHeader}>
-                    <Text style={styles.confirmPackageIcon}>📦</Text>
+                    <Feather name="package" size={18} color="#6C63FF" />
                     <Text style={styles.confirmPackageLabel}>Package</Text>
                   </View>
                   <Text style={styles.confirmPackageName}>{selectedPackage.name}</Text>
                   <View style={styles.confirmPackageDetails}>
                     <Text style={styles.confirmPackageDetailText}>
-                      {packagePaxCount} pax x {formatPeso(selectedPackage.priceType === 'calculated'
-                        ? calculatePackagePrice(selectedPackage, 1, removedItems)
-                        : (selectedPackage.basePrice || 0))}
+                      {packagePaxCount} pax x{' '}
+                      {formatPeso(
+                        selectedPackage.priceType === 'calculated'
+                          ? calculatePackagePrice(selectedPackage, 1, removedItems)
+                          : selectedPackage.basePrice || 0,
+                      )}
                     </Text>
                     {removedItems.length > 0 && (
                       <Text style={styles.confirmPackageRemovedText}>
-                        {removedItems.length} optional item{removedItems.length !== 1 ? 's' : ''} removed
+                        {removedItems.length} optional item{removedItems.length !== 1 ? 's' : ''}{' '}
+                        removed
                       </Text>
                     )}
                   </View>
-                  <Text style={styles.confirmPackagePrice}>
-                    {formatPeso(getPackagePrice())}
-                  </Text>
+                  <Text style={styles.confirmPackagePrice}>{formatPeso(getPackagePrice())}</Text>
                 </View>
               )}
 
@@ -173,13 +189,16 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
               <View style={styles.confirmCostCard}>
                 <Text style={styles.confirmCostLabel}>Estimated Cost</Text>
                 <Text style={styles.confirmCostValue}>
-                  ₱{((confirmBookingData?.cost || 0) + (selectedPackage ? getPackagePrice() : 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱
+                  {(
+                    (confirmBookingData?.cost || 0) + (selectedPackage ? getPackagePrice() : 0)
+                  ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
 
               {/* Warning */}
               <View style={styles.confirmWarning}>
-                <Text style={styles.confirmWarningIcon}>⚠️</Text>
+                <Feather name="alert-triangle" size={16} color="#f59e0b" />
                 <Text style={styles.confirmWarningText}>This action cannot be undone</Text>
               </View>
             </ScrollView>

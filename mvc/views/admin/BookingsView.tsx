@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
@@ -24,7 +33,7 @@ interface Booking {
 
 export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, onLogout }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -48,7 +57,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
             location: b.b_location,
             totalCost: parseFloat(b.b_total_cost) || 0,
             status: b.b_status,
-            services: Array.isArray(b.services) ? b.services : []
+            services: Array.isArray(b.services) ? b.services : [],
           }));
           setBookings(mapped);
         }
@@ -65,18 +74,19 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
     pending: '#f59e0b',
     confirmed: '#3b82f6',
     completed: '#10b981',
-    cancelled: '#ef4444'
+    cancelled: '#ef4444',
   };
 
   const statusFilters = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b) => {
     const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
-    const matchesSearch = !searchQuery ||
+    const matchesSearch =
+      !searchQuery ||
       b.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.services.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      b.services.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
@@ -96,7 +106,9 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Bookings Management</Text>
-              <Text style={styles.subtitle}>{filteredBookings.length} of {bookings.length} bookings</Text>
+              <Text style={styles.subtitle}>
+                {filteredBookings.length} of {bookings.length} bookings
+              </Text>
             </View>
           </View>
 
@@ -114,7 +126,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
 
           {/* Status Filters */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusFilter}>
-            {statusFilters.map(status => (
+            {statusFilters.map((status) => (
               <TouchableOpacity
                 key={status}
                 style={[styles.statusChip, filterStatus === status && styles.statusChipActive]}
@@ -122,7 +134,12 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                 accessibilityRole="button"
                 accessibilityLabel={`Filter by ${status}`}
               >
-                <Text style={[styles.statusChipText, filterStatus === status && styles.statusChipTextActive]}>
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    filterStatus === status && styles.statusChipTextActive,
+                  ]}
+                >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -137,7 +154,12 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                   <Text style={styles.bookingEventName}>{booking.eventName}</Text>
                   <Text style={styles.bookingClientName}>Client: {booking.clientName}</Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) + '20' }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(booking.status) + '20' },
+                  ]}
+                >
                   <Text style={[styles.statusBadgeText, { color: getStatusColor(booking.status) }]}>
                     {booking.status.toUpperCase()}
                   </Text>
@@ -146,20 +168,34 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
 
               <View style={styles.bookingDetails}>
                 <View style={styles.bookingDetailRow}>
-                  <Text style={styles.bookingDetailLabel}>📅 Date:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
+                    <Feather name="calendar" size={13} color="#64748B" />
+                    <Text style={styles.bookingDetailLabel}>Date:</Text>
+                  </View>
                   <Text style={styles.bookingDetailValue}>{booking.date}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <Text style={styles.bookingDetailLabel}>🕐 Time:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
+                    <Feather name="clock" size={13} color="#64748B" />
+                    <Text style={styles.bookingDetailLabel}>Time:</Text>
+                  </View>
                   <Text style={styles.bookingDetailValue}>{booking.time}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <Text style={styles.bookingDetailLabel}>📍 Location:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
+                    <Feather name="map-pin" size={13} color="#64748B" />
+                    <Text style={styles.bookingDetailLabel}>Location:</Text>
+                  </View>
                   <Text style={styles.bookingDetailValue}>{booking.location}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <Text style={styles.bookingDetailLabel}>💰 Total Cost:</Text>
-                  <Text style={styles.bookingDetailValue}>₱ {booking.totalCost.toLocaleString()}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
+                    <Feather name="dollar-sign" size={13} color="#64748B" />
+                    <Text style={styles.bookingDetailLabel}>Total Cost:</Text>
+                  </View>
+                  <Text style={styles.bookingDetailValue}>
+                    ₱ {booking.totalCost.toLocaleString()}
+                  </Text>
                 </View>
               </View>
 
@@ -189,30 +225,41 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                     accessibilityRole="button"
                     accessibilityLabel={`Confirm ${booking.eventName}`}
                     onPress={async () => {
-                      Alert.alert('Confirm Booking', 'Are you sure you want to confirm this booking?', [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Confirm',
-                          onPress: async () => {
-                            try {
-                              const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${booking.id}/status`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ status: 'confirmed' })
-                              });
-                              if (resp.ok) {
-                                setBookings(prev => prev.map(b =>
-                                  b.id === booking.id ? { ...b, status: 'confirmed' as const } : b
-                                ));
-                              } else {
+                      Alert.alert(
+                        'Confirm Booking',
+                        'Are you sure you want to confirm this booking?',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Confirm',
+                            onPress: async () => {
+                              try {
+                                const resp = await fetch(
+                                  `${getApiBaseUrl()}/api/bookings/${booking.id}/status`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ status: 'confirmed' }),
+                                  },
+                                );
+                                if (resp.ok) {
+                                  setBookings((prev) =>
+                                    prev.map((b) =>
+                                      b.id === booking.id
+                                        ? { ...b, status: 'confirmed' as const }
+                                        : b,
+                                    ),
+                                  );
+                                } else {
+                                  Alert.alert('Error', 'Failed to update booking status');
+                                }
+                              } catch {
                                 Alert.alert('Error', 'Failed to update booking status');
                               }
-                            } catch (error) {
-                              Alert.alert('Error', 'Failed to update booking status');
-                            }
-                          }
-                        }
-                      ]);
+                            },
+                          },
+                        ],
+                      );
                     }}
                   >
                     <Text style={[styles.actionButtonText, styles.confirmButtonText]}>Confirm</Text>
@@ -224,31 +271,42 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                     accessibilityRole="button"
                     accessibilityLabel={`Cancel ${booking.eventName}`}
                     onPress={async () => {
-                      Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
-                        { text: 'No', style: 'cancel' },
-                        {
-                          text: 'Yes, Cancel',
-                          style: 'destructive',
-                          onPress: async () => {
-                            try {
-                              const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${booking.id}/status`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ status: 'cancelled' })
-                              });
-                              if (resp.ok) {
-                                setBookings(prev => prev.map(b =>
-                                  b.id === booking.id ? { ...b, status: 'cancelled' as const } : b
-                                ));
-                              } else {
+                      Alert.alert(
+                        'Cancel Booking',
+                        'Are you sure you want to cancel this booking?',
+                        [
+                          { text: 'No', style: 'cancel' },
+                          {
+                            text: 'Yes, Cancel',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                const resp = await fetch(
+                                  `${getApiBaseUrl()}/api/bookings/${booking.id}/status`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ status: 'cancelled' }),
+                                  },
+                                );
+                                if (resp.ok) {
+                                  setBookings((prev) =>
+                                    prev.map((b) =>
+                                      b.id === booking.id
+                                        ? { ...b, status: 'cancelled' as const }
+                                        : b,
+                                    ),
+                                  );
+                                } else {
+                                  Alert.alert('Error', 'Failed to update booking status');
+                                }
+                              } catch {
                                 Alert.alert('Error', 'Failed to update booking status');
                               }
-                            } catch (error) {
-                              Alert.alert('Error', 'Failed to update booking status');
-                            }
-                          }
-                        }
-                      ]);
+                            },
+                          },
+                        ],
+                      );
                     }}
                   >
                     <Text style={[styles.actionButtonText, styles.cancelButtonText]}>Cancel</Text>
@@ -369,7 +427,6 @@ const styles = StyleSheet.create({
   bookingDetailLabel: {
     fontSize: 13,
     color: '#64748B',
-    width: 80,
   },
   bookingDetailValue: {
     fontSize: 13,

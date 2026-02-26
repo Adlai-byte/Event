@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { AuthState } from '../models/AuthState';
 import { LoginFormData } from '../models/FormData';
-import { getShadowStyle } from '../utils/shadowStyles';
 import { useBreakpoints } from '../hooks/useBreakpoints';
+import { Feather } from '@expo/vector-icons';
 import { colors, semantic } from '../theme';
 
 interface LoginViewProps {
@@ -113,7 +113,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const _handleGoogleLogin = async () => {
     if (!onGoogleLogin) return;
     setIsSubmitting(true);
     try {
@@ -127,181 +127,376 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const displayError = authState.error || errors.submit;
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      flexDirection: 'row',
-    },
-    splitRow: {
-      flex: 1,
-      flexDirection: 'row',
-      minHeight: screenHeight,
-    },
-    formSection: {
-      flex: 1,
-      maxWidth: isTablet ? 480 : 520,
-      backgroundColor: semantic.surface,
-      justifyContent: 'center',
-    },
-    welcomeSection: {
-      flex: 1,
-    },
-    welcomePanel: {
-      flex: 1,
-      position: 'relative',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 48,
-      ...(Platform.OS === 'web' ? {
-        backgroundImage: 'linear-gradient(135deg, #EC4899 0%, #A855F7 50%, #6D28D9 100%)',
-      } : {
-        backgroundColor: '#7C3AED',
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          flexDirection: 'row',
+        },
+        splitRow: {
+          flex: 1,
+          flexDirection: 'row',
+          minHeight: screenHeight,
+        },
+        formSection: {
+          flex: 1,
+          maxWidth: isTablet ? 480 : 520,
+          backgroundColor: semantic.surface,
+          justifyContent: 'center',
+        },
+        welcomeSection: {
+          flex: 1,
+        },
+        welcomePanel: {
+          flex: 1,
+          position: 'relative',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 48,
+          ...(Platform.OS === 'web'
+            ? {
+                backgroundImage: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%)',
+              }
+            : {
+                backgroundColor: '#1D4ED8',
+              }),
+        },
+        decoCircle1: {
+          position: 'absolute',
+          width: 280,
+          height: 280,
+          borderRadius: 140,
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          top: '10%',
+          right: '-10%',
+        },
+        decoCircle2: {
+          position: 'absolute',
+          width: 160,
+          height: 160,
+          borderRadius: 80,
+          backgroundColor: 'rgba(255,255,255,0.06)',
+          bottom: '25%',
+          left: '-5%',
+        },
+        decoCircle3: {
+          position: 'absolute',
+          width: 80,
+          height: 80,
+          borderRadius: 40,
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          top: '40%',
+          left: '15%',
+        },
+        decoRing: {
+          position: 'absolute',
+          width: 320,
+          height: 320,
+          borderRadius: 160,
+          borderWidth: 2,
+          borderColor: 'rgba(255,255,255,0.12)',
+          top: '50%',
+          left: '50%',
+          marginLeft: -160,
+          marginTop: -160,
+        },
+        welcomeContent: { zIndex: 1, alignItems: 'center', maxWidth: 380 },
+        welcomeTitle: {
+          fontSize: isTablet ? 28 : 32,
+          fontWeight: '800',
+          color: semantic.surface,
+          marginBottom: 16,
+          textAlign: 'center',
+          letterSpacing: -0.5,
+        },
+        welcomeSubtitle: {
+          fontSize: isTablet ? 16 : 18,
+          color: 'rgba(255,255,255,0.9)',
+          textAlign: 'center',
+          lineHeight: 28,
+        },
+        containerMobile: { flex: 1, position: 'relative', backgroundColor: 'transparent' },
+        mobileGradientBg: {
+          ...StyleSheet.absoluteFillObject,
+          ...(Platform.OS === 'web'
+            ? ({
+                backgroundImage: 'linear-gradient(180deg, #2563EB 0%, #1D4ED8 40%, #1E40AF 100%)',
+              } as any)
+            : { backgroundColor: '#1D4ED8' }),
+        },
+        decoCircleMobile: {
+          position: 'absolute',
+          width: 200,
+          height: 200,
+          borderRadius: 100,
+          backgroundColor: 'rgba(255,255,255,0.06)',
+          top: -60,
+          right: -60,
+        },
+        scrollMobile: { flex: 1, backgroundColor: 'transparent' },
+        scrollContentMobile: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          paddingTop: Platform.OS === 'ios' ? 56 : 48,
+          paddingBottom: 32,
+          paddingHorizontal: 24,
+          minHeight: screenHeight,
+          backgroundColor: 'transparent',
+        },
+        scrollContent: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 40,
+          paddingHorizontal: 32,
+          minHeight: screenHeight,
+        },
+        card: {
+          width: '100%',
+          maxWidth: isMobile ? '100%' : 440,
+          backgroundColor: isMobile ? 'transparent' : semantic.surface,
+          borderRadius: isMobile ? 0 : 28,
+          padding: isMobile ? 24 : 40,
+          borderWidth: isMobile ? 0 : 1,
+          borderColor: 'rgba(226, 232, 240, 0.8)',
+          ...(isMobile
+            ? {}
+            : Platform.OS === 'web'
+              ? {
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+                }
+              : {
+                  shadowColor: colors.neutral[900],
+                  shadowOffset: { width: 0, height: 12 },
+                  shadowOpacity: 0.06,
+                  shadowRadius: 24,
+                  elevation: 8,
+                }),
+        },
+        logoContainer: {
+          alignItems: 'center',
+          marginBottom: 24,
+          ...(isMobile && {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0,
+          }),
+        },
+        logoImage: { width: isMobile ? 110 : 130, height: isMobile ? 36 : 44 },
+        header: { marginBottom: 28, alignItems: 'center' },
+        title: {
+          fontSize: isMobile ? 28 : 32,
+          fontWeight: '800',
+          color: isMobile ? semantic.surface : colors.neutral[900],
+          marginBottom: 8,
+          letterSpacing: -0.6,
+        },
+        subtitle: {
+          fontSize: isMobile ? 15 : 16,
+          color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600],
+          textAlign: 'center',
+          lineHeight: 24,
+          paddingHorizontal: 8,
+        },
+        errorContainer: {
+          backgroundColor: '#FEF2F2',
+          borderWidth: 1,
+          borderColor: colors.error[100],
+          borderRadius: 14,
+          padding: 14,
+          marginBottom: 20,
+        },
+        errorText: {
+          color: colors.error[700],
+          fontSize: isMobile ? 14 : 13,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
+        inputContainer: { marginBottom: 20 },
+        label: {
+          fontSize: isMobile ? 15 : 14,
+          fontWeight: '600',
+          color: isMobile ? semantic.surface : semantic.textPrimary,
+          marginBottom: 8,
+        },
+        input: {
+          backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+          borderWidth: 2,
+          borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
+          borderRadius: 14,
+          paddingHorizontal: 18,
+          paddingVertical: isMobile ? 16 : 14,
+          fontSize: isMobile ? 17 : 16,
+          color: colors.neutral[900],
+          ...(isMobile && {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0,
+          }),
+          ...(Platform.OS === 'web'
+            ? {
+                outlineStyle: 'none' as any,
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any,
+                ...(isMobile && { boxShadow: 'none' as any }),
+              }
+            : {}),
+        },
+        inputError: { borderColor: semantic.error, backgroundColor: '#FFFBFB' },
+        passwordContainer: { position: 'relative' },
+        passwordInput: {
+          backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
+          borderWidth: 2,
+          borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
+          borderRadius: 14,
+          paddingHorizontal: 18,
+          paddingRight: 52,
+          paddingVertical: isMobile ? 16 : 14,
+          fontSize: isMobile ? 17 : 16,
+          color: colors.neutral[900],
+          ...(isMobile && {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0,
+          }),
+          ...(Platform.OS === 'web'
+            ? {
+                outlineStyle: 'none' as any,
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any,
+                ...(isMobile && { boxShadow: 'none' as any }),
+              }
+            : {}),
+        },
+        eyeButton: {
+          position: 'absolute',
+          right: 14,
+          top: '50%',
+          transform: [{ translateY: -14 }],
+          padding: 8,
+        },
+        eyeButtonText: { fontSize: 22 },
+        fieldError: {
+          color: colors.error[700],
+          fontSize: 13,
+          marginTop: 6,
+          marginLeft: 4,
+          fontWeight: '500',
+        },
+        forgotPasswordLink: { alignSelf: 'flex-end', marginBottom: 22, marginTop: -2 },
+        forgotPasswordLinkText: {
+          color: isMobile ? semantic.surface : '#2563EB',
+          fontSize: isMobile ? 15 : 14,
+          fontWeight: '600',
+        },
+        primaryButton: {
+          backgroundColor: isMobile ? semantic.surface : '#1D4ED8',
+          borderRadius: 14,
+          paddingVertical: isMobile ? 18 : 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 20,
+          ...(isMobile && {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0,
+          }),
+          ...(Platform.OS === 'web' && !isMobile
+            ? {
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                backgroundImage: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                backgroundColor: 'transparent',
+              }
+            : {}),
+          ...(Platform.OS === 'web' && isMobile ? { boxShadow: 'none' as any } : {}),
+        },
+        primaryButtonDisabled: {
+          opacity: 0.6,
+          ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}),
+        },
+        primaryButtonText: {
+          color: isMobile ? '#1D4ED8' : semantic.surface,
+          fontSize: isMobile ? 17 : 16,
+          fontWeight: '700',
+          letterSpacing: 0.3,
+        },
+        divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+        dividerLine: { flex: 1, height: 1, backgroundColor: semantic.border },
+        dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
+        googleButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: semantic.surface,
+          borderWidth: 1,
+          borderColor: semantic.border,
+          borderRadius: 12,
+          paddingVertical: Platform.OS === 'web' ? 16 : 18,
+          marginBottom: 24,
+          ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+        },
+        googleButtonIcon: { fontSize: 20, marginRight: 12 },
+        googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
+        registerContainer: {
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 4,
+          flexWrap: 'wrap',
+        },
+        registerText: {
+          fontSize: isMobile ? 15 : 14,
+          color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600],
+        },
+        registerLink: {
+          fontSize: isMobile ? 15 : 14,
+          color: isMobile ? semantic.surface : '#2563EB',
+          fontWeight: '700',
+        },
+        forgotPasswordContainer: { marginTop: 8 },
+        forgotPasswordTitle: {
+          fontSize: isMobile ? 22 : 24,
+          fontWeight: '700',
+          color: colors.neutral[900],
+          marginBottom: 8,
+          textAlign: 'center',
+        },
+        forgotPasswordSubtitle: {
+          fontSize: isMobile ? 15 : 14,
+          color: colors.neutral[600],
+          textAlign: 'center',
+          marginBottom: 24,
+          lineHeight: 22,
+        },
+        forgotPasswordActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+        forgotPasswordButton: { flex: 1 },
+        secondaryButton: {
+          backgroundColor: semantic.background,
+          borderRadius: 14,
+          paddingVertical: isMobile ? 18 : 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: semantic.border,
+          ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
+        },
+        secondaryButtonText: {
+          color: semantic.textPrimary,
+          fontSize: isMobile ? 17 : 16,
+          fontWeight: '600',
+        },
       }),
-    },
-    decoCircle1: {
-      position: 'absolute', width: 280, height: 280, borderRadius: 140,
-      backgroundColor: 'rgba(255,255,255,0.08)', top: '10%', right: '-10%',
-    },
-    decoCircle2: {
-      position: 'absolute', width: 160, height: 160, borderRadius: 80,
-      backgroundColor: 'rgba(255,255,255,0.06)', bottom: '25%', left: '-5%',
-    },
-    decoCircle3: {
-      position: 'absolute', width: 80, height: 80, borderRadius: 40,
-      backgroundColor: 'rgba(255,255,255,0.1)', top: '40%', left: '15%',
-    },
-    decoRing: {
-      position: 'absolute', width: 320, height: 320, borderRadius: 160,
-      borderWidth: 2, borderColor: 'rgba(255,255,255,0.12)',
-      top: '50%', left: '50%', marginLeft: -160, marginTop: -160,
-    },
-    welcomeContent: { zIndex: 1, alignItems: 'center', maxWidth: 380 },
-    welcomeTitle: {
-      fontSize: isTablet ? 28 : 32, fontWeight: '800', color: semantic.surface,
-      marginBottom: 16, textAlign: 'center', letterSpacing: -0.5,
-    },
-    welcomeSubtitle: {
-      fontSize: isTablet ? 16 : 18, color: 'rgba(255,255,255,0.9)',
-      textAlign: 'center', lineHeight: 28,
-    },
-    containerMobile: { flex: 1, position: 'relative', backgroundColor: 'transparent' },
-    mobileGradientBg: {
-      ...StyleSheet.absoluteFillObject,
-      ...(Platform.OS === 'web' ? {
-        backgroundImage: 'linear-gradient(180deg, #EC4899 0%, #A855F7 40%, #6D28D9 100%)',
-      } as any : { backgroundColor: '#7C3AED' }),
-    },
-    decoCircleMobile: {
-      position: 'absolute', width: 200, height: 200, borderRadius: 100,
-      backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -60,
-    },
-    scrollMobile: { flex: 1, backgroundColor: 'transparent' },
-    scrollContentMobile: {
-      flexGrow: 1, justifyContent: 'center', alignItems: 'stretch',
-      paddingTop: Platform.OS === 'ios' ? 56 : 48, paddingBottom: 32,
-      paddingHorizontal: 24, minHeight: screenHeight, backgroundColor: 'transparent',
-    },
-    scrollContent: {
-      flexGrow: 1, justifyContent: 'center', alignItems: 'center',
-      paddingVertical: 40, paddingHorizontal: 32, minHeight: screenHeight,
-    },
-    card: {
-      width: '100%', maxWidth: isMobile ? '100%' : 440,
-      backgroundColor: isMobile ? 'transparent' : semantic.surface,
-      borderRadius: isMobile ? 0 : 28,
-      padding: isMobile ? 24 : 40,
-      borderWidth: isMobile ? 0 : 1,
-      borderColor: 'rgba(226, 232, 240, 0.8)',
-      ...(isMobile ? {} : Platform.OS === 'web' ? {
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)',
-      } : {
-        shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.06, shadowRadius: 24, elevation: 8,
-      }),
-    },
-    logoContainer: {
-      alignItems: 'center', marginBottom: 24,
-      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
-    },
-    logoImage: { width: isMobile ? 110 : 130, height: isMobile ? 36 : 44 },
-    header: { marginBottom: 28, alignItems: 'center' },
-    title: {
-      fontSize: isMobile ? 28 : 32, fontWeight: '800',
-      color: isMobile ? semantic.surface : colors.neutral[900], marginBottom: 8, letterSpacing: -0.6,
-    },
-    subtitle: {
-      fontSize: isMobile ? 15 : 16, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600],
-      textAlign: 'center', lineHeight: 24, paddingHorizontal: 8,
-    },
-    errorContainer: {
-      backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: colors.error[100],
-      borderRadius: 14, padding: 14, marginBottom: 20,
-    },
-    errorText: { color: colors.error[700], fontSize: isMobile ? 14 : 13, fontWeight: '600', textAlign: 'center' },
-    inputContainer: { marginBottom: 20 },
-    label: {
-      fontSize: isMobile ? 15 : 14, fontWeight: '600',
-      color: isMobile ? semantic.surface : semantic.textPrimary, marginBottom: 8,
-    },
-    input: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
-      borderRadius: 14, paddingHorizontal: 18,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
-      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
-    },
-    inputError: { borderColor: semantic.error, backgroundColor: '#FFFBFB' },
-    passwordContainer: { position: 'relative' },
-    passwordInput: {
-      backgroundColor: isMobile ? 'rgba(255,255,255,0.95)' : semantic.background,
-      borderWidth: 2, borderColor: isMobile ? 'rgba(255,255,255,0.6)' : semantic.border,
-      borderRadius: 14, paddingHorizontal: 18, paddingRight: 52,
-      paddingVertical: isMobile ? 16 : 14, fontSize: isMobile ? 17 : 16, color: colors.neutral[900],
-      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' as any, ...(isMobile && { boxShadow: 'none' as any }) } : {}),
-    },
-    eyeButton: { position: 'absolute', right: 14, top: '50%', transform: [{ translateY: -14 }], padding: 8 },
-    eyeButtonText: { fontSize: 22 },
-    fieldError: { color: colors.error[700], fontSize: 13, marginTop: 6, marginLeft: 4, fontWeight: '500' },
-    forgotPasswordLink: { alignSelf: 'flex-end', marginBottom: 22, marginTop: -2 },
-    forgotPasswordLinkText: { color: isMobile ? semantic.surface : '#A855F7', fontSize: isMobile ? 15 : 14, fontWeight: '600' },
-    primaryButton: {
-      backgroundColor: isMobile ? semantic.surface : '#7C3AED',
-      borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
-      alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-      ...(isMobile && { shadowColor: 'transparent', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
-      ...(Platform.OS === 'web' && !isMobile ? { cursor: 'pointer', transition: 'all 0.2s ease', backgroundImage: 'linear-gradient(135deg, #EC4899 0%, #A855F7 100%)', backgroundColor: 'transparent' } : {}),
-      ...(Platform.OS === 'web' && isMobile ? { boxShadow: 'none' as any } : {}),
-    },
-    primaryButtonDisabled: { opacity: 0.6, ...(Platform.OS === 'web' ? { cursor: 'not-allowed' as any } : {}) },
-    primaryButtonText: { color: isMobile ? '#7C3AED' : semantic.surface, fontSize: isMobile ? 17 : 16, fontWeight: '700', letterSpacing: 0.3 },
-    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
-    dividerLine: { flex: 1, height: 1, backgroundColor: semantic.border },
-    dividerText: { marginHorizontal: 16, fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
-    googleButton: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: semantic.surface, borderWidth: 1, borderColor: semantic.border, borderRadius: 12,
-      paddingVertical: Platform.OS === 'web' ? 16 : 18, marginBottom: 24,
-      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
-    },
-    googleButtonIcon: { fontSize: 20, marginRight: 12 },
-    googleButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
-    registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4, flexWrap: 'wrap' },
-    registerText: { fontSize: isMobile ? 15 : 14, color: isMobile ? 'rgba(255,255,255,0.9)' : colors.neutral[600] },
-    registerLink: { fontSize: isMobile ? 15 : 14, color: isMobile ? semantic.surface : '#A855F7', fontWeight: '700' },
-    forgotPasswordContainer: { marginTop: 8 },
-    forgotPasswordTitle: { fontSize: isMobile ? 22 : 24, fontWeight: '700', color: colors.neutral[900], marginBottom: 8, textAlign: 'center' },
-    forgotPasswordSubtitle: { fontSize: isMobile ? 15 : 14, color: colors.neutral[600], textAlign: 'center', marginBottom: 24, lineHeight: 22 },
-    forgotPasswordActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-    forgotPasswordButton: { flex: 1 },
-    secondaryButton: {
-      backgroundColor: semantic.background, borderRadius: 14, paddingVertical: isMobile ? 18 : 16,
-      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: semantic.border,
-      ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.2s ease' } : {}),
-    },
-    secondaryButtonText: { color: semantic.textPrimary, fontSize: isMobile ? 17 : 16, fontWeight: '600' },
-  }), [screenWidth, screenHeight, isMobile, isTablet, isDesktop]);
+    [screenWidth, screenHeight, isMobile, isTablet, isDesktop],
+  );
 
   const formCardContent = (
     <View style={styles.card}>
@@ -400,9 +595,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               editable={!isSubmitting && !authState.isLoading}
               accessibilityLabel="Email address"
             />
-            {errors.email && (
-              <Text style={styles.fieldError}>{errors.email}</Text>
-            )}
+            {errors.email && <Text style={styles.fieldError}>{errors.email}</Text>}
           </View>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
@@ -425,12 +618,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Text style={styles.eyeButtonText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
-            {errors.password && (
-              <Text style={styles.fieldError}>{errors.password}</Text>
-            )}
+            {errors.password && <Text style={styles.fieldError}>{errors.password}</Text>}
           </View>
           {onForgotPassword && (
             <TouchableOpacity
@@ -443,7 +634,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.primaryButton, (isSubmitting || authState.isLoading) && styles.primaryButtonDisabled]}
+            style={[
+              styles.primaryButton,
+              (isSubmitting || authState.isLoading) && styles.primaryButtonDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={isSubmitting || authState.isLoading}
             accessibilityRole="button"
@@ -457,7 +651,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </TouchableOpacity>
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={onRegister} disabled={isSubmitting || authState.isLoading} accessibilityRole="button" accessibilityLabel="Go to sign up">
+            <TouchableOpacity
+              onPress={onRegister}
+              disabled={isSubmitting || authState.isLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Go to sign up"
+            >
               <Text style={styles.registerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
@@ -475,7 +674,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <View style={styles.decoRing} />
       <View style={styles.welcomeContent}>
         <Text style={styles.welcomeTitle}>Welcome to E-VENT</Text>
-        <Text style={styles.welcomeSubtitle}>Sign in to access your account and discover events and services near you.</Text>
+        <Text style={styles.welcomeSubtitle}>
+          Sign in to access your account and discover events and services near you.
+        </Text>
       </View>
     </View>
   );

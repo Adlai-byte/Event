@@ -8,20 +8,18 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonListItem } from '../../components/ui';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
 import { semantic } from '../../theme';
-
-const { width } = Dimensions.get('window');
-const isMobile = width < 768;
 
 interface MessagingViewProps {
   userId: string;
@@ -38,6 +36,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -176,23 +177,23 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
   const getMessageTypeIcon = (messageType: MessageType): string => {
     switch (messageType) {
       case MessageType.BOOKING_REQUEST:
-        return '📅';
+        return 'calendar';
       case MessageType.BOOKING_CONFIRMATION:
-        return '✅';
+        return 'check-circle';
       case MessageType.BOOKING_CANCELLATION:
-        return '❌';
+        return 'x-circle';
       case MessageType.PAYMENT_REQUEST:
-        return '💳';
+        return 'credit-card';
       case MessageType.PAYMENT_CONFIRMATION:
-        return '💰';
+        return 'dollar-sign';
       case MessageType.SYSTEM:
-        return '🔔';
+        return 'bell';
       case MessageType.IMAGE:
-        return '🖼️';
+        return 'image';
       case MessageType.FILE:
-        return '📎';
+        return 'paperclip';
       default:
-        return '💬';
+        return 'message-circle';
     }
   };
 
@@ -203,9 +204,14 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
     if (isSystemMessage) {
       return (
         <View key={message.id} style={styles.systemMessage}>
-          <Text style={styles.systemMessageText}>
-            {getMessageTypeIcon(message.messageType)} {message.content}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather
+              name={getMessageTypeIcon(message.messageType) as any}
+              size={14}
+              color={semantic.textSecondary}
+            />
+            <Text style={styles.systemMessageText}>{message.content}</Text>
+          </View>
           <Text style={styles.systemMessageTime}>{formatTime(message.timestamp)}</Text>
         </View>
       );
@@ -223,7 +229,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
           ]}
         >
           {message.messageType !== MessageType.TEXT && (
-            <Text style={styles.messageTypeIcon}>{getMessageTypeIcon(message.messageType)}</Text>
+            <Feather
+              name={getMessageTypeIcon(message.messageType) as any}
+              size={16}
+              color={isOwnMessage ? semantic.surface : semantic.textSecondary}
+              style={{ marginBottom: 4 }}
+            />
           )}
           <Text
             style={[
@@ -411,277 +422,278 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: semantic.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: semantic.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: semantic.primary,
-  },
-  conversationsContainer: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: isMobile ? 12 : 20,
-    paddingVertical: isMobile ? 12 : 16,
-    backgroundColor: semantic.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: isMobile ? 14 : 16,
-    color: semantic.primary,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: 'bold',
-    color: semantic.textPrimary,
-  },
-  unreadHeaderBadge: {
-    backgroundColor: '#F44336',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 24,
-    alignItems: 'center',
-  },
-  unreadHeaderCount: {
-    color: semantic.surface,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  conversationsList: {
-    flex: 1,
-  },
-  conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: semantic.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  unreadConversation: {
-    backgroundColor: '#F0F8FF',
-  },
-  conversationAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: semantic.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  conversationAvatarText: {
-    color: semantic.surface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  conversationContent: {
-    flex: 1,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  conversationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: semantic.textPrimary,
-  },
-  conversationTime: {
-    fontSize: 12,
-    color: '#A4B0BE',
-  },
-  conversationPreview: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-  },
-  unreadPreview: {
-    fontWeight: '600',
-    color: semantic.textPrimary,
-  },
-  unreadBadge: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    backgroundColor: '#F44336',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  unreadCount: {
-    color: semantic.surface,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: semantic.textSecondary,
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#A4B0BE',
-    textAlign: 'center',
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: semantic.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  chatTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: semantic.textPrimary,
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: semantic.background,
-  },
-  messagesContent: {
-    padding: 16,
-  },
-  messageContainer: {
-    marginBottom: 16,
-  },
-  ownMessage: {
-    alignItems: 'flex-end',
-  },
-  otherMessage: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: width * 0.75,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  ownMessageBubble: {
-    backgroundColor: semantic.primary,
-    borderBottomRightRadius: 4,
-  },
-  otherMessageBubble: {
-    backgroundColor: semantic.surface,
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  messageTypeIcon: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  ownMessageText: {
-    color: semantic.surface,
-  },
-  otherMessageText: {
-    color: semantic.textPrimary,
-  },
-  messageTime: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  ownMessageTime: {
-    color: '#A4B0BE',
-    textAlign: 'right',
-  },
-  otherMessageTime: {
-    color: '#A4B0BE',
-    textAlign: 'left',
-  },
-  systemMessage: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  systemMessageText: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    backgroundColor: semantic.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  systemMessageTime: {
-    fontSize: 10,
-    color: '#A4B0BE',
-    marginTop: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: semantic.surface,
-    borderTopWidth: 1,
-    borderTopColor: semantic.border,
-  },
-  messageInput: {
-    flex: 1,
-    backgroundColor: semantic.background,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    maxHeight: 100,
-    marginRight: 12,
-  },
-  sendButton: {
-    backgroundColor: semantic.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#A4B0BE',
-  },
-  sendButtonText: {
-    color: semantic.surface,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: semantic.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: semantic.background,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: semantic.primary,
+    },
+    conversationsContainer: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: isMobile ? 12 : 20,
+      paddingVertical: isMobile ? 12 : 16,
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    backButton: {
+      padding: 8,
+    },
+    backButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      color: semantic.primary,
+      fontWeight: '600',
+    },
+    headerTitle: {
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: 'bold',
+      color: semantic.textPrimary,
+    },
+    unreadHeaderBadge: {
+      backgroundColor: '#F44336',
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      minWidth: 24,
+      alignItems: 'center',
+    },
+    unreadHeaderCount: {
+      color: semantic.surface,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    conversationsList: {
+      flex: 1,
+    },
+    conversationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    unreadConversation: {
+      backgroundColor: '#F0F8FF',
+    },
+    conversationAvatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: semantic.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    conversationAvatarText: {
+      color: semantic.surface,
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    conversationContent: {
+      flex: 1,
+    },
+    conversationHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    conversationTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+    },
+    conversationTime: {
+      fontSize: 12,
+      color: '#A4B0BE',
+    },
+    conversationPreview: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    unreadPreview: {
+      fontWeight: '600',
+      color: semantic.textPrimary,
+    },
+    unreadBadge: {
+      position: 'absolute',
+      right: 16,
+      top: 16,
+      backgroundColor: '#F44336',
+      borderRadius: 10,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      minWidth: 20,
+      alignItems: 'center',
+    },
+    unreadCount: {
+      color: semantic.surface,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
+    emptyStateText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: semantic.textSecondary,
+      marginBottom: 8,
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: '#A4B0BE',
+      textAlign: 'center',
+    },
+    chatContainer: {
+      flex: 1,
+    },
+    chatHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    chatTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: semantic.textPrimary,
+    },
+    messagesContainer: {
+      flex: 1,
+      backgroundColor: semantic.background,
+    },
+    messagesContent: {
+      padding: 16,
+    },
+    messageContainer: {
+      marginBottom: 16,
+    },
+    ownMessage: {
+      alignItems: 'flex-end',
+    },
+    otherMessage: {
+      alignItems: 'flex-start',
+    },
+    messageBubble: {
+      maxWidth: screenWidth * 0.75,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 20,
+    },
+    ownMessageBubble: {
+      backgroundColor: semantic.primary,
+      borderBottomRightRadius: 4,
+    },
+    otherMessageBubble: {
+      backgroundColor: semantic.surface,
+      borderBottomLeftRadius: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    messageTypeIcon: {
+      fontSize: 16,
+      marginBottom: 4,
+    },
+    messageText: {
+      fontSize: 16,
+      lineHeight: 20,
+    },
+    ownMessageText: {
+      color: semantic.surface,
+    },
+    otherMessageText: {
+      color: semantic.textPrimary,
+    },
+    messageTime: {
+      fontSize: 12,
+      marginTop: 4,
+    },
+    ownMessageTime: {
+      color: '#A4B0BE',
+      textAlign: 'right',
+    },
+    otherMessageTime: {
+      color: '#A4B0BE',
+      textAlign: 'left',
+    },
+    systemMessage: {
+      alignItems: 'center',
+      marginVertical: 8,
+    },
+    systemMessageText: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      backgroundColor: semantic.border,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+    },
+    systemMessageTime: {
+      fontSize: 10,
+      color: '#A4B0BE',
+      marginTop: 2,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: semantic.surface,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    messageInput: {
+      flex: 1,
+      backgroundColor: semantic.background,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      maxHeight: 100,
+      marginRight: 12,
+    },
+    sendButton: {
+      backgroundColor: semantic.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 20,
+    },
+    sendButtonDisabled: {
+      backgroundColor: '#A4B0BE',
+    },
+    sendButtonText: {
+      color: semantic.surface,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
 export default MessagingView;

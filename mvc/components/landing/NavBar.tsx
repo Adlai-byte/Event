@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 type NavItem = 'home' | 'services' | 'events' | 'about' | 'contact';
 
@@ -39,13 +40,16 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       <TouchableOpacity style={styles.mobileMenuOverlay} onPress={onClose} activeOpacity={1} />
       <View style={styles.mobileMenu}>
         <TouchableOpacity style={styles.mobileMenuClose} onPress={onClose}>
-          <Text style={styles.mobileMenuCloseText}>{'\u2715'}</Text>
+          <Feather name="x" size={20} color="#334155" />
         </TouchableOpacity>
         {NAV_ITEMS.map((nav) => (
           <TouchableOpacity
             key={nav}
             style={[styles.mobileMenuItem, activeNav === nav && styles.mobileMenuItemActive]}
-            onPress={() => { onNavClick(nav); onClose(); }}
+            onPress={() => {
+              onNavClick(nav);
+              onClose();
+            }}
           >
             <Text style={[styles.mobileMenuText, activeNav === nav && styles.mobileMenuTextActive]}>
               {nav.charAt(0).toUpperCase() + nav.slice(1)}
@@ -90,7 +94,7 @@ export const NavBar: React.FC<NavBarProps> = ({
           {/* Search Bar on Left */}
           <View style={styles.searchBarContainer}>
             <TouchableOpacity onPress={onSearchSubmit} style={styles.searchIconButton}>
-              <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
+              <Feather name="search" size={18} color="#94A3B8" />
             </TouchableOpacity>
             <TextInput
               style={styles.searchInput}
@@ -123,7 +127,9 @@ export const NavBar: React.FC<NavBarProps> = ({
                   style={[styles.headerNavItem, activeNav === nav && styles.headerNavItemActive]}
                   onPress={() => onNavClick(nav)}
                 >
-                  <Text style={[styles.headerNavText, activeNav === nav && styles.headerNavTextActive]}>
+                  <Text
+                    style={[styles.headerNavText, activeNav === nav && styles.headerNavTextActive]}
+                  >
                     {nav.charAt(0).toUpperCase() + nav.slice(1)}
                   </Text>
                 </TouchableOpacity>

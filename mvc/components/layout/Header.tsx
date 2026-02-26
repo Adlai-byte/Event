@@ -1,7 +1,8 @@
 // mvc/components/layout/Header.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { colors, semantic, typography, spacing, shadow } from '../../theme';
+import { Feather } from '@expo/vector-icons';
+import { colors, typography, spacing, shadow } from '../../theme';
 
 interface HeaderProps {
   title: string;
@@ -27,7 +28,7 @@ export function Header({
             style={styles.menuButton}
             accessibilityLabel="Open menu"
           >
-            <Text style={styles.menuIcon}>☰</Text>
+            <Feather name="menu" size={22} color={colors.neutral[800]} />
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{title}</Text>
@@ -38,7 +39,7 @@ export function Header({
           style={styles.notifButton}
           accessibilityLabel={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
         >
-          <Text style={styles.notifIcon}>🔔</Text>
+          <Feather name="bell" size={20} color={colors.neutral[700]} />
           {notificationCount > 0 && (
             <View style={styles.notifBadge}>
               <Text style={styles.notifBadgeText}>
@@ -73,10 +74,6 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
     padding: spacing.xs,
   },
-  menuIcon: {
-    fontSize: 22,
-    color: colors.neutral[800],
-  },
   title: {
     ...typography.h2,
     color: colors.neutral[800],
@@ -88,9 +85,6 @@ const styles = StyleSheet.create({
   notifButton: {
     padding: spacing.sm,
     position: 'relative',
-  },
-  notifIcon: {
-    fontSize: 20,
   },
   notifBadge: {
     position: 'absolute',

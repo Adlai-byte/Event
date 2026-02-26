@@ -26,27 +26,30 @@ interface AppLayoutProps {
   onLogout: () => void;
 }
 
-const mobileNavItems: Record<Role, { key: string; label: string; icon: string }[]> = {
+const mobileNavItems: Record<
+  Role,
+  { key: string; label: string; icon: keyof typeof import('@expo/vector-icons').Feather.glyphMap }[]
+> = {
   user: [
-    { key: 'dashboard', label: 'Home', icon: '\u{1F3E0}' },
-    { key: 'bookings', label: 'Bookings', icon: '\u{1F4C5}' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'hiring', label: 'Hiring', icon: '\u{1F4BC}' },
-    { key: 'profile', label: 'Profile', icon: '\u{1F464}' },
+    { key: 'dashboard', label: 'Home', icon: 'home' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
+    { key: 'profile', label: 'Profile', icon: 'user' },
   ],
   provider: [
-    { key: 'dashboard', label: 'Home', icon: '\u{1F3E0}' },
-    { key: 'services', label: 'Services', icon: '\u{1F6E0}\uFE0F' },
-    { key: 'bookings', label: 'Bookings', icon: '\u{1F4C5}' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'profile', label: 'Profile', icon: '\u{1F464}' },
+    { key: 'dashboard', label: 'Home', icon: 'home' },
+    { key: 'services', label: 'Services', icon: 'tool' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'profile', label: 'Profile', icon: 'user' },
   ],
   admin: [
-    { key: 'dashboard', label: 'Home', icon: '\u{1F3E0}' },
-    { key: 'user', label: 'Users', icon: '\u{1F465}' },
-    { key: 'services', label: 'Services', icon: '\u{1F6E0}\uFE0F' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'providerApplications', label: 'Apps', icon: '\u{1F4CB}' },
+    { key: 'dashboard', label: 'Home', icon: 'home' },
+    { key: 'user', label: 'Users', icon: 'users' },
+    { key: 'services', label: 'Services', icon: 'tool' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'providerApplications', label: 'Apps', icon: 'clipboard' },
   ],
 };
 
@@ -65,8 +68,11 @@ export function AppLayout({
   const { data: unreadMessages = 0 } = useQuery({
     queryKey: ['unread-messages', user?.email],
     queryFn: async () => {
-      const data = await apiClient.get<{ ok: boolean; count?: number }>('/api/user/messages/count', { email: user!.email });
-      return data.ok ? (data.count || 0) : 0;
+      const data = await apiClient.get<{ ok: boolean; count?: number }>(
+        '/api/user/messages/count',
+        { email: user!.email },
+      );
+      return data.ok ? data.count || 0 : 0;
     },
     enabled: !!user?.email,
     refetchInterval: 60000,
@@ -75,8 +81,11 @@ export function AppLayout({
   const { data: notificationCount = 0 } = useQuery({
     queryKey: ['unread-notifications', user?.email],
     queryFn: async () => {
-      const data = await apiClient.get<{ ok: boolean; count?: number }>('/api/notifications/unread-count', { email: user!.email });
-      return data.ok ? (data.count || 0) : 0;
+      const data = await apiClient.get<{ ok: boolean; count?: number }>(
+        '/api/notifications/unread-count',
+        { email: user!.email },
+      );
+      return data.ok ? data.count || 0 : 0;
     },
     enabled: !!user?.email,
     refetchInterval: 60000,
@@ -105,9 +114,7 @@ export function AppLayout({
             notificationCount={notificationCount}
             onNotificationPress={() => handleNavigate('notifications')}
           />
-          <View style={styles.pageContent}>
-            {children}
-          </View>
+          <View style={styles.pageContent}>{children}</View>
         </View>
       </View>
     );
@@ -123,9 +130,7 @@ export function AppLayout({
         onMenuPress={() => setSidebarOpen(true)}
         onNotificationPress={() => handleNavigate('notifications')}
       />
-      <View style={styles.mobileContent}>
-        {children}
-      </View>
+      <View style={styles.mobileContent}>{children}</View>
       <BottomNav
         items={mobileNavItems[role]}
         activeRoute={activeRoute}
@@ -136,7 +141,11 @@ export function AppLayout({
       {/* Mobile sidebar drawer */}
       <Modal visible={sidebarOpen} transparent animationType="none">
         <View style={styles.drawerOverlay}>
-          <Pressable style={styles.drawerBackdrop} onPress={() => setSidebarOpen(false)} accessibilityLabel="Close menu" />
+          <Pressable
+            style={styles.drawerBackdrop}
+            onPress={() => setSidebarOpen(false)}
+            accessibilityLabel="Close menu"
+          />
           <Sidebar
             role={role}
             activeRoute={activeRoute}

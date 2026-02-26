@@ -1,12 +1,13 @@
 // mvc/components/layout/BottomNav.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors, semantic, typography, spacing, shadow } from '../../theme';
 
 interface BottomNavItem {
   key: string;
   label: string;
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface BottomNavProps {
@@ -33,12 +34,14 @@ export function BottomNav({ items, activeRoute, unreadMessages = 0, onNavigate }
             accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconContainer}>
-              <Text style={[styles.icon, isActive && styles.iconActive]}>{item.icon}</Text>
+              <Feather
+                name={item.icon}
+                size={20}
+                color={isActive ? semantic.primary : colors.neutral[400]}
+              />
               {showBadge && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {unreadMessages > 9 ? '9+' : unreadMessages}
-                  </Text>
+                  <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
                 </View>
               )}
             </View>
@@ -68,13 +71,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     position: 'relative',
     marginBottom: 2,
-  },
-  icon: {
-    fontSize: 20,
-    opacity: 0.5,
-  },
-  iconActive: {
-    opacity: 1,
   },
   label: {
     ...typography.caption,

@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { styles } from '../../views/provider/HiringView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/provider/HiringView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface PostJobModalProps {
   visible: boolean;
@@ -61,14 +63,12 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   onSubmit,
   onClose,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   return (
     <>
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={onClose}
-      >
+      <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
         <View style={styles.modalOverlay}>
           {/* Success Toast Notification */}
           {showSuccessToast && (
@@ -89,7 +89,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               ]}
             >
               <View style={styles.successToastContent}>
-                <Text style={styles.successToastIcon}>✓</Text>
+                <Feather name="check-circle" size={16} color="#10b981" />
                 <Text style={styles.successToastText}>Successfully Added</Text>
               </View>
             </Animated.View>
@@ -114,7 +114,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               ]}
             >
               <View style={styles.errorToastContent}>
-                <Text style={styles.errorToastIcon}>⚠</Text>
+                <Feather name="alert-triangle" size={16} color="#ef4444" />
                 <Text style={styles.errorToastText}>{errorToastMessage}</Text>
               </View>
             </Animated.View>
@@ -123,11 +123,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{isEdit ? 'Edit Job Posting' : 'Post New Job'}</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -171,7 +168,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.jobTypeOption,
-                        jobType === 'full_time' && styles.jobTypeOptionSelected
+                        jobType === 'full_time' && styles.jobTypeOptionSelected,
                       ]}
                       onPress={() => {
                         setJobType('full_time');
@@ -179,21 +176,27 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                       }}
                       disabled={isPostingJob}
                     >
-                      <View style={[
-                        styles.jobTypeRadio,
-                        jobType === 'full_time' && styles.jobTypeRadioSelected
-                      ]}>
+                      <View
+                        style={[
+                          styles.jobTypeRadio,
+                          jobType === 'full_time' && styles.jobTypeRadioSelected,
+                        ]}
+                      >
                         {jobType === 'full_time' && <View style={styles.jobTypeRadioInner} />}
                       </View>
-                      <Text style={[
-                        styles.jobTypeLabel,
-                        jobType === 'full_time' && styles.jobTypeLabelSelected
-                      ]}>Full Time</Text>
+                      <Text
+                        style={[
+                          styles.jobTypeLabel,
+                          jobType === 'full_time' && styles.jobTypeLabelSelected,
+                        ]}
+                      >
+                        Full Time
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.jobTypeOption,
-                        jobType === 'part_time' && styles.jobTypeOptionSelected
+                        jobType === 'part_time' && styles.jobTypeOptionSelected,
                       ]}
                       onPress={() => {
                         setJobType('part_time');
@@ -201,16 +204,22 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                       }}
                       disabled={isPostingJob}
                     >
-                      <View style={[
-                        styles.jobTypeRadio,
-                        jobType === 'part_time' && styles.jobTypeRadioSelected
-                      ]}>
+                      <View
+                        style={[
+                          styles.jobTypeRadio,
+                          jobType === 'part_time' && styles.jobTypeRadioSelected,
+                        ]}
+                      >
                         {jobType === 'part_time' && <View style={styles.jobTypeRadioInner} />}
                       </View>
-                      <Text style={[
-                        styles.jobTypeLabel,
-                        jobType === 'part_time' && styles.jobTypeLabelSelected
-                      ]}>Part Time</Text>
+                      <Text
+                        style={[
+                          styles.jobTypeLabel,
+                          jobType === 'part_time' && styles.jobTypeLabelSelected,
+                        ]}
+                      >
+                        Part Time
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -220,7 +229,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                 <Text style={styles.label}>Deadline Date *</Text>
                 {Platform.OS === 'web' ? (
                   <View style={styles.deadlineInputWrapper}>
-                    {/* @ts-ignore - HTML input for web date picker */}
+                    {/* @ts-expect-error - HTML input for web date picker */}
                     <input
                       type="date"
                       value={deadlineDate || ''}
@@ -246,21 +255,37 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                   </View>
                 ) : (
                   <TouchableOpacity
-                    style={[styles.deadlinePickerButton, isPostingJob && styles.deadlinePickerButtonDisabled]}
+                    style={[
+                      styles.deadlinePickerButton,
+                      isPostingJob && styles.deadlinePickerButtonDisabled,
+                    ]}
                     onPress={() => !isPostingJob && setShowDeadlineDatePicker(true)}
                     disabled={isPostingJob}
                     activeOpacity={0.7}
                   >
                     <View style={styles.deadlinePickerButtonLeft}>
-                      <Text style={styles.deadlinePickerIcon}>📅</Text>
-                      <Text style={deadlineDate ? styles.deadlinePickerText : styles.deadlinePickerPlaceholder}>
-                        {deadlineDate ? (() => {
-                          const d = new Date(deadlineDate);
-                          return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-                        })() : 'Select deadline date'}
+                      <Feather name="calendar" size={16} color="#64748B" />
+                      <Text
+                        style={
+                          deadlineDate
+                            ? styles.deadlinePickerText
+                            : styles.deadlinePickerPlaceholder
+                        }
+                      >
+                        {deadlineDate
+                          ? (() => {
+                              const d = new Date(deadlineDate);
+                              return d.toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              });
+                            })()
+                          : 'Select deadline date'}
                       </Text>
                     </View>
-                    <Text style={styles.deadlinePickerArrow}>›</Text>
+                    <Feather name="chevron-right" size={18} color="#64748B" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -268,13 +293,13 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               {/* Error Message Display */}
               {postJobError && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Feather name="alert-triangle" size={16} color="#ef4444" />
                   <Text style={styles.errorText}>{postJobError}</Text>
                   <TouchableOpacity
                     onPress={() => setPostJobError(null)}
                     style={styles.errorCloseButton}
                   >
-                    <Text style={styles.errorCloseText}>✕</Text>
+                    <Feather name="x" size={16} color="#64748B" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -293,13 +318,24 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                   styles.modalButton,
                   styles.submitButton,
                   isEdit
-                    ? (!jobTitle.trim() || !description.trim() || !deadlineDate) && styles.submitButtonDisabled
-                    : (isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate || !jobType) && styles.submitButtonDisabled
+                    ? (!jobTitle.trim() || !description.trim() || !deadlineDate) &&
+                      styles.submitButtonDisabled
+                    : (isPostingJob ||
+                        !jobTitle.trim() ||
+                        !description.trim() ||
+                        !deadlineDate ||
+                        !jobType) &&
+                      styles.submitButtonDisabled,
                 ]}
                 onPress={onSubmit}
-                disabled={isEdit
-                  ? (!jobTitle.trim() || !description.trim() || !deadlineDate)
-                  : (isPostingJob || !jobTitle.trim() || !description.trim() || !deadlineDate || !jobType)
+                disabled={
+                  isEdit
+                    ? !jobTitle.trim() || !description.trim() || !deadlineDate
+                    : isPostingJob ||
+                      !jobTitle.trim() ||
+                      !description.trim() ||
+                      !deadlineDate ||
+                      !jobType
                 }
               >
                 {isPostingJob ? (
@@ -332,7 +368,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                   onPress={() => setShowDeadlineDatePicker(false)}
                   style={styles.pickerModalCloseButton}
                 >
-                  <Text style={styles.pickerModalCloseText}>✕</Text>
+                  <Feather name="x" size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.pickerModalBody}>
@@ -356,7 +392,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                         key={date}
                         style={[
                           styles.pickerModalItem,
-                          isSelected && styles.pickerModalItemSelected
+                          isSelected && styles.pickerModalItemSelected,
                         ]}
                         onPress={() => {
                           setDeadlineDate(date);
@@ -364,10 +400,12 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                           setPostJobError(null);
                         }}
                       >
-                        <Text style={[
-                          styles.pickerModalItemText,
-                          isSelected && styles.pickerModalItemTextSelected
-                        ]}>
+                        <Text
+                          style={[
+                            styles.pickerModalItemText,
+                            isSelected && styles.pickerModalItemTextSelected,
+                          ]}
+                        >
                           {dayName}, {month} {day}, {year}
                         </Text>
                       </TouchableOpacity>

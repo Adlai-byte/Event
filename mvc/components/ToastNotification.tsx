@@ -1,13 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface ToastNotificationProps {
   visible: boolean;
@@ -18,8 +12,67 @@ interface ToastNotificationProps {
   onPress?: () => void;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768 || Platform.OS !== 'web';
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: Platform.OS === 'web' ? 20 : 60,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      zIndex: 10000,
+      elevation: 10000,
+      pointerEvents: 'box-none',
+    },
+    toast: {
+      width: isMobile ? screenWidth - 32 : Math.min(400, screenWidth - 32),
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+      marginHorizontal: 16,
+    },
+    toastContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+    },
+    iconContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    icon: {
+      fontSize: 18,
+      color: '#ffffff',
+      fontWeight: 'bold',
+    },
+    message: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#ffffff',
+      lineHeight: 20,
+    },
+    closeButton: {
+      width: 24,
+      height: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    closeIcon: {
+      fontSize: 24,
+      color: '#ffffff',
+      fontWeight: 'bold',
+      lineHeight: 24,
+    },
+  });
 
 export const ToastNotification: React.FC<ToastNotificationProps> = ({
   visible,
@@ -29,6 +82,8 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
   onClose,
   onPress,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -80,16 +135,20 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
 
   if (!visible) return null;
 
-  const getTypeStyles = () => {
+  const getTypeStyles = (): {
+    bg: string;
+    iconName: React.ComponentProps<typeof Feather>['name'];
+    iconBg: string;
+  } => {
     switch (type) {
       case 'success':
-        return { bg: '#10b981', icon: '✓', iconBg: '#059669' };
+        return { bg: '#10b981', iconName: 'check-circle', iconBg: '#059669' };
       case 'error':
-        return { bg: '#ef4444', icon: '✕', iconBg: '#dc2626' };
+        return { bg: '#ef4444', iconName: 'x-circle', iconBg: '#dc2626' };
       case 'warning':
-        return { bg: '#f59e0b', icon: '⚠', iconBg: '#d97706' };
+        return { bg: '#f59e0b', iconName: 'alert-triangle', iconBg: '#d97706' };
       default:
-        return { bg: '#3b82f6', icon: 'ℹ', iconBg: '#2563eb' };
+        return { bg: '#3b82f6', iconName: 'info', iconBg: '#2563eb' };
     }
   };
 
@@ -113,7 +172,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
           activeOpacity={0.8}
         >
           <View style={[styles.iconContainer, { backgroundColor: typeStyles.iconBg }]}>
-            <Text style={styles.icon}>{typeStyles.icon}</Text>
+            <Feather name={typeStyles.iconName} size={18} color="#ffffff" />
           </View>
           <Text style={styles.message} numberOfLines={2}>
             {message}
@@ -123,71 +182,10 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
             style={styles.closeButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.closeIcon}>×</Text>
+            <Feather name="x" size={20} color="#ffffff" />
           </TouchableOpacity>
         </TouchableOpacity>
       </Animated.View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? 20 : 60,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10000,
-    elevation: 10000,
-    pointerEvents: 'box-none',
-  },
-  toast: {
-    width: isMobile ? screenWidth - 32 : Math.min(400, screenWidth - 32),
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    marginHorizontal: 16,
-  },
-  toastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  message: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-    lineHeight: 20,
-  },
-  closeButton: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  closeIcon: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: 'bold',
-    lineHeight: 24,
-  },
-});

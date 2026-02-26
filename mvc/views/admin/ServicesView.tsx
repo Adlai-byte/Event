@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { User as UserModel } from '../../models/User';
 import { AppLayout } from '../../components/layout';
@@ -27,7 +28,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
     setActiveTab,
     setSearchQuery,
     setFilterCategory,
-    setNewService,
+    setNewService: _setNewService,
     handleAddService,
     handleMapMessage,
     handleToggleServiceStatus,
@@ -56,7 +57,11 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 accessibilityRole="button"
                 accessibilityLabel="View all services tab"
               >
-                <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>View All</Text>
+                <Text
+                  style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}
+                >
+                  View All
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
@@ -64,7 +69,11 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 accessibilityRole="button"
                 accessibilityLabel="Add service tab"
               >
-                <Text style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}>Add Service</Text>
+                <Text
+                  style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}
+                >
+                  Add Service
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -80,16 +89,28 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                   onChangeText={setSearchQuery}
                   accessibilityLabel="Search services"
                 />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilter}>
-                  {categories.map(cat => (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryFilter}
+                >
+                  {categories.map((cat) => (
                     <TouchableOpacity
                       key={cat}
-                      style={[styles.categoryChip, filterCategory === cat && styles.categoryChipActive]}
+                      style={[
+                        styles.categoryChip,
+                        filterCategory === cat && styles.categoryChipActive,
+                      ]}
                       onPress={() => setFilterCategory(cat)}
                       accessibilityRole="button"
                       accessibilityLabel={`Filter by ${cat}`}
                     >
-                      <Text style={[styles.categoryChipText, filterCategory === cat && styles.categoryChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          filterCategory === cat && styles.categoryChipTextActive,
+                        ]}
+                      >
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -99,19 +120,29 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
 
               {/* Services List */}
               {filteredServices.map((service: Service, i: number) => (
-                <View key={service.id} style={[styles.serviceCard, i % 2 === 1 && styles.serviceCardAlt]}>
+                <View
+                  key={service.id}
+                  style={[styles.serviceCard, i % 2 === 1 && styles.serviceCardAlt]}
+                >
                   <View style={styles.serviceInfo}>
                     <View style={styles.serviceHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.serviceName}>{service.name}</Text>
                         <Text style={styles.serviceProvider}>Provider: {service.provider}</Text>
                       </View>
-                      <View style={[styles.statusBadge, service.status === 'active' ? styles.statusActive : styles.statusInactive]}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          service.status === 'active' ? styles.statusActive : styles.statusInactive,
+                        ]}
+                      >
                         <Text style={styles.statusText}>{service.status}</Text>
                       </View>
                     </View>
                     {service.description ? (
-                      <Text style={styles.serviceDescription} numberOfLines={2}>{service.description}</Text>
+                      <Text style={styles.serviceDescription} numberOfLines={2}>
+                        {service.description}
+                      </Text>
                     ) : null}
                     <View style={styles.serviceMeta}>
                       <Text style={styles.serviceCategory}>{service.category}</Text>
@@ -121,19 +152,39 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                           <Text style={styles.perPersonLabel}> /person</Text>
                         )}
                       </Text>
-                      <Text style={styles.serviceRating}>{'\u2B50'} {service.rating} ({service.bookings})</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="star" size={14} color="#f59e0b" />
+                        <Text style={styles.serviceRating}>
+                          {service.rating} ({service.bookings})
+                        </Text>
+                      </View>
                     </View>
                   </View>
                   <View style={styles.serviceActions}>
                     <TouchableOpacity
-                      style={[styles.actionButton, service.status === 'active' ? styles.deactivateButton : styles.activateButton]}
+                      style={[
+                        styles.actionButton,
+                        service.status === 'active'
+                          ? styles.deactivateButton
+                          : styles.activateButton,
+                      ]}
                       onPress={() => handleToggleServiceStatus(service)}
                       accessibilityRole="button"
-                      accessibilityLabel={service.status === 'active' ? `Deactivate ${service.name}` : `Activate ${service.name}`}
+                      accessibilityLabel={
+                        service.status === 'active'
+                          ? `Deactivate ${service.name}`
+                          : `Activate ${service.name}`
+                      }
                     >
-                      <Text style={styles.actionButtonText}>{service.status === 'active' ? 'Deactivate' : 'Activate'}</Text>
+                      <Text style={styles.actionButtonText}>
+                        {service.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.editButton} accessibilityRole="button" accessibilityLabel={`Edit ${service.name}`}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${service.name}`}
+                    >
                       <Text style={styles.editButtonText}>Edit</Text>
                     </TouchableOpacity>
                   </View>
@@ -152,7 +203,10 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
             <View style={styles.addForm}>
               <Text style={styles.formLabel}>Provider Email *</Text>
               <TextInput
-                style={[styles.addInputFull, emailError && { borderColor: '#ef4444', borderWidth: 1 }]}
+                style={[
+                  styles.addInputFull,
+                  emailError && { borderColor: '#ef4444', borderWidth: 1 },
+                ]}
                 placeholder="Enter provider email"
                 value={newService.providerEmail}
                 onChangeText={handleEmailChange}
@@ -161,7 +215,9 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 autoComplete="email"
                 accessibilityLabel="Provider email"
               />
-              {emailError && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{emailError}</Text>}
+              {emailError && (
+                <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{emailError}</Text>
+              )}
 
               <Text style={styles.formLabel}>Service Name *</Text>
               <TextInput
@@ -184,12 +240,14 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
               />
 
               <Text style={styles.formLabel}>Location *</Text>
-              <Text style={styles.mapHint}>Click on the map or drag the marker to pin the service location</Text>
+              <Text style={styles.mapHint}>
+                Click on the map or drag the marker to pin the service location
+              </Text>
               <View style={styles.mapContainer}>
                 {mapLocation && Platform.OS === 'web' ? (
                   <View
                     style={styles.map}
-                    // @ts-ignore - web-specific prop
+                    // @ts-expect-error - web-specific prop
                     nativeID="map-container"
                   />
                 ) : mapLocation ? (
@@ -204,9 +262,12 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                 ) : null}
               </View>
               {newService.address ? (
-                <Text style={styles.addressText} numberOfLines={2}>
-                  {'\uD83D\uDCCD'} {newService.address}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Feather name="map-pin" size={14} color="#64748B" />
+                  <Text style={[styles.addressText, { flex: 1 }]} numberOfLines={2}>
+                    {newService.address}
+                  </Text>
+                </View>
               ) : (
                 <Text style={styles.addressPlaceholder}>
                   Location will appear here after pinning
@@ -215,55 +276,87 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
 
               <Text style={styles.formLabel}>Category *</Text>
               <View style={styles.categoryGrid}>
-                {categories.filter(c => c !== 'all').map(cat => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.categoryOption, newService.category === cat && styles.categoryOptionSelected]}
-                    onPress={() => updateNewServiceField('category', cat)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select ${cat} category`}
-                  >
-                    <Text style={[styles.categoryOptionText, newService.category === cat && styles.categoryOptionTextSelected]}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {categories
+                  .filter((c) => c !== 'all')
+                  .map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.categoryOption,
+                        newService.category === cat && styles.categoryOptionSelected,
+                      ]}
+                      onPress={() => updateNewServiceField('category', cat)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${cat} category`}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryOptionText,
+                          newService.category === cat && styles.categoryOptionTextSelected,
+                        ]}
+                      >
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
               </View>
 
               <Text style={styles.formLabel}>Pricing Type *</Text>
               <View style={styles.pricingTypeContainer}>
                 <TouchableOpacity
-                  style={[styles.pricingTypeOption, newService.pricingType === 'fixed' && styles.pricingTypeOptionSelected]}
+                  style={[
+                    styles.pricingTypeOption,
+                    newService.pricingType === 'fixed' && styles.pricingTypeOptionSelected,
+                  ]}
                   onPress={() => updateNewServiceField('pricingType', 'fixed')}
                   accessibilityRole="button"
                   accessibilityLabel="Fixed price"
                 >
-                  <Text style={[styles.pricingTypeText, newService.pricingType === 'fixed' && styles.pricingTypeTextSelected]}>
+                  <Text
+                    style={[
+                      styles.pricingTypeText,
+                      newService.pricingType === 'fixed' && styles.pricingTypeTextSelected,
+                    ]}
+                  >
                     Fixed Price
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.pricingTypeOption, newService.pricingType === 'per_person' && styles.pricingTypeOptionSelected]}
+                  style={[
+                    styles.pricingTypeOption,
+                    newService.pricingType === 'per_person' && styles.pricingTypeOptionSelected,
+                  ]}
                   onPress={() => updateNewServiceField('pricingType', 'per_person')}
                   accessibilityRole="button"
                   accessibilityLabel="Per person pricing"
                 >
-                  <Text style={[styles.pricingTypeText, newService.pricingType === 'per_person' && styles.pricingTypeTextSelected]}>
+                  <Text
+                    style={[
+                      styles.pricingTypeText,
+                      newService.pricingType === 'per_person' && styles.pricingTypeTextSelected,
+                    ]}
+                  >
                     Per Person (Per Pax)
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.formLabel}>
-                {newService.pricingType === 'per_person' ? 'Price per Person (\u20B1) *' : 'Price (\u20B1) *'}
+                {newService.pricingType === 'per_person'
+                  ? 'Price per Person (\u20B1) *'
+                  : 'Price (\u20B1) *'}
               </Text>
               <TextInput
                 style={styles.addInputFull}
-                placeholder={newService.pricingType === 'per_person' ? "Enter price per person" : "Enter price"}
+                placeholder={
+                  newService.pricingType === 'per_person' ? 'Enter price per person' : 'Enter price'
+                }
                 keyboardType="numeric"
                 value={newService.price}
                 onChangeText={(text) => updateNewServiceField('price', text)}
-                accessibilityLabel={newService.pricingType === 'per_person' ? 'Price per person' : 'Price'}
+                accessibilityLabel={
+                  newService.pricingType === 'per_person' ? 'Price per person' : 'Price'
+                }
               />
 
               <TouchableOpacity

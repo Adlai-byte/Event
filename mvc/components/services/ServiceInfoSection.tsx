@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { ServiceDTO } from '../../types/service';
 import { ServicePackage } from '../../models/Package';
 import { getCategoryIcon, formatPrice } from '../../utils/serviceHelpers';
 import { PackageCard } from '../PackageCard';
-import { styles } from '../../views/user/ServiceDetailsView.styles';
+import { createStyles } from '../../views/user/ServiceDetailsView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface ServiceInfoSectionProps {
   service: ServiceDTO;
@@ -37,6 +39,9 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
   isMobile = false,
   children,
 }) => {
+  const { screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   return (
     <View style={styles.infoCard}>
       {/* Service Header */}
@@ -58,7 +63,7 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
             </TouchableOpacity>
             {rating > 0 && !isNaN(rating) && (
               <View style={styles.ratingBadge}>
-                <Text style={styles.ratingStar}>⭐</Text>
+                <Feather name="star" size={14} color="#f59e0b" />
                 <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
                 <Text style={styles.reviewCount}>({reviewCount})</Text>
               </View>
@@ -66,7 +71,7 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
           </View>
         </View>
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryIcon}>{getCategoryIcon(service.s_category)}</Text>
+          <Feather name={getCategoryIcon(service.s_category) as any} size={20} color="#64748B" />
         </View>
       </View>
 
@@ -94,7 +99,7 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
               ? 'Select a package for better value'
               : 'Select a package for better value or book individual services'}
           </Text>
-          {packages.map(pkg => (
+          {packages.map((pkg) => (
             <PackageCard
               key={pkg.id}
               pkg={pkg}
@@ -120,7 +125,7 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
         <View style={styles.detailsGrid}>
           {service.s_duration && (
             <View style={styles.detailItem}>
-              <Text style={styles.detailIcon}>⏱️</Text>
+              <Feather name="clock" size={18} color="#64748B" />
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Duration</Text>
                 <Text style={styles.detailValue}>
@@ -132,7 +137,7 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
 
           {service.s_max_capacity && (
             <View style={styles.detailItem}>
-              <Text style={styles.detailIcon}>👥</Text>
+              <Feather name="users" size={18} color="#64748B" />
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Capacity</Text>
                 <Text style={styles.detailValue}>{service.s_max_capacity} people</Text>
@@ -145,11 +150,12 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
       {/* Location - Modern Card */}
       {(service.s_address || service.s_city || service.s_state) && (
         <View style={styles.locationCard}>
-          <Text style={styles.cardTitle}>📍 Location</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="map-pin" size={16} color="#64748B" />
+            <Text style={styles.cardTitle}>Location</Text>
+          </View>
           <View style={styles.locationContent}>
-            {service.s_address && (
-              <Text style={styles.locationText}>{service.s_address}</Text>
-            )}
+            {service.s_address && <Text style={styles.locationText}>{service.s_address}</Text>}
             {(service.s_city || service.s_state) && (
               <Text style={styles.locationCity}>
                 {service.s_city && `${service.s_city}`}

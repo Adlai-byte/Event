@@ -9,8 +9,10 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../../services/api';
-import { styles } from '../../views/user/BookingView.styles';
+import { createStyles } from '../../views/user/BookingView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import type { Booking } from './types';
 
 export interface EventDetailsModalProps {
@@ -36,6 +38,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   serviceRatings = {},
   onRateService,
 }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
   const [imageError, setImageError] = useState(false);
 
   // Check if booking is in the past
@@ -71,7 +75,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       }
     } catch (error) {
       console.error('Error downloading invoice:', error);
-      Alert.alert('Error', `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      Alert.alert(
+        'Error',
+        `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   };
 
@@ -83,17 +90,14 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       {/* Header */}
       <View style={styles.modalHeader}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>{'\u2715'}</Text>
+          <Feather name="x" size={22} color="#64748B" />
         </TouchableOpacity>
         <Text style={styles.modalTitle}>Event Details</Text>
         <View style={styles.placeholder} />
       </View>
 
       {/* Content */}
-      <ScrollView
-        style={styles.modalContent}
-        contentContainerStyle={styles.modalContentContainer}
-      >
+      <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalContentContainer}>
         {/* Event Image */}
         <View style={styles.eventImageContainer}>
           {booking.image && !imageError ? (
@@ -124,7 +128,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           <View style={styles.costSection}>
             <Text style={styles.costLabel}>Total Cost:</Text>
             <View style={styles.costValueContainer}>
-              <Text style={styles.costValue}>{'\u20B1'}{booking.totalCost.toLocaleString()}</Text>
+              <Text style={styles.costValue}>
+                {'\u20B1'}
+                {booking.totalCost.toLocaleString()}
+              </Text>
               {booking.bookingStatus === 'cancelled' && (
                 <View style={styles.cancelledBadge}>
                   <Text style={styles.cancelledBadgeText}>CANCELLED</Text>
@@ -158,7 +165,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       <Text style={styles.serviceDetailName}>{service.name}</Text>
                       {existingRating && (
                         <View style={styles.ratingBadge}>
-                          <Text style={styles.ratingBadgeText}>{'\u2605'} {existingRating.rating}/5</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Feather name="star" size={16} color="#f59e0b" />
+                            <Text style={styles.ratingBadgeText}>{existingRating.rating}/5</Text>
+                          </View>
                         </View>
                       )}
                     </View>
@@ -171,11 +181,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     </View>
                     <View style={styles.serviceDetailRow}>
                       <Text style={styles.serviceDetailLabel}>Unit Price:</Text>
-                      <Text style={styles.serviceDetailValue}>{'\u20B1'}{service.unitPrice.toLocaleString()}</Text>
+                      <Text style={styles.serviceDetailValue}>
+                        {'\u20B1'}
+                        {service.unitPrice.toLocaleString()}
+                      </Text>
                     </View>
                     <View style={styles.serviceDetailRow}>
                       <Text style={styles.serviceDetailLabel}>Subtotal:</Text>
-                      <Text style={styles.serviceDetailValue}>{'\u20B1'}{service.totalPrice.toLocaleString()}</Text>
+                      <Text style={styles.serviceDetailValue}>
+                        {'\u20B1'}
+                        {service.totalPrice.toLocaleString()}
+                      </Text>
                     </View>
                     {existingRating && existingRating.comment && (
                       <View style={styles.ratingCommentBox}>
@@ -189,13 +205,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         onPress={() => onRateService(serviceId, service.name)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.rateButtonIcon}>{'\u2B50'}</Text>
+                        <Feather name="star" size={16} color="#fff" />
                         <Text style={styles.rateButtonText}>Rate Service</Text>
                       </TouchableOpacity>
                     )}
                     {isCompleted && existingRating && (
                       <View style={styles.ratedBadge}>
-                        <Text style={styles.ratedBadgeText}>{'\u2713'} Rating Submitted</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Feather name="check-circle" size={16} color="#10b981" />
+                          <Text style={styles.ratedBadgeText}>Rating Submitted</Text>
+                        </View>
                       </View>
                     )}
                   </View>
@@ -224,7 +243,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         {showPayButton && (
           <TouchableOpacity style={styles.payButtonModal} onPress={onPay} activeOpacity={0.8}>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>{'\uD83D\uDCB3'}</Text>
+              <Feather name="credit-card" size={16} color="#fff" />
               <Text style={styles.payButtonModalText}>Pay Now</Text>
             </View>
           </TouchableOpacity>
@@ -236,47 +255,53 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             activeOpacity={0.8}
           >
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>{'\uD83D\uDCC4'}</Text>
+              <Feather name="file-text" size={16} color="#fff" />
               <Text style={styles.invoiceButtonText}>Invoice</Text>
             </View>
           </TouchableOpacity>
         )}
         {booking.bookingStatus === 'confirmed' && onMessageProvider && (
           <TouchableOpacity
-            style={[styles.messageButton, (showPayButton || booking.isPaid) && styles.messageButtonWithPay]}
+            style={[
+              styles.messageButton,
+              (showPayButton || booking.isPaid) && styles.messageButtonWithPay,
+            ]}
             onPress={() => onMessageProvider(booking.id)}
             activeOpacity={0.8}
           >
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>{'\uD83D\uDCAC'}</Text>
+              <Feather name="message-circle" size={16} color="#fff" />
               <Text style={styles.messageButtonText}>Message</Text>
             </View>
           </TouchableOpacity>
         )}
-        {!booking.isPaid && !isPast && booking.bookingStatus !== 'completed' && booking.bookingStatus !== 'cancelled' && (
-          <>
-            <TouchableOpacity
-              style={[styles.editButton, (showPayButton || booking.bookingStatus === 'confirmed') && styles.editButtonWithOther]}
-              onPress={onEdit}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonIcon}>{'\u270F\uFE0F'}</Text>
-                <Text style={styles.editButtonText}>Edit</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={onCancel}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonIcon}>{'\u274C'}</Text>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </View>
-            </TouchableOpacity>
-          </>
-        )}
+        {!booking.isPaid &&
+          !isPast &&
+          booking.bookingStatus !== 'completed' &&
+          booking.bookingStatus !== 'cancelled' && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.editButton,
+                  (showPayButton || booking.bookingStatus === 'confirmed') &&
+                    styles.editButtonWithOther,
+                ]}
+                onPress={onEdit}
+                activeOpacity={0.8}
+              >
+                <View style={styles.buttonContent}>
+                  <Feather name="edit-2" size={16} color="#fff" />
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} onPress={onCancel} activeOpacity={0.8}>
+                <View style={styles.buttonContent}>
+                  <Feather name="x-circle" size={16} color="#fff" />
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
       </View>
     </>
   );
@@ -284,9 +309,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   return (
     <View style={styles.modalContainer}>
       {isWeb ? (
-        <View style={styles.modalWebCardContainer}>
-          {renderContent()}
-        </View>
+        <View style={styles.modalWebCardContainer}>{renderContent()}</View>
       ) : (
         renderContent()
       )}

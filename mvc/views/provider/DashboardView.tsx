@@ -1,16 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
@@ -46,7 +38,15 @@ interface Activity {
   metadata?: any;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNavigate, onLogout }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({
+  user,
+  onMenu: _onMenu,
+  onNavigate,
+  onLogout,
+}) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [stats, setStats] = useState<DashboardStats>({
     totalServices: 0,
     activeServices: 0,
@@ -59,7 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     monthlyRevenue: 0,
     totalProposals: 0,
     activeProposals: 0,
-    averageRating: 0
+    averageRating: 0,
   });
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -76,13 +76,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       // Load provider dashboard stats from API using email
       const providerEmail = encodeURIComponent(user.email);
-      const statsResp = await fetch(`${getApiBaseUrl()}/api/provider/dashboard/stats?providerEmail=${providerEmail}`);
-      
+      const statsResp = await fetch(
+        `${getApiBaseUrl()}/api/provider/dashboard/stats?providerEmail=${providerEmail}`,
+      );
+
       if (statsResp.ok) {
         const statsData = await statsResp.json();
         if (statsData.ok && statsData.stats) {
@@ -93,13 +95,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
       } else {
         console.error('Failed to fetch stats:', statsResp.status, statsResp.statusText);
         // Fallback: try to load services individually
-        const servicesResp = await fetch(`${getApiBaseUrl()}/api/services?providerEmail=${providerEmail}`);
+        const servicesResp = await fetch(
+          `${getApiBaseUrl()}/api/services?providerEmail=${providerEmail}`,
+        );
         if (servicesResp.ok) {
           const servicesData = await servicesResp.json();
           if (servicesData.ok && Array.isArray(servicesData.rows)) {
             const totalServices = servicesData.rows.length;
             const activeServices = servicesData.rows.filter((s: any) => s.s_is_active).length;
-            setStats(prev => ({ ...prev, totalServices, activeServices }));
+            setStats((prev) => ({ ...prev, totalServices, activeServices }));
           }
         }
       }
@@ -112,11 +116,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
 
   const loadRecentActivity = async () => {
     if (!user?.email) return;
-    
+
     try {
       const providerEmail = encodeURIComponent(user.email);
-      const resp = await fetch(`${getApiBaseUrl()}/api/provider/activity?providerEmail=${providerEmail}&limit=4`);
-      
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/provider/activity?providerEmail=${providerEmail}&limit=4`,
+      );
+
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok && Array.isArray(data.activities)) {
@@ -132,44 +138,58 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) {
       return 'Just now';
     }
-    
+
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) {
       return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
     }
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) {
       return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
     }
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) {
       return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
     }
-    
+
     const diffInWeeks = Math.floor(diffInDays / 7);
     if (diffInWeeks < 4) {
       return `${diffInWeeks} ${diffInWeeks === 1 ? 'week' : 'weeks'} ago`;
     }
-    
+
     const diffInMonths = Math.floor(diffInDays / 30);
     return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
   };
 
-  const MetricCard = ({ title, value, icon, color, subtitle }: { title: string; value: string; icon?: string; color?: string; subtitle?: string }) => (
+  const MetricCard = ({
+    title,
+    value,
+    icon,
+    color,
+    subtitle,
+  }: {
+    title: string;
+    value: string;
+    icon?: string;
+    color?: string;
+    subtitle?: string;
+  }) => (
     <View style={[styles.metricCard, color && { borderLeftWidth: 4, borderLeftColor: color }]}>
       <View style={styles.metricHeader}>
         <Text style={styles.metricTitle}>{title}</Text>
         {icon ? (
           <View style={[styles.metricIconContainer, color && { backgroundColor: `${color}15` }]}>
-            <Text style={styles.metricIcon}>{icon}</Text>
+            <Feather name={icon as any} size={14} color={color || semantic.textSecondary} />
           </View>
-        ) : <Text style={styles.metricDot}>•</Text>}
+        ) : (
+          <Text style={styles.metricDot}>•</Text>
+        )}
       </View>
       <Text style={[styles.metricValue, color && { color: color }]}>{value}</Text>
       {subtitle && <Text style={styles.metricSubtitle}>{subtitle}</Text>}
@@ -185,9 +205,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
       onNavigate={(route) => onNavigate?.(route)}
       onLogout={() => onLogout?.()}
     >
-      <ScrollView style={styles.main} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.main}
+        contentContainerStyle={styles.mainContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Welcome subtitle */}
-        <Text style={styles.headerSubtitle}>Welcome back, {user?.getFullName() || user?.email || 'Provider'}</Text>
+        <Text style={styles.headerSubtitle}>
+          Welcome back, {user?.getFullName() || user?.email || 'Provider'}
+        </Text>
 
         {loading ? (
           <View style={{ padding: 16 }}>
@@ -199,24 +225,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
           <>
             {/* Top Metrics */}
             <View style={styles.metricsRow}>
-              <MetricCard 
-                title="Services" 
-                value={stats.totalServices.toString()} 
-                icon="🎯" 
+              <MetricCard
+                title="Services"
+                value={stats.totalServices.toString()}
+                icon="target"
                 color={semantic.primary}
                 subtitle={`${stats.activeServices} active`}
               />
-              <MetricCard 
-                title="Bookings" 
-                value={stats.totalBookings.toString()} 
-                icon="📅" 
+              <MetricCard
+                title="Bookings"
+                value={stats.totalBookings.toString()}
+                icon="calendar"
                 color={semantic.success}
                 subtitle={`${stats.pendingBookings} pending`}
               />
-              <MetricCard 
-                title="Revenue" 
-                value={`₱ ${stats.monthlyRevenue.toLocaleString()}`} 
-                icon="💰" 
+              <MetricCard
+                title="Revenue"
+                value={`₱ ${stats.monthlyRevenue.toLocaleString()}`}
+                icon="dollar-sign"
                 color={semantic.warning}
                 subtitle={`₱ ${stats.totalRevenue.toLocaleString()} total`}
               />
@@ -224,69 +250,254 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
 
             {/* Quick Stats Row */}
             <View style={styles.row}>
-              <View style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: semantic.primary }]}>
-                <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: semantic.primary, paddingBottom: 12 }]}>
-                  <Text style={[styles.cardTitle, { color: semantic.primary }]}>Booking Overview</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: semantic.primary }]} onPress={() => onNavigate?.('bookings')} accessibilityRole="button" accessibilityLabel="View all bookings">
-                  <Text style={[styles.ctaText, { color: semantic.surface }]}>View All</Text>
-                </TouchableOpacity>
-              </View>
+              <View
+                style={[styles.cardLarge, { borderTopWidth: 4, borderTopColor: semantic.primary }]}
+              >
+                <View
+                  style={[
+                    styles.cardHeader,
+                    {
+                      borderBottomWidth: 2,
+                      borderBottomColor: semantic.primary,
+                      paddingBottom: 12,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.cardTitle, { color: semantic.primary }]}>
+                    Booking Overview
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.ctaButton, { backgroundColor: semantic.primary }]}
+                    onPress={() => onNavigate?.('bookings')}
+                    accessibilityRole="button"
+                    accessibilityLabel="View all bookings"
+                  >
+                    <Text style={[styles.ctaText, { color: semantic.surface }]}>View All</Text>
+                  </TouchableOpacity>
+                </View>
                 {/* Booking status breakdown */}
                 <View style={styles.bookingBreakdown}>
-                  <View style={[styles.bookingStat, { backgroundColor: colors.warning[50], borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.warning }]} />
-                    <Text style={[styles.bookingStatLabel, { color: '#92400E', fontWeight: '600' }]}>Pending</Text>
-                    <Text style={[styles.bookingStatValue, { color: semantic.warning }]}>{stats.pendingBookings}</Text>
+                  <View
+                    style={[
+                      styles.bookingStat,
+                      { backgroundColor: colors.warning[50], borderRadius: 8, padding: 12 },
+                    ]}
+                  >
+                    <View
+                      style={[styles.bookingStatIndicator, { backgroundColor: semantic.warning }]}
+                    />
+                    <Text
+                      style={[styles.bookingStatLabel, { color: '#92400E', fontWeight: '600' }]}
+                    >
+                      Pending
+                    </Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.warning }]}>
+                      {stats.pendingBookings}
+                    </Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: colors.success[50], borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.success }]} />
-                    <Text style={[styles.bookingStatLabel, { color: '#065F46', fontWeight: '600' }]}>Confirmed</Text>
-                    <Text style={[styles.bookingStatValue, { color: semantic.success }]}>{stats.confirmedBookings}</Text>
+                  <View
+                    style={[
+                      styles.bookingStat,
+                      { backgroundColor: colors.success[50], borderRadius: 8, padding: 12 },
+                    ]}
+                  >
+                    <View
+                      style={[styles.bookingStatIndicator, { backgroundColor: semantic.success }]}
+                    />
+                    <Text
+                      style={[styles.bookingStatLabel, { color: '#065F46', fontWeight: '600' }]}
+                    >
+                      Confirmed
+                    </Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.success }]}>
+                      {stats.confirmedBookings}
+                    </Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: colors.primary[100], borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.primary }]} />
-                    <Text style={[styles.bookingStatLabel, { color: '#3730A3', fontWeight: '600' }]}>Completed</Text>
-                    <Text style={[styles.bookingStatValue, { color: semantic.primary }]}>{stats.completedBookings}</Text>
+                  <View
+                    style={[
+                      styles.bookingStat,
+                      { backgroundColor: colors.primary[100], borderRadius: 8, padding: 12 },
+                    ]}
+                  >
+                    <View
+                      style={[styles.bookingStatIndicator, { backgroundColor: semantic.primary }]}
+                    />
+                    <Text
+                      style={[styles.bookingStatLabel, { color: '#3730A3', fontWeight: '600' }]}
+                    >
+                      Completed
+                    </Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.primary }]}>
+                      {stats.completedBookings}
+                    </Text>
                   </View>
-                  <View style={[styles.bookingStat, { backgroundColor: colors.error[50], borderRadius: 8, padding: 12 }]}>
-                    <View style={[styles.bookingStatIndicator, { backgroundColor: semantic.error }]} />
-                    <Text style={[styles.bookingStatLabel, { color: '#991B1B', fontWeight: '600' }]}>Cancelled</Text>
-                    <Text style={[styles.bookingStatValue, { color: semantic.error }]}>{stats.cancelledBookings}</Text>
+                  <View
+                    style={[
+                      styles.bookingStat,
+                      { backgroundColor: colors.error[50], borderRadius: 8, padding: 12 },
+                    ]}
+                  >
+                    <View
+                      style={[styles.bookingStatIndicator, { backgroundColor: semantic.error }]}
+                    />
+                    <Text
+                      style={[styles.bookingStatLabel, { color: '#991B1B', fontWeight: '600' }]}
+                    >
+                      Cancelled
+                    </Text>
+                    <Text style={[styles.bookingStatValue, { color: semantic.error }]}>
+                      {stats.cancelledBookings}
+                    </Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.cardRightCol}>
                 {/* Performance Summary */}
-                <View style={[styles.progressCard, { borderTopWidth: 4, borderTopColor: semantic.primary }]}>
+                <View
+                  style={[
+                    styles.progressCard,
+                    { borderTopWidth: 4, borderTopColor: semantic.primary },
+                  ]}
+                >
                   <Text style={styles.cardTitle}>Performance</Text>
                   <View style={styles.activityList}>
-                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.primary, width: 12, height: 12 }]} />
+                    <View
+                      style={[
+                        styles.activityItem,
+                        {
+                          backgroundColor: semantic.background,
+                          borderRadius: 8,
+                          padding: 12,
+                          marginBottom: 8,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityDot,
+                          { backgroundColor: semantic.primary, width: 12, height: 12 },
+                        ]}
+                      />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: semantic.primary, fontWeight: '600' }]}>Average Rating</Text>
-                        <Text style={[styles.activityValue, { color: semantic.primary, fontSize: 16 }]}>⭐ {stats.averageRating.toFixed(1)}</Text>
+                        <Text
+                          style={[
+                            styles.activityText,
+                            { color: semantic.primary, fontWeight: '600' },
+                          ]}
+                        >
+                          Average Rating
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="star" size={14} color={semantic.primary} />
+                          <Text
+                            style={[
+                              styles.activityValue,
+                              { color: semantic.primary, fontSize: 16 },
+                            ]}
+                          >
+                            {stats.averageRating.toFixed(1)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.success, width: 12, height: 12 }]} />
+                    <View
+                      style={[
+                        styles.activityItem,
+                        {
+                          backgroundColor: semantic.background,
+                          borderRadius: 8,
+                          padding: 12,
+                          marginBottom: 8,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityDot,
+                          { backgroundColor: semantic.success, width: 12, height: 12 },
+                        ]}
+                      />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: semantic.success, fontWeight: '600' }]}>Active Services</Text>
-                        <Text style={[styles.activityValue, { color: semantic.success, fontSize: 16 }]}>{stats.activeServices}</Text>
+                        <Text
+                          style={[
+                            styles.activityText,
+                            { color: semantic.success, fontWeight: '600' },
+                          ]}
+                        >
+                          Active Services
+                        </Text>
+                        <Text
+                          style={[styles.activityValue, { color: semantic.success, fontSize: 16 }]}
+                        >
+                          {stats.activeServices}
+                        </Text>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.warning, width: 12, height: 12 }]} />
+                    <View
+                      style={[
+                        styles.activityItem,
+                        {
+                          backgroundColor: semantic.background,
+                          borderRadius: 8,
+                          padding: 12,
+                          marginBottom: 8,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityDot,
+                          { backgroundColor: semantic.warning, width: 12, height: 12 },
+                        ]}
+                      />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: semantic.warning, fontWeight: '600' }]}>This Month Revenue</Text>
-                        <Text style={[styles.activityValue, { color: semantic.warning, fontSize: 16 }]}>₱ {stats.monthlyRevenue.toLocaleString()}</Text>
+                        <Text
+                          style={[
+                            styles.activityText,
+                            { color: semantic.warning, fontWeight: '600' },
+                          ]}
+                        >
+                          This Month Revenue
+                        </Text>
+                        <Text
+                          style={[styles.activityValue, { color: semantic.warning, fontSize: 16 }]}
+                        >
+                          ₱ {stats.monthlyRevenue.toLocaleString()}
+                        </Text>
                       </View>
                     </View>
-                    <View style={[styles.activityItem, { backgroundColor: semantic.background, borderRadius: 8, padding: 12, marginBottom: 8 }]}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.error, width: 12, height: 12 }]} />
+                    <View
+                      style={[
+                        styles.activityItem,
+                        {
+                          backgroundColor: semantic.background,
+                          borderRadius: 8,
+                          padding: 12,
+                          marginBottom: 8,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.activityDot,
+                          { backgroundColor: semantic.error, width: 12, height: 12 },
+                        ]}
+                      />
                       <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: semantic.error, fontWeight: '600' }]}>Active Proposals</Text>
-                        <Text style={[styles.activityValue, { color: semantic.error, fontSize: 16 }]}>{stats.activeProposals}</Text>
+                        <Text
+                          style={[
+                            styles.activityText,
+                            { color: semantic.error, fontWeight: '600' },
+                          ]}
+                        >
+                          Active Proposals
+                        </Text>
+                        <Text
+                          style={[styles.activityValue, { color: semantic.error, fontSize: 16 }]}
+                        >
+                          {stats.activeProposals}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -295,44 +506,88 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
             </View>
 
             {/* Quick Actions */}
-            <View style={[styles.quickActionsCard, { borderTopWidth: 4, borderTopColor: semantic.warning }]}>
+            <View
+              style={[
+                styles.quickActionsCard,
+                { borderTopWidth: 4, borderTopColor: semantic.warning },
+              ]}
+            >
               <Text style={[styles.cardTitle, { color: semantic.warning }]}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: semantic.primary, borderColor: semantic.primary }]}
+                  style={[
+                    styles.quickActionBtn,
+                    { backgroundColor: semantic.primary, borderColor: semantic.primary },
+                  ]}
                   onPress={() => onNavigate?.('services')}
                   accessibilityRole="button"
                   accessibilityLabel="Add service"
                 >
-                  <Text style={styles.quickActionIcon}>➕</Text>
-                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>Add Service</Text>
+                  <Feather
+                    name="plus"
+                    size={24}
+                    color={semantic.surface}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>
+                    Add Service
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: semantic.success, borderColor: semantic.success }]}
+                  style={[
+                    styles.quickActionBtn,
+                    { backgroundColor: semantic.success, borderColor: semantic.success },
+                  ]}
                   onPress={() => onNavigate?.('bookings')}
                   accessibilityRole="button"
                   accessibilityLabel="View bookings"
                 >
-                  <Text style={styles.quickActionIcon}>📅</Text>
-                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>View Bookings</Text>
+                  <Feather
+                    name="calendar"
+                    size={24}
+                    color={semantic.surface}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>
+                    View Bookings
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickActionBtn, { backgroundColor: semantic.error, borderColor: semantic.error }]}
+                  style={[
+                    styles.quickActionBtn,
+                    { backgroundColor: semantic.error, borderColor: semantic.error },
+                  ]}
                   onPress={() => onNavigate?.('hiring')}
                   accessibilityRole="button"
                   accessibilityLabel="View hiring"
                 >
-                  <Text style={styles.quickActionIcon}>💼</Text>
+                  <Feather
+                    name="briefcase"
+                    size={24}
+                    color={semantic.surface}
+                    style={{ marginBottom: 8 }}
+                  />
                   <Text style={[styles.quickActionLabel, { color: semantic.surface }]}>Hiring</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Recent Activity */}
-            <View style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: semantic.success }]}>
-              <View style={[styles.cardHeader, { borderBottomWidth: 2, borderBottomColor: semantic.success, paddingBottom: 12 }]}>
+            <View
+              style={[styles.cardWide, { borderTopWidth: 4, borderTopColor: semantic.success }]}
+            >
+              <View
+                style={[
+                  styles.cardHeader,
+                  { borderBottomWidth: 2, borderBottomColor: semantic.success, paddingBottom: 12 },
+                ]}
+              >
                 <Text style={[styles.cardTitle, { color: semantic.success }]}>Recent Activity</Text>
-                <TouchableOpacity style={[styles.ctaButton, { backgroundColor: semantic.success }]} accessibilityRole="button" accessibilityLabel="View all recent activity">
+                <TouchableOpacity
+                  style={[styles.ctaButton, { backgroundColor: semantic.success }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="View all recent activity"
+                >
                   <Text style={[styles.ctaText, { color: semantic.surface }]}>View All</Text>
                 </TouchableOpacity>
               </View>
@@ -342,33 +597,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
                     // Determine color based on activity type
                     let activityColor: string = semantic.primary;
                     let bgColor: string = colors.primary[100];
-                    if (activity.type?.includes('payment') || activity.description?.toLowerCase().includes('payment')) {
+                    if (
+                      activity.type?.includes('payment') ||
+                      activity.description?.toLowerCase().includes('payment')
+                    ) {
                       activityColor = semantic.success;
                       bgColor = colors.success[50];
-                    } else if (activity.type?.includes('booking') || activity.description?.toLowerCase().includes('booking')) {
+                    } else if (
+                      activity.type?.includes('booking') ||
+                      activity.description?.toLowerCase().includes('booking')
+                    ) {
                       activityColor = semantic.primary;
                       bgColor = colors.primary[100];
-                    } else if (activity.type?.includes('service') || activity.description?.toLowerCase().includes('service')) {
+                    } else if (
+                      activity.type?.includes('service') ||
+                      activity.description?.toLowerCase().includes('service')
+                    ) {
                       activityColor = semantic.warning;
                       bgColor = colors.warning[50];
                     }
-                    
+
                     return (
-                      <View 
-                        key={`${activity.type}-${activity.entity_id}-${index}`} 
-                        style={[styles.activityRow, { backgroundColor: bgColor, borderRadius: 8, padding: 12, marginBottom: 8 }]}
+                      <View
+                        key={`${activity.type}-${activity.entity_id}-${index}`}
+                        style={[
+                          styles.activityRow,
+                          {
+                            backgroundColor: bgColor,
+                            borderRadius: 8,
+                            padding: 12,
+                            marginBottom: 8,
+                          },
+                        ]}
                       >
-                        <View style={[styles.activityDot, { backgroundColor: activityColor, width: 8, height: 8, marginRight: 12 }]} />
-                        <Text style={[styles.activityCell, { color: activityColor, fontWeight: '600', flex: 1 }]}>{activity.description}</Text>
-                        <Text style={[styles.activityCell, { color: semantic.textSecondary, fontSize: 12 }]}>{formatTimeAgo(activity.created_at)}</Text>
+                        <View
+                          style={[
+                            styles.activityDot,
+                            {
+                              backgroundColor: activityColor,
+                              width: 8,
+                              height: 8,
+                              marginRight: 12,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.activityCell,
+                            { color: activityColor, fontWeight: '600', flex: 1 },
+                          ]}
+                        >
+                          {activity.description}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.activityCell,
+                            { color: semantic.textSecondary, fontSize: 12 },
+                          ]}
+                        >
+                          {formatTimeAgo(activity.created_at)}
+                        </Text>
                       </View>
                     );
                   })
                 ) : (
                   <>
-                    <View style={[styles.activityRow, { backgroundColor: semantic.background, borderRadius: 8, padding: 12 }]}>
-                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>No recent activity</Text>
-                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>-</Text>
+                    <View
+                      style={[
+                        styles.activityRow,
+                        { backgroundColor: semantic.background, borderRadius: 8, padding: 12 },
+                      ]}
+                    >
+                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>
+                        No recent activity
+                      </Text>
+                      <Text style={[styles.activityCell, { color: semantic.textSecondary }]}>
+                        -
+                      </Text>
                     </View>
                   </>
                 )}
@@ -381,259 +686,255 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onMenu, onNa
   );
 };
 
-const styles = StyleSheet.create({
-  main: {
-    flex: 1,
-    backgroundColor: '#EEF1F5',
-  },
-  mainContent: {
-    padding: isMobile ? 12 : 20,
-    paddingBottom: isMobile ? 20 : 20,
-  },
-  headerSubtitle: {
-    fontSize: isMobile ? 12 : 14,
-    color: semantic.textSecondary,
-    marginBottom: isMobile ? 16 : 24,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: semantic.textSecondary,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-    ...(isMobile && {
-      marginLeft: -6,
-      marginRight: -6,
-    }),
-  },
-  metricCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginRight: isMobile ? 6 : 12,
-    marginLeft: isMobile ? 6 : 0,
-    marginBottom: 12,
-    width: isMobile
-      ? (screenWidth - 48) / 2
-      : Math.min(180, (screenWidth - 80) / 4),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  metricIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricSubtitle: {
-    fontSize: 12,
-    color: semantic.textSecondary,
-    marginTop: 4,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  metricTitle: {
-    color: semantic.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metricIcon: {
-    fontSize: 14,
-  },
-  metricDot: {
-    color: colors.neutral[300],
-    fontSize: 18,
-  },
-  metricValue: {
-    marginTop: 8,
-    fontSize: isMobile ? 18 : 22,
-    fontWeight: '700',
-  },
-  row: {
-    flexDirection: isMobile ? 'column' : 'row',
-  },
-  cardLarge: {
-    flex: isMobile ? 0 : 1,
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginRight: isMobile ? 0 : 12,
-    marginBottom: isMobile ? 12 : 0,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  ctaButton: {
-    backgroundColor: semantic.background,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  ctaText: {
-    color: '#0EA5E9',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  bookingBreakdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: isMobile ? 12 : 16,
-    paddingTop: isMobile ? 12 : 16,
-    borderTopWidth: 1,
-    borderTopColor: semantic.border,
-    flexWrap: isMobile ? 'wrap' : 'nowrap',
-  },
-  bookingStat: {
-    alignItems: 'center',
-    width: isMobile ? '50%' : 'auto',
-    marginBottom: isMobile ? 12 : 0,
-    position: 'relative',
-  },
-  bookingStatIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  bookingStatLabel: {
-    fontSize: isMobile ? 11 : 12,
-    color: semantic.textSecondary,
-    marginBottom: 4,
-  },
-  bookingStatValue: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: '700',
-  },
-  activityList: {
-    marginTop: 12,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  activityContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  activityText: {
-    fontSize: 13,
-    color: semantic.textSecondary,
-  },
-  activityValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  quickActionsCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginTop: 12,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-    ...(isMobile && {
-      marginLeft: -6,
-      marginRight: -6,
-    }),
-  },
-  quickActionBtn: {
-    width: isMobile
-      ? (screenWidth - 48) / 3
-      : (screenWidth - 80) / 4,
-    backgroundColor: semantic.background,
-    borderRadius: 8,
-    padding: isMobile ? 12 : 16,
-    alignItems: 'center',
-    marginRight: isMobile ? 6 : 12,
-    marginLeft: isMobile ? 6 : 0,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: semantic.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  quickActionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  quickActionLabel: {
-    fontSize: isMobile ? 11 : 12,
-    color: semantic.textPrimary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  activityTable: {
-    marginTop: 12,
-  },
-  activityRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  activityCell: {
-    fontSize: 13,
-    color: semantic.textSecondary,
-  },
-  cardRightCol: {
-    width: isMobile ? '100%' : 200,
-  },
-  progressCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-  },
-  cardWide: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 12,
-    marginBottom: 0,
-    elevation: 2,
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    main: {
+      flex: 1,
+      backgroundColor: '#EEF1F5',
+    },
+    mainContent: {
+      padding: isMobile ? 12 : 20,
+      paddingBottom: isMobile ? 20 : 20,
+    },
+    headerSubtitle: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+      marginBottom: isMobile ? 16 : 24,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 16,
+      ...(isMobile && {
+        marginLeft: -6,
+        marginRight: -6,
+      }),
+    },
+    metricCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginRight: isMobile ? 6 : 12,
+      marginLeft: isMobile ? 6 : 0,
+      marginBottom: 12,
+      width: isMobile ? (screenWidth - 48) / 2 : Math.min(180, (screenWidth - 80) / 4),
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    metricIconContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    metricSubtitle: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      marginTop: 4,
+    },
+    metricHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    metricTitle: {
+      color: semantic.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    metricIcon: {
+      fontSize: 14,
+    },
+    metricDot: {
+      color: colors.neutral[300],
+      fontSize: 18,
+    },
+    metricValue: {
+      marginTop: 8,
+      fontSize: isMobile ? 18 : 22,
+      fontWeight: '700',
+    },
+    row: {
+      flexDirection: isMobile ? 'column' : 'row',
+    },
+    cardLarge: {
+      flex: isMobile ? 0 : 1,
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginRight: isMobile ? 0 : 12,
+      marginBottom: isMobile ? 12 : 0,
+      elevation: 2,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    ctaButton: {
+      backgroundColor: semantic.background,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    ctaText: {
+      color: '#0EA5E9',
+      fontWeight: '700',
+      fontSize: 12,
+    },
+    bookingBreakdown: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: isMobile ? 12 : 16,
+      paddingTop: isMobile ? 12 : 16,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
+    },
+    bookingStat: {
+      alignItems: 'center',
+      width: isMobile ? '50%' : 'auto',
+      marginBottom: isMobile ? 12 : 0,
+      position: 'relative',
+    },
+    bookingStatIndicator: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginBottom: 6,
+    },
+    bookingStatLabel: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textSecondary,
+      marginBottom: 4,
+    },
+    bookingStatValue: {
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: '700',
+    },
+    activityList: {
+      marginTop: 12,
+    },
+    activityItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    activityDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 12,
+    },
+    activityContent: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    activityText: {
+      fontSize: 13,
+      color: semantic.textSecondary,
+    },
+    activityValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    quickActionsCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginTop: 12,
+      marginBottom: 12,
+      elevation: 2,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 12,
+      ...(isMobile && {
+        marginLeft: -6,
+        marginRight: -6,
+      }),
+    },
+    quickActionBtn: {
+      width: isMobile ? (screenWidth - 48) / 3 : (screenWidth - 80) / 4,
+      backgroundColor: semantic.background,
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      alignItems: 'center',
+      marginRight: isMobile ? 6 : 12,
+      marginLeft: isMobile ? 6 : 0,
+      marginBottom: 12,
+      borderWidth: 2,
+      borderColor: semantic.border,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    quickActionIcon: {
+      fontSize: 24,
+      marginBottom: 8,
+    },
+    quickActionLabel: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textPrimary,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    activityTable: {
+      marginTop: 12,
+    },
+    activityRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    activityCell: {
+      fontSize: 13,
+      color: semantic.textSecondary,
+    },
+    cardRightCol: {
+      width: isMobile ? '100%' : 200,
+    },
+    progressCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: 16,
+      elevation: 2,
+    },
+    cardWide: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginTop: 12,
+      marginBottom: 0,
+      elevation: 2,
+    },
+  });
 
 export default DashboardView;
-

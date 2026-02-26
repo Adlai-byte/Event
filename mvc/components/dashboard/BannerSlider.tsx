@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
-import { styles } from '../../views/user/DashboardView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/DashboardView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { ServiceDTO as Service } from '../../types/service';
 import { getCategoryIcon, getCategoryLabel, formatPrice } from '../../utils/serviceHelpers';
 import { getApiBaseUrl } from '../../services/api';
@@ -18,6 +20,8 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
   onViewService,
   onBookService,
 }) => {
+  const { isMobile, isMobileWeb } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
   const [bannerCurrentIndex, setBannerCurrentIndex] = useState(0);
   const bannerScrollRef = useRef<ScrollView>(null);
 
@@ -36,9 +40,7 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
           setBannerCurrentIndex((prevIndex) => {
             const nextIndex = (prevIndex + 1) % services.length;
             try {
-              const slideWidth = Platform.OS === 'web'
-                ? screenWidth - 48
-                : screenWidth - 32;
+              const slideWidth = Platform.OS === 'web' ? screenWidth - 48 : screenWidth - 32;
               bannerScrollRef.current?.scrollTo({
                 x: nextIndex * slideWidth,
                 animated: true,
@@ -65,7 +67,10 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
   return (
     <View style={styles.bannerContainer}>
       <View style={styles.bannerHeader}>
-        <Text style={styles.bannerTitle}>&#11088; Best Services of the Day</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Feather name="star" size={16} color="#2563EB" />
+          <Text style={styles.bannerTitle}>Best Services of the Day</Text>
+        </View>
       </View>
       <ScrollView
         ref={bannerScrollRef}
@@ -74,9 +79,7 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(event) => {
           try {
-            const slideWidth = Platform.OS === 'web'
-              ? screenWidth - 48
-              : screenWidth - 32;
+            const slideWidth = Platform.OS === 'web' ? screenWidth - 48 : screenWidth - 32;
             const index = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
             setBannerCurrentIndex(index);
           } catch (error) {
@@ -86,17 +89,21 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
         style={styles.bannerScrollView}
         contentContainerStyle={styles.bannerScrollContent}
       >
-        {services.map((service, index) => {
-          const rating = typeof service.s_rating === 'string'
-            ? parseFloat(service.s_rating)
-            : (service.s_rating || 0);
-          const reviewCount = typeof service.s_review_count === 'string'
-            ? parseInt(service.s_review_count) || 0
-            : (service.s_review_count || 0);
+        {services.map((service, _index) => {
+          const rating =
+            typeof service.s_rating === 'string'
+              ? parseFloat(service.s_rating)
+              : service.s_rating || 0;
+          const reviewCount =
+            typeof service.s_review_count === 'string'
+              ? parseInt(service.s_review_count) || 0
+              : service.s_review_count || 0;
           const imageUrl = service.primary_image
-            ? (service.primary_image.startsWith('http://') || service.primary_image.startsWith('https://') || service.primary_image.startsWith('data:image')
-                ? service.primary_image
-                : `${getApiBaseUrl()}${service.primary_image}`)
+            ? service.primary_image.startsWith('http://') ||
+              service.primary_image.startsWith('https://') ||
+              service.primary_image.startsWith('data:image')
+              ? service.primary_image
+              : `${getApiBaseUrl()}${service.primary_image}`
             : null;
 
           return (
@@ -108,16 +115,14 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
             >
               <View style={styles.bannerCard}>
                 {imageUrl ? (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    style={styles.bannerImage}
-                    resizeMode="cover"
-                  />
+                  <Image source={{ uri: imageUrl }} style={styles.bannerImage} resizeMode="cover" />
                 ) : (
                   <View style={styles.bannerImagePlaceholder}>
-                    <Text style={styles.bannerImageIcon}>
-                      {getCategoryIcon(service.s_category)}
-                    </Text>
+                    <Feather
+                      name={getCategoryIcon(service.s_category) as any}
+                      size={48}
+                      color="#64748B"
+                    />
                   </View>
                 )}
                 <View style={styles.bannerOverlay} />
@@ -127,7 +132,11 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
                       <Text style={styles.bannerBadgeText}>Top Rated</Text>
                     </View>
                     <View style={[styles.categoryTag, styles.bannerCategoryTag]}>
-                      <Text style={styles.categoryTagIcon}>{getCategoryIcon(service.s_category)}</Text>
+                      <Feather
+                        name={getCategoryIcon(service.s_category) as any}
+                        size={12}
+                        color="#64748B"
+                      />
                       <Text style={[styles.categoryTagText, styles.bannerCategoryTagText]}>
                         {getCategoryLabel(service.s_category)}
                       </Text>
@@ -141,9 +150,10 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
                   </Text>
                   {rating > 0 && (
                     <View style={styles.bannerRating}>
-                      <Text style={styles.bannerRatingText}>
-                        &#11088; {rating.toFixed(1)}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="star" size={14} color="#f59e0b" />
+                        <Text style={styles.bannerRatingText}>{rating.toFixed(1)}</Text>
+                      </View>
                       {reviewCount > 0 && (
                         <Text style={styles.bannerReviewCount}>
                           ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
@@ -182,10 +192,7 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
           {services.map((_, index) => (
             <View
               key={index}
-              style={[
-                styles.bannerDot,
-                index === bannerCurrentIndex && styles.bannerDotActive
-              ]}
+              style={[styles.bannerDot, index === bannerCurrentIndex && styles.bannerDotActive]}
             />
           ))}
         </View>

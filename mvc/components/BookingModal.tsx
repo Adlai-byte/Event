@@ -8,8 +8,9 @@ import {
   Platform,
   Alert,
   TextInput,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { BookingWeekCalendar } from './BookingWeekCalendar';
 import { ServicePackage } from '../models/Package';
 import { useBreakpoints } from '../hooks/useBreakpoints';
@@ -17,19 +18,26 @@ import { useBookingSlots } from '../hooks/useBookingSlots';
 import { useBookingCost } from '../hooks/useBookingCost';
 import { ProfileCompleteModal } from './booking/ProfileCompleteModal';
 import { BookingConfirmationModal, ConfirmBookingData } from './booking/BookingConfirmationModal';
-import { styles } from './BookingModal.styles';
+import { createStyles } from './BookingModal.styles';
 
 interface BookingModalProps {
   visible: boolean;
   serviceId: number;
   serviceName: string;
   onClose: () => void;
-  onConfirm: (date: string, startTime: string, endTime: string, attendees?: number, notes?: string, packageData?: {
-    packageId: number;
-    paxCount: number;
-    removedItems: number[];
-    totalPrice: number;
-  }) => void;
+  onConfirm: (
+    date: string,
+    startTime: string,
+    endTime: string,
+    attendees?: number,
+    notes?: string,
+    packageData?: {
+      packageId: number;
+      paxCount: number;
+      removedItems: number[];
+      totalPrice: number;
+    },
+  ) => void;
   user?: {
     firstName?: string;
     lastName?: string;
@@ -52,9 +60,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onConfirm,
   user,
   onNavigateToPersonalInfo,
-  preSelectedPackage
+  preSelectedPackage,
 }) => {
-  const { isMobile } = useBreakpoints();
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
 
   const {
     selectedDate,
@@ -120,17 +129,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (!user) return true;
 
     const hasPersonalDetails = !!(
-      user.firstName && user.firstName.trim() !== '' &&
-      user.lastName && user.lastName.trim() !== '' &&
-      user.phone && user.phone.trim() !== '' &&
-      user.dateOfBirth && user.dateOfBirth.trim() !== ''
+      user.firstName &&
+      user.firstName.trim() !== '' &&
+      user.lastName &&
+      user.lastName.trim() !== '' &&
+      user.phone &&
+      user.phone.trim() !== '' &&
+      user.dateOfBirth &&
+      user.dateOfBirth.trim() !== ''
     );
 
     const hasAddress = !!(
-      user.address && user.address.trim() !== '' &&
-      user.city && user.city.trim() !== '' &&
-      user.state && user.state.trim() !== '' &&
-      user.zipCode && user.zipCode.trim() !== ''
+      user.address &&
+      user.address.trim() !== '' &&
+      user.city &&
+      user.city.trim() !== '' &&
+      user.state &&
+      user.state.trim() !== '' &&
+      user.zipCode &&
+      user.zipCode.trim() !== ''
     );
 
     if (!hasPersonalDetails || !hasAddress) {
@@ -153,7 +170,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     // For per-day booking mode
     if (bookingMode === 'perday' && selectedDays.length > 0) {
-      const sortedDays = [...selectedDays].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      const sortedDays = [...selectedDays].sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+      );
       const startDate = sortedDays[0];
       const endDate = sortedDays[sortedDays.length - 1];
 
@@ -163,16 +182,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           days: selectedDays.length,
           cost: estimatedCost,
           startDate: startDate,
-          endDate: endDate
+          endDate: endDate,
         });
         setShowConfirmModal(true);
       } catch (error: any) {
         console.error('Error creating booking for date range:', error);
-        Alert.alert(
-          'Error',
-          `Failed to create booking: ${error.message || 'Unknown error'}`,
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Error', `Failed to create booking: ${error.message || 'Unknown error'}`, [
+          { text: 'OK' },
+        ]);
       }
       return;
     }
@@ -185,7 +202,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         Alert.alert(
           'Minimum Slots Required',
           'Please select at least 2 time slots to proceed with booking.',
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
         return;
       }
@@ -206,13 +223,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
       const earliestStart = sortedSlots[0].start;
       const latestStart = sortedSlots[sortedSlots.length - 1].start;
-      const numAttendees = serviceDetails?.category.toLowerCase() === 'catering' ? parseInt(attendees) : undefined;
+      const numAttendees =
+        serviceDetails?.category.toLowerCase() === 'catering' ? parseInt(attendees) : undefined;
 
       const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
       const startTimeFormatted = formatTime(earliestStart);
       const endTimeFormatted = formatTime(latestStart);
@@ -226,7 +244,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         duration: durationFormatted,
         slots: selectedSlots.length,
         attendees: numAttendees,
-        cost: estimatedCost
+        cost: estimatedCost,
       });
       setShowConfirmModal(true);
     }
@@ -241,28 +259,42 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     setShowConfirmModal(false);
 
-    const packageData = selectedPackage && selectedPackage.id
-      ? {
-          packageId: selectedPackage.id,
-          paxCount: packagePaxCount,
-          removedItems: removedItems,
-          totalPrice: getPackagePrice(),
-        }
-      : undefined;
+    const packageData =
+      selectedPackage && selectedPackage.id
+        ? {
+            packageId: selectedPackage.id,
+            paxCount: packagePaxCount,
+            removedItems: removedItems,
+            totalPrice: getPackagePrice(),
+          }
+        : undefined;
 
     try {
-      if (confirmBookingData.type === 'perday' && confirmBookingData.startDate && confirmBookingData.endDate) {
-        const sortedDays = [...selectedDays].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      if (
+        confirmBookingData.type === 'perday' &&
+        confirmBookingData.startDate &&
+        confirmBookingData.endDate
+      ) {
+        const sortedDays = [...selectedDays].sort(
+          (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+        );
         const startDate = sortedDays[0];
         const endDate = sortedDays[sortedDays.length - 1];
         const dateRangeInfo = {
           startDate: startDate,
           endDate: endDate,
           totalDays: selectedDays.length,
-          allDates: sortedDays
+          allDates: sortedDays,
         };
 
-        await onConfirm(startDate, '00:00:00', '23:59:59', undefined, JSON.stringify(dateRangeInfo), packageData);
+        await onConfirm(
+          startDate,
+          '00:00:00',
+          '23:59:59',
+          undefined,
+          JSON.stringify(dateRangeInfo),
+          packageData,
+        );
 
         for (const date of sortedDays) {
           await reloadSlotsForDate(date);
@@ -272,7 +304,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         Alert.alert(
           'Success',
           `Successfully booked ${selectedDays.length} day${selectedDays.length !== 1 ? 's' : ''} (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})!`,
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
       } else if (confirmBookingData.type === 'hourly' && selectedDate) {
         const sortedSlots = [...selectedSlots].sort((a, b) => {
@@ -284,18 +316,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         const latestEnd = sortedSlots[sortedSlots.length - 1].end;
         const numAttendees = confirmBookingData.attendees;
 
-        await onConfirm(selectedDate, earliestStart, latestEnd, numAttendees, undefined, packageData);
+        await onConfirm(
+          selectedDate,
+          earliestStart,
+          latestEnd,
+          numAttendees,
+          undefined,
+          packageData,
+        );
         await reloadSlotsForDate(selectedDate);
         onClose();
         Alert.alert('Success', 'Booking created successfully!');
       }
     } catch (error: any) {
       console.error('Booking error:', error);
-      Alert.alert(
-        'Error',
-        `Failed to create booking: ${error.message || 'Unknown error'}`,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', `Failed to create booking: ${error.message || 'Unknown error'}`, [
+        { text: 'OK' },
+      ]);
     }
   };
 
@@ -312,44 +349,82 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               : 'Select your preferred date and time'}
           </Text>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close booking modal">
-          <Text style={styles.closeButtonText}>✕</Text>
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.closeButton}
+          accessibilityRole="button"
+          accessibilityLabel="Close booking modal"
+        >
+          <Feather name="x" size={22} color="#64748B" />
         </TouchableOpacity>
       </View>
 
       {/* Booking Mode Switcher */}
-      {serviceDetails && serviceDetails.hourlyPrice && serviceDetails.perDayPrice && serviceDetails.category.toLowerCase() !== 'catering' && (
-        <View style={styles.bookingModeSwitcher}>
-          <TouchableOpacity
-            style={[styles.bookingModeButton, bookingMode === 'hourly' && styles.bookingModeButtonActive]}
-            onPress={() => {
-              setBookingMode('hourly');
-              setSelectedDays([]);
-              setSelectedSlots([]);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Switch to hourly booking mode"
-          >
-            <Text style={[styles.bookingModeText, bookingMode === 'hourly' && styles.bookingModeTextActive]}>
-              ⏰ Hourly
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.bookingModeButton, bookingMode === 'perday' && styles.bookingModeButtonActive]}
-            onPress={() => {
-              setBookingMode('perday');
-              setSelectedSlots([]);
-              setSelectedDate(null);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Switch to per day booking mode"
-          >
-            <Text style={[styles.bookingModeText, bookingMode === 'perday' && styles.bookingModeTextActive]}>
-              📅 Per Day
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {serviceDetails &&
+        serviceDetails.hourlyPrice &&
+        serviceDetails.perDayPrice &&
+        serviceDetails.category.toLowerCase() !== 'catering' && (
+          <View style={styles.bookingModeSwitcher}>
+            <TouchableOpacity
+              style={[
+                styles.bookingModeButton,
+                bookingMode === 'hourly' && styles.bookingModeButtonActive,
+              ]}
+              onPress={() => {
+                setBookingMode('hourly');
+                setSelectedDays([]);
+                setSelectedSlots([]);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Switch to hourly booking mode"
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather
+                  name="clock"
+                  size={14}
+                  color={bookingMode === 'hourly' ? '#fff' : '#64748B'}
+                />
+                <Text
+                  style={[
+                    styles.bookingModeText,
+                    bookingMode === 'hourly' && styles.bookingModeTextActive,
+                  ]}
+                >
+                  Hourly
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.bookingModeButton,
+                bookingMode === 'perday' && styles.bookingModeButtonActive,
+              ]}
+              onPress={() => {
+                setBookingMode('perday');
+                setSelectedSlots([]);
+                setSelectedDate(null);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Switch to per day booking mode"
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather
+                  name="calendar"
+                  size={14}
+                  color={bookingMode === 'perday' ? '#fff' : '#64748B'}
+                />
+                <Text
+                  style={[
+                    styles.bookingModeText,
+                    bookingMode === 'perday' && styles.bookingModeTextActive,
+                  ]}
+                >
+                  Per Day
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
       <View style={styles.calendarContainer}>
         {loadingDates || loadingSlots ? (
@@ -372,7 +447,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   Alert.alert(
                     'No Available Slots',
                     'This date has no available time slots. Please select another date.',
-                    [{ text: 'OK' }]
+                    [{ text: 'OK' }],
                   );
                   return;
                 }
@@ -398,7 +473,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               }}
             />
           </>
-        ) : bookingMode === 'perday' || (serviceDetails && serviceDetails.duration >= 1440 && !serviceDetails.hourlyPrice) ? (
+        ) : bookingMode === 'perday' ||
+          (serviceDetails && serviceDetails.duration >= 1440 && !serviceDetails.hourlyPrice) ? (
           <>
             <BookingWeekCalendar
               currentWeek={currentWeek}
@@ -410,9 +486,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               noSlotsDates={noSlotsDates}
               onDateSelect={(dateStr) => {
                 if (isDateAvailable(dateStr)) {
-                  setSelectedDays(prev => {
+                  setSelectedDays((prev) => {
                     if (prev.includes(dateStr)) {
-                      return prev.filter(d => d !== dateStr);
+                      return prev.filter((d) => d !== dateStr);
                     } else {
                       return [...prev, dateStr].sort();
                     }
@@ -424,9 +500,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               selectedDays={selectedDays}
             />
             <View style={styles.perDayInfoCard}>
-              <Text style={styles.perDayInfoText}>
-                📅 This service is booked per day (24 hours). Select one or more dates.
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="calendar" size={16} color="#64748B" />
+                <Text style={styles.perDayInfoText}>
+                  This service is booked per day (24 hours). Select one or more dates.
+                </Text>
+              </View>
             </View>
           </>
         ) : (
@@ -445,7 +524,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   Alert.alert(
                     'No Available Slots',
                     'This date has no available time slots. Please select another date.',
-                    [{ text: 'OK' }]
+                    [{ text: 'OK' }],
                   );
                   return;
                 }
@@ -495,9 +574,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 accessibilityLabel="Number of attendees"
               />
             </View>
-            <Text style={styles.attendeesHint}>
-              Cost will be calculated per pax
-            </Text>
+            <Text style={styles.attendeesHint}>Cost will be calculated per pax</Text>
           </View>
         )}
 
@@ -545,23 +622,36 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <View style={styles.priceCard}>
                 <Text style={styles.priceLabel}>Estimated Cost</Text>
                 <Text style={styles.priceValue}>
-                  ₱{estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱
+                  {estimatedCost.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </Text>
               </View>
             )}
 
             {serviceDetails && serviceDetails.duration >= 1440 ? (
-              <Text style={styles.summaryHint}>
-                💡 Select multiple dates to book for multiple days
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="info" size={14} color="#64748B" />
+                <Text style={[styles.summaryHint, { flex: 1 }]}>
+                  Select multiple dates to book for multiple days
+                </Text>
+              </View>
             ) : serviceDetails?.category.toLowerCase() === 'catering' ? (
-              <Text style={styles.summaryHint}>
-                💡 Please select a date, at least 2 time slots, and enter number of attendees
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="info" size={14} color="#64748B" />
+                <Text style={[styles.summaryHint, { flex: 1 }]}>
+                  Please select a date, at least 2 time slots, and enter number of attendees
+                </Text>
+              </View>
             ) : (
-              <Text style={styles.summaryHint}>
-                💡 Please select at least 2 time slots to proceed with booking
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="info" size={14} color="#64748B" />
+                <Text style={[styles.summaryHint, { flex: 1 }]}>
+                  Please select at least 2 time slots to proceed with booking
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -571,39 +661,50 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             style={[
               styles.confirmButton,
               ((bookingMode === 'perday' && selectedDays.length === 0) ||
-               (bookingMode === 'hourly' && (!selectedDate || selectedSlots.length < 2)) ||
-                (serviceDetails?.category.toLowerCase() === 'catering' && (!attendees || parseInt(attendees) < 1))) && styles.confirmButtonDisabled
+                (bookingMode === 'hourly' && (!selectedDate || selectedSlots.length < 2)) ||
+                (serviceDetails?.category.toLowerCase() === 'catering' &&
+                  (!attendees || parseInt(attendees) < 1))) &&
+                styles.confirmButtonDisabled,
             ]}
             onPress={handleConfirm}
             disabled={
               (bookingMode === 'perday' && selectedDays.length === 0) ||
               (bookingMode === 'hourly' && (!selectedDate || selectedSlots.length < 2)) ||
-              (serviceDetails?.category.toLowerCase() === 'catering' && (!attendees || parseInt(attendees) < 1))
+              (serviceDetails?.category.toLowerCase() === 'catering' &&
+                (!attendees || parseInt(attendees) < 1))
             }
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Confirm booking"
           >
-            <Text style={styles.confirmButtonIcon}>✓</Text>
-            <Text style={[
-              styles.confirmButtonText,
-              ((bookingMode === 'perday' && selectedDays.length === 0) ||
-               (bookingMode === 'hourly' && (!selectedDate || selectedSlots.length < 2))) && styles.confirmButtonTextDisabled
-            ]}>
+            <Feather name="check" size={18} color="#fff" />
+            <Text
+              style={[
+                styles.confirmButtonText,
+                ((bookingMode === 'perday' && selectedDays.length === 0) ||
+                  (bookingMode === 'hourly' && (!selectedDate || selectedSlots.length < 2))) &&
+                  styles.confirmButtonTextDisabled,
+              ]}
+            >
               Confirm Booking
             </Text>
           </TouchableOpacity>
           {((bookingMode === 'perday' && selectedDays.length > 0) ||
-            (bookingMode === 'hourly' && selectedSlots.length >= 2)) && estimatedCost > 0 && (
-            <View style={styles.footerInfo}>
-              <Text style={styles.footerInfoText}>
-                {bookingMode === 'perday'
-                  ? `${selectedDays.length} day${selectedDays.length !== 1 ? 's' : ''}`
-                  : `${selectedSlots.length} time slot${selectedSlots.length !== 1 ? 's' : ''}`} •
-                {' '}₱{estimatedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            </View>
-          )}
+            (bookingMode === 'hourly' && selectedSlots.length >= 2)) &&
+            estimatedCost > 0 && (
+              <View style={styles.footerInfo}>
+                <Text style={styles.footerInfoText}>
+                  {bookingMode === 'perday'
+                    ? `${selectedDays.length} day${selectedDays.length !== 1 ? 's' : ''}`
+                    : `${selectedSlots.length} time slot${selectedSlots.length !== 1 ? 's' : ''}`}{' '}
+                  • ₱
+                  {estimatedCost.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Text>
+              </View>
+            )}
         </View>
       </View>
     </>
@@ -624,15 +725,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <View style={styles.decorativeCircle1} />
               <View style={styles.decorativeCircle2} />
             </View>
-            <View style={styles.modalContent}>
-              {renderModalContent()}
-            </View>
+            <View style={styles.modalContent}>{renderModalContent()}</View>
           </View>
         ) : (
           <SafeAreaView style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {renderModalContent()}
-            </View>
+            <View style={styles.modalContent}>{renderModalContent()}</View>
           </SafeAreaView>
         )}
 

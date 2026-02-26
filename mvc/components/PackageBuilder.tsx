@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import {
   ServicePackage,
   PackageCategory,
@@ -16,7 +17,8 @@ import {
   formatPeso,
 } from '../models/Package';
 import { usePackageBuilder } from '../hooks/usePackageBuilder';
-import { styles } from './PackageBuilder.styles';
+import { createStyles } from './PackageBuilder.styles';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface PackageBuilderProps {
   visible: boolean;
@@ -35,6 +37,9 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
   onClose,
   onSave,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const {
     pkg,
     saving,
@@ -56,7 +61,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
 
   const renderPriceSummary = () => {
     let subtotal = 0;
-    pkg.categories.forEach(cat => {
+    pkg.categories.forEach((cat) => {
       subtotal += calculateCategorySubtotal(cat);
     });
     const discount = pkg.discountPercent || 0;
@@ -86,14 +91,9 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
     );
   };
 
-  const renderItem = (
-    item: PackageItem,
-    itemIndex: number,
-    categoryIndex: number
-  ) => {
+  const renderItem = (item: PackageItem, itemIndex: number, categoryIndex: number) => {
     const isEditing =
-      editingItemIndex?.catIdx === categoryIndex &&
-      editingItemIndex?.itemIdx === itemIndex;
+      editingItemIndex?.catIdx === categoryIndex && editingItemIndex?.itemIdx === itemIndex;
     const itemTotal = (item.quantity || 1) * (item.unitPrice || 0);
 
     return (
@@ -104,9 +104,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
               <TextInput
                 style={[styles.itemInput, styles.itemNameInput]}
                 value={item.name}
-                onChangeText={(text) =>
-                  updateItem(categoryIndex, itemIndex, { name: text })
-                }
+                onChangeText={(text) => updateItem(categoryIndex, itemIndex, { name: text })}
                 placeholder="Item name"
                 placeholderTextColor="#9CA3AF"
               />
@@ -127,9 +125,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
               <TextInput
                 style={[styles.itemInput, styles.itemUnitInput]}
                 value={item.unit || 'pc'}
-                onChangeText={(text) =>
-                  updateItem(categoryIndex, itemIndex, { unit: text })
-                }
+                onChangeText={(text) => updateItem(categoryIndex, itemIndex, { unit: text })}
                 placeholder="Unit"
                 placeholderTextColor="#9CA3AF"
               />
@@ -155,13 +151,8 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
                   })
                 }
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    item.isOptional && styles.checkboxChecked,
-                  ]}
-                >
-                  {item.isOptional && <Text style={styles.checkmark}>✓</Text>}
+                <View style={[styles.checkbox, item.isOptional && styles.checkboxChecked]}>
+                  {item.isOptional && <Feather name="check" size={12} color="#fff" />}
                 </View>
                 <Text style={styles.optionalLabel}>Optional</Text>
               </TouchableOpacity>
@@ -178,9 +169,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>
                 {item.name || 'Unnamed item'}
-                {item.isOptional && (
-                  <Text style={styles.optionalBadge}> (optional)</Text>
-                )}
+                {item.isOptional && <Text style={styles.optionalBadge}> (optional)</Text>}
               </Text>
               <Text style={styles.itemDetails}>
                 {item.quantity} {item.unit} × {formatPeso(item.unitPrice)}
@@ -190,17 +179,15 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
             <View style={styles.itemActions}>
               <TouchableOpacity
                 style={styles.itemActionButton}
-                onPress={() =>
-                  setEditingItemIndex({ catIdx: categoryIndex, itemIdx: itemIndex })
-                }
+                onPress={() => setEditingItemIndex({ catIdx: categoryIndex, itemIdx: itemIndex })}
               >
-                <Text style={styles.itemActionIcon}>✏️</Text>
+                <Feather name="edit-2" size={16} color="#2563EB" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.itemActionButton}
                 onPress={() => deleteItem(categoryIndex, itemIndex)}
               >
-                <Text style={styles.itemActionIcon}>🗑️</Text>
+                <Feather name="trash-2" size={16} color="#ef4444" />
               </TouchableOpacity>
             </View>
           </>
@@ -221,7 +208,11 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
           onPress={() => toggleCategoryExpanded(index)}
         >
           <View style={styles.categoryHeaderLeft}>
-            <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+            <Feather
+              name={isExpanded ? 'chevron-down' : 'chevron-right'}
+              size={16}
+              color="#6B7280"
+            />
             {isEditing ? (
               <TextInput
                 style={styles.categoryNameInput}
@@ -233,26 +224,22 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
                 onBlur={() => setEditingCategoryIndex(null)}
               />
             ) : (
-              <Text style={styles.categoryName}>
-                {category.name || 'Unnamed category'}
-              </Text>
+              <Text style={styles.categoryName}>{category.name || 'Unnamed category'}</Text>
             )}
           </View>
           <View style={styles.categoryHeaderRight}>
-            <Text style={styles.categorySubtotal}>
-              {formatPeso(categorySubtotal)}
-            </Text>
+            <Text style={styles.categorySubtotal}>{formatPeso(categorySubtotal)}</Text>
             <TouchableOpacity
               style={styles.categoryActionButton}
               onPress={() => setEditingCategoryIndex(index)}
             >
-              <Text style={styles.categoryActionIcon}>✏️</Text>
+              <Feather name="edit-2" size={16} color="#2563EB" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.categoryActionButton}
               onPress={() => deleteCategory(index)}
             >
-              <Text style={styles.categoryActionIcon}>🗑️</Text>
+              <Feather name="trash-2" size={16} color="#ef4444" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -261,27 +248,16 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
           <View style={styles.categoryContent}>
             {/* Items table header */}
             <View style={styles.itemsHeader}>
-              <Text style={[styles.itemsHeaderText, styles.itemNameCol]}>
-                Item
-              </Text>
-              <Text style={[styles.itemsHeaderText, styles.itemTotalCol]}>
-                Total
-              </Text>
-              <Text style={[styles.itemsHeaderText, styles.itemActionsCol]}>
-                Actions
-              </Text>
+              <Text style={[styles.itemsHeaderText, styles.itemNameCol]}>Item</Text>
+              <Text style={[styles.itemsHeaderText, styles.itemTotalCol]}>Total</Text>
+              <Text style={[styles.itemsHeaderText, styles.itemActionsCol]}>Actions</Text>
             </View>
 
             {/* Items list */}
-            {category.items.map((item, itemIdx) =>
-              renderItem(item, itemIdx, index)
-            )}
+            {category.items.map((item, itemIdx) => renderItem(item, itemIdx, index))}
 
             {/* Add item button */}
-            <TouchableOpacity
-              style={styles.addItemButton}
-              onPress={() => addItem(index)}
-            >
+            <TouchableOpacity style={styles.addItemButton} onPress={() => addItem(index)}>
               <Text style={styles.addItemIcon}>+</Text>
               <Text style={styles.addItemText}>Add Item</Text>
             </TouchableOpacity>
@@ -292,12 +268,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Header */}
@@ -309,7 +280,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
               <Text style={styles.modalSubtitle}>for {serviceName}</Text>
             </View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>×</Text>
+              <Feather name="x" size={22} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -348,9 +319,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
                   <TextInput
                     style={styles.input}
                     value={pkg.minPax?.toString() || '1'}
-                    onChangeText={(text) =>
-                      updatePackageField({ minPax: parseInt(text) || 1 })
-                    }
+                    onChangeText={(text) => updatePackageField({ minPax: parseInt(text) || 1 })}
                     placeholder="1"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
@@ -387,15 +356,14 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
                         <Text
                           style={[
                             styles.priceTypeButtonText,
-                            pkg.priceType === type &&
-                              styles.priceTypeButtonTextActive,
+                            pkg.priceType === type && styles.priceTypeButtonTextActive,
                           ]}
                         >
                           {type === 'calculated'
                             ? 'Auto'
                             : type === 'fixed'
-                            ? 'Fixed'
-                            : 'Per Person'}
+                              ? 'Fixed'
+                              : 'Per Person'}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -439,10 +407,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Categories & Items</Text>
-                <TouchableOpacity
-                  style={styles.addCategoryButton}
-                  onPress={addCategory}
-                >
+                <TouchableOpacity style={styles.addCategoryButton} onPress={addCategory}>
                   <Text style={styles.addCategoryIcon}>+</Text>
                   <Text style={styles.addCategoryText}>Add Category</Text>
                 </TouchableOpacity>
@@ -465,11 +430,7 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
 
           {/* Footer */}
           <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={onClose}
-              disabled={saving}
-            >
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity

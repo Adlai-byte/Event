@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { styles } from '../../views/user/HiringView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/HiringView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface ApplyModalProps {
   visible: boolean;
@@ -27,22 +29,16 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
   onSubmit,
   onClearError,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Apply to Job</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
-            >
-              <Text style={styles.closeButtonText}>{'\u2715'}</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Feather name="x" size={22} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -51,7 +47,12 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
               <Text style={styles.jobInfoTitle}>{selectedJobPosting.jobTitle}</Text>
               <Text style={styles.jobInfoDescription}>{selectedJobPosting.description}</Text>
               <Text style={styles.jobInfoDeadline}>
-                Deadline: {new Date(selectedJobPosting.deadlineDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                Deadline:{' '}
+                {new Date(selectedJobPosting.deadlineDate).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </Text>
             </View>
           )}
@@ -65,15 +66,22 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
                 onPress={onPickResume}
                 disabled={isSubmitting}
               >
-                <Text style={styles.filePickerButtonText}>
-                  {resumeFile ? `\uD83D\uDCC4 ${resumeFile.name}` : '\uD83D\uDCCE Select PDF Resume'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  {resumeFile ? (
+                    <>
+                      <Feather name="file" size={20} color="#2563EB" />
+                      <Text style={styles.filePickerButtonText}>{resumeFile.name}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Feather name="paperclip" size={20} color="#94A3B8" />
+                      <Text style={styles.filePickerButtonText}>Select PDF Resume</Text>
+                    </>
+                  )}
+                </View>
               </TouchableOpacity>
               {resumeFile && (
-                <TouchableOpacity
-                  style={styles.removeFileButton}
-                  onPress={onRemoveFile}
-                >
+                <TouchableOpacity style={styles.removeFileButton} onPress={onRemoveFile}>
                   <Text style={styles.removeFileButtonText}>Remove File</Text>
                 </TouchableOpacity>
               )}
@@ -81,13 +89,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
 
             {errorMessage && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorIcon}>{'\u26A0\uFE0F'}</Text>
+                <Feather name="alert-triangle" size={16} color="#f59e0b" />
                 <Text style={styles.errorText}>{errorMessage}</Text>
-                <TouchableOpacity
-                  onPress={onClearError}
-                  style={styles.errorCloseButton}
-                >
-                  <Text style={styles.errorCloseText}>{'\u2715'}</Text>
+                <TouchableOpacity onPress={onClearError} style={styles.errorCloseButton}>
+                  <Feather name="x" size={16} color="#64748B" />
                 </TouchableOpacity>
               </View>
             )}
@@ -102,7 +107,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+              style={[
+                styles.modalButton,
+                styles.submitButton,
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
               onPress={onSubmit}
               disabled={isSubmitting || !resumeFile}
             >

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { styles } from '../../views/user/BookingView.styles';
+import { createStyles } from '../../views/user/BookingView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import type { Booking } from './types';
 
 export interface BookingCardProps {
@@ -13,7 +14,16 @@ export interface BookingCardProps {
 }
 
 export const BookingCard: React.FC<BookingCardProps> = React.memo(
-  ({ booking, onViewDetails, onEdit, onCancel, onPay, isPast = false }) => {
+  ({
+    booking,
+    onViewDetails,
+    onEdit: _onEdit,
+    onCancel: _onCancel,
+    onPay,
+    isPast: _isPast = false,
+  }) => {
+    const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+    const styles = createStyles(isMobile, screenWidth, screenHeight);
     const [imageError, setImageError] = useState(false);
 
     // Check if booking is in the past (more accurate check using dateStr)
@@ -24,7 +34,8 @@ export const BookingCard: React.FC<BookingCardProps> = React.memo(
     const bookingIsPast = eventDate < today;
 
     // Show pay button only if confirmed, not paid, and not in the past
-    const showPayButton = booking.bookingStatus === 'confirmed' && !booking.isPaid && !bookingIsPast;
+    const showPayButton =
+      booking.bookingStatus === 'confirmed' && !booking.isPaid && !bookingIsPast;
 
     return (
       <View style={styles.bookingCard}>
@@ -66,19 +77,15 @@ export const BookingCard: React.FC<BookingCardProps> = React.memo(
           </View>
 
           <Text style={styles.bookingDateTime}>
-            {booking.date}{booking.time ? ` • ${booking.time}` : ''}
+            {booking.date}
+            {booking.time ? ` • ${booking.time}` : ''}
           </Text>
 
-          <Text style={styles.bookingDescription}>
-            {booking.description}
-          </Text>
+          <Text style={styles.bookingDescription}>{booking.description}</Text>
 
           <View style={styles.bookingActions}>
             {showPayButton && (
-              <TouchableOpacity
-                style={styles.payButton}
-                onPress={onPay}
-              >
+              <TouchableOpacity style={styles.payButton} onPress={onPay}>
                 <Text style={styles.payButtonText}>PAY</Text>
               </TouchableOpacity>
             )}
@@ -92,5 +99,5 @@ export const BookingCard: React.FC<BookingCardProps> = React.memo(
         </View>
       </View>
     );
-  }
+  },
 );

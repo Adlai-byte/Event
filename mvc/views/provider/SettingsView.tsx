@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface SettingsViewProps {
   user: User;
@@ -16,11 +10,9 @@ interface SettingsViewProps {
   onLogout?: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({
-  user,
-  onNavigate,
-  onLogout,
-}) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile } = useBreakpoints();
+  const styles = createStyles(isMobile);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -45,11 +37,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Notification Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Text style={styles.settingLabel}>Enable Notifications</Text>
-              <Text style={styles.settingDescription}>Receive notifications about bookings and messages</Text>
+              <Text style={styles.settingDescription}>
+                Receive notifications about bookings and messages
+              </Text>
             </View>
             <Switch
               value={notificationsEnabled}
@@ -77,7 +71,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <View style={styles.settingItem}>
                 <View style={styles.settingLeft}>
                   <Text style={styles.settingLabel}>Push Notifications</Text>
-                  <Text style={styles.settingDescription}>Receive push notifications on your device</Text>
+                  <Text style={styles.settingDescription}>
+                    Receive push notifications on your device
+                  </Text>
                 </View>
                 <Switch
                   value={pushNotifications}
@@ -90,7 +86,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <View style={styles.settingItem}>
                 <View style={styles.settingLeft}>
                   <Text style={styles.settingLabel}>Marketing Emails</Text>
-                  <Text style={styles.settingDescription}>Receive updates and promotional emails</Text>
+                  <Text style={styles.settingDescription}>
+                    Receive updates and promotional emails
+                  </Text>
                 </View>
                 <Switch
                   value={marketingEmails}
@@ -106,11 +104,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Business Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Business Settings</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Text style={styles.settingLabel}>Auto-Accept Bookings</Text>
-              <Text style={styles.settingDescription}>Automatically accept bookings within your availability</Text>
+              <Text style={styles.settingDescription}>
+                Automatically accept bookings within your availability
+              </Text>
             </View>
             <Switch
               value={autoAcceptBookings}
@@ -137,18 +137,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Privacy Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy</Text>
-          
-          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Privacy policy">
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            accessibilityRole="button"
+            accessibilityLabel="Privacy policy"
+          >
             <Text style={styles.settingButtonText}>Privacy Policy</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Terms of service">
+          <TouchableOpacity
+            style={styles.settingButton}
+            accessibilityRole="button"
+            accessibilityLabel="Terms of service"
+          >
             <Text style={styles.settingButtonText}>Terms of Service</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Data and privacy">
+          <TouchableOpacity
+            style={styles.settingButton}
+            accessibilityRole="button"
+            accessibilityLabel="Data and privacy"
+          >
             <Text style={styles.settingButtonText}>Data & Privacy</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
@@ -157,18 +169,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Account Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
-          <TouchableOpacity style={styles.settingButton} onPress={() => onNavigate?.('profile')} accessibilityRole="button" accessibilityLabel="Edit profile">
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => onNavigate?.('profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
+          >
             <Text style={styles.settingButtonText}>Edit Profile</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Change password">
+          <TouchableOpacity
+            style={styles.settingButton}
+            accessibilityRole="button"
+            accessibilityLabel="Change password"
+          >
             <Text style={styles.settingButtonText}>Change Password</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton} accessibilityRole="button" accessibilityLabel="Payment methods">
+          <TouchableOpacity
+            style={styles.settingButton}
+            accessibilityRole="button"
+            accessibilityLabel="Payment methods"
+          >
             <Text style={styles.settingButtonText}>Payment Methods</Text>
             <Text style={styles.arrowIcon}>›</Text>
           </TouchableOpacity>
@@ -177,7 +202,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* About */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
-          
+
           <View style={styles.aboutItem}>
             <Text style={styles.aboutLabel}>App Version</Text>
             <Text style={styles.aboutValue}>1.0.0</Text>
@@ -196,122 +221,101 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D3436',
-    marginBottom: 12,
-  },
-  settingItem: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  settingLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#636E72',
-  },
-  settingButton: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  settingButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-  },
-  arrowIcon: {
-    fontSize: 20,
-    color: '#A4B0BE',
-    fontWeight: 'bold',
-  },
-  aboutItem: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  aboutLabel: {
-    fontSize: 16,
-    color: '#636E72',
-  },
-  aboutValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-  },
-  bottomSpacing: {
-    height: 20,
-  },
-});
+const createStyles = (isMobile: boolean) =>
+  StyleSheet.create({
+    scrollView: {
+      flex: 1,
+    },
+    content: {
+      padding: isMobile ? 12 : 20,
+    },
+    section: {
+      marginBottom: isMobile ? 16 : 24,
+    },
+    sectionTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: 'bold',
+      color: '#2D3436',
+      marginBottom: isMobile ? 8 : 12,
+    },
+    settingItem: {
+      backgroundColor: '#ffffff',
+      borderRadius: isMobile ? 8 : 12,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    settingLeft: {
+      flex: 1,
+      marginRight: 12,
+    },
+    settingLabel: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#2D3436',
+      marginBottom: 4,
+    },
+    settingDescription: {
+      fontSize: isMobile ? 12 : 14,
+      color: '#636E72',
+    },
+    settingButton: {
+      backgroundColor: '#ffffff',
+      borderRadius: isMobile ? 8 : 12,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    settingButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#2D3436',
+    },
+    arrowIcon: {
+      fontSize: isMobile ? 18 : 20,
+      color: '#A4B0BE',
+      fontWeight: 'bold',
+    },
+    aboutItem: {
+      backgroundColor: '#ffffff',
+      borderRadius: isMobile ? 8 : 12,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 8,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    aboutLabel: {
+      fontSize: isMobile ? 14 : 16,
+      color: '#636E72',
+    },
+    aboutValue: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#2D3436',
+    },
+    bottomSpacing: {
+      height: 20,
+    },
+  });
 
 export default SettingsView;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

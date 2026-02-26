@@ -1,13 +1,8 @@
 // mvc/components/layout/Sidebar.tsx
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-import { colors, semantic, typography, spacing, shadow, borderRadius } from '../../theme';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { colors, semantic, typography, spacing, borderRadius } from '../../theme';
 import { Avatar } from '../ui/Avatar';
 
 type Role = 'user' | 'provider' | 'admin';
@@ -15,7 +10,7 @@ type Role = 'user' | 'provider' | 'admin';
 interface NavItem {
   key: string;
   label: string;
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface SidebarProps {
@@ -30,33 +25,33 @@ interface SidebarProps {
 
 const navItemsByRole: Record<Role, NavItem[]> = {
   user: [
-    { key: 'dashboard', label: 'Dashboard', icon: '\u{1F3E0}' },
-    { key: 'bookings', label: 'Bookings', icon: '\u{1F4C5}' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'hiring', label: 'Hiring', icon: '\u{1F4BC}' },
-    { key: 'profile', label: 'Profile', icon: '\u{1F464}' },
-    { key: 'notifications', label: 'Notifications', icon: '\u{1F514}' },
-    { key: 'settings', label: 'Settings', icon: '\u2699\uFE0F' },
+    { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
+    { key: 'profile', label: 'Profile', icon: 'user' },
+    { key: 'notifications', label: 'Notifications', icon: 'bell' },
+    { key: 'settings', label: 'Settings', icon: 'settings' },
   ],
   provider: [
-    { key: 'dashboard', label: 'Dashboard', icon: '\u{1F3E0}' },
-    { key: 'services', label: 'Services', icon: '\u{1F6E0}\uFE0F' },
-    { key: 'bookings', label: 'Bookings', icon: '\u{1F4C5}' },
-    { key: 'proposals', label: 'Proposals', icon: '\u{1F4DD}' },
-    { key: 'hiring', label: 'Hiring', icon: '\u{1F4BC}' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'analytics', label: 'Analytics', icon: '\u{1F4CA}' },
-    { key: 'profile', label: 'Profile', icon: '\u{1F464}' },
-    { key: 'settings', label: 'Settings', icon: '\u2699\uFE0F' },
+    { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+    { key: 'services', label: 'Services', icon: 'tool' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'proposals', label: 'Proposals', icon: 'file-text' },
+    { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'analytics', label: 'Analytics', icon: 'bar-chart-2' },
+    { key: 'profile', label: 'Profile', icon: 'user' },
+    { key: 'settings', label: 'Settings', icon: 'settings' },
   ],
   admin: [
-    { key: 'dashboard', label: 'Dashboard', icon: '\u{1F3E0}' },
-    { key: 'user', label: 'Users', icon: '\u{1F465}' },
-    { key: 'services', label: 'Services', icon: '\u{1F6E0}\uFE0F' },
-    { key: 'bookings', label: 'Bookings', icon: '\u{1F4C5}' },
-    { key: 'analytics', label: 'Analytics', icon: '\u{1F4CA}' },
-    { key: 'messages', label: 'Messages', icon: '\u{1F4AC}' },
-    { key: 'providerApplications', label: 'Applications', icon: '\u{1F4CB}' },
+    { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+    { key: 'user', label: 'Users', icon: 'users' },
+    { key: 'services', label: 'Services', icon: 'tool' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'analytics', label: 'Analytics', icon: 'bar-chart-2' },
+    { key: 'messages', label: 'Messages', icon: 'message-circle' },
+    { key: 'providerApplications', label: 'Applications', icon: 'clipboard' },
   ],
 };
 
@@ -79,7 +74,7 @@ export function Sidebar({
         <Text style={styles.logo}>E-VENT</Text>
         {onClose && (
           <TouchableOpacity onPress={onClose} accessibilityLabel="Close menu">
-            <Text style={styles.closeButton}>{'\u2715'}</Text>
+            <Feather name="x" size={20} color={colors.neutral[400]} />
           </TouchableOpacity>
         )}
       </View>
@@ -89,8 +84,12 @@ export function Sidebar({
         <View style={styles.userSection}>
           <Avatar uri={user.profilePicture} name={displayName} size={36} />
           <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
-            <Text style={styles.userEmail} numberOfLines={1}>{user.email}</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={styles.userEmail} numberOfLines={1}>
+              {user.email}
+            </Text>
           </View>
         </View>
       )}
@@ -110,10 +109,14 @@ export function Sidebar({
               accessibilityLabel={item.label}
               accessibilityState={{ selected: isActive }}
             >
-              <Text style={styles.navIcon}>{item.icon}</Text>
-              <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                {item.label}
-              </Text>
+              <View style={styles.navIconContainer}>
+                <Feather
+                  name={item.icon}
+                  size={18}
+                  color={isActive ? colors.neutral[0] : colors.neutral[400]}
+                />
+              </View>
+              <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{item.label}</Text>
               {showBadge && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
@@ -128,7 +131,9 @@ export function Sidebar({
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={onLogout} accessibilityLabel="Log out">
-        <Text style={styles.navIcon}>{'\u{1F6AA}'}</Text>
+        <View style={styles.navIconContainer}>
+          <Feather name="log-out" size={18} color={colors.neutral[400]} />
+        </View>
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
     </View>
@@ -152,10 +157,6 @@ const styles = StyleSheet.create({
   logo: {
     ...typography.h1,
     color: colors.neutral[0],
-  },
-  closeButton: {
-    color: colors.neutral[400],
-    fontSize: 20,
   },
   userSection: {
     flexDirection: 'row',
@@ -193,10 +194,9 @@ const styles = StyleSheet.create({
   navItemActive: {
     backgroundColor: semantic.sidebarActive,
   },
-  navIcon: {
-    fontSize: 18,
+  navIconContainer: {
     width: 28,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   navLabel: {
     ...typography.body,

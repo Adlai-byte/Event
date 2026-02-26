@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
@@ -22,7 +23,8 @@ import {
   type Booking,
 } from '../../components/booking';
 import { useBookingData } from '../../hooks/useBookingData';
-import { styles } from './BookingView.styles';
+import { createStyles } from './BookingView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface BookingViewProps {
   userId: string;
@@ -47,6 +49,9 @@ export const BookingView: React.FC<BookingViewProps> = ({
   onNavigateToMessages,
   refreshKey,
 }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   const { bookings, loading, serviceRatings, loadBookings, loadServiceRatings } = useBookingData({
     userEmail,
     refreshKey,
@@ -340,7 +345,9 @@ export const BookingView: React.FC<BookingViewProps> = ({
         <View style={styles.content}>
           {filteredBookings.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>{'\uD83D\uDCC5'}</Text>
+              <View style={styles.emptyStateIcon}>
+                <Feather name="calendar" size={48} color="#94A3B8" />
+              </View>
               <Text style={styles.emptyStateText}>
                 {activeFilter === 'all' ? 'No bookings yet' : `No ${activeFilter} bookings`}
               </Text>

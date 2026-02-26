@@ -11,6 +11,7 @@ import {
   Platform,
   Animated,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../services/api';
 
 interface RatingModalProps {
@@ -40,7 +41,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
   const [rating, setRating] = useState<number>(existingRating?.rating || 0);
   const [comment, setComment] = useState<string>(existingRating?.comment || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, _setIsLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const toastOpacity = React.useRef(new Animated.Value(0)).current;
 
@@ -88,7 +89,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
             rating,
             comment: comment.trim() || null,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -135,22 +136,15 @@ export const RatingModal: React.FC<RatingModalProps> = ({
           style={styles.starButton}
           activeOpacity={0.6}
         >
-          <Text style={[styles.star, isFilled && styles.starFilled]}>
-            {isFilled ? '★' : '☆'}
-          </Text>
-        </TouchableOpacity>
+          <Feather name="star" size={44} color={isFilled ? '#FBBF24' : '#D1D5DB'} />
+        </TouchableOpacity>,
       );
     }
     return stars;
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         {/* Success Toast Notification */}
         {showSuccessToast && (
@@ -171,7 +165,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
             ]}
           >
             <View style={styles.successToastContent}>
-              <Text style={styles.successToastIcon}>✓</Text>
+              <Feather name="check-circle" size={24} color="#FFFFFF" style={{ marginRight: 12 }} />
               <Text style={styles.successToastText}>Successfully Submitted</Text>
             </View>
           </Animated.View>
@@ -181,7 +175,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Rate Service</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Feather name="x" size={18} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
@@ -227,7 +221,11 @@ export const RatingModal: React.FC<RatingModalProps> = ({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.submitButton, rating === 0 && styles.submitButtonDisabled]}
+              style={[
+                styles.button,
+                styles.submitButton,
+                rating === 0 && styles.submitButtonDisabled,
+              ]}
               onPress={handleSubmit}
               disabled={isSubmitting || rating === 0}
             >
@@ -260,15 +258,17 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     maxHeight: '90%',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 10,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+        }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 10,
+        }),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -406,9 +406,11 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1000,
     alignItems: 'center',
-    ...(Platform.OS === 'web' ? {
-      pointerEvents: 'none',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          pointerEvents: 'none',
+        }
+      : {}),
   },
   successToastContent: {
     backgroundColor: '#10B981',
@@ -435,4 +437,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
-

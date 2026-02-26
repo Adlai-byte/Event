@@ -5,18 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Alert,
   TextInput,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
-import { colors, semantic } from '../../theme';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
+import { semantic } from '../../theme';
 
 interface ProposalsViewProps {
   user?: User;
@@ -49,6 +47,9 @@ interface HiringRequest {
 }
 
 export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [hiringRequests, setHiringRequests] = useState<HiringRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
     description: '',
     proposedBudget: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
   });
   const [showProposalForm, setShowProposalForm] = useState(false);
 
@@ -88,7 +89,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             status: p.p_status,
             submittedAt: p.p_submitted_at,
             clientName: p.client_name || 'Unknown Client',
-            hiringRequestTitle: p.hiring_request_title || 'Hiring Request'
+            hiringRequestTitle: p.hiring_request_title || 'Hiring Request',
           }));
           setProposals(mapped);
         }
@@ -115,7 +116,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             startDate: hr.hr_start_date,
             endDate: hr.hr_end_date,
             city: hr.hr_city,
-            status: hr.hr_status
+            status: hr.hr_status,
           }));
           setHiringRequests(mapped);
         }
@@ -142,52 +143,76 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
           description: newProposal.description,
           proposedBudget: parseFloat(newProposal.proposedBudget),
           startDate: newProposal.startDate,
-          endDate: newProposal.endDate
-        })
+          endDate: newProposal.endDate,
+        }),
       });
 
       if (resp.ok) {
         Alert.alert('Success', 'Proposal submitted successfully');
-        setNewProposal({ hiringRequestId: '', title: '', description: '', proposedBudget: '', startDate: '', endDate: '' });
+        setNewProposal({
+          hiringRequestId: '',
+          title: '',
+          description: '',
+          proposedBudget: '',
+          startDate: '',
+          endDate: '',
+        });
         setShowProposalForm(false);
         loadProposals();
       } else {
         Alert.alert('Error', 'Failed to submit proposal');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to submit proposal');
     }
   };
 
-  const filteredProposals = proposals.filter(p => {
+  const filteredProposals = proposals.filter((p) => {
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.hiringRequestTitle.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
-  
-  const filteredHiringRequests = hiringRequests.filter(hr => {
-    const matchesSearch = !searchQuery || 
+
+  const filteredHiringRequests = hiringRequests.filter((hr) => {
+    const matchesSearch =
+      !searchQuery ||
       hr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       hr.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       hr.city.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
-  
-  const statusFilters = ['all', 'submitted', 'under_review', 'accepted', 'rejected', 'revised', 'withdrawn'];
+
+  const statusFilters = [
+    'all',
+    'submitted',
+    'under_review',
+    'accepted',
+    'rejected',
+    'revised',
+    'withdrawn',
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'submitted': return semantic.warning;
-      case 'under_review': return semantic.primary;
-      case 'accepted': return semantic.success;
-      case 'rejected': return semantic.error;
-      case 'revised': return '#8b5cf6';
-      case 'withdrawn': return semantic.textSecondary;
-      default: return semantic.textSecondary;
+      case 'submitted':
+        return semantic.warning;
+      case 'under_review':
+        return semantic.primary;
+      case 'accepted':
+        return semantic.success;
+      case 'rejected':
+        return semantic.error;
+      case 'revised':
+        return '#8b5cf6';
+      case 'withdrawn':
+        return semantic.textSecondary;
+      default:
+        return semantic.textSecondary;
     }
   };
 
@@ -201,7 +226,6 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
       onLogout={() => onLogout?.()}
     >
       <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
-
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -210,7 +234,14 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             accessibilityRole="button"
             accessibilityLabel="My proposals tab"
           >
-            <Text style={[styles.tabButtonText, activeTab === 'my-proposals' && styles.tabButtonTextActive]}>My Proposals</Text>
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === 'my-proposals' && styles.tabButtonTextActive,
+              ]}
+            >
+              My Proposals
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'available-requests' && styles.tabButtonActive]}
@@ -218,7 +249,14 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             accessibilityRole="button"
             accessibilityLabel="Available requests tab"
           >
-            <Text style={[styles.tabButtonText, activeTab === 'available-requests' && styles.tabButtonTextActive]}>Available Requests</Text>
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === 'available-requests' && styles.tabButtonTextActive,
+              ]}
+            >
+              Available Requests
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -237,8 +275,12 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             </View>
 
             {/* Status Filters */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-              {statusFilters.map(status => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterContainer}
+            >
+              {statusFilters.map((status) => (
                 <TouchableOpacity
                   key={status}
                   style={[styles.filterChip, filterStatus === status && styles.filterChipActive]}
@@ -246,8 +288,14 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   accessibilityRole="button"
                   accessibilityLabel={`Filter by ${status}`}
                 >
-                  <Text style={[styles.filterChipText, filterStatus === status && styles.filterChipTextActive]}>
-                    {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterStatus === status && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {status.replace('_', ' ').charAt(0).toUpperCase() +
+                      status.replace('_', ' ').slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -263,11 +311,16 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
               <>
                 {filteredProposals.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateIcon}>📝</Text>
+                    <Feather
+                      name="file-text"
+                      size={48}
+                      color={semantic.textSecondary}
+                      style={{ marginBottom: 16 }}
+                    />
                     <Text style={styles.emptyStateText}>No proposals found</Text>
                     <Text style={styles.emptyStateSubtext}>
-                      {filterStatus === 'all' 
-                        ? 'You haven\'t submitted any proposals yet' 
+                      {filterStatus === 'all'
+                        ? "You haven't submitted any proposals yet"
                         : `No ${filterStatus} proposals`}
                     </Text>
                   </View>
@@ -277,10 +330,19 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                       <View style={styles.proposalHeader}>
                         <View style={styles.proposalTitleSection}>
                           <Text style={styles.proposalTitle}>{proposal.title}</Text>
-                          <Text style={styles.proposalHiringRequest}>{proposal.hiringRequestTitle}</Text>
+                          <Text style={styles.proposalHiringRequest}>
+                            {proposal.hiringRequestTitle}
+                          </Text>
                         </View>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(proposal.status) + '20' }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(proposal.status) }]}>
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: getStatusColor(proposal.status) + '20' },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.statusText, { color: getStatusColor(proposal.status) }]}
+                          >
                             {proposal.status.replace('_', ' ').toUpperCase()}
                           </Text>
                         </View>
@@ -303,7 +365,9 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                         </View>
                         <View style={styles.proposalDetailRow}>
                           <Text style={styles.proposalDetailLabel}>Submitted:</Text>
-                          <Text style={styles.proposalDetailValue}>{new Date(proposal.submittedAt).toLocaleDateString()}</Text>
+                          <Text style={styles.proposalDetailValue}>
+                            {new Date(proposal.submittedAt).toLocaleDateString()}
+                          </Text>
                         </View>
                       </View>
 
@@ -314,10 +378,14 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                             accessibilityRole="button"
                             accessibilityLabel={`Withdraw proposal ${proposal.title}`}
                             onPress={() => {
-                              Alert.alert('Withdraw Proposal', 'Are you sure you want to withdraw this proposal?', [
-                                { text: 'Cancel', style: 'cancel' },
-                                { text: 'Withdraw', onPress: () => {} }
-                              ]);
+                              Alert.alert(
+                                'Withdraw Proposal',
+                                'Are you sure you want to withdraw this proposal?',
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  { text: 'Withdraw', onPress: () => {} },
+                                ],
+                              );
                             }}
                           >
                             <Text style={styles.actionButtonText}>Withdraw</Text>
@@ -348,9 +416,16 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
             {filteredHiringRequests.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>🔍</Text>
+                <Feather
+                  name="search"
+                  size={48}
+                  color={semantic.textSecondary}
+                  style={{ marginBottom: 16 }}
+                />
                 <Text style={styles.emptyStateText}>No available requests</Text>
-                <Text style={styles.emptyStateSubtext}>Check back later for new hiring requests</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Check back later for new hiring requests
+                </Text>
               </View>
             ) : (
               filteredHiringRequests.map((request) => (
@@ -370,7 +445,8 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                     <View style={styles.requestDetailRow}>
                       <Text style={styles.requestDetailLabel}>Budget Range:</Text>
                       <Text style={styles.requestDetailValue}>
-                        ₱ {request.budgetMin.toLocaleString()} - ₱ {request.budgetMax.toLocaleString()}
+                        ₱ {request.budgetMin.toLocaleString()} - ₱{' '}
+                        {request.budgetMax.toLocaleString()}
                       </Text>
                     </View>
                     <View style={styles.requestDetailRow}>
@@ -380,7 +456,8 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                     <View style={styles.requestDetailRow}>
                       <Text style={styles.requestDetailLabel}>Duration:</Text>
                       <Text style={styles.requestDetailValue}>
-                        {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+                        {new Date(request.startDate).toLocaleDateString()} -{' '}
+                        {new Date(request.endDate).toLocaleDateString()}
                       </Text>
                     </View>
                   </View>
@@ -390,7 +467,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                     accessibilityRole="button"
                     accessibilityLabel={`Submit proposal for ${request.title}`}
                     onPress={() => {
-                      setNewProposal({...newProposal, hiringRequestId: request.id});
+                      setNewProposal({ ...newProposal, hiringRequestId: request.id });
                       setShowProposalForm(true);
                     }}
                   >
@@ -408,8 +485,12 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Submit Proposal</Text>
-                <TouchableOpacity onPress={() => setShowProposalForm(false)} accessibilityRole="button" accessibilityLabel="Close proposal form">
-                  <Text style={styles.modalClose}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => setShowProposalForm(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close proposal form"
+                >
+                  <Feather name="x" size={24} color={semantic.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -419,7 +500,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   style={styles.formInput}
                   placeholder="Enter proposal title"
                   value={newProposal.title}
-                  onChangeText={(text) => setNewProposal({...newProposal, title: text})}
+                  onChangeText={(text) => setNewProposal({ ...newProposal, title: text })}
                   accessibilityLabel="Proposal title"
                 />
 
@@ -430,7 +511,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   multiline
                   numberOfLines={4}
                   value={newProposal.description}
-                  onChangeText={(text) => setNewProposal({...newProposal, description: text})}
+                  onChangeText={(text) => setNewProposal({ ...newProposal, description: text })}
                   accessibilityLabel="Proposal description"
                 />
 
@@ -440,7 +521,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                   placeholder="Enter proposed budget"
                   keyboardType="numeric"
                   value={newProposal.proposedBudget}
-                  onChangeText={(text) => setNewProposal({...newProposal, proposedBudget: text})}
+                  onChangeText={(text) => setNewProposal({ ...newProposal, proposedBudget: text })}
                   accessibilityLabel="Proposed budget"
                 />
 
@@ -459,7 +540,9 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
                     accessibilityRole="button"
                     accessibilityLabel="Submit proposal"
                   >
-                    <Text style={[styles.modalButtonText, styles.submitModalButtonText]}>Submit</Text>
+                    <Text style={[styles.modalButtonText, styles.submitModalButtonText]}>
+                      Submit
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -471,364 +554,357 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   );
 };
 
-const styles = StyleSheet.create({
-  main: {
-    flex: 1,
-  },
-  mainContent: {
-    padding: isMobile ? 12 : 20,
-    paddingBottom: isMobile ? 20 : 20,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: isMobile ? 12 : 20,
-    backgroundColor: semantic.surface,
-    flexWrap: 'wrap',
-    borderRadius: 8,
-    padding: 4,
-  },
-  tabButton: {
-    flex: isMobile ? undefined : 1,
-    minWidth: isMobile ? (screenWidth - 48) / 2 : undefined,
-    paddingVertical: isMobile ? 8 : 10,
-    paddingHorizontal: isMobile ? 12 : 20,
-    borderRadius: 6,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabButtonActive: {
-    backgroundColor: semantic.primary,
-    elevation: 2,
-    shadowColor: semantic.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  tabButtonText: {
-    fontSize: isMobile ? 12 : 14,
-    color: semantic.textSecondary,
-    fontWeight: '600',
-  },
-  tabButtonTextActive: {
-    color: semantic.surface,
-    fontWeight: '700',
-  },
-  filterContainer: {
-    marginBottom: 20,
-  },
-  filterChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: semantic.surface,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: semantic.border,
-  },
-  filterChipActive: {
-    backgroundColor: semantic.primary,
-    borderColor: semantic.primary,
-  },
-  filterChipText: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    fontWeight: '600',
-  },
-  filterChipTextActive: {
-    color: semantic.surface,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: semantic.textSecondary,
-  },
-  proposalCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  proposalHeader: {
-    flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'space-between',
-    alignItems: isMobile ? 'flex-start' : 'flex-start',
-    marginBottom: 12,
-    gap: isMobile ? 8 : 0,
-  },
-  proposalTitleSection: {
-    flex: 1,
-  },
-  proposalTitle: {
-    fontSize: isMobile ? 16 : 18,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-    marginBottom: 4,
-  },
-  proposalHiringRequest: {
-    fontSize: isMobile ? 12 : 14,
-    color: semantic.textSecondary,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  proposalDescription: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  proposalDetails: {
-    marginBottom: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: semantic.border,
-  },
-  proposalDetailRow: {
-    flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: isMobile ? 4 : 0,
-  },
-  proposalDetailLabel: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    fontWeight: '600',
-  },
-  proposalDetailValue: {
-    fontSize: 14,
-    color: semantic.textPrimary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  proposalBudget: {
-    fontWeight: '700',
-    color: semantic.primary,
-  },
-  proposalActions: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: semantic.border,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  viewButton: {
-    backgroundColor: semantic.primary,
-  },
-  withdrawButton: {
-    backgroundColor: semantic.error,
-  },
-  actionButtonText: {
-    color: semantic.surface,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  requestCard: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  requestHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  requestTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-    flex: 1,
-  },
-  requestDescription: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  requestDetails: {
-    marginBottom: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: semantic.border,
-  },
-  requestDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  requestDetailLabel: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    fontWeight: '600',
-  },
-  requestDetailValue: {
-    fontSize: 14,
-    color: semantic.textPrimary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  submitProposalButton: {
-    backgroundColor: semantic.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitProposalButtonText: {
-    color: semantic.surface,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: semantic.textPrimary,
-    marginBottom: 4,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: semantic.surface,
-    borderRadius: 12,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-  },
-  modalClose: {
-    fontSize: 24,
-    color: semantic.textSecondary,
-  },
-  modalBody: {
-    padding: 16,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: semantic.textPrimary,
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  formInput: {
-    borderWidth: 1,
-    borderColor: semantic.border,
-    borderRadius: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: semantic.background,
-  },
-  searchContainer: {
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  searchInput: {
-    backgroundColor: semantic.surface,
-    borderWidth: 1,
-    borderColor: semantic.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: semantic.textPrimary,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelModalButton: {
-    backgroundColor: semantic.background,
-  },
-  submitModalButton: {
-    backgroundColor: semantic.primary,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: semantic.textSecondary,
-  },
-  submitModalButtonText: {
-    color: semantic.surface,
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    main: {
+      flex: 1,
+    },
+    mainContent: {
+      padding: isMobile ? 12 : 20,
+      paddingBottom: isMobile ? 20 : 20,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      marginBottom: isMobile ? 12 : 20,
+      backgroundColor: semantic.surface,
+      flexWrap: 'wrap',
+      borderRadius: 8,
+      padding: 4,
+    },
+    tabButton: {
+      flex: isMobile ? undefined : 1,
+      minWidth: isMobile ? (screenWidth - 48) / 2 : undefined,
+      paddingVertical: isMobile ? 8 : 10,
+      paddingHorizontal: isMobile ? 12 : 20,
+      borderRadius: 6,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabButtonActive: {
+      backgroundColor: semantic.primary,
+      elevation: 2,
+      shadowColor: semantic.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    tabButtonText: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    tabButtonTextActive: {
+      color: semantic.surface,
+      fontWeight: '700',
+    },
+    filterContainer: {
+      marginBottom: 20,
+    },
+    filterChip: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      backgroundColor: semantic.surface,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    filterChipActive: {
+      backgroundColor: semantic.primary,
+      borderColor: semantic.primary,
+    },
+    filterChipText: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    filterChipTextActive: {
+      color: semantic.surface,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    proposalCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 16,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    proposalHeader: {
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: 'space-between',
+      alignItems: isMobile ? 'flex-start' : 'flex-start',
+      marginBottom: 12,
+      gap: isMobile ? 8 : 0,
+    },
+    proposalTitleSection: {
+      flex: 1,
+    },
+    proposalTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 4,
+    },
+    proposalHiringRequest: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    proposalDescription: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    proposalDetails: {
+      marginBottom: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    proposalDetailRow: {
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+      gap: isMobile ? 4 : 0,
+    },
+    proposalDetailLabel: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    proposalDetailValue: {
+      fontSize: 14,
+      color: semantic.textPrimary,
+      flex: 1,
+      textAlign: 'right',
+    },
+    proposalBudget: {
+      fontWeight: '700',
+      color: semantic.primary,
+    },
+    proposalActions: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    viewButton: {
+      backgroundColor: semantic.primary,
+    },
+    withdrawButton: {
+      backgroundColor: semantic.error,
+    },
+    actionButtonText: {
+      color: semantic.surface,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    requestCard: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    requestHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    requestTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      flex: 1,
+    },
+    requestDescription: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    requestDetails: {
+      marginBottom: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    requestDetailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    requestDetailLabel: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    requestDetailValue: {
+      fontSize: 14,
+      color: semantic.textPrimary,
+      flex: 1,
+      textAlign: 'right',
+    },
+    submitProposalButton: {
+      backgroundColor: semantic.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    submitProposalButtonText: {
+      color: semantic.surface,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyStateIcon: {
+      fontSize: 48,
+      marginBottom: 16,
+    },
+    emptyStateText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      marginBottom: 4,
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+    },
+    modalOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      width: '90%',
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    modalClose: {
+      fontSize: 24,
+      color: semantic.textSecondary,
+    },
+    modalBody: {
+      padding: 16,
+    },
+    formLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    formInput: {
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: semantic.background,
+    },
+    searchContainer: {
+      marginBottom: 16,
+      paddingHorizontal: 16,
+    },
+    searchInput: {
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: semantic.textPrimary,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 20,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    cancelModalButton: {
+      backgroundColor: semantic.background,
+    },
+    submitModalButton: {
+      backgroundColor: semantic.primary,
+    },
+    modalButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: semantic.textSecondary,
+    },
+    submitModalButtonText: {
+      color: semantic.surface,
+    },
+  });
 
 export default ProposalsView;
-
-
-
-
-
-
-
-

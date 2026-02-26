@@ -1,5 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, TextInput, Platform, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { ServiceFormState } from '../../hooks/useServiceForm';
 import { generateMapHTML } from '../../utils/leafletMap';
@@ -28,7 +37,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   activeTab,
   newService,
   onFieldChange,
-  onServiceChange,
+  onServiceChange: _onServiceChange,
   submitting,
   errorMessage,
   onDismissError,
@@ -56,7 +65,8 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
     hasImage: !!newService.image,
     imageLength: newService.image?.length || 0,
     isDataURI: newService.image?.startsWith('data:image') || false,
-    isURL: newService.image?.startsWith('http') || newService.image?.startsWith('/uploads/') || false,
+    isURL:
+      newService.image?.startsWith('http') || newService.image?.startsWith('/uploads/') || false,
     willShow: hasValidImage,
   });
 
@@ -102,7 +112,10 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
               console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
               console.log('Image URI length:', newService.image?.length);
               console.log('Image URI start:', newService.image?.substring(0, 50));
-              console.log('Image URI end:', newService.image?.substring(newService.image!.length - 20));
+              console.log(
+                'Image URI end:',
+                newService.image?.substring(newService.image!.length - 20),
+              );
             }}
             onLoad={() => {
               console.log('Image loaded successfully in edit form');
@@ -115,18 +128,23 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         </View>
       ) : (
         <TouchableOpacity style={styles.imageUploadButton} onPress={onImagePick}>
-          <Text style={styles.imageUploadText}>📷 Choose Photo</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="camera" size={16} color="#64748B" />
+            <Text style={styles.imageUploadText}>Choose Photo</Text>
+          </View>
         </TouchableOpacity>
       )}
 
       <Text style={styles.formLabel}>Location *</Text>
-      <Text style={styles.mapHint}>Click on the map or drag the marker to pin your service location</Text>
+      <Text style={styles.mapHint}>
+        Click on the map or drag the marker to pin your service location
+      </Text>
       <View style={styles.mapContainer}>
         {mapLocation ? (
           Platform.OS === 'web' ? (
             <View
               style={styles.map}
-              // @ts-ignore - web-specific prop
+              // @ts-expect-error - web-specific prop
               nativeID="map-container"
             />
           ) : (
@@ -173,13 +191,19 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
       </View>
 
       {newService.address && newService.address.trim() ? (
-        <Text style={styles.addressText} numberOfLines={3}>
-          📍 {newService.address}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Feather name="map-pin" size={14} color="#64748B" />
+          <Text style={styles.addressText} numberOfLines={3}>
+            {newService.address}
+          </Text>
+        </View>
       ) : newService.latitude && newService.longitude ? (
-        <Text style={styles.addressText} numberOfLines={3}>
-          📍 {newService.latitude}, {newService.longitude}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Feather name="map-pin" size={14} color="#64748B" />
+          <Text style={styles.addressText} numberOfLines={3}>
+            {newService.latitude}, {newService.longitude}
+          </Text>
+        </View>
       ) : (
         <Text style={styles.addressPlaceholder}>Location will appear here after pinning</Text>
       )}
@@ -191,7 +215,10 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
           .map((cat) => (
             <TouchableOpacity
               key={cat}
-              style={[styles.categoryOption, newService.category === cat && styles.categoryOptionSelected]}
+              style={[
+                styles.categoryOption,
+                newService.category === cat && styles.categoryOptionSelected,
+              ]}
               onPress={() => onFieldChange('category', cat)}
             >
               <Text

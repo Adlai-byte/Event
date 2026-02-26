@@ -11,6 +11,7 @@ import {
   Linking,
   Modal,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../services/api';
 import { LoginView } from './LoginView';
 import { RegisterView } from './user/RegisterView';
@@ -56,14 +57,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onForgotPassword,
   onGoogleLogin,
 }) => {
-  const { screenWidth, isMobile, isMobileWeb, isTablet, isDesktop, isLargeDesktop } = useBreakpoints();
+  const { screenWidth, isMobile, isMobileWeb, isTablet, isDesktop, isLargeDesktop } =
+    useBreakpoints();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'popular' | 'latest'>('popular');
-  const [activeNav, setActiveNav] = useState<'home' | 'services' | 'events' | 'about' | 'contact'>('home');
+  const [activeTab, _setActiveTab] = useState<'popular' | 'latest'>('popular');
+  const [activeNav, setActiveNav] = useState<'home' | 'services' | 'events' | 'about' | 'contact'>(
+    'home',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [_searchLoading, setSearchLoading] = useState(false);
   const [featuredService, setFeaturedService] = useState<Service | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -118,10 +122,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const mapImageUrl = (service: any): Service => ({
     ...service,
     primary_image: service.primary_image
-      ? (service.primary_image.startsWith('/uploads/')
-          ? `${getApiBaseUrl()}${service.primary_image}`
-          : service.primary_image)
-      : null
+      ? service.primary_image.startsWith('/uploads/')
+        ? `${getApiBaseUrl()}${service.primary_image}`
+        : service.primary_image
+      : null,
   });
 
   // Load featured service (highest rated)
@@ -142,9 +146,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Load trending services
   const loadTrendingServices = async () => {
     try {
-      const endpoint = activeTab === 'popular'
-        ? `${getApiBaseUrl()}/api/services?highRated=true&limit=5`
-        : `${getApiBaseUrl()}/api/services?limit=5`;
+      const endpoint =
+        activeTab === 'popular'
+          ? `${getApiBaseUrl()}/api/services?highRated=true&limit=5`
+          : `${getApiBaseUrl()}/api/services?limit=5`;
 
       const resp = await fetch(endpoint);
       if (resp.ok) {
@@ -162,8 +167,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const loadEntertainmentServices = async () => {
     try {
       const categories = ['venue', 'catering', 'photography'];
-      const promises = categories.map(cat =>
-        fetch(`${getApiBaseUrl()}/api/services?category=${cat}&limit=1`)
+      const promises = categories.map((cat) =>
+        fetch(`${getApiBaseUrl()}/api/services?category=${cat}&limit=1`),
       );
 
       const responses = await Promise.all(promises);
@@ -187,8 +192,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Load category services
   const loadCategoryServices = async () => {
     try {
-      const promises = categories.map(cat =>
-        fetch(`${getApiBaseUrl()}/api/services?category=${cat}&limit=3`)
+      const promises = categories.map((cat) =>
+        fetch(`${getApiBaseUrl()}/api/services?category=${cat}&limit=3`),
       );
 
       const responses = await Promise.all(promises);
@@ -196,10 +201,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       responses.forEach((resp, index) => {
         if (resp.ok) {
-          resp.json().then(data => {
+          resp.json().then((data) => {
             if (data.ok && Array.isArray(data.rows)) {
               categoryData[categories[index]] = data.rows.map(mapImageUrl);
-              setCategoryServices(prev => ({ ...prev, ...categoryData }));
+              setCategoryServices((prev) => ({ ...prev, ...categoryData }));
             }
           });
         }
@@ -217,7 +222,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         loadFeaturedService(),
         loadTrendingServices(),
         loadEntertainmentServices(),
-        loadCategoryServices()
+        loadCategoryServices(),
       ]);
       setLoading(false);
     };
@@ -240,7 +245,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     setSearchLoading(true);
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/services?search=${encodeURIComponent(searchQuery)}&limit=10`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/services?search=${encodeURIComponent(searchQuery)}&limit=10`,
+      );
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok && Array.isArray(data.rows)) {
@@ -267,7 +274,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setSelectedCategory(category);
     setSearchLoading(true);
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/services?category=${encodeURIComponent(category)}&limit=10`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/services?category=${encodeURIComponent(category)}&limit=10`,
+      );
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok && Array.isArray(data.rows)) {
@@ -289,7 +298,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     } else {
       Alert.alert('Please Login', 'You need to login to view service details.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => setShowLoginModal(true) }
+        { text: 'Login', onPress: () => setShowLoginModal(true) },
       ]);
     }
   };
@@ -297,7 +306,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Handle section layout to track positions
   const handleSectionLayout = (section: string, event: any) => {
     const { y } = event.nativeEvent.layout;
-    setSectionPositions(prev => ({ ...prev, [section]: y }));
+    setSectionPositions((prev) => ({ ...prev, [section]: y }));
   };
 
   // Handle navigation
@@ -347,7 +356,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const styles = useMemo(
-    () => createLandingStyles({ isMobile, isMobileWeb, isTablet, isDesktop, isLargeDesktop, screenWidth }),
+    () =>
+      createLandingStyles({
+        isMobile,
+        isMobileWeb,
+        isTablet,
+        isDesktop,
+        isLargeDesktop,
+        screenWidth,
+      }),
     [isMobile, isMobileWeb, isTablet, isDesktop, isLargeDesktop, screenWidth],
   );
 
@@ -376,11 +393,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
       )}
 
-    <ScrollView
-      ref={scrollViewRef}
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-    >
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Top Bar + Header */}
         <NavBar
           styles={styles}
@@ -394,511 +411,594 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           onLoginPress={onLogin}
         />
 
-      {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* Home Section */}
-        <View
-          ref={homeRef}
-          onLayout={(e) => handleSectionLayout('home', e)}
-        >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4a55e1" />
-            <Text style={styles.loadingText}>Loading amazing services...</Text>
-          </View>
-        ) : (
-          <>
-            {/* Hero Section */}
-            <HeroSection
-              styles={styles}
-              featuredService={featuredService}
-              trendingServices={trendingServices}
-              onServiceClick={handleServiceClick}
-              onRegister={onRegister}
-            />
-
-            {/* Service Showcase (recommended, sidebar, entertainment) */}
-            <ServiceShowcase
-              styles={styles}
-              trendingServices={trendingServices}
-              entertainmentServices={entertainmentServices}
-              newsletterEmail={newsletterEmail}
-              newsletterEmailError={newsletterEmailError}
-              onServiceClick={handleServiceClick}
-              onRegister={onRegister}
-              onNewsletterEmailChange={setNewsletterEmail}
-              onNewsletterSubscribe={handleNewsletterSubscribe}
-              validateEmail={validateEmail}
-              onNewsletterEmailErrorChange={setNewsletterEmailError}
-            />
-
-            {/* Services Section */}
-            <View
-              ref={servicesRef}
-              style={styles.categoriesSection}
-              onLayout={(e) => handleSectionLayout('services', e)}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>All Services</Text>
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Home Section */}
+          <View ref={homeRef} onLayout={(e) => handleSectionLayout('home', e)}>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4a55e1" />
+                <Text style={styles.loadingText}>Loading amazing services...</Text>
               </View>
-              {activeNav === 'services' && allServices.length > 0 ? (
-                <View style={styles.servicesGrid}>
-                  {allServices.map((service) => (
-                    <TouchableOpacity
-                      key={service.idservice}
-                      style={styles.serviceCard}
-                      onPress={() => handleServiceClick(service.idservice)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View service: ${service.s_name}`}
-                    >
-                      {service.primary_image ? (
-                        <Image
-                          source={{ uri: service.primary_image }}
-                          style={styles.serviceCardImage as any}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={styles.serviceCardImagePlaceholder}>
-                          <Text style={styles.serviceCardImageText}>
-                            {service.s_category.charAt(0).toUpperCase() + service.s_category.slice(1)}
-                          </Text>
-                        </View>
-                      )}
-                      <View style={styles.serviceCardContent}>
-                        <Text style={styles.serviceCardTitle} numberOfLines={2}>{service.s_name}</Text>
-                        <Text style={styles.serviceCardDescription} numberOfLines={2}>
-                          {service.s_description}
-                        </Text>
-                        <View style={styles.serviceCardMeta}>
-                          <Text style={styles.serviceCardPrice}>
-                            {formatPrice(service.s_base_price || 0)}
-                          </Text>
-                          {service.s_rating && service.s_rating > 0 && (
-                            <Text style={styles.serviceCardRating}>
-                              {'\u2B50'} {Number(service.s_rating).toFixed(1)}
-                            </Text>
+            ) : (
+              <>
+                {/* Hero Section */}
+                <HeroSection
+                  styles={styles}
+                  featuredService={featuredService}
+                  trendingServices={trendingServices}
+                  onServiceClick={handleServiceClick}
+                  onRegister={onRegister}
+                />
+
+                {/* Service Showcase (recommended, sidebar, entertainment) */}
+                <ServiceShowcase
+                  styles={styles}
+                  trendingServices={trendingServices}
+                  entertainmentServices={entertainmentServices}
+                  newsletterEmail={newsletterEmail}
+                  newsletterEmailError={newsletterEmailError}
+                  onServiceClick={handleServiceClick}
+                  onRegister={onRegister}
+                  onNewsletterEmailChange={setNewsletterEmail}
+                  onNewsletterSubscribe={handleNewsletterSubscribe}
+                  validateEmail={validateEmail}
+                  onNewsletterEmailErrorChange={setNewsletterEmailError}
+                />
+
+                {/* Services Section */}
+                <View
+                  ref={servicesRef}
+                  style={styles.categoriesSection}
+                  onLayout={(e) => handleSectionLayout('services', e)}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>All Services</Text>
+                  </View>
+                  {activeNav === 'services' && allServices.length > 0 ? (
+                    <View style={styles.servicesGrid}>
+                      {allServices.map((service) => (
+                        <TouchableOpacity
+                          key={service.idservice}
+                          style={styles.serviceCard}
+                          onPress={() => handleServiceClick(service.idservice)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`View service: ${service.s_name}`}
+                        >
+                          {service.primary_image ? (
+                            <Image
+                              source={{ uri: service.primary_image }}
+                              style={styles.serviceCardImage as any}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View style={styles.serviceCardImagePlaceholder}>
+                              <Text style={styles.serviceCardImageText}>
+                                {service.s_category.charAt(0).toUpperCase() +
+                                  service.s_category.slice(1)}
+                              </Text>
+                            </View>
                           )}
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <>
-                  <View style={styles.categoriesGrid}>
-                    {categories.map((category) => (
-                      <TouchableOpacity
-                        key={category}
-                        style={[
-                          styles.categoryCard,
-                          selectedCategory === category && styles.categoryCardActive
-                        ]}
-                        onPress={() => handleCategoryFilter(category)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Filter by ${category}`}
-                      >
-                        <Text style={[
-                          styles.categoryText,
-                          selectedCategory === category && styles.categoryTextActive
-                        ]}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </Text>
-                        {categoryServices[category] && categoryServices[category].length > 0 && (
-                          <Text style={styles.categoryCount}>
-                            {categoryServices[category].length} services
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {activeNav === 'services' && (
-                    <TouchableOpacity
-                      style={styles.loadMoreButton}
-                      onPress={loadAllServices}
-                      accessibilityRole="button"
-                      accessibilityLabel="View all services"
-                    >
-                      <Text style={styles.loadMoreButtonText}>View All Services</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </View>
-
-            {/* Events Section */}
-            <View
-              ref={eventsRef}
-              style={styles.eventsSection}
-              onLayout={(e) => handleSectionLayout('events', e)}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Upcoming Events</Text>
-              </View>
-              <View style={styles.eventsContent}>
-                <Text style={styles.eventsDescription}>
-                  Discover exciting events happening near you. From weddings to corporate gatherings,
-                  find the perfect event for your occasion.
-                </Text>
-                <View style={styles.eventsGrid}>
-                  {entertainmentServices.length > 0 ? (
-                    entertainmentServices.map((service) => (
-                      <TouchableOpacity
-                        key={service.idservice}
-                        style={styles.eventCard}
-                        onPress={() => handleServiceClick(service.idservice)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`View event: ${service.s_name}`}
-                      >
-                        {service.primary_image ? (
-                          <Image
-                            source={{ uri: service.primary_image }}
-                            style={styles.eventCardImage as any}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <View style={styles.eventCardImagePlaceholder}>
-                            <Text style={styles.eventCardImageText}>Event</Text>
+                          <View style={styles.serviceCardContent}>
+                            <Text style={styles.serviceCardTitle} numberOfLines={2}>
+                              {service.s_name}
+                            </Text>
+                            <Text style={styles.serviceCardDescription} numberOfLines={2}>
+                              {service.s_description}
+                            </Text>
+                            <View style={styles.serviceCardMeta}>
+                              <Text style={styles.serviceCardPrice}>
+                                {formatPrice(service.s_base_price || 0)}
+                              </Text>
+                              {service.s_rating && service.s_rating > 0 && (
+                                <View
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                                >
+                                  <Feather name="star" size={14} color="#f59e0b" />
+                                  <Text style={styles.serviceCardRating}>
+                                    {Number(service.s_rating).toFixed(1)}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
                           </View>
-                        )}
-                        <View style={styles.eventCardContent}>
-                          <Text style={styles.eventCardTitle} numberOfLines={2}>
-                            {service.s_name}
-                          </Text>
-                          <Text style={styles.eventCardCategory}>
-                            {service.s_category.charAt(0).toUpperCase() + service.s_category.slice(1)}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   ) : (
-                    <Text style={styles.emptyText}>No events available at the moment</Text>
+                    <>
+                      <View style={styles.categoriesGrid}>
+                        {categories.map((category) => (
+                          <TouchableOpacity
+                            key={category}
+                            style={[
+                              styles.categoryCard,
+                              selectedCategory === category && styles.categoryCardActive,
+                            ]}
+                            onPress={() => handleCategoryFilter(category)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Filter by ${category}`}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryText,
+                                selectedCategory === category && styles.categoryTextActive,
+                              ]}
+                            >
+                              {category.charAt(0).toUpperCase() + category.slice(1)}
+                            </Text>
+                            {categoryServices[category] &&
+                              categoryServices[category].length > 0 && (
+                                <Text style={styles.categoryCount}>
+                                  {categoryServices[category].length} services
+                                </Text>
+                              )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {activeNav === 'services' && (
+                        <TouchableOpacity
+                          style={styles.loadMoreButton}
+                          onPress={loadAllServices}
+                          accessibilityRole="button"
+                          accessibilityLabel="View all services"
+                        >
+                          <Text style={styles.loadMoreButtonText}>View All Services</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
                 </View>
-              </View>
-            </View>
 
-            {/* About Section */}
-            <View
-              ref={aboutRef}
-              style={styles.aboutSection}
-              onLayout={(e) => handleSectionLayout('about', e)}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>About E-VENT</Text>
-              </View>
-              <View style={styles.aboutContent}>
-                <Text style={styles.aboutText}>
-                  E-VENT is your trusted partner for planning and organizing memorable events.
-                  We connect you with the best service providers in the industry, from venues
-                  and catering to photography and entertainment.
-                </Text>
-                <View style={styles.aboutFeatures}>
-                  <View style={styles.aboutFeature}>
-                    <Text style={styles.aboutFeatureIcon}>{'\uD83C\uDFAF'}</Text>
-                    <Text style={styles.aboutFeatureTitle}>Wide Selection</Text>
-                    <Text style={styles.aboutFeatureText}>
-                      Choose from hundreds of verified service providers
-                    </Text>
+                {/* Events Section */}
+                <View
+                  ref={eventsRef}
+                  style={styles.eventsSection}
+                  onLayout={(e) => handleSectionLayout('events', e)}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Upcoming Events</Text>
                   </View>
-                  <View style={styles.aboutFeature}>
-                    <Text style={styles.aboutFeatureIcon}>{'\u2B50'}</Text>
-                    <Text style={styles.aboutFeatureTitle}>Quality Assured</Text>
-                    <Text style={styles.aboutFeatureText}>
-                      All services are rated and reviewed by real customers
+                  <View style={styles.eventsContent}>
+                    <Text style={styles.eventsDescription}>
+                      Discover exciting events happening near you. From weddings to corporate
+                      gatherings, find the perfect event for your occasion.
                     </Text>
-                  </View>
-                  <View style={styles.aboutFeature}>
-                    <Text style={styles.aboutFeatureIcon}>{'\uD83D\uDCB3'}</Text>
-                    <Text style={styles.aboutFeatureTitle}>Easy Booking</Text>
-                    <Text style={styles.aboutFeatureText}>
-                      Simple and secure booking process
-                    </Text>
+                    <View style={styles.eventsGrid}>
+                      {entertainmentServices.length > 0 ? (
+                        entertainmentServices.map((service) => (
+                          <TouchableOpacity
+                            key={service.idservice}
+                            style={styles.eventCard}
+                            onPress={() => handleServiceClick(service.idservice)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`View event: ${service.s_name}`}
+                          >
+                            {service.primary_image ? (
+                              <Image
+                                source={{ uri: service.primary_image }}
+                                style={styles.eventCardImage as any}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={styles.eventCardImagePlaceholder}>
+                                <Text style={styles.eventCardImageText}>Event</Text>
+                              </View>
+                            )}
+                            <View style={styles.eventCardContent}>
+                              <Text style={styles.eventCardTitle} numberOfLines={2}>
+                                {service.s_name}
+                              </Text>
+                              <Text style={styles.eventCardCategory}>
+                                {service.s_category.charAt(0).toUpperCase() +
+                                  service.s_category.slice(1)}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <Text style={styles.emptyText}>No events available at the moment</Text>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            </View>
 
-            {/* Contact Section */}
-            <View
-              ref={contactRef}
-              style={styles.contactSection}
-              onLayout={(e) => handleSectionLayout('contact', e)}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Contact Us</Text>
-              </View>
-              <View style={styles.contactContent}>
-                <Text style={styles.contactDescription}>
-                  Have questions? We're here to help! Get in touch with us through any of the following:
-                </Text>
-                <View style={styles.contactInfo}>
-                  <View style={styles.contactItem}>
-                    <Text style={styles.contactIcon}>{'\uD83D\uDCE7'}</Text>
-                    <Text style={styles.contactLabel}>Email</Text>
-                    <Text style={styles.contactValue}>support@e-vent.com</Text>
+                {/* About Section */}
+                <View
+                  ref={aboutRef}
+                  style={styles.aboutSection}
+                  onLayout={(e) => handleSectionLayout('about', e)}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>About E-VENT</Text>
                   </View>
-                  <View style={styles.contactItem}>
-                    <Text style={styles.contactIcon}>{'\uD83D\uDCF1'}</Text>
-                    <Text style={styles.contactLabel}>Phone</Text>
-                    <Text style={styles.contactValue}>+63 123 456 7890</Text>
-                  </View>
-                  <View style={styles.contactItem}>
-                    <Text style={styles.contactIcon}>{'\uD83D\uDCCD'}</Text>
-                    <Text style={styles.contactLabel}>Address</Text>
-                    <Text style={styles.contactValue}>City of Mati, Davao Oriental, Philippines</Text>
+                  <View style={styles.aboutContent}>
+                    <Text style={styles.aboutText}>
+                      E-VENT is your trusted partner for planning and organizing memorable events.
+                      We connect you with the best service providers in the industry, from venues
+                      and catering to photography and entertainment.
+                    </Text>
+                    <View style={styles.aboutFeatures}>
+                      <View style={styles.aboutFeature}>
+                        <Feather name="target" size={28} color="#2563EB" />
+                        <Text style={styles.aboutFeatureTitle}>Wide Selection</Text>
+                        <Text style={styles.aboutFeatureText}>
+                          Choose from hundreds of verified service providers
+                        </Text>
+                      </View>
+                      <View style={styles.aboutFeature}>
+                        <Feather name="award" size={28} color="#2563EB" />
+                        <Text style={styles.aboutFeatureTitle}>Quality Assured</Text>
+                        <Text style={styles.aboutFeatureText}>
+                          All services are rated and reviewed by real customers
+                        </Text>
+                      </View>
+                      <View style={styles.aboutFeature}>
+                        <Feather name="credit-card" size={28} color="#2563EB" />
+                        <Text style={styles.aboutFeatureTitle}>Easy Booking</Text>
+                        <Text style={styles.aboutFeatureText}>
+                          Simple and secure booking process
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.contactButton} onPress={() => setShowRegisterModal(true)} accessibilityRole="button" accessibilityLabel="Get started today">
-                  <Text style={styles.contactButtonText}>Get Started Today</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Call to Action */}
-            <View style={styles.ctaSection}>
-              <Text style={styles.ctaTitle}>Ready to Plan Your Event?</Text>
-              <Text style={styles.ctaDescription}>Join thousands of users who trust us for their special occasions</Text>
-              <View style={styles.ctaButtons}>
-                <TouchableOpacity style={styles.ctaButtonPrimary} onPress={onRegister} accessibilityRole="button" accessibilityLabel="Get started with registration">
-                  <Text style={styles.ctaButtonText}>Get Started</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.ctaButtonSecondary} onPress={onLogin} accessibilityRole="button" accessibilityLabel="Login to your account">
-                  <Text style={styles.ctaButtonTextSecondary}>Login</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
+                {/* Contact Section */}
+                <View
+                  ref={contactRef}
+                  style={styles.contactSection}
+                  onLayout={(e) => handleSectionLayout('contact', e)}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Contact Us</Text>
+                  </View>
+                  <View style={styles.contactContent}>
+                    <Text style={styles.contactDescription}>
+                      Have questions? We're here to help! Get in touch with us through any of the
+                      following:
+                    </Text>
+                    <View style={styles.contactInfo}>
+                      <View style={styles.contactItem}>
+                        <Feather name="mail" size={22} color="#2563EB" />
+                        <Text style={styles.contactLabel}>Email</Text>
+                        <Text style={styles.contactValue}>support@e-vent.com</Text>
+                      </View>
+                      <View style={styles.contactItem}>
+                        <Feather name="phone" size={22} color="#2563EB" />
+                        <Text style={styles.contactLabel}>Phone</Text>
+                        <Text style={styles.contactValue}>+63 123 456 7890</Text>
+                      </View>
+                      <View style={styles.contactItem}>
+                        <Feather name="map-pin" size={22} color="#2563EB" />
+                        <Text style={styles.contactLabel}>Address</Text>
+                        <Text style={styles.contactValue}>
+                          City of Mati, Davao Oriental, Philippines
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.contactButton}
+                      onPress={() => setShowRegisterModal(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Get started today"
+                    >
+                      <Text style={styles.contactButtonText}>Get Started Today</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Call to Action */}
+                <View style={styles.ctaSection}>
+                  <Text style={styles.ctaTitle}>Ready to Plan Your Event?</Text>
+                  <Text style={styles.ctaDescription}>
+                    Join thousands of users who trust us for their special occasions
+                  </Text>
+                  <View style={styles.ctaButtons}>
+                    <TouchableOpacity
+                      style={styles.ctaButtonPrimary}
+                      onPress={onRegister}
+                      accessibilityRole="button"
+                      accessibilityLabel="Get started with registration"
+                    >
+                      <Text style={styles.ctaButtonText}>Get Started</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.ctaButtonSecondary}
+                      onPress={onLogin}
+                      accessibilityRole="button"
+                      accessibilityLabel="Login to your account"
+                    >
+                      <Text style={styles.ctaButtonTextSecondary}>Login</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <View style={styles.footerContent}>
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>About Us</Text>
-            <TouchableOpacity onPress={() => handleNavClick('about')} accessibilityRole="button" accessibilityLabel="Our story">
-              <Text style={styles.footerLink}>Our Story</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('about')} accessibilityRole="button" accessibilityLabel="Our team">
-              <Text style={styles.footerLink}>Our Team</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('contact')} accessibilityRole="button" accessibilityLabel="Contact us">
-              <Text style={styles.footerLink}>Contact Us</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>My Account</Text>
-            <TouchableOpacity onPress={() => setShowLoginModal(true)} accessibilityRole="button" accessibilityLabel="Login">
-              <Text style={styles.footerLink}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onRegister} accessibilityRole="button" accessibilityLabel="Register">
-              <Text style={styles.footerLink}>Register</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('services')} accessibilityRole="button" accessibilityLabel="My bookings">
-              <Text style={styles.footerLink}>My Bookings</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Services</Text>
-            <TouchableOpacity onPress={() => handleNavClick('services')} accessibilityRole="button" accessibilityLabel="All services">
-              <Text style={styles.footerLink}>All Services</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('events')} accessibilityRole="button" accessibilityLabel="Events">
-              <Text style={styles.footerLink}>Events</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('services')} accessibilityRole="button" accessibilityLabel="Categories">
-              <Text style={styles.footerLink}>Categories</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Support</Text>
-            <TouchableOpacity onPress={() => handleNavClick('contact')} accessibilityRole="button" accessibilityLabel="Help center">
-              <Text style={styles.footerLink}>Help Center</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('contact')} accessibilityRole="button" accessibilityLabel="FAQs">
-              <Text style={styles.footerLink}>FAQs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleNavClick('about')} accessibilityRole="button" accessibilityLabel="Terms and conditions">
-              <Text style={styles.footerLink}>Terms & Conditions</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Download App QR Code */}
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Download App</Text>
-            <View style={styles.qrCodeContainer}>
-              {/* QR Code - Links to EAS Build page for APK download */}
-              <Image
-                source={{
-                  uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://expo.dev/accounts/honey25/projects/e-vent/builds/ab2ee8e2-444d-4840-b796-3230e256f782')}`
-                }}
-                style={styles.qrCode as any}
-                resizeMode="contain"
-              />
-              <Text style={styles.qrCodeLabel}>Scan to download</Text>
-              <Text style={styles.qrCodeSubLabel}>Android APK</Text>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerContent}>
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerColumnTitle}>About Us</Text>
               <TouchableOpacity
-                style={styles.downloadButton}
+                onPress={() => handleNavClick('about')}
                 accessibilityRole="button"
-                accessibilityLabel="Download Android APK"
-                onPress={() => {
-                  // EAS Build page link - users can download APK from the build page
-                  const apkUrl = 'https://expo.dev/accounts/honey25/projects/e-vent/builds/ab2ee8e2-444d-4840-b796-3230e256f782';
-
-                  if (Platform.OS === 'web') {
-                    // For direct download, use a direct link to the APK file
-                    // If the URL points to an APK file, it will download automatically
-                    const link = document.createElement('a');
-                    link.href = apkUrl;
-                    link.download = 'Event.apk';
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  } else {
-                    // On mobile, open in browser
-                    Linking.openURL(apkUrl).catch((err) => {
-                      console.error('Error opening URL:', err);
-                      Alert.alert('Error', 'Failed to open download link. Please try again.');
-                    });
-                  }
-                }}
-                activeOpacity={0.8}
+                accessibilityLabel="Our story"
               >
-                <Text style={styles.downloadButtonText}>{'\uD83D\uDCE5'} Download APK</Text>
+                <Text style={styles.footerLink}>Our Story</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('about')}
+                accessibilityRole="button"
+                accessibilityLabel="Our team"
+              >
+                <Text style={styles.footerLink}>Our Team</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('contact')}
+                accessibilityRole="button"
+                accessibilityLabel="Contact us"
+              >
+                <Text style={styles.footerLink}>Contact Us</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerColumnTitle}>My Account</Text>
+              <TouchableOpacity
+                onPress={() => setShowLoginModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Login"
+              >
+                <Text style={styles.footerLink}>Login</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onRegister}
+                accessibilityRole="button"
+                accessibilityLabel="Register"
+              >
+                <Text style={styles.footerLink}>Register</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('services')}
+                accessibilityRole="button"
+                accessibilityLabel="My bookings"
+              >
+                <Text style={styles.footerLink}>My Bookings</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerColumnTitle}>Services</Text>
+              <TouchableOpacity
+                onPress={() => handleNavClick('services')}
+                accessibilityRole="button"
+                accessibilityLabel="All services"
+              >
+                <Text style={styles.footerLink}>All Services</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('events')}
+                accessibilityRole="button"
+                accessibilityLabel="Events"
+              >
+                <Text style={styles.footerLink}>Events</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('services')}
+                accessibilityRole="button"
+                accessibilityLabel="Categories"
+              >
+                <Text style={styles.footerLink}>Categories</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerColumnTitle}>Support</Text>
+              <TouchableOpacity
+                onPress={() => handleNavClick('contact')}
+                accessibilityRole="button"
+                accessibilityLabel="Help center"
+              >
+                <Text style={styles.footerLink}>Help Center</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('contact')}
+                accessibilityRole="button"
+                accessibilityLabel="FAQs"
+              >
+                <Text style={styles.footerLink}>FAQs</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleNavClick('about')}
+                accessibilityRole="button"
+                accessibilityLabel="Terms and conditions"
+              >
+                <Text style={styles.footerLink}>Terms & Conditions</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Download App QR Code */}
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerColumnTitle}>Download App</Text>
+              <View style={styles.qrCodeContainer}>
+                {/* QR Code - Links to EAS Build page for APK download */}
+                <Image
+                  source={{
+                    uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://expo.dev/accounts/honey25/projects/e-vent/builds/ab2ee8e2-444d-4840-b796-3230e256f782')}`,
+                  }}
+                  style={styles.qrCode as any}
+                  resizeMode="contain"
+                />
+                <Text style={styles.qrCodeLabel}>Scan to download</Text>
+                <Text style={styles.qrCodeSubLabel}>Android APK</Text>
+                <TouchableOpacity
+                  style={styles.downloadButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Download Android APK"
+                  onPress={() => {
+                    // EAS Build page link - users can download APK from the build page
+                    const apkUrl =
+                      'https://expo.dev/accounts/honey25/projects/e-vent/builds/ab2ee8e2-444d-4840-b796-3230e256f782';
+
+                    if (Platform.OS === 'web') {
+                      // For direct download, use a direct link to the APK file
+                      // If the URL points to an APK file, it will download automatically
+                      const link = document.createElement('a');
+                      link.href = apkUrl;
+                      link.download = 'Event.apk';
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    } else {
+                      // On mobile, open in browser
+                      Linking.openURL(apkUrl).catch((err) => {
+                        console.error('Error opening URL:', err);
+                        Alert.alert('Error', 'Failed to open download link. Please try again.');
+                      });
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Feather name="download" size={16} color="#fff" />
+                    <Text style={styles.downloadButtonText}>Download APK</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+          <View style={styles.footerBottom}>
+            <Text style={styles.footerText}>{'\u00A9'} 2025 E-VENT. All rights reserved.</Text>
           </View>
         </View>
-        <View style={styles.footerBottom}>
-        <Text style={styles.footerText}>{'\u00A9'} 2025 E-VENT. All rights reserved.</Text>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
 
-    {/* Login Modal */}
-    <Modal
-      visible={showLoginModal}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setShowLoginModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowLoginModal(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Close login modal"
-          >
-            <Text style={styles.modalCloseIcon}>{'\u2715'}</Text>
-          </TouchableOpacity>
-          <ScrollView
-            style={styles.modalScrollView}
-            contentContainerStyle={styles.modalScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {onLoginSubmit ? (
-              <LoginView
-                authState={authModalState}
-                onLogin={async (formData) => {
-                  const result = await onLoginSubmit(formData);
-                  if (result.success) {
-                    setShowLoginModal(false);
-                    onLogin();
-                  }
-                  return result;
-                }}
-                onRegister={() => {
-                  setShowLoginModal(false);
-                  setShowRegisterModal(true);
-                }}
-                onForgotPassword={onForgotPassword || (async () => false)}
-                onGoogleLogin={onGoogleLogin}
-              />
-            ) : (
-              <View style={styles.modalPlaceholder}>
-                <Text style={styles.modalPlaceholderText}>Login functionality not available</Text>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => {
-                    setShowLoginModal(false);
-                    onLogin();
+      {/* Login Modal */}
+      <Modal
+        visible={showLoginModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowLoginModal(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close login modal"
+            >
+              <Feather name="x" size={22} color="#64748B" />
+            </TouchableOpacity>
+            <ScrollView
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {onLoginSubmit ? (
+                <LoginView
+                  authState={authModalState}
+                  onLogin={async (formData) => {
+                    const result = await onLoginSubmit(formData);
+                    if (result.success) {
+                      setShowLoginModal(false);
+                      onLogin();
+                    }
+                    return result;
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go to login page"
-                >
-                  <Text style={styles.modalButtonText}>Go to Login Page</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
+                  onRegister={() => {
+                    setShowLoginModal(false);
+                    setShowRegisterModal(true);
+                  }}
+                  onForgotPassword={onForgotPassword || (async () => false)}
+                  onGoogleLogin={onGoogleLogin}
+                />
+              ) : (
+                <View style={styles.modalPlaceholder}>
+                  <Text style={styles.modalPlaceholderText}>Login functionality not available</Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={() => {
+                      setShowLoginModal(false);
+                      onLogin();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to login page"
+                  >
+                    <Text style={styles.modalButtonText}>Go to Login Page</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
-    {/* Register Modal */}
-    <Modal
-      visible={showRegisterModal}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setShowRegisterModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowRegisterModal(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Close register modal"
-          >
-            <Text style={styles.modalCloseIcon}>{'\u2715'}</Text>
-          </TouchableOpacity>
-          <ScrollView
-            style={styles.modalScrollView}
-            contentContainerStyle={styles.modalScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {onRegisterSubmit ? (
-              <RegisterView
-                authState={authModalState}
-                onRegister={async (formData) => {
-                  const result = await onRegisterSubmit(formData);
-                  if (result.success) {
-                    setShowRegisterModal(false);
-                    onRegister();
-                  }
-                  return result;
-                }}
-                onLogin={() => {
-                  setShowRegisterModal(false);
-                  setShowLoginModal(true);
-                }}
-              />
-            ) : (
-              <View style={styles.modalPlaceholder}>
-                <Text style={styles.modalPlaceholderText}>Register functionality not available</Text>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => {
-                    setShowRegisterModal(false);
-                    onRegister();
+      {/* Register Modal */}
+      <Modal
+        visible={showRegisterModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRegisterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowRegisterModal(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close register modal"
+            >
+              <Feather name="x" size={22} color="#64748B" />
+            </TouchableOpacity>
+            <ScrollView
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {onRegisterSubmit ? (
+                <RegisterView
+                  authState={authModalState}
+                  onRegister={async (formData) => {
+                    const result = await onRegisterSubmit(formData);
+                    if (result.success) {
+                      setShowRegisterModal(false);
+                      onRegister();
+                    }
+                    return result;
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go to register page"
-                >
-                  <Text style={styles.modalButtonText}>Go to Register Page</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
+                  onLogin={() => {
+                    setShowRegisterModal(false);
+                    setShowLoginModal(true);
+                  }}
+                />
+              ) : (
+                <View style={styles.modalPlaceholder}>
+                  <Text style={styles.modalPlaceholderText}>
+                    Register functionality not available
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={() => {
+                      setShowRegisterModal(false);
+                      onRegister();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to register page"
+                  >
+                    <Text style={styles.modalButtonText}>Go to Register Page</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </View>
   );
 };

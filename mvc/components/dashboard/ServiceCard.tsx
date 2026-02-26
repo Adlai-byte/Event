@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { styles } from '../../views/user/DashboardView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/DashboardView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { ServiceDTO as Service } from '../../types/service';
 import { getCategoryIcon, getCategoryLabel, formatPrice } from '../../utils/serviceHelpers';
 
@@ -11,23 +13,22 @@ interface ServiceCardProps {
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBook }) => {
-  const rating = typeof service.s_rating === 'string'
-    ? parseFloat(service.s_rating)
-    : (service.s_rating || 0);
+  const { isMobile, screenWidth, isMobileWeb } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
+
+  const rating =
+    typeof service.s_rating === 'string' ? parseFloat(service.s_rating) : service.s_rating || 0;
   const reviewCount = service.s_review_count || 0;
 
   return (
-    <View
-      key={service.idservice}
-      style={[styles.modernServiceCard]}
-    >
-      <TouchableOpacity
-        onPress={() => onView(service.idservice.toString())}
-        activeOpacity={0.9}
-      >
+    <View key={service.idservice} style={[styles.modernServiceCard]}>
+      <TouchableOpacity onPress={() => onView(service.idservice.toString())} activeOpacity={0.9}>
         {/* Image with Badge */}
         <View style={styles.modernServiceImageContainer}>
-          {service.primary_image && (service.primary_image.startsWith('http://') || service.primary_image.startsWith('https://') || service.primary_image.startsWith('data:image')) ? (
+          {service.primary_image &&
+          (service.primary_image.startsWith('http://') ||
+            service.primary_image.startsWith('https://') ||
+            service.primary_image.startsWith('data:image')) ? (
             <Image
               source={{ uri: service.primary_image }}
               style={styles.modernServiceImage as any}
@@ -35,7 +36,11 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBoo
             />
           ) : (
             <View style={styles.modernServiceImagePlaceholder}>
-              <Text style={styles.serviceEmoji}>{getCategoryIcon(service.s_category)}</Text>
+              <Feather
+                name={getCategoryIcon(service.s_category) as any}
+                size={32}
+                color="#64748B"
+              />
             </View>
           )}
           {rating >= 4.5 && (
@@ -48,19 +53,27 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBoo
         {/* Card Content */}
         <View style={styles.modernServiceInfo}>
           <View style={styles.modernServiceTitleRow}>
-            <Text style={styles.modernServiceTitle} numberOfLines={2}>{service.s_name}</Text>
+            <Text style={styles.modernServiceTitle} numberOfLines={2}>
+              {service.s_name}
+            </Text>
             <View style={styles.categoryTag}>
-              <Text style={styles.categoryTagIcon}>{getCategoryIcon(service.s_category)}</Text>
+              <Feather
+                name={getCategoryIcon(service.s_category) as any}
+                size={12}
+                color="#64748B"
+              />
               <Text style={styles.categoryTagText}>{getCategoryLabel(service.s_category)}</Text>
             </View>
           </View>
-          <Text style={styles.modernServiceProvider} numberOfLines={1}>{service.provider_name}</Text>
+          <Text style={styles.modernServiceProvider} numberOfLines={1}>
+            {service.provider_name}
+          </Text>
 
           {/* Rating and Location Row */}
           <View style={styles.modernServiceMeta}>
             {rating > 0 && !isNaN(rating) ? (
               <View style={styles.modernRatingContainer}>
-                <Text style={styles.modernRatingStar}>&#11088;</Text>
+                <Feather name="star" size={14} color="#f59e0b" />
                 <Text style={styles.modernRatingText}>{rating.toFixed(1)}</Text>
                 <Text style={styles.modernReviewCount}>({reviewCount})</Text>
               </View>
@@ -69,7 +82,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBoo
             )}
             {(service.s_city || service.s_state || service.s_address) && (
               <View style={styles.modernLocationContainer}>
-                <Text style={styles.modernLocationIcon}>&#128205;</Text>
+                <Feather name="map-pin" size={12} color="#64748B" />
                 <Text style={styles.modernLocationText} numberOfLines={2}>
                   {(() => {
                     // Build full location string
@@ -89,16 +102,28 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBoo
                     }
 
                     // Add city if not already in address
-                    if (service.s_city && !locationParts.some(part => part.toLowerCase().includes(service.s_city!.toLowerCase()))) {
+                    if (
+                      service.s_city &&
+                      !locationParts.some((part) =>
+                        part.toLowerCase().includes(service.s_city!.toLowerCase()),
+                      )
+                    ) {
                       locationParts.push(service.s_city);
                     }
 
                     // Add state if not already in address
-                    if (service.s_state && !locationParts.some(part => part.toLowerCase().includes(service.s_state!.toLowerCase()))) {
+                    if (
+                      service.s_state &&
+                      !locationParts.some((part) =>
+                        part.toLowerCase().includes(service.s_state!.toLowerCase()),
+                      )
+                    ) {
                       locationParts.push(service.s_state);
                     }
 
-                    return locationParts.length > 0 ? locationParts.join(', ') : 'Location not specified';
+                    return locationParts.length > 0
+                      ? locationParts.join(', ')
+                      : 'Location not specified';
                   })()}
                 </Text>
                 {service.distance_km !== undefined && (

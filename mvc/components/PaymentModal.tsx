@@ -11,10 +11,10 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../services/api';
 import { getShadowStyle } from '../utils/shadowStyles';
 import { colors, semantic } from '../theme';
-
 
 interface PaymentModalProps {
   visible: boolean;
@@ -40,15 +40,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'paymongo' | 'cash'>('paymongo');
-
   const handlePay = async () => {
     console.log('Pay button clicked');
     setErrorMessage(''); // Clear previous error
-    
+
     if (paymentMethod === 'cash') {
       await processCashPayment();
     } else {
-    await processPayment();
+      await processPayment();
     }
   };
 
@@ -78,13 +77,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         console.log('PayMongo payment URL created:', data.paymentUrl);
         console.log('Source ID:', data.sourceId);
         console.log('Amount:', data.amount);
-        
+
         // Close modal first
         onClose();
-        
+
         // Call onSuccess to trigger refresh
         onSuccess();
-        
+
         // Redirect to PayMongo checkout URL
         if (Platform.OS === 'web' || (typeof window !== 'undefined' && window.location)) {
           // For web, redirect directly
@@ -109,12 +108,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           });
         }
       } else {
-        const errorMessage = data?.error || data?.message || 'Failed to create payment. Please try again.';
+        const errorMessage =
+          data?.error || data?.message || 'Failed to create payment. Please try again.';
         console.error('Payment creation failed:', {
           status: resp.status,
           data: data,
         });
-        
+
         // Check if it's a provider payment setup error
         if (errorMessage.includes('not yet set up') || errorMessage.includes('Provider not yet')) {
           setErrorMessage('Provider not yet set up his payment');
@@ -127,8 +127,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       console.error('Error processing payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       Alert.alert(
-        'Payment Error', 
-        `Failed to process payment: ${errorMessage}\n\nPlease check:\n1. Server is running\n2. PayMongo credentials are configured\n3. Network connection is active`
+        'Payment Error',
+        `Failed to process payment: ${errorMessage}\n\nPlease check:\n1. Server is running\n2. PayMongo credentials are configured\n3. Network connection is active`,
       );
       setProcessing(false);
     }
@@ -158,10 +158,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       if (resp.ok && data.ok) {
         console.log('Cash payment recorded successfully');
-        
+
         // Close modal
         onClose();
-        
+
         // Show success message
         Alert.alert(
           'Payment Recorded',
@@ -174,10 +174,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onSuccess();
               },
             },
-          ]
+          ],
         );
       } else {
-        const errorMessage = data?.error || data?.message || 'Failed to record cash payment. Please try again.';
+        const errorMessage =
+          data?.error || data?.message || 'Failed to record cash payment. Please try again.';
         console.error('Cash payment failed:', {
           status: resp.status,
           data: data,
@@ -189,13 +190,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       console.error('Error processing cash payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       Alert.alert(
-        'Payment Error', 
-        `Failed to process cash payment: ${errorMessage}\n\nPlease check:\n1. Server is running\n2. Network connection is active`
+        'Payment Error',
+        `Failed to process cash payment: ${errorMessage}\n\nPlease check:\n1. Server is running\n2. Network connection is active`,
       );
       setProcessing(false);
     }
   };
-
 
   // Clear error when modal opens
   useEffect(() => {
@@ -215,7 +215,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Feather name="x" size={22} color={semantic.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Payment</Text>
           <View style={styles.placeholder} />
@@ -227,11 +227,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{errorMessage}</Text>
               <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton}>
-                <Text style={styles.errorCloseText}>×</Text>
+                <Feather name="x" size={18} color={colors.error[600]} />
               </TouchableOpacity>
             </View>
           ) : null}
-          
+
           {/* Booking Summary */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Booking Summary</Text>
@@ -266,18 +266,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.paymentMethodContent}>
-                  <Text style={styles.paymentMethodIcon}>💳</Text>
+                  <Feather
+                    name="credit-card"
+                    size={28}
+                    color="#2563EB"
+                    style={{ marginRight: 12 }}
+                  />
                   <View style={styles.paymentMethodTextContainer}>
-                    <Text style={[
-                      styles.paymentMethodTitle,
-                      paymentMethod === 'paymongo' && styles.paymentMethodTitleActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.paymentMethodTitle,
+                        paymentMethod === 'paymongo' && styles.paymentMethodTitleActive,
+                      ]}
+                    >
                       Online Payment (PayMongo)
                     </Text>
-                    <Text style={[
-                      styles.paymentMethodDescription,
-                      paymentMethod === 'paymongo' && styles.paymentMethodDescriptionActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.paymentMethodDescription,
+                        paymentMethod === 'paymongo' && styles.paymentMethodDescriptionActive,
+                      ]}
+                    >
                       Pay securely via GCash or other online methods
                     </Text>
                   </View>
@@ -298,18 +307,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.paymentMethodContent}>
-                  <Text style={styles.paymentMethodIcon}>💵</Text>
+                  <Feather
+                    name="dollar-sign"
+                    size={28}
+                    color="#10B981"
+                    style={{ marginRight: 12 }}
+                  />
                   <View style={styles.paymentMethodTextContainer}>
-                    <Text style={[
-                      styles.paymentMethodTitle,
-                      paymentMethod === 'cash' && styles.paymentMethodTitleActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.paymentMethodTitle,
+                        paymentMethod === 'cash' && styles.paymentMethodTitleActive,
+                      ]}
+                    >
                       Cash on Hand
                     </Text>
-                    <Text style={[
-                      styles.paymentMethodDescription,
-                      paymentMethod === 'cash' && styles.paymentMethodDescriptionActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.paymentMethodDescription,
+                        paymentMethod === 'cash' && styles.paymentMethodDescriptionActive,
+                      ]}
+                    >
                       Pay with cash when you meet the provider
                     </Text>
                   </View>
@@ -325,26 +343,31 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* Payment Info */}
           {paymentMethod === 'paymongo' && (
-          <View style={styles.paymentSection}>
-            <Text style={styles.sectionTitle}>Payment Information</Text>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoText}>
-                You will be redirected to PayMongo to complete your payment securely.
-              </Text>
-              <Text style={styles.infoSubtext}>
-                Click the button below to proceed to the payment page.
-              </Text>
+            <View style={styles.paymentSection}>
+              <Text style={styles.sectionTitle}>Payment Information</Text>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoText}>
+                  You will be redirected to PayMongo to complete your payment securely.
+                </Text>
+                <Text style={styles.infoSubtext}>
+                  Click the button below to proceed to the payment page.
+                </Text>
+              </View>
             </View>
-          </View>
           )}
 
           {paymentMethod === 'cash' && (
             <View style={styles.paymentSection}>
               <Text style={styles.sectionTitle}>Cash Payment Information</Text>
               <View style={styles.cashInfoCard}>
-                <Text style={styles.cashInfoText}>
-                  💵 You will pay with cash directly to the provider when you meet them.
-                </Text>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}
+                >
+                  <Feather name="dollar-sign" size={16} color="#166534" />
+                  <Text style={[styles.cashInfoText, { marginBottom: 0 }]}>
+                    You will pay with cash directly to the provider when you meet them.
+                  </Text>
+                </View>
                 <Text style={styles.cashInfoSubtext}>
                   Make sure to bring the exact amount: ₱{booking.totalCost.toLocaleString()}
                 </Text>
@@ -356,10 +379,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Action Buttons */}
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[
-              styles.payButton,
-              processing && styles.payButtonDisabled,
-            ]}
+            style={[styles.payButton, processing && styles.payButtonDisabled]}
             onPress={handlePay}
             disabled={processing}
           >
@@ -367,10 +387,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.payButtonText}>
-                {paymentMethod === 'cash' 
+                {paymentMethod === 'cash'
                   ? `Confirm Cash Payment ₱${booking.totalCost.toLocaleString()}`
-                  : `Pay ₱${booking.totalCost.toLocaleString()}`
-                }
+                  : `Pay ₱${booking.totalCost.toLocaleString()}`}
               </Text>
             )}
           </TouchableOpacity>
@@ -624,4 +643,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-

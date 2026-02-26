@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { JobApplication } from '../../types/hiring';
-import { styles } from '../../views/provider/HiringView.styles';
+import { createStyles } from '../../views/provider/HiringView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface HireRejectModalsProps {
   // Hire modal
@@ -40,6 +35,9 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
   onCloseReject,
   selectedApplication,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   return (
     <>
       {/* Hire Application Modal */}
@@ -53,11 +51,8 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Hire Applicant</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onCloseHire}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onCloseHire}>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -65,7 +60,8 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
               <View style={styles.jobInfoContainer}>
                 <Text style={styles.jobInfoTitle}>{selectedApplication.jobTitle}</Text>
                 <Text style={styles.jobInfoDescription}>
-                  Applicant: {selectedApplication.applicantFirstName && selectedApplication.applicantLastName
+                  Applicant:{' '}
+                  {selectedApplication.applicantFirstName && selectedApplication.applicantLastName
                     ? `${selectedApplication.applicantFirstName} ${selectedApplication.applicantLastName}`
                     : selectedApplication.applicantEmail}
                 </Text>
@@ -84,9 +80,7 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
                   numberOfLines={5}
                   maxLength={500}
                 />
-                <Text style={styles.helperText}>
-                  {hireNote.length}/500 characters
-                </Text>
+                <Text style={styles.helperText}>{hireNote.length}/500 characters</Text>
               </View>
             </ScrollView>
 
@@ -119,11 +113,8 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Reject Application</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onCloseReject}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onCloseReject}>
+                <Feather name="x" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -131,7 +122,8 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
               <View style={styles.jobInfoContainer}>
                 <Text style={styles.jobInfoTitle}>{selectedApplication.jobTitle}</Text>
                 <Text style={styles.jobInfoDescription}>
-                  Applicant: {selectedApplication.applicantFirstName && selectedApplication.applicantLastName
+                  Applicant:{' '}
+                  {selectedApplication.applicantFirstName && selectedApplication.applicantLastName
                     ? `${selectedApplication.applicantFirstName} ${selectedApplication.applicantLastName}`
                     : selectedApplication.applicantEmail}
                 </Text>
@@ -150,9 +142,7 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
                   numberOfLines={5}
                   maxLength={500}
                 />
-                <Text style={styles.helperText}>
-                  {rejectionNote.length}/500 characters
-                </Text>
+                <Text style={styles.helperText}>{rejectionNote.length}/500 characters</Text>
               </View>
             </ScrollView>
 
@@ -167,7 +157,9 @@ export const HireRejectModals: React.FC<HireRejectModalsProps> = ({
                 style={[styles.modalButton, styles.rejectButtonModal]}
                 onPress={onSubmitReject}
               >
-                <Text style={[styles.submitButtonText, { color: '#FFFFFF' }]}>Reject Application</Text>
+                <Text style={[styles.submitButtonText, { color: '#FFFFFF' }]}>
+                  Reject Application
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

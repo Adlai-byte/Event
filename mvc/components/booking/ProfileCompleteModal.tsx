@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity } from 'react-native';
-import { styles } from '../BookingModal.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../BookingModal.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 export interface ProfileCompleteModalProps {
   visible: boolean;
@@ -15,18 +17,16 @@ export const ProfileCompleteModal: React.FC<ProfileCompleteModalProps> = ({
   onCancel,
   onGoToProfile,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onCancel}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onCancel}>
       <View style={styles.profileModalOverlay}>
         <View style={styles.profileModalContent}>
           {/* Icon */}
           <View style={styles.profileModalIconContainer}>
-            <Text style={styles.profileModalIcon}>📝</Text>
+            <Feather name="edit" size={32} color="#6C63FF" />
           </View>
 
           {/* Title */}
@@ -41,7 +41,7 @@ export const ProfileCompleteModal: React.FC<ProfileCompleteModalProps> = ({
           <View style={styles.profileModalFieldsContainer}>
             {missingFields.map((field, index) => (
               <View key={index} style={styles.profileModalFieldItem}>
-                <Text style={styles.profileModalFieldIcon}>⚠️</Text>
+                <Feather name="alert-triangle" size={16} color="#f59e0b" />
                 <Text style={styles.profileModalFieldText}>{field}</Text>
               </View>
             ))}
@@ -49,7 +49,7 @@ export const ProfileCompleteModal: React.FC<ProfileCompleteModalProps> = ({
 
           {/* Note */}
           <View style={styles.profileModalNoteContainer}>
-            <Text style={styles.profileModalNoteIcon}>ℹ️</Text>
+            <Feather name="info" size={16} color="#3b82f6" />
             <Text style={styles.profileModalNoteText}>
               You will be redirected to your profile page to complete this information.
             </Text>

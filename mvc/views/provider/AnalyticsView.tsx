@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
-
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768;
 
 interface AnalyticsViewProps {
   user?: User;
@@ -33,6 +25,9 @@ interface AnalyticsData {
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalRevenue: 0,
     monthlyRevenue: 0,
@@ -41,7 +36,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
     averageRating: 0,
     totalReviews: 0,
     servicesCount: 0,
-    activeServices: 0
+    activeServices: 0,
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
@@ -53,7 +48,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
   const loadAnalytics = async () => {
     try {
       setLoading(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/provider/analytics?providerId=${user?.uid}&range=${timeRange}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/provider/analytics?providerId=${user?.uid}&range=${timeRange}`,
+      );
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok && data.analytics) {
@@ -67,7 +64,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
     }
   };
 
-  const StatCard = ({ title, value, subtitle, icon, color }: {
+  const StatCard = ({
+    title,
+    value,
+    subtitle,
+    icon,
+    color,
+  }: {
     title: string;
     value: string;
     subtitle?: string;
@@ -77,7 +80,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
     <View style={[styles.statCard, color && { borderLeftWidth: 4, borderLeftColor: color }]}>
       <View style={styles.statHeader}>
         <Text style={styles.statTitle}>{title}</Text>
-        {icon && <Text style={styles.statIcon}>{icon}</Text>}
+        {icon && (
+          <Feather name={icon as any} size={isMobile ? 14 : 16} color={color || '#64748B'} />
+        )}
       </View>
       <Text style={styles.statValue}>{value}</Text>
       {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
@@ -107,19 +112,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
             style={[styles.timeRangeButton, timeRange === 'week' && styles.timeRangeButtonActive]}
             onPress={() => setTimeRange('week')}
           >
-            <Text style={[styles.timeRangeText, timeRange === 'week' && styles.timeRangeTextActive]}>Week</Text>
+            <Text
+              style={[styles.timeRangeText, timeRange === 'week' && styles.timeRangeTextActive]}
+            >
+              Week
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.timeRangeButton, timeRange === 'month' && styles.timeRangeButtonActive]}
             onPress={() => setTimeRange('month')}
           >
-            <Text style={[styles.timeRangeText, timeRange === 'month' && styles.timeRangeTextActive]}>Month</Text>
+            <Text
+              style={[styles.timeRangeText, timeRange === 'month' && styles.timeRangeTextActive]}
+            >
+              Month
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.timeRangeButton, timeRange === 'year' && styles.timeRangeButtonActive]}
             onPress={() => setTimeRange('year')}
           >
-            <Text style={[styles.timeRangeText, timeRange === 'year' && styles.timeRangeTextActive]}>Year</Text>
+            <Text
+              style={[styles.timeRangeText, timeRange === 'year' && styles.timeRangeTextActive]}
+            >
+              Year
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -137,28 +154,28 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
                 title="Total Revenue"
                 value={`₱ ${analytics.totalRevenue.toLocaleString()}`}
                 subtitle={`₱ ${analytics.monthlyRevenue.toLocaleString()} this ${timeRange}`}
-                icon="💰"
+                icon="dollar-sign"
                 color="#4a55e1"
               />
               <StatCard
                 title="Bookings"
                 value={analytics.totalBookings.toString()}
                 subtitle={`${analytics.completedBookings} completed`}
-                icon="📅"
+                icon="calendar"
                 color="#10b981"
               />
               <StatCard
                 title="Rating"
-                value={`⭐ ${analytics.averageRating.toFixed(1)}`}
+                value={analytics.averageRating.toFixed(1)}
                 subtitle={`${analytics.totalReviews} reviews`}
-                icon="⭐"
+                icon="star"
                 color="#f59e0b"
               />
               <StatCard
                 title="Services"
                 value={analytics.servicesCount.toString()}
                 subtitle={`${analytics.activeServices} active`}
-                icon="🎯"
+                icon="target"
                 color="#ef4444"
               />
             </View>
@@ -179,13 +196,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
                 <Text style={styles.statsCardValue}>
                   {analytics.totalBookings > 0
                     ? ((analytics.completedBookings / analytics.totalBookings) * 100).toFixed(1)
-                    : 0}%
+                    : 0}
+                  %
                 </Text>
               </View>
               <View style={styles.statsCard}>
                 <Text style={styles.statsCardTitle}>Average Booking Value</Text>
                 <Text style={styles.statsCardValue}>
-                  ₱ {analytics.totalBookings > 0
+                  ₱{' '}
+                  {analytics.totalBookings > 0
                     ? (analytics.totalRevenue / analytics.totalBookings).toLocaleString()
                     : 0}
                 </Text>
@@ -198,159 +217,158 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
   );
 };
 
-const styles = StyleSheet.create({
-  main: {
-    flex: 1,
-  },
-  mainContent: {
-    padding: isMobile ? 12 : 20,
-  },
-  header: {
-    marginBottom: isMobile ? 16 : 24,
-  },
-  headerTitle: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: isMobile ? 12 : 14,
-    color: '#64748B',
-  },
-  timeRangeContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 4,
-  },
-  timeRangeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  timeRangeButtonActive: {
-    backgroundColor: '#4a55e1',
-  },
-  timeRangeText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  timeRangeTextActive: {
-    color: '#FFFFFF',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#64748B',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: isMobile ? 12 : 16,
-    ...(isMobile && {
-      marginLeft: -6,
-      marginRight: -6,
-    }),
-  },
-  statCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginRight: isMobile ? 6 : 12,
-    marginBottom: isMobile ? 8 : 12,
-    width: isMobile
-      ? (screenWidth - 48) / 2
-      : Math.min(180, (screenWidth - 300) / 4),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statTitle: {
-    color: '#64748B',
-    fontSize: isMobile ? 11 : 12,
-    fontWeight: '600',
-  },
-  statIcon: {
-    fontSize: isMobile ? 12 : 14,
-  },
-  statValue: {
-    marginTop: 8,
-    fontSize: isMobile ? 18 : 22,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  statSubtitle: {
-    fontSize: isMobile ? 11 : 12,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  chartCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: isMobile ? 12 : 16,
-    marginBottom: isMobile ? 12 : 16,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: isMobile ? 13 : 14,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: isMobile ? 10 : 12,
-  },
-  chartPlaceholder: {
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-  },
-  chartPlaceholderText: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  chartPlaceholderSubtext: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statsCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-  },
-  statsCardTitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 8,
-  },
-  statsCardValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) =>
+  StyleSheet.create({
+    main: {
+      flex: 1,
+    },
+    mainContent: {
+      padding: isMobile ? 12 : 20,
+    },
+    header: {
+      marginBottom: isMobile ? 16 : 24,
+    },
+    headerTitle: {
+      fontSize: isMobile ? 20 : 24,
+      fontWeight: '700',
+      color: '#1E293B',
+      marginBottom: 4,
+    },
+    headerSubtitle: {
+      fontSize: isMobile ? 12 : 14,
+      color: '#64748B',
+    },
+    timeRangeContainer: {
+      flexDirection: 'row',
+      marginBottom: 20,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 8,
+      padding: 4,
+    },
+    timeRangeButton: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 6,
+      alignItems: 'center',
+    },
+    timeRangeButtonActive: {
+      backgroundColor: '#4a55e1',
+    },
+    timeRangeText: {
+      fontSize: 14,
+      color: '#64748B',
+      fontWeight: '600',
+    },
+    timeRangeTextActive: {
+      color: '#FFFFFF',
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: '#64748B',
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: isMobile ? 12 : 16,
+      ...(isMobile && {
+        marginLeft: -6,
+        marginRight: -6,
+      }),
+    },
+    statCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginRight: isMobile ? 6 : 12,
+      marginBottom: isMobile ? 8 : 12,
+      width: isMobile ? (screenWidth - 48) / 2 : Math.min(180, (screenWidth - 300) / 4),
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    statHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    statTitle: {
+      color: '#64748B',
+      fontSize: isMobile ? 11 : 12,
+      fontWeight: '600',
+    },
+    statIcon: {
+      fontSize: isMobile ? 12 : 14,
+    },
+    statValue: {
+      marginTop: 8,
+      fontSize: isMobile ? 18 : 22,
+      fontWeight: '700',
+      color: '#0F172A',
+    },
+    statSubtitle: {
+      fontSize: isMobile ? 11 : 12,
+      color: '#64748B',
+      marginTop: 4,
+    },
+    chartCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      marginBottom: isMobile ? 12 : 16,
+      elevation: 2,
+    },
+    cardTitle: {
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '700',
+      color: '#1E293B',
+      marginBottom: isMobile ? 10 : 12,
+    },
+    chartPlaceholder: {
+      height: 200,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#F8FAFC',
+      borderRadius: 8,
+    },
+    chartPlaceholderText: {
+      fontSize: 16,
+      color: '#64748B',
+      marginBottom: 4,
+    },
+    chartPlaceholderSubtext: {
+      fontSize: 12,
+      color: '#94A3B8',
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    statsCard: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 12,
+      padding: 16,
+      elevation: 2,
+    },
+    statsCardTitle: {
+      fontSize: 14,
+      color: '#64748B',
+      marginBottom: 8,
+    },
+    statsCardValue: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: '#1E293B',
+    },
+  });
 
 export default AnalyticsView;

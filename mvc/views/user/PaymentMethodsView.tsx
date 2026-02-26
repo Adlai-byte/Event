@@ -8,13 +8,14 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { getShadowStyle } from '../../utils/shadowStyles';
 import { AppLayout } from '../../components/layout';
+import { Feather } from '@expo/vector-icons';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface PaymentMethodsViewProps {
   user: User;
@@ -36,6 +37,9 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile } = useBreakpoints();
+  const styles = createStyles(isMobile);
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -54,7 +58,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
       setLoading(true);
       const encodedEmail = encodeURIComponent(user.email || '');
       const resp = await fetch(`${getApiBaseUrl()}/api/user/payment-methods?email=${encodedEmail}`);
-      
+
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok) {
@@ -97,7 +101,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
       Alert.alert(
         'Invalid GCash Number',
         'Please enter a valid GCash mobile number (11 digits starting with 09)',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
       return;
     }
@@ -170,46 +174,42 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   };
 
   const handleDelete = async (id: number) => {
-    Alert.alert(
-      'Delete Payment Method',
-      'Are you sure you want to remove this payment method?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const resp = await fetch(`${getApiBaseUrl()}/api/user/payment-methods/${id}`, {
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userEmail: user.email,
-                }),
-              });
+    Alert.alert('Delete Payment Method', 'Are you sure you want to remove this payment method?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const resp = await fetch(`${getApiBaseUrl()}/api/user/payment-methods/${id}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userEmail: user.email,
+              }),
+            });
 
-              if (resp.ok) {
-                const data = await resp.json();
-                if (data.ok) {
-                  Alert.alert('Success', 'Payment method removed successfully');
-                  loadPaymentMethods();
-                } else {
-                  Alert.alert('Error', data.error || 'Failed to delete payment method');
-                }
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.ok) {
+                Alert.alert('Success', 'Payment method removed successfully');
+                loadPaymentMethods();
               } else {
-                const errorData = await resp.json();
-                Alert.alert('Error', errorData.error || 'Failed to delete payment method');
+                Alert.alert('Error', data.error || 'Failed to delete payment method');
               }
-            } catch (error) {
-              console.error('Error deleting payment method:', error);
-              Alert.alert('Error', 'An error occurred. Please try again.');
+            } else {
+              const errorData = await resp.json();
+              Alert.alert('Error', errorData.error || 'Failed to delete payment method');
             }
-          },
+          } catch (error) {
+            console.error('Error deleting payment method:', error);
+            Alert.alert('Error', 'An error occurred. Please try again.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const formatGCashNumber = (number: string): string => {
@@ -226,7 +226,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
       <View style={styles.paymentMethodHeader}>
         <View style={styles.paymentMethodInfo}>
           <View style={styles.paymentMethodIcon}>
-            <Text style={styles.paymentMethodIconText}>📱</Text>
+            <Feather name="smartphone" size={24} color="#FFFFFF" />
           </View>
           <View style={styles.paymentMethodDetails}>
             <Text style={styles.paymentMethodType}>GCash</Text>
@@ -267,7 +267,14 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
 
   if (loading) {
     return (
-      <AppLayout role="user" activeRoute="settings" title="Payment Methods" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="settings"
+        title="Payment Methods"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={{ padding: 16 }}>
           <SkeletonCard />
           <SkeletonCard />
@@ -278,7 +285,14 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   }
 
   return (
-    <AppLayout role="user" activeRoute="settings" title="Payment Methods" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+    <AppLayout
+      role="user"
+      activeRoute="settings"
+      title="Payment Methods"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Add GCash Button */}
         {!showAddForm && (
@@ -290,12 +304,12 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Link GCash account"
             >
-              <Text style={styles.addButtonIcon}>📱</Text>
+              <Feather name="smartphone" size={24} color="#FFFFFF" style={{ marginRight: 12 }} />
               <View style={styles.addButtonTextContainer}>
                 <Text style={styles.addButtonText}>Link GCash Account</Text>
                 <Text style={styles.addButtonSubtext}>Connect your GCash for easy payments</Text>
               </View>
-              <Text style={styles.addButtonArrow}>›</Text>
+              <Feather name="chevron-right" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -305,7 +319,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
           <View style={styles.section}>
             <View style={[styles.formCard, getShadowStyle(0.1, 4, 2)]}>
               <Text style={styles.formTitle}>Link GCash Account</Text>
-              
+
               <Text style={styles.label}>Account Name</Text>
               <TextInput
                 style={styles.input}
@@ -362,16 +376,12 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
 
         {/* Payment Methods List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Linked Accounts ({paymentMethods.length})
-          </Text>
+          <Text style={styles.sectionTitle}>Linked Accounts ({paymentMethods.length})</Text>
           {paymentMethods.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>💳</Text>
+              <Feather name="credit-card" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
               <Text style={styles.emptyStateText}>No payment methods linked</Text>
-              <Text style={styles.emptyStateSubtext}>
-                Link your GCash account to get started
-              </Text>
+              <Text style={styles.emptyStateSubtext}>Link your GCash account to get started</Text>
             </View>
           ) : (
             paymentMethods.map(renderPaymentMethod)
@@ -384,219 +394,219 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  section: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6C63FF',
-    padding: 16,
-    borderRadius: 12,
-  },
-  addButtonIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  addButtonTextContainer: {
-    flex: 1,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  addButtonSubtext: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-  addButtonArrow: {
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 12,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    color: '#000000',
-  },
-  hintText: {
-    fontSize: 12,
-    color: '#666666',
-    marginTop: 4,
-  },
-  formActions: {
-    flexDirection: 'row',
-    marginTop: 20,
-    gap: 12,
-  },
-  formButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#F5F5F5',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666666',
-  },
-  submitButton: {
-    backgroundColor: '#6C63FF',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  paymentMethodCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  paymentMethodHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  paymentMethodInfo: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  paymentMethodIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#6C63FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  paymentMethodIconText: {
-    fontSize: 24,
-  },
-  paymentMethodDetails: {
-    flex: 1,
-  },
-  paymentMethodType: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6C63FF',
-    marginBottom: 4,
-  },
-  paymentMethodName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  paymentMethodNumber: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  defaultBadge: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  defaultBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  paymentMethodActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6C63FF',
-  },
-  deleteButton: {
-    backgroundColor: '#FFEBEE',
-  },
-  deleteButtonText: {
-    color: '#F44336',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-  },
-  emptyStateIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  bottomSpacing: {
-    height: 20,
-  },
-});
-
+const createStyles = (isMobile: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#F5F5F5',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    section: {
+      padding: isMobile ? 12 : 16,
+    },
+    sectionTitle: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: isMobile ? 8 : 12,
+    },
+    addButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#6C63FF',
+      padding: isMobile ? 12 : 16,
+      borderRadius: isMobile ? 8 : 12,
+    },
+    addButtonIcon: {
+      fontSize: isMobile ? 20 : 24,
+      marginRight: 12,
+    },
+    addButtonTextContainer: {
+      flex: 1,
+    },
+    addButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+      marginBottom: 4,
+    },
+    addButtonSubtext: {
+      fontSize: 12,
+      color: '#FFFFFF',
+      opacity: 0.9,
+    },
+    addButtonArrow: {
+      fontSize: isMobile ? 20 : 24,
+      color: '#FFFFFF',
+    },
+    formCard: {
+      backgroundColor: '#FFFFFF',
+      padding: isMobile ? 14 : 20,
+      borderRadius: isMobile ? 8 : 12,
+    },
+    formTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: isMobile ? 14 : 20,
+    },
+    label: {
+      fontSize: isMobile ? 13 : 14,
+      fontWeight: '500',
+      color: '#000000',
+      marginBottom: 8,
+      marginTop: isMobile ? 8 : 12,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      borderRadius: 8,
+      padding: isMobile ? 10 : 12,
+      fontSize: isMobile ? 14 : 16,
+      backgroundColor: '#FFFFFF',
+      color: '#000000',
+    },
+    hintText: {
+      fontSize: 12,
+      color: '#666666',
+      marginTop: 4,
+    },
+    formActions: {
+      flexDirection: 'row',
+      marginTop: isMobile ? 14 : 20,
+      gap: 12,
+    },
+    formButton: {
+      flex: 1,
+      padding: isMobile ? 12 : 14,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      backgroundColor: '#F5F5F5',
+    },
+    cancelButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#666666',
+    },
+    submitButton: {
+      backgroundColor: '#6C63FF',
+    },
+    submitButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    paymentMethodCard: {
+      backgroundColor: '#FFFFFF',
+      padding: isMobile ? 12 : 16,
+      borderRadius: isMobile ? 8 : 12,
+      marginBottom: 12,
+    },
+    paymentMethodHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    paymentMethodInfo: {
+      flexDirection: 'row',
+      flex: 1,
+    },
+    paymentMethodIcon: {
+      width: isMobile ? 40 : 48,
+      height: isMobile ? 40 : 48,
+      borderRadius: isMobile ? 20 : 24,
+      backgroundColor: '#6C63FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    paymentMethodIconText: {
+      fontSize: isMobile ? 20 : 24,
+    },
+    paymentMethodDetails: {
+      flex: 1,
+    },
+    paymentMethodType: {
+      fontSize: isMobile ? 12 : 14,
+      fontWeight: '600',
+      color: '#6C63FF',
+      marginBottom: 4,
+    },
+    paymentMethodName: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: 4,
+    },
+    paymentMethodNumber: {
+      fontSize: isMobile ? 12 : 14,
+      color: '#666666',
+    },
+    defaultBadge: {
+      backgroundColor: '#4CAF50',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    defaultBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    paymentMethodActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionButton: {
+      flex: 1,
+      padding: isMobile ? 8 : 10,
+      borderRadius: 8,
+      backgroundColor: '#F5F5F5',
+      alignItems: 'center',
+    },
+    actionButtonText: {
+      fontSize: isMobile ? 12 : 14,
+      fontWeight: '600',
+      color: '#6C63FF',
+    },
+    deleteButton: {
+      backgroundColor: '#FFEBEE',
+    },
+    deleteButtonText: {
+      color: '#F44336',
+    },
+    emptyState: {
+      alignItems: 'center',
+      padding: isMobile ? 24 : 40,
+      backgroundColor: '#FFFFFF',
+      borderRadius: isMobile ? 8 : 12,
+    },
+    emptyStateIcon: {
+      fontSize: isMobile ? 40 : 48,
+      marginBottom: 12,
+    },
+    emptyStateText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: 8,
+    },
+    emptyStateSubtext: {
+      fontSize: isMobile ? 12 : 14,
+      color: '#666666',
+      textAlign: 'center',
+    },
+    bottomSpacing: {
+      height: 20,
+    },
+  });

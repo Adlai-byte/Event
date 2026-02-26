@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonListItem } from '../../components/ui';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
@@ -15,7 +11,7 @@ import { PostJobModal } from '../../components/hiring/PostJobModal';
 import { InterviewModal } from '../../components/hiring/InterviewModal';
 import { HireRejectModals } from '../../components/hiring/HireRejectModals';
 import { ApplicationsTable } from '../../components/hiring/ApplicationsTable';
-import { styles } from './HiringView.styles';
+import { createStyles } from './HiringView.styles';
 
 interface HiringViewProps {
   user?: User;
@@ -27,20 +23,29 @@ const statusFilters = ['all', 'active', 'closed', 'expired'];
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'active': return '#10b981';
-    case 'closed': return '#64748b';
-    case 'expired': return '#ef4444';
-    default: return '#64748b';
+    case 'active':
+      return '#10b981';
+    case 'closed':
+      return '#64748b';
+    case 'expired':
+      return '#ef4444';
+    default:
+      return '#64748b';
   }
 };
 
 const getApplicationStatusColor = (status: string) => {
   switch (status) {
-    case 'pending': return '#f59e0b';
-    case 'reviewed': return '#3b82f6';
-    case 'accepted': return '#10b981';
-    case 'rejected': return '#ef4444';
-    default: return '#64748b';
+    case 'pending':
+      return '#f59e0b';
+    case 'reviewed':
+      return '#3b82f6';
+    case 'accepted':
+      return '#10b981';
+    case 'rejected':
+      return '#ef4444';
+    default:
+      return '#64748b';
   }
 };
 
@@ -55,7 +60,8 @@ const formatDate = (dateString: string) => {
 };
 
 export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogout }) => {
-  const { isMobile } = useBreakpoints();
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
   const [activeTab, setActiveTab] = useState<'postings' | 'applications'>('postings');
 
   const jobPostingsHook = useJobPostings(user);
@@ -98,7 +104,9 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
             accessibilityRole="button"
             accessibilityLabel="Job postings tab"
           >
-            <Text style={[styles.tabButtonText, activeTab === 'postings' && styles.tabButtonTextActive]}>
+            <Text
+              style={[styles.tabButtonText, activeTab === 'postings' && styles.tabButtonTextActive]}
+            >
               Job Postings
             </Text>
           </TouchableOpacity>
@@ -108,7 +116,12 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
             accessibilityRole="button"
             accessibilityLabel="Applications tab"
           >
-            <Text style={[styles.tabButtonText, activeTab === 'applications' && styles.tabButtonTextActive]}>
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === 'applications' && styles.tabButtonTextActive,
+              ]}
+            >
               Applications ({applicationsHook.applications.length})
             </Text>
           </TouchableOpacity>
@@ -116,16 +129,28 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
 
         {/* Status Filters - Only show for Job Postings */}
         {activeTab === 'postings' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-            {statusFilters.map(status => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterContainer}
+          >
+            {statusFilters.map((status) => (
               <TouchableOpacity
                 key={status}
-                style={[styles.filterChip, jobPostingsHook.filterStatus === status && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  jobPostingsHook.filterStatus === status && styles.filterChipActive,
+                ]}
                 onPress={() => jobPostingsHook.setFilterStatus(status)}
                 accessibilityRole="button"
                 accessibilityLabel={`Filter by ${status}`}
               >
-                <Text style={[styles.filterChipText, jobPostingsHook.filterStatus === status && styles.filterChipTextActive]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    jobPostingsHook.filterStatus === status && styles.filterChipTextActive,
+                  ]}
+                >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -145,157 +170,187 @@ export const HiringView: React.FC<HiringViewProps> = ({ user, onNavigate, onLogo
           <>
             {jobPostingsHook.filteredJobPostings.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>💼</Text>
+                <Feather name="briefcase" size={48} color="#64748B" style={{ marginBottom: 16 }} />
                 <Text style={styles.emptyStateText}>No job postings found</Text>
                 <Text style={styles.emptyStateSubtext}>
                   {jobPostingsHook.filterStatus === 'all'
-                    ? 'You don\'t have any job postings yet'
+                    ? "You don't have any job postings yet"
                     : `No ${jobPostingsHook.filterStatus} job postings`}
                 </Text>
               </View>
-            ) : (
-              isMobile ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={true}
-                  style={styles.tableScrollContainer}
-                  contentContainerStyle={styles.tableScrollContent}
-                >
-                  <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={styles.tableHeader}>
-                      <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Job Title</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Job Type</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Deadline</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 0.8 }]}>Status</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Actions</Text>
+            ) : isMobile ? (
+              <View style={styles.mobileCardContainer}>
+                {jobPostingsHook.filteredJobPostings.map((job) => (
+                  <View key={job.id} style={styles.mobileCard}>
+                    <View style={styles.mobileCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.mobileCardTitle}>{job.jobTitle}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: getStatusColor(job.status) + '20' },
+                        ]}
+                      >
+                        <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
+                          {job.status.toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
-
-                    {/* Table Rows */}
-                    {jobPostingsHook.filteredJobPostings.map((job) => (
-                      <View key={job.id} style={styles.tableRow}>
-                        <View style={[styles.tableCell, { flex: 2 }]}>
-                          <Text style={styles.tableCellTitle}>{job.jobTitle}</Text>
+                    <Text style={styles.mobileCardSubtitle} numberOfLines={3}>
+                      {job.description}
+                    </Text>
+                    <View style={[styles.mobileCardRow, { marginTop: 8 }]}>
+                      <Text style={styles.mobileCardLabel}>Type</Text>
+                      <Text style={styles.mobileCardValue}>
+                        {(job as any).jobType === 'full_time' || !(job as any).jobType
+                          ? 'Full Time'
+                          : (job as any).jobType === 'part_time'
+                            ? 'Part Time'
+                            : String((job as any).jobType || 'Full Time')}
+                      </Text>
+                    </View>
+                    <View style={[styles.mobileCardRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.mobileCardLabel}>Deadline</Text>
+                      <Text style={styles.mobileCardValue}>{formatDate(job.deadlineDate)}</Text>
+                    </View>
+                    <View style={styles.mobileCardActions}>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.editButton]}
+                        onPress={() => jobPostingsHook.handleEditJob(job)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit job ${job.jobTitle}`}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="edit-2" size={12} color="#FFFFFF" />
+                          <Text style={styles.tableActionButtonText}>Edit</Text>
                         </View>
-                        <View style={[styles.tableCell, { flex: 2.5 }]}>
-                          <Text style={styles.tableCellText} numberOfLines={3}>{job.description}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.deleteButton]}
+                        onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete job ${job.jobTitle}`}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="trash-2" size={12} color="#FFFFFF" />
+                          <Text style={styles.tableActionButtonText}>Delete</Text>
                         </View>
-                        <View style={[styles.tableCell, { flex: 1 }]}>
-                          <Text style={styles.tableCellText}>
-                            {((job as any).jobType === 'full_time' || !(job as any).jobType) ? 'Full Time' :
-                             (job as any).jobType === 'part_time' ? 'Part Time' :
-                             String((job as any).jobType || 'Full Time')}
-                          </Text>
-                        </View>
-                        <View style={[styles.tableCell, { flex: 1.2 }]}>
-                          <Text style={styles.tableCellText}>{formatDate(job.deadlineDate)}</Text>
-                        </View>
-                        <View style={[styles.tableCell, { flex: 0.8 }]}>
-                          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) + '20' }]}>
-                            <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
-                              {job.status.toUpperCase()}
+                      </TouchableOpacity>
+                      {job.status !== 'expired' && (
+                        <TouchableOpacity
+                          style={[styles.tableActionButton, styles.toggleButton]}
+                          onPress={() => jobPostingsHook.handleToggleStatus(job)}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            job.status === 'active'
+                              ? `Close job ${job.jobTitle}`
+                              : `Reopen job ${job.jobTitle}`
+                          }
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Feather
+                              name={job.status === 'active' ? 'lock' : 'unlock'}
+                              size={12}
+                              color="#FFFFFF"
+                            />
+                            <Text style={styles.tableActionButtonText}>
+                              {job.status === 'active' ? 'Close' : 'Reopen'}
                             </Text>
                           </View>
-                        </View>
-                        <View style={[styles.tableCell, styles.tableCellActions, { flex: 2 }]}>
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.editButton]}
-                            onPress={() => jobPostingsHook.handleEditJob(job)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit job ${job.jobTitle}`}
-                          >
-                            <Text style={styles.tableActionButtonText}>✏️ Edit</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.deleteButton]}
-                            onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Delete job ${job.jobTitle}`}
-                          >
-                            <Text style={styles.tableActionButtonText}>🗑️ Delete</Text>
-                          </TouchableOpacity>
-                          {job.status !== 'expired' && (
-                            <TouchableOpacity
-                              style={[styles.tableActionButton, styles.toggleButton]}
-                              onPress={() => jobPostingsHook.handleToggleStatus(job)}
-                              accessibilityRole="button"
-                              accessibilityLabel={job.status === 'active' ? `Close job ${job.jobTitle}` : `Reopen job ${job.jobTitle}`}
-                            >
-                              <Text style={styles.tableActionButtonText}>
-                                {job.status === 'active' ? '🔒 Close' : '🔓 Reopen'}
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </View>
-                    ))}
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </ScrollView>
-              ) : (
-                <View style={styles.tableContainer}>
-                  {/* Table Header */}
-                  <View style={styles.tableHeader}>
-                    <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Job Title</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Deadline</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 0.8 }]}>Status</Text>
-                    <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Actions</Text>
-                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.tableContainer}>
+                {/* Table Header */}
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Job Title</Text>
+                  <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
+                  <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Deadline</Text>
+                  <Text style={[styles.tableHeaderCell, { flex: 0.8 }]}>Status</Text>
+                  <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Actions</Text>
+                </View>
 
-                  {/* Table Rows */}
-                  {jobPostingsHook.filteredJobPostings.map((job) => (
-                    <View key={job.id} style={styles.tableRow}>
-                      <View style={[styles.tableCell, { flex: 2 }]}>
-                        <Text style={styles.tableCellTitle}>{job.jobTitle}</Text>
-                      </View>
-                      <View style={[styles.tableCell, { flex: 2.5 }]}>
-                        <Text style={styles.tableCellText} numberOfLines={3}>{job.description}</Text>
-                      </View>
-                      <View style={[styles.tableCell, { flex: 1.2 }]}>
-                        <Text style={styles.tableCellText}>{formatDate(job.deadlineDate)}</Text>
-                      </View>
-                      <View style={[styles.tableCell, { flex: 0.8 }]}>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) + '20' }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
-                            {job.status.toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={[styles.tableCell, styles.tableCellActions, { flex: 2 }]}>
-                        <TouchableOpacity
-                          style={[styles.tableActionButton, styles.editButton]}
-                          onPress={() => jobPostingsHook.handleEditJob(job)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Edit job ${job.jobTitle}`}
-                        >
-                          <Text style={styles.tableActionButtonText}>✏️ Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.tableActionButton, styles.deleteButton]}
-                          onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Delete job ${job.jobTitle}`}
-                        >
-                          <Text style={styles.tableActionButtonText}>🗑️ Delete</Text>
-                        </TouchableOpacity>
-                        {job.status !== 'expired' && (
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.toggleButton]}
-                            onPress={() => jobPostingsHook.handleToggleStatus(job)}
-                            accessibilityRole="button"
-                            accessibilityLabel={job.status === 'active' ? `Close job ${job.jobTitle}` : `Reopen job ${job.jobTitle}`}
-                          >
-                            <Text style={styles.tableActionButtonText}>
-                              {job.status === 'active' ? '🔒 Close' : '🔓 Reopen'}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                {/* Table Rows */}
+                {jobPostingsHook.filteredJobPostings.map((job) => (
+                  <View key={job.id} style={styles.tableRow}>
+                    <View style={[styles.tableCell, { flex: 2 }]}>
+                      <Text style={styles.tableCellTitle}>{job.jobTitle}</Text>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 2.5 }]}>
+                      <Text style={styles.tableCellText} numberOfLines={3}>
+                        {job.description}
+                      </Text>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 1.2 }]}>
+                      <Text style={styles.tableCellText}>{formatDate(job.deadlineDate)}</Text>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 0.8 }]}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: getStatusColor(job.status) + '20' },
+                        ]}
+                      >
+                        <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
+                          {job.status.toUpperCase()}
+                        </Text>
                       </View>
                     </View>
-                  ))}
-                </View>
-              )
+                    <View style={[styles.tableCell, styles.tableCellActions, { flex: 2 }]}>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.editButton]}
+                        onPress={() => jobPostingsHook.handleEditJob(job)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit job ${job.jobTitle}`}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="edit-2" size={12} color="#FFFFFF" />
+                          <Text style={styles.tableActionButtonText}>Edit</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.deleteButton]}
+                        onPress={() => jobPostingsHook.handleDeleteJob(job.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete job ${job.jobTitle}`}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="trash-2" size={12} color="#FFFFFF" />
+                          <Text style={styles.tableActionButtonText}>Delete</Text>
+                        </View>
+                      </TouchableOpacity>
+                      {job.status !== 'expired' && (
+                        <TouchableOpacity
+                          style={[styles.tableActionButton, styles.toggleButton]}
+                          onPress={() => jobPostingsHook.handleToggleStatus(job)}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            job.status === 'active'
+                              ? `Close job ${job.jobTitle}`
+                              : `Reopen job ${job.jobTitle}`
+                          }
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Feather
+                              name={job.status === 'active' ? 'lock' : 'unlock'}
+                              size={14}
+                              color="#fff"
+                            />
+                            <Text style={styles.tableActionButtonText}>
+                              {job.status === 'active' ? 'Close' : 'Reopen'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
             )}
           </>
         ) : (

@@ -9,13 +9,15 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
 import { ProviderBookingCard } from '../../components/booking/ProviderBookingCard';
-import { useProviderBookings } from '../../hooks/useProviderBookings';
+import { useProviderBookings, getStatusColor } from '../../hooks/useProviderBookings';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { SkeletonListItem } from '../../components/ui';
-import { styles } from './BookingsView.styles';
+import { semantic } from '../../theme';
+import { createStyles } from './BookingsView.styles';
 
 interface BookingsViewProps {
   user?: User;
@@ -24,7 +26,8 @@ interface BookingsViewProps {
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, onLogout }) => {
-  const { isMobile } = useBreakpoints();
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
 
   const {
     filteredBookings,
@@ -86,11 +89,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
     if (filteredBookings.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateIcon}>📅</Text>
+          <Feather name="calendar" size={48} color="#64748B" style={{ marginBottom: 16 }} />
           <Text style={styles.emptyStateText}>No bookings found</Text>
           <Text style={styles.emptyStateSubtext}>
             {filterStatus === 'all'
-              ? 'You don\'t have any bookings yet'
+              ? "You don't have any bookings yet"
               : `No ${filterStatus} bookings`}
           </Text>
         </View>
@@ -99,17 +102,99 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
 
     if (isMobile) {
       return (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={true}
-          style={styles.tableScrollContainer}
-          contentContainerStyle={styles.tableScrollContent}
-        >
-          <View style={styles.tableContainer}>
-            {renderTableHeader()}
-            {renderBookingRows(false)}
-          </View>
-        </ScrollView>
+        <View style={styles.mobileCardContainer}>
+          {filteredBookings.map((booking) => {
+            const statusColor = getStatusColor(booking.status);
+            return (
+              <View key={booking.id} style={styles.mobileCard}>
+                <View style={styles.mobileCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mobileCardTitle}>{booking.eventName}</Text>
+                    <Text style={styles.mobileCardSubtitle}>{booking.serviceName}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                    <Text style={[styles.statusText, { color: statusColor }]}>
+                      {booking.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.mobileCardRow}>
+                  <Text style={styles.mobileCardLabel}>Client</Text>
+                  <Text style={styles.mobileCardValue}>{booking.clientName}</Text>
+                </View>
+                <View style={styles.mobileCardRow}>
+                  <Text style={styles.mobileCardLabel}>Date</Text>
+                  <Text style={styles.mobileCardValue}>{booking.date}</Text>
+                </View>
+                <View style={styles.mobileCardRow}>
+                  <Text style={styles.mobileCardLabel}>Time</Text>
+                  <Text style={styles.mobileCardValue}>{booking.time}</Text>
+                </View>
+                <View style={styles.mobileCardRow}>
+                  <Text style={styles.mobileCardLabel}>Location</Text>
+                  <Text style={styles.mobileCardValue} numberOfLines={1}>
+                    {booking.location}
+                  </Text>
+                </View>
+                <View style={[styles.mobileCardRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.mobileCardLabel}>Total</Text>
+                  <Text
+                    style={[styles.mobileCardValue, { color: semantic.primary, fontWeight: '700' }]}
+                  >
+                    ₱{booking.totalCost.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.mobileCardActions}>
+                  {handleViewClientDetails && (
+                    <TouchableOpacity
+                      style={[styles.tableActionButton, styles.viewDetailsButton]}
+                      onPress={() => handleViewClientDetails(booking)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`View details for ${booking.eventName}`}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="eye" size={12} color="#fff" />
+                        <Text style={styles.tableActionButtonText}>Details</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  {booking.status === 'pending' && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.confirmButton]}
+                        onPress={() => handleConfirmClick(booking.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Confirm booking"
+                      >
+                        <Text style={styles.tableActionButtonText}>Confirm</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.cancelButton]}
+                        onPress={() => handleCancelClick(booking.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cancel booking"
+                      >
+                        <Text style={styles.tableActionButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {booking.status === 'confirmed' && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.completeButton]}
+                        onPress={() => handleUpdateBookingStatus(booking.id, 'completed')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Complete booking"
+                      >
+                        <Text style={styles.tableActionButtonText}>Complete</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
       );
     }
 
@@ -159,8 +244,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
         </View>
 
         {/* Status Filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-          {statusFilters.map(status => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {statusFilters.map((status) => (
             <TouchableOpacity
               key={status}
               style={[styles.filterChip, filterStatus === status && styles.filterChipActive]}
@@ -168,7 +257,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
               accessibilityRole="button"
               accessibilityLabel={`Filter by ${status}`}
             >
-              <Text style={[styles.filterChipText, filterStatus === status && styles.filterChipTextActive]}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterStatus === status && styles.filterChipTextActive,
+                ]}
+              >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -205,7 +299,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                 accessibilityRole="button"
                 accessibilityLabel="Close client details"
               >
-                <Text style={styles.closeButtonText}>✕</Text>
+                <Feather name="x" size={22} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -236,7 +330,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                   </View>
                   <View style={styles.clientDetailsRow}>
                     <Text style={styles.clientDetailsLabel}>Total:</Text>
-                    <Text style={styles.clientDetailsValue}>₱{selectedBooking.totalCost.toLocaleString()}</Text>
+                    <Text style={styles.clientDetailsValue}>
+                      ₱{selectedBooking.totalCost.toLocaleString()}
+                    </Text>
                   </View>
                 </View>
 
@@ -249,7 +345,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                   </View>
                   {selectedBooking.clientEmail && (
                     <View style={styles.clientDetailsRow}>
-                      <Text style={styles.clientDetailsLabel}>📧 Email:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="mail" size={14} color="#64748B" />
+                        <Text style={styles.clientDetailsLabel}>Email:</Text>
+                      </View>
                       <TouchableOpacity
                         onPress={() => {
                           if (Platform.OS === 'web') {
@@ -269,7 +368,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                   )}
                   {selectedBooking.clientPhone && (
                     <View style={styles.clientDetailsRow}>
-                      <Text style={styles.clientDetailsLabel}>📞 Phone:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="phone" size={14} color="#64748B" />
+                        <Text style={styles.clientDetailsLabel}>Phone:</Text>
+                      </View>
                       <TouchableOpacity
                         onPress={() => {
                           if (Platform.OS === 'web') {
@@ -289,17 +391,27 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                   )}
                   {selectedBooking.clientAddress && (
                     <View style={styles.clientDetailsRow}>
-                      <Text style={styles.clientDetailsLabel}>📍 Address:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather name="map-pin" size={14} color="#64748B" />
+                        <Text style={styles.clientDetailsLabel}>Address:</Text>
+                      </View>
                       <Text style={[styles.clientDetailsValue, { flex: 1 }]}>
                         {selectedBooking.clientAddress}
                       </Text>
                     </View>
                   )}
-                  {!selectedBooking.clientEmail && !selectedBooking.clientPhone && !selectedBooking.clientAddress && (
-                    <Text style={[styles.clientDetailsValue, { color: '#94A3B8', fontStyle: 'italic' }]}>
-                      No contact information available
-                    </Text>
-                  )}
+                  {!selectedBooking.clientEmail &&
+                    !selectedBooking.clientPhone &&
+                    !selectedBooking.clientAddress && (
+                      <Text
+                        style={[
+                          styles.clientDetailsValue,
+                          { color: '#94A3B8', fontStyle: 'italic' },
+                        ]}
+                      >
+                        No contact information available
+                      </Text>
+                    )}
                 </View>
               </ScrollView>
             )}
@@ -329,8 +441,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
           <View style={styles.confirmModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Confirm Booking</Text>
-              <TouchableOpacity onPress={handleCloseConfirmModal} accessibilityRole="button" accessibilityLabel="Close confirm booking modal">
-                <Text style={styles.closeModalIcon}>✕</Text>
+              <TouchableOpacity
+                onPress={handleCloseConfirmModal}
+                accessibilityRole="button"
+                accessibilityLabel="Close confirm booking modal"
+              >
+                <Feather name="x" size={22} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
@@ -371,8 +487,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
           <View style={styles.cancelModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Cancel Booking</Text>
-              <TouchableOpacity onPress={handleCloseCancelModal} accessibilityRole="button" accessibilityLabel="Close cancel booking modal">
-                <Text style={styles.closeModalIcon}>✕</Text>
+              <TouchableOpacity
+                onPress={handleCloseCancelModal}
+                accessibilityRole="button"
+                accessibilityLabel="Close cancel booking modal"
+              >
+                <Feather name="x" size={22} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
@@ -407,7 +527,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                 accessibilityRole="button"
                 accessibilityLabel="Submit booking cancellation"
               >
-                <Text style={[styles.submitCancelButtonText, !cancelReason.trim() && styles.disabledButtonText]}>
+                <Text
+                  style={[
+                    styles.submitCancelButtonText,
+                    !cancelReason.trim() && styles.disabledButtonText,
+                  ]}
+                >
                   Cancel Booking
                 </Text>
               </TouchableOpacity>

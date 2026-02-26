@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { styles } from '../../views/user/HiringView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/HiringView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface JobPostingsListProps {
   jobPostings: any[];
@@ -19,6 +21,8 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
   getApplicationStatusColor,
   onApply,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
   if (loading) {
     return (
       <View style={styles.modernLoadingContainer}>
@@ -32,12 +36,10 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
     return (
       <View style={styles.modernEmptyState}>
         <View style={styles.modernEmptyIconContainer}>
-          <Text style={styles.modernEmptyIcon}>{'\uD83D\uDCBC'}</Text>
+          <Feather name="briefcase" size={48} color="#94A3B8" />
         </View>
         <Text style={styles.modernEmptyTitle}>No job postings available</Text>
-        <Text style={styles.modernEmptySubtext}>
-          Check back later for new job opportunities
-        </Text>
+        <Text style={styles.modernEmptySubtext}>Check back later for new job opportunities</Text>
       </View>
     );
   }
@@ -49,23 +51,30 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
         const applicationStatus = getApplicationStatusForJob(job.id);
 
         return (
-          <View key={job.id} style={[
-            styles.modernJobCard,
-            hasApplied && styles.modernJobCardApplied
-          ]}>
+          <View
+            key={job.id}
+            style={[styles.modernJobCard, hasApplied && styles.modernJobCardApplied]}
+          >
             <View style={styles.modernJobCardHeader}>
               <View style={styles.modernJobCardHeaderLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={styles.modernJobTitle}>{job.jobTitle}</Text>
                   {hasApplied && (
-                    <View style={[
-                      styles.appliedBadge,
-                      { backgroundColor: getApplicationStatusColor(applicationStatus || 'pending') + '20' }
-                    ]}>
-                      <Text style={[
-                        styles.appliedBadgeText,
-                        { color: getApplicationStatusColor(applicationStatus || 'pending') }
-                      ]}>
+                    <View
+                      style={[
+                        styles.appliedBadge,
+                        {
+                          backgroundColor:
+                            getApplicationStatusColor(applicationStatus || 'pending') + '20',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.appliedBadgeText,
+                          { color: getApplicationStatusColor(applicationStatus || 'pending') },
+                        ]}
+                      >
                         {applicationStatus ? applicationStatus.toUpperCase() : 'APPLIED'}
                       </Text>
                     </View>
@@ -73,7 +82,7 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
                 </View>
                 {job.providerFirstName && job.providerLastName && (
                   <View style={styles.modernJobProviderContainer}>
-                    <Text style={styles.modernJobProviderIcon}>{'\uD83D\uDC64'}</Text>
+                    <Feather name="user" size={14} color="#64748B" />
                     <Text style={styles.modernJobProvider}>
                       {job.providerFirstName} {job.providerLastName}
                     </Text>
@@ -82,9 +91,7 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
               </View>
               <View style={styles.modernStatusBadge}>
                 <View style={styles.modernStatusDot} />
-                <Text style={styles.modernStatusText}>
-                  {job.status.toUpperCase()}
-                </Text>
+                <Text style={styles.modernStatusText}>{job.status.toUpperCase()}</Text>
               </View>
             </View>
 
@@ -94,47 +101,53 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
 
             <View style={styles.modernJobCardFooter}>
               <View style={styles.modernJobInfoItem}>
-                <Text style={styles.modernJobInfoIcon}>{'\uD83D\uDCC5'}</Text>
+                <Feather name="calendar" size={14} color="#64748B" />
                 <View style={styles.modernJobInfoTextContainer}>
                   <Text style={styles.modernJobInfoLabel}>Deadline</Text>
                   <Text style={styles.modernJobInfoValue}>
                     {new Date(job.deadlineDate).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
-                      day: 'numeric'
+                      day: 'numeric',
                     })}
                   </Text>
                 </View>
               </View>
               <View style={styles.modernJobInfoItem}>
-                <Text style={styles.modernJobInfoIcon}>{'\uD83D\uDCC6'}</Text>
+                <Feather name="calendar" size={14} color="#64748B" />
                 <View style={styles.modernJobInfoTextContainer}>
                   <Text style={styles.modernJobInfoLabel}>Posted</Text>
                   <Text style={styles.modernJobInfoValue}>
                     {new Date(job.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
-                      day: 'numeric'
+                      day: 'numeric',
                     })}
                   </Text>
                 </View>
               </View>
-              {((job as any).jobType && String((job as any).jobType).trim() !== '' && String((job as any).jobType).trim() !== 'null') ? (
+              {(job as any).jobType &&
+              String((job as any).jobType).trim() !== '' &&
+              String((job as any).jobType).trim() !== 'null' ? (
                 <View style={styles.modernJobInfoItem}>
-                  <Text style={styles.modernJobInfoIcon}>{'\u23F0'}</Text>
+                  <Feather name="clock" size={14} color="#64748B" />
                   <View style={styles.modernJobInfoTextContainer}>
                     <Text style={styles.modernJobInfoLabel}>Job Type</Text>
                     <Text style={styles.modernJobInfoValue}>
-                      {String((job as any).jobType).trim() === 'full_time' ? 'Full Time' :
-                       String((job as any).jobType).trim() === 'part_time' ? 'Part Time' :
-                       String((job as any).jobType).trim()}
+                      {String((job as any).jobType).trim() === 'full_time'
+                        ? 'Full Time'
+                        : String((job as any).jobType).trim() === 'part_time'
+                          ? 'Part Time'
+                          : String((job as any).jobType).trim()}
                     </Text>
                   </View>
                 </View>
               ) : null}
-              {((job as any).location && String((job as any).location).trim() !== '' && String((job as any).location).trim() !== 'null') ? (
+              {(job as any).location &&
+              String((job as any).location).trim() !== '' &&
+              String((job as any).location).trim() !== 'null' ? (
                 <View style={[styles.modernJobInfoItem, styles.modernJobInfoItemLocation]}>
-                  <Text style={styles.modernJobInfoIcon}>{'\uD83D\uDCCD'}</Text>
+                  <Feather name="map-pin" size={14} color="#64748B" />
                   <View style={styles.modernJobInfoTextContainer}>
                     <Text style={styles.modernJobInfoLabel}>Location</Text>
                     <Text style={styles.modernJobInfoValue} numberOfLines={3}>
@@ -146,10 +159,7 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.modernApplyButton,
-                hasApplied && styles.modernApplyButtonDisabled
-              ]}
+              style={[styles.modernApplyButton, hasApplied && styles.modernApplyButtonDisabled]}
               onPress={() => {
                 if (!hasApplied) {
                   onApply(job);
@@ -158,13 +168,15 @@ export const JobPostingsList: React.FC<JobPostingsListProps> = ({
               activeOpacity={hasApplied ? 1 : 0.8}
               disabled={hasApplied}
             >
-              <Text style={[
-                styles.modernApplyButtonText,
-                hasApplied && styles.modernApplyButtonTextDisabled
-              ]}>
+              <Text
+                style={[
+                  styles.modernApplyButtonText,
+                  hasApplied && styles.modernApplyButtonTextDisabled,
+                ]}
+              >
                 {hasApplied ? 'Already Applied' : 'Apply Now'}
               </Text>
-              {!hasApplied && <Text style={styles.modernApplyButtonIcon}>{'\u2192'}</Text>}
+              {!hasApplied && <Feather name="arrow-right" size={16} color="#fff" />}
             </TouchableOpacity>
           </View>
         );

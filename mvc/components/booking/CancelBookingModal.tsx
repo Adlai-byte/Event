@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { styles } from '../../views/user/BookingView.styles';
+import { Feather } from '@expo/vector-icons';
+import { createStyles } from '../../views/user/BookingView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import type { Booking } from './types';
 
 export interface CancelBookingModalProps {
@@ -20,22 +22,17 @@ export const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
   onConfirm,
   onClose,
 }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.cancelModalOverlay}>
         <View style={styles.cancelModalContent}>
           <View style={styles.cancelModalHeader}>
             <Text style={styles.cancelModalTitle}>Cancel Booking</Text>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.cancelModalCloseButton}
-            >
-              <Text style={styles.cancelModalCloseIcon}>{'\u2715'}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.cancelModalCloseButton}>
+              <Feather name="x" size={22} color="#64748B" />
             </TouchableOpacity>
           </View>
           <View style={styles.cancelModalBody}>

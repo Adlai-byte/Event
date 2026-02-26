@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface PaymentSetupViewProps {
   user: User;
@@ -28,6 +29,9 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile } = useBreakpoints();
+  const styles = createStyles(isMobile);
+
   const [paymentLink, setPaymentLink] = useState('');
   const [secretKey, setSecretKey] = useState('');
   const [publicKey, setPublicKey] = useState('');
@@ -305,7 +309,10 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
               <>
                 {/* API Credentials Info */}
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoTitle}>🔑 PayMongo API Credentials</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Feather name="key" size={18} color="#2D3436" />
+                    <Text style={styles.infoTitle}>PayMongo API Credentials</Text>
+                  </View>
                   <Text style={styles.infoText}>
                     Enter your PayMongo API credentials to receive payments directly to your
                     account. Payments will go to YOUR PayMongo account, not a central account.
@@ -342,8 +349,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                   <Text style={styles.helperText}>Your PayMongo secret key (starts with sk_)</Text>
                   {secretKeyMismatch && (
                     <Text style={styles.warningText}>
-                      ⚠️ This key is for {secretKeyMode?.toUpperCase()} mode, but you have selected{' '}
-                      {mode.toUpperCase()} mode
+                      Warning: This key is for {secretKeyMode?.toUpperCase()} mode, but you have
+                      selected {mode.toUpperCase()} mode
                     </Text>
                   )}
                 </View>
@@ -374,8 +381,8 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
                   <Text style={styles.helperText}>Your PayMongo public key (starts with pk_)</Text>
                   {publicKeyMismatch && (
                     <Text style={styles.warningText}>
-                      ⚠️ This key is for {publicKeyMode?.toUpperCase()} mode, but you have selected{' '}
-                      {mode.toUpperCase()} mode
+                      Warning: This key is for {publicKeyMode?.toUpperCase()} mode, but you have
+                      selected {mode.toUpperCase()} mode
                     </Text>
                   )}
                 </View>
@@ -428,7 +435,10 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
               <>
                 {/* Payment Link Info */}
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoTitle}>💰 PayMongo Payment Link</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Feather name="dollar-sign" size={18} color="#2D3436" />
+                    <Text style={styles.infoTitle}>PayMongo Payment Link</Text>
+                  </View>
                   <Text style={styles.infoText}>
                     Set up your PayMongo payment link as a fallback option. This is only used if API
                     credentials fail.
@@ -489,7 +499,10 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
             {/* Help Section */}
             {activeTab === 'api' ? (
               <View style={styles.helpCard}>
-                <Text style={styles.helpTitle}>📖 How to get your PayMongo API keys:</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather name="book-open" size={16} color="#2D3436" />
+                  <Text style={styles.helpTitle}>How to get your PayMongo API keys:</Text>
+                </View>
                 <View style={styles.helpSteps}>
                   <Text style={styles.helpStep}>
                     1. Log in to your PayMongo account at dashboard.paymongo.com
@@ -505,7 +518,10 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
               </View>
             ) : (
               <View style={styles.helpCard}>
-                <Text style={styles.helpTitle}>📖 How to get your PayMongo payment link:</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather name="book-open" size={16} color="#2D3436" />
+                  <Text style={styles.helpTitle}>How to get your PayMongo payment link:</Text>
+                </View>
                 <View style={styles.helpSteps}>
                   <Text style={styles.helpStep}>1. Log in to your PayMongo account</Text>
                   <Text style={styles.helpStep}>2. Go to Payment Links section</Text>
@@ -526,233 +542,234 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#636E72',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentWrapper: {
-    flex: 1,
-    ...(Platform.OS === 'web'
-      ? {
-          alignItems: 'center',
-          paddingVertical: 20,
-        }
-      : {}),
-  },
-  content: {
-    ...(Platform.OS === 'web'
-      ? {
-          width: '100%',
-          maxWidth: 800,
-          backgroundColor: '#ffffff',
-          borderRadius: 12,
-          marginHorizontal: 'auto',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 3,
-          marginTop: 20,
-          marginBottom: 20,
-          padding: 20,
-        }
-      : {}),
-  },
-  scrollContent: {
-    ...(Platform.OS === 'web'
-      ? {
-          padding: 0,
-        }
-      : {
-          padding: 20,
-        }),
-  },
-  infoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D3436',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#636E72',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  infoSubtext: {
-    fontSize: 12,
-    color: '#6C63FF',
-    fontStyle: 'italic',
-  },
-  inputSection: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 16,
-    paddingRight: 50,
-    fontSize: 16,
-    color: '#2D3436',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    padding: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#95A5A6',
-  },
-  warningText: {
-    fontSize: 12,
-    color: '#E74C3C',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  buttonContainer: {
-    marginBottom: 20,
-    gap: 12,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  testButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#6C63FF',
-  },
-  testButtonText: {
-    color: '#6C63FF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#6C63FF',
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  helpCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  helpTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: 12,
-  },
-  helpSteps: {
-    gap: 8,
-  },
-  helpStep: {
-    fontSize: 14,
-    color: '#636E72',
-    lineHeight: 20,
-  },
-  bottomSpacing: {
-    height: 20,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  tabActive: {
-    backgroundColor: '#6C63FF',
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#636E72',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  radio: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-  },
-  radioActive: {
-    backgroundColor: '#6C63FF',
-    borderColor: '#6C63FF',
-  },
-  radioText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#636E72',
-  },
-  radioTextActive: {
-    color: '#FFFFFF',
-  },
-});
+const createStyles = (isMobile: boolean) =>
+  StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#f8f9fa',
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: isMobile ? 14 : 16,
+      color: '#636E72',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    contentWrapper: {
+      flex: 1,
+      ...(Platform.OS === 'web'
+        ? {
+            alignItems: 'center',
+            paddingVertical: isMobile ? 12 : 20,
+          }
+        : {}),
+    },
+    content: {
+      ...(Platform.OS === 'web'
+        ? {
+            width: '100%',
+            maxWidth: 800,
+            backgroundColor: '#ffffff',
+            borderRadius: isMobile ? 8 : 12,
+            marginHorizontal: 'auto',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 3,
+            marginTop: isMobile ? 12 : 20,
+            marginBottom: isMobile ? 12 : 20,
+            padding: isMobile ? 12 : 20,
+          }
+        : {}),
+    },
+    scrollContent: {
+      ...(Platform.OS === 'web'
+        ? {
+            padding: 0,
+          }
+        : {
+            padding: isMobile ? 12 : 20,
+          }),
+    },
+    infoCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: isMobile ? 8 : 12,
+      padding: isMobile ? 14 : 20,
+      marginBottom: isMobile ? 14 : 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    infoTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: 'bold',
+      color: '#2D3436',
+      marginBottom: 8,
+    },
+    infoText: {
+      fontSize: isMobile ? 13 : 14,
+      color: '#636E72',
+      lineHeight: isMobile ? 18 : 20,
+      marginBottom: 8,
+    },
+    infoSubtext: {
+      fontSize: 12,
+      color: '#6C63FF',
+      fontStyle: 'italic',
+    },
+    inputSection: {
+      marginBottom: isMobile ? 14 : 20,
+    },
+    label: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#2D3436',
+      marginBottom: 8,
+    },
+    inputContainer: {
+      position: 'relative',
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: '#ffffff',
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      paddingRight: 50,
+      fontSize: isMobile ? 14 : 16,
+      color: '#2D3436',
+      borderWidth: 1,
+      borderColor: '#E9ECEF',
+    },
+    eyeIcon: {
+      position: 'absolute',
+      right: 16,
+      top: isMobile ? 12 : 16,
+      padding: 4,
+    },
+    helperText: {
+      fontSize: 12,
+      color: '#95A5A6',
+    },
+    warningText: {
+      fontSize: 12,
+      color: '#E74C3C',
+      marginTop: 4,
+      fontWeight: '500',
+    },
+    buttonContainer: {
+      marginBottom: isMobile ? 14 : 20,
+      gap: 12,
+    },
+    button: {
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    testButton: {
+      backgroundColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#6C63FF',
+    },
+    testButtonText: {
+      color: '#6C63FF',
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+    },
+    saveButton: {
+      backgroundColor: '#6C63FF',
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      color: '#ffffff',
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+    },
+    helpCard: {
+      backgroundColor: '#F8F9FA',
+      borderRadius: isMobile ? 8 : 12,
+      padding: isMobile ? 14 : 20,
+      marginBottom: isMobile ? 14 : 20,
+      borderWidth: 1,
+      borderColor: '#E9ECEF',
+    },
+    helpTitle: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#2D3436',
+      marginBottom: isMobile ? 8 : 12,
+    },
+    helpSteps: {
+      gap: isMobile ? 6 : 8,
+    },
+    helpStep: {
+      fontSize: isMobile ? 13 : 14,
+      color: '#636E72',
+      lineHeight: isMobile ? 18 : 20,
+    },
+    bottomSpacing: {
+      height: 20,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: '#ffffff',
+      borderRadius: 8,
+      padding: 4,
+      marginBottom: isMobile ? 14 : 20,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: isMobile ? 10 : 12,
+      paddingHorizontal: isMobile ? 12 : 16,
+      borderRadius: 6,
+      alignItems: 'center',
+    },
+    tabActive: {
+      backgroundColor: '#6C63FF',
+    },
+    tabText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#636E72',
+    },
+    tabTextActive: {
+      color: '#FFFFFF',
+    },
+    radioContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+    },
+    radio: {
+      flex: 1,
+      paddingVertical: isMobile ? 10 : 12,
+      paddingHorizontal: isMobile ? 12 : 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#E9ECEF',
+      backgroundColor: '#ffffff',
+      alignItems: 'center',
+    },
+    radioActive: {
+      backgroundColor: '#6C63FF',
+      borderColor: '#6C63FF',
+    },
+    radioText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: '#636E72',
+    },
+    radioTextActive: {
+      color: '#FFFFFF',
+    },
+  });
 
 export default PaymentSetupView;

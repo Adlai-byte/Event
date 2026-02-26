@@ -9,7 +9,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { styles } from './DashboardView.styles';
+import { createStyles } from './DashboardView.styles';
 import { User } from '../../models/User';
 import { AuthState } from '../../models/AuthState';
 import { BookingModal } from '../../components/BookingModal';
@@ -25,6 +25,7 @@ import { BannerSlider } from '../../components/dashboard/BannerSlider';
 import { FilterPanel } from '../../components/dashboard/FilterPanel';
 import { SearchResultsSection } from '../../components/dashboard/SearchResultsSection';
 import { SkeletonCard } from '../../components/ui';
+import { Feather } from '@expo/vector-icons';
 
 interface DashboardViewProps {
   user: User;
@@ -72,7 +73,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onBookingModalClosed,
   onNavigateToPersonalInfo,
 }) => {
-  const { screenWidth, isMobile: _isMobile, isMobileWeb } = useBreakpoints();
+  const { screenWidth, isMobile, isMobileWeb } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
 
   const {
     loading,
@@ -178,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Hero Section with Gradient Background */}
           <View style={styles.heroSection}>
             <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>Welcome back, {user.getFullName()}! 👋</Text>
+              <Text style={styles.heroTitle}>Welcome back, {user.getFullName()}!</Text>
               <Text style={styles.heroSubtitle}>
                 Discover amazing events and services around you
               </Text>
@@ -186,7 +188,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Modern Search Bar */}
               <View style={styles.modernSearchContainer}>
                 <View style={styles.searchIconContainer}>
-                  <Text style={styles.searchIcon}>🔍</Text>
+                  <Feather name="search" size={20} color="#94a3b8" />
                 </View>
                 <TextInput
                   style={styles.modernSearchInput}
@@ -212,19 +214,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onPress={() => setShowFilters(!showFilters)}
                   activeOpacity={0.8}
                 >
-                  <Text
-                    style={[
-                      filterMinPrice ||
-                      filterMaxPrice ||
-                      filterCity ||
-                      filterMinRating ||
-                      filterCategory
-                        ? styles.filterButtonTextActive
-                        : styles.filterButtonText,
-                    ]}
-                  >
-                    {showFilters ? '🔼' : '🔽'} {isMobileWeb ? 'Filter' : 'Filters'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Feather
+                      name={showFilters ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={
+                        filterMinPrice ||
+                        filterMaxPrice ||
+                        filterCity ||
+                        filterMinRating ||
+                        filterCategory
+                          ? '#FFFFFF'
+                          : '#64748B'
+                      }
+                    />
+                    <Text
+                      style={[
+                        filterMinPrice ||
+                        filterMaxPrice ||
+                        filterCity ||
+                        filterMinRating ||
+                        filterCategory
+                          ? styles.filterButtonTextActive
+                          : styles.filterButtonText,
+                      ]}
+                    >
+                      {isMobileWeb ? 'Filter' : 'Filters'}
+                    </Text>
+                  </View>
                   {filterMinPrice ||
                   filterMaxPrice ||
                   filterCity ||
@@ -317,7 +334,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Category Filter View */}
               <View style={styles.categoryFilterHeader}>
                 <TouchableOpacity onPress={clearCategoryFilter} style={styles.backButton}>
-                  <Text style={styles.backButtonText}>← Back</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Feather name="arrow-left" size={20} color="#1E293B" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                  </View>
                 </TouchableOpacity>
                 <Text style={styles.categoryFilterTitle}>
                   {selectedCategory === 'venue'
@@ -368,9 +388,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                         resizeMode="cover"
                                       />
                                     ) : (
-                                      <Text style={styles.serviceEmoji}>
-                                        {getCategoryIcon(serviceItem.s_category)}
-                                      </Text>
+                                      <Feather
+                                        name={getCategoryIcon(serviceItem.s_category) as any}
+                                        size={32}
+                                        color="#64748B"
+                                      />
                                     )}
                                   </View>
                                   <View style={styles.serviceInfo}>
@@ -388,9 +410,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                       const reviewCount = serviceItem.s_review_count || 0;
                                       return rating > 0 && !isNaN(rating) ? (
                                         <View style={styles.ratingContainer}>
-                                          <Text style={styles.ratingText}>
-                                            ⭐ {rating.toFixed(1)}
-                                          </Text>
+                                          <View
+                                            style={{
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 4,
+                                            }}
+                                          >
+                                            <Feather name="star" size={14} color="#f59e0b" />
+                                            <Text style={styles.ratingText}>
+                                              {rating.toFixed(1)}
+                                            </Text>
+                                          </View>
                                           <Text style={styles.reviewCount}>({reviewCount})</Text>
                                         </View>
                                       ) : null;
@@ -401,49 +432,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                     {(serviceItem.s_city ||
                                       serviceItem.s_state ||
                                       serviceItem.s_address) && (
-                                      <Text style={styles.serviceLocation} numberOfLines={2}>
-                                        📍{' '}
-                                        {(() => {
-                                          const locationParts = [];
-                                          if (serviceItem.s_address) {
-                                            const address = serviceItem.s_address.trim();
-                                            const coordsMatch =
-                                              address.match(/\(([\d.-]+),([\d.-]+)\)/);
-                                            if (coordsMatch) {
-                                              locationParts.push(
-                                                address
-                                                  .replace(/\s*\([\d.-]+,[\d.-]+\)\s*/, '')
-                                                  .trim(),
-                                              );
-                                            } else {
-                                              locationParts.push(address);
+                                      <View
+                                        style={{
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          gap: 4,
+                                        }}
+                                      >
+                                        <Feather name="map-pin" size={14} color="#64748B" />
+                                        <Text
+                                          style={[styles.serviceLocation, { flex: 1 }]}
+                                          numberOfLines={2}
+                                        >
+                                          {(() => {
+                                            const locationParts = [];
+                                            if (serviceItem.s_address) {
+                                              const address = serviceItem.s_address.trim();
+                                              const coordsMatch =
+                                                address.match(/\(([\d.-]+),([\d.-]+)\)/);
+                                              if (coordsMatch) {
+                                                locationParts.push(
+                                                  address
+                                                    .replace(/\s*\([\d.-]+,[\d.-]+\)\s*/, '')
+                                                    .trim(),
+                                                );
+                                              } else {
+                                                locationParts.push(address);
+                                              }
                                             }
-                                          }
-                                          if (
-                                            serviceItem.s_city &&
-                                            !locationParts.some((part) =>
-                                              part
-                                                .toLowerCase()
-                                                .includes(serviceItem.s_city!.toLowerCase()),
-                                            )
-                                          ) {
-                                            locationParts.push(serviceItem.s_city);
-                                          }
-                                          if (
-                                            serviceItem.s_state &&
-                                            !locationParts.some((part) =>
-                                              part
-                                                .toLowerCase()
-                                                .includes(serviceItem.s_state!.toLowerCase()),
-                                            )
-                                          ) {
-                                            locationParts.push(serviceItem.s_state);
-                                          }
-                                          return locationParts.length > 0
-                                            ? locationParts.join(', ')
-                                            : 'Location not specified';
-                                        })()}
-                                      </Text>
+                                            if (
+                                              serviceItem.s_city &&
+                                              !locationParts.some((part) =>
+                                                part
+                                                  .toLowerCase()
+                                                  .includes(serviceItem.s_city!.toLowerCase()),
+                                              )
+                                            ) {
+                                              locationParts.push(serviceItem.s_city);
+                                            }
+                                            if (
+                                              serviceItem.s_state &&
+                                              !locationParts.some((part) =>
+                                                part
+                                                  .toLowerCase()
+                                                  .includes(serviceItem.s_state!.toLowerCase()),
+                                              )
+                                            ) {
+                                              locationParts.push(serviceItem.s_state);
+                                            }
+                                            return locationParts.length > 0
+                                              ? locationParts.join(', ')
+                                              : 'Location not specified';
+                                          })()}
+                                        </Text>
+                                      </View>
                                     )}
                                   </View>
                                 </TouchableOpacity>
@@ -476,7 +518,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </View>
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateIcon}>{getCategoryIcon(selectedCategory)}</Text>
+                  <Feather
+                    name={getCategoryIcon(selectedCategory) as any}
+                    size={48}
+                    color="#94A3B8"
+                  />
                   <Text style={styles.emptyStateText}>No data found</Text>
                   <Text style={styles.emptyStateSubtext}>
                     {filterMinPrice ||

@@ -82,6 +82,10 @@ Desktop.ini
 
 # Playwright
 .playwright-mcp/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # Upload directories (keep structure, ignore content)
 server/uploads/images/*

@@ -7,11 +7,12 @@ import {
   Image,
   TouchableOpacity,
   Platform,
-  Dimensions,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface ProviderProfileViewProps {
   providerEmail: string;
@@ -48,9 +49,6 @@ interface Service {
   primary_image?: string | null;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768 || Platform.OS !== 'web';
-
 export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   providerEmail,
   onNavigateToService,
@@ -58,6 +56,9 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [provider, setProvider] = useState<Provider | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,26 +70,26 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   const loadProviderProfile = async () => {
     try {
       setLoading(true);
-      
+
       console.log('Loading provider profile for email:', providerEmail);
-      
+
       // Load provider information
       const providerResp = await fetch(
-        `${getApiBaseUrl()}/api/provider/profile?email=${encodeURIComponent(providerEmail)}`
+        `${getApiBaseUrl()}/api/provider/profile?email=${encodeURIComponent(providerEmail)}`,
       );
-      
+
       if (providerResp.ok) {
         const providerData = await providerResp.json();
         console.log('Provider data response:', providerData);
-        
+
         if (providerData.ok && providerData.provider) {
           setProvider(providerData.provider);
-          
+
           // Load provider services
           const servicesResp = await fetch(
-            `${getApiBaseUrl()}/api/provider/services?email=${encodeURIComponent(providerEmail)}`
+            `${getApiBaseUrl()}/api/provider/services?email=${encodeURIComponent(providerEmail)}`,
           );
-          
+
           if (servicesResp.ok) {
             const servicesData = await servicesResp.json();
             console.log('Services data response:', servicesData);
@@ -125,17 +126,24 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
   const getCategoryIcon = (category: string): string => {
     const icons: { [key: string]: string } = {
-      photography: '📷',
-      venue: '🏢',
-      music: '🎵',
-      catering: '🍽️',
+      photography: 'camera',
+      venue: 'home',
+      music: 'music',
+      catering: 'coffee',
     };
-    return icons[category.toLowerCase()] || '🎯';
+    return icons[category.toLowerCase()] || 'grid';
   };
 
   if (loading) {
     return (
-      <AppLayout role="user" activeRoute="dashboard" title="Provider Profile" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="dashboard"
+        title="Provider Profile"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={{ padding: 16 }}>
           <SkeletonCard />
           <SkeletonCard />
@@ -147,7 +155,14 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
   if (!provider) {
     return (
-      <AppLayout role="user" activeRoute="dashboard" title="Provider Profile" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="dashboard"
+        title="Provider Profile"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Provider not found</Text>
         </View>
@@ -157,14 +172,21 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
   const providerName = `${provider.u_fname} ${provider.u_lname}`;
   const initials = `${provider.u_fname?.[0] || ''}${provider.u_lname?.[0] || ''}`.toUpperCase();
-  const profileImage = provider.u_profile_picture 
-    ? (provider.u_profile_picture.startsWith('/uploads/') 
-        ? `${getApiBaseUrl()}${provider.u_profile_picture}` 
-        : provider.u_profile_picture)
+  const profileImage = provider.u_profile_picture
+    ? provider.u_profile_picture.startsWith('/uploads/')
+      ? `${getApiBaseUrl()}${provider.u_profile_picture}`
+      : provider.u_profile_picture
     : null;
 
   return (
-    <AppLayout role="user" activeRoute="dashboard" title="Provider Profile" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+    <AppLayout
+      role="user"
+      activeRoute="dashboard"
+      title="Provider Profile"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -174,11 +196,7 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.avatarImage}
-                resizeMode="cover"
-              />
+              <Image source={{ uri: profileImage }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
               <Text style={styles.avatarText}>{initials}</Text>
             )}
@@ -186,7 +204,10 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
           <Text style={styles.providerName}>{providerName}</Text>
           {provider.u_provider_status === 'approved' && (
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓ Verified Provider</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="check-circle" size={14} color="#059669" />
+                <Text style={styles.verifiedText}>Verified Provider</Text>
+              </View>
             </View>
           )}
         </View>
@@ -222,19 +243,19 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
             <Text style={styles.sectionTitle}>Contact Information</Text>
             {provider.u_email && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>📧</Text>
+                <Feather name="mail" size={18} color="#64748B" />
                 <Text style={styles.infoText}>{provider.u_email}</Text>
               </View>
             )}
             {provider.u_phone && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>📱</Text>
+                <Feather name="phone" size={18} color="#64748B" />
                 <Text style={styles.infoText}>{provider.u_phone}</Text>
               </View>
             )}
             {(provider.u_address || provider.u_city) && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>📍</Text>
+                <Feather name="map-pin" size={18} color="#64748B" />
                 <Text style={styles.infoText}>
                   {[provider.u_address, provider.u_city, provider.u_state]
                     .filter(Boolean)
@@ -247,9 +268,7 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
         {/* Services Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Services ({services.length})
-          </Text>
+          <Text style={styles.sectionTitle}>Services ({services.length})</Text>
           {services.length === 0 ? (
             <View style={styles.emptyServices}>
               <Text style={styles.emptyServicesText}>No services available</Text>
@@ -257,14 +276,16 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
           ) : (
             <View style={styles.servicesGrid}>
               {services.map((service) => {
-                const rating = typeof service.s_rating === 'string' 
-                  ? parseFloat(service.s_rating) 
-                  : (service.s_rating || 0);
+                const rating =
+                  typeof service.s_rating === 'string'
+                    ? parseFloat(service.s_rating)
+                    : service.s_rating || 0;
                 const reviewCount = service.s_review_count || 0;
-                const imageUrl = service.primary_image 
-                  ? (service.primary_image.startsWith('/uploads/') || service.primary_image.startsWith('/')
-                      ? `${getApiBaseUrl()}${service.primary_image}` 
-                      : service.primary_image)
+                const imageUrl = service.primary_image
+                  ? service.primary_image.startsWith('/uploads/') ||
+                    service.primary_image.startsWith('/')
+                    ? `${getApiBaseUrl()}${service.primary_image}`
+                    : service.primary_image
                   : null;
 
                 return (
@@ -282,9 +303,11 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
                       />
                     ) : (
                       <View style={styles.serviceImagePlaceholder}>
-                        <Text style={styles.serviceImageIcon}>
-                          {getCategoryIcon(service.s_category)}
-                        </Text>
+                        <Feather
+                          name={getCategoryIcon(service.s_category) as any}
+                          size={48}
+                          color="#64748B"
+                        />
                       </View>
                     )}
                     <View style={styles.serviceInfo}>
@@ -292,18 +315,24 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
                         {service.s_name}
                       </Text>
                       <View style={styles.serviceMeta}>
-                        <Text style={styles.serviceCategory}>
-                          {getCategoryIcon(service.s_category)} {service.s_category}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather
+                            name={getCategoryIcon(service.s_category) as any}
+                            size={12}
+                            color="#6B7280"
+                          />
+                          <Text style={styles.serviceCategory}>{service.s_category}</Text>
+                        </View>
                         {rating > 0 && (
-                          <Text style={styles.serviceRating}>
-                            ⭐ {rating.toFixed(1)} ({reviewCount})
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Feather name="star" size={12} color="#f59e0b" />
+                            <Text style={styles.serviceRating}>
+                              {rating.toFixed(1)} ({reviewCount})
+                            </Text>
+                          </View>
                         )}
                       </View>
-                      <Text style={styles.servicePrice}>
-                        {formatPrice(service.s_base_price)}
-                      </Text>
+                      <Text style={styles.servicePrice}>{formatPrice(service.s_base_price)}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -316,227 +345,233 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  profileHeader: {
-    backgroundColor: '#FFFFFF',
-    padding: isMobile ? 24 : 32,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  avatarContainer: {
-    width: isMobile ? 100 : 120,
-    height: isMobile ? 100 : 120,
-    borderRadius: isMobile ? 50 : 60,
-    backgroundColor: '#4a55e1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: {
-    fontSize: isMobile ? 36 : 48,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  providerName: {
-    fontSize: isMobile ? 24 : 28,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  verifiedBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 4,
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    marginTop: 16,
-    marginHorizontal: isMobile ? 16 : 24,
-    borderRadius: 12,
-    padding: isMobile ? 16 : 20,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: isMobile ? 12 : 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 8,
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 16,
-    marginHorizontal: isMobile ? 16 : 24,
-    borderRadius: 12,
-    padding: isMobile ? 16 : 20,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
-  },
-  sectionTitle: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoIcon: {
-    fontSize: 18,
-    marginRight: 12,
-  },
-  infoText: {
-    fontSize: isMobile ? 14 : 16,
-    color: '#374151',
-    flex: 1,
-  },
-  emptyServices: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyServicesText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  serviceCard: {
-    width: isMobile ? '100%' : '48%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-      cursor: 'pointer',
-      transition: 'transform 0.2s ease',
-      ':hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-      },
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 2,
-    }),
-  },
-  serviceImage: {
-    width: '100%',
-    height: isMobile ? 180 : 200,
-  },
-  serviceImagePlaceholder: {
-    width: '100%',
-    height: isMobile ? 180 : 200,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  serviceImageIcon: {
-    fontSize: 48,
-  },
-  serviceInfo: {
-    padding: 12,
-  },
-  serviceName: {
-    fontSize: isMobile ? 16 : 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  serviceMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  serviceCategory: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  serviceRating: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  servicePrice: {
-    fontSize: isMobile ? 18 : 20,
-    fontWeight: '700',
-    color: '#4a55e1',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-});
-
+const createStyles = (isMobile: boolean, _screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#F5F7FA',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 24,
+    },
+    profileHeader: {
+      backgroundColor: '#FFFFFF',
+      padding: isMobile ? 24 : 32,
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E7EB',
+    },
+    avatarContainer: {
+      width: isMobile ? 100 : 120,
+      height: isMobile ? 100 : 120,
+      borderRadius: isMobile ? 50 : 60,
+      backgroundColor: '#4a55e1',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    avatarText: {
+      fontSize: isMobile ? 36 : 48,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+    },
+    providerName: {
+      fontSize: isMobile ? 24 : 28,
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    verifiedBadge: {
+      backgroundColor: '#D1FAE5',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      marginTop: 4,
+    },
+    verifiedText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#059669',
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      backgroundColor: '#FFFFFF',
+      marginTop: 16,
+      marginHorizontal: isMobile ? 16 : 24,
+      borderRadius: 12,
+      padding: isMobile ? 16 : 20,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }),
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statValue: {
+      fontSize: isMobile ? 20 : 24,
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: isMobile ? 12 : 14,
+      color: '#6B7280',
+      fontWeight: '500',
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: '#E5E7EB',
+      marginHorizontal: 8,
+    },
+    section: {
+      backgroundColor: '#FFFFFF',
+      marginTop: 16,
+      marginHorizontal: isMobile ? 16 : 24,
+      borderRadius: 12,
+      padding: isMobile ? 16 : 20,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }),
+    },
+    sectionTitle: {
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: 16,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    infoIcon: {
+      fontSize: 18,
+      marginRight: 12,
+    },
+    infoText: {
+      fontSize: isMobile ? 14 : 16,
+      color: '#374151',
+      flex: 1,
+    },
+    emptyServices: {
+      padding: 40,
+      alignItems: 'center',
+    },
+    emptyServicesText: {
+      fontSize: 14,
+      color: '#6B7280',
+    },
+    servicesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    serviceCard: {
+      width: isMobile ? '100%' : '48%',
+      backgroundColor: '#F9FAFB',
+      borderRadius: 12,
+      overflow: 'hidden',
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease',
+            ':hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            },
+          }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 2,
+          }),
+    },
+    serviceImage: {
+      width: '100%',
+      height: isMobile ? 180 : 200,
+    },
+    serviceImagePlaceholder: {
+      width: '100%',
+      height: isMobile ? 180 : 200,
+      backgroundColor: '#E5E7EB',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    serviceImageIcon: {
+      fontSize: 48,
+    },
+    serviceInfo: {
+      padding: 12,
+    },
+    serviceName: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '600',
+      color: '#111827',
+      marginBottom: 8,
+    },
+    serviceMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    serviceCategory: {
+      fontSize: 12,
+      color: '#6B7280',
+      fontWeight: '500',
+    },
+    serviceRating: {
+      fontSize: 12,
+      color: '#6B7280',
+      fontWeight: '500',
+    },
+    servicePrice: {
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: '700',
+      color: '#4a55e1',
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 40,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: '#6B7280',
+    },
+  });

@@ -1,19 +1,17 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SkeletonCard } from '../../components/ui';
+import { Feather } from '@expo/vector-icons';
 import { AppLayout } from '../../components/layout';
-import { ServiceHeroImage, ServicePhotoGallery } from '../../components/services/ServiceImageGallery';
+import {
+  ServiceHeroImage,
+  ServicePhotoGallery,
+} from '../../components/services/ServiceImageGallery';
 import { ServiceInfoSection } from '../../components/services/ServiceInfoSection';
 import { ReviewsSection } from '../../components/services/ReviewsSection';
 import { useServiceDetails } from '../../hooks/useServiceDetails';
-import { styles } from './ServiceDetailsView.styles';
+import { createStyles } from './ServiceDetailsView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface ServiceDetailsViewProps {
   serviceId: string;
@@ -25,7 +23,7 @@ interface ServiceDetailsViewProps {
 }
 
 const formatDuration = (minutes: number | string | null | undefined): string => {
-  const numMinutes = typeof minutes === 'string' ? parseInt(minutes, 10) : (minutes || 0);
+  const numMinutes = typeof minutes === 'string' ? parseInt(minutes, 10) : minutes || 0;
   if (isNaN(numMinutes) || numMinutes <= 0) return 'N/A';
 
   const MINUTES_PER_HOUR = 60;
@@ -76,11 +74,11 @@ const formatDuration = (minutes: number | string | null | undefined): string => 
 
 const getPricingTypeLabel = (type: string): string => {
   const labels: { [key: string]: string } = {
-    'fixed': 'Fixed Price',
-    'hourly': 'Per Hour',
-    'per_person': 'Per Person',
-    'package': 'Package',
-    'custom': 'Custom'
+    fixed: 'Fixed Price',
+    hourly: 'Per Hour',
+    per_person: 'Per Person',
+    package: 'Package',
+    custom: 'Custom',
   };
   return labels[type] || type;
 };
@@ -93,6 +91,9 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile, screenWidth, screenHeight } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth, screenHeight);
+
   const {
     service,
     loading,
@@ -106,11 +107,16 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
     setSelectedPackage,
   } = useServiceDetails(serviceId, onNavigate);
 
-  const { width: screenWidth } = Dimensions.get('window');
-
   if (loading) {
     return (
-      <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="dashboard"
+        title="Service Details"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={{ padding: 16 }}>
           <SkeletonCard />
           <SkeletonCard />
@@ -122,7 +128,14 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
 
   if (!service) {
     return (
-      <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="dashboard"
+        title="Service Details"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>Service not found</Text>
         </View>
@@ -130,11 +143,10 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
     );
   }
 
-  const rating = typeof service.s_rating === 'string'
-    ? parseFloat(service.s_rating)
-    : (service.s_rating || 0);
+  const rating =
+    typeof service.s_rating === 'string' ? parseFloat(service.s_rating) : service.s_rating || 0;
   const reviewCount = service.s_review_count || 0;
-  const mainImage = images.length > 0 ? images[0] : (service.primary_image || null);
+  const mainImage = images.length > 0 ? images[0] : service.primary_image || null;
   const isWeb = Platform.OS === 'web';
 
   const scrollContent = (
@@ -178,19 +190,23 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             accessibilityRole="button"
             accessibilityLabel="View provider profile"
           >
-            <Text style={styles.viewProfileButtonIcon}>👤</Text>
+            <Feather name="user" size={16} color="#4a55e1" style={{ marginRight: 6 }} />
             <Text style={styles.viewProfileButtonText}>View Profile</Text>
           </TouchableOpacity>
         )}
         {onBookNow && (
           <TouchableOpacity
-            style={[styles.modernBookButton, !(service?.provider_email && onNavigateToProviderProfile) && styles.modernBookButtonFull]}
+            style={[
+              styles.modernBookButton,
+              !(service?.provider_email && onNavigateToProviderProfile) &&
+                styles.modernBookButtonFull,
+            ]}
             onPress={() => onBookNow(serviceId)}
             activeOpacity={0.9}
             accessibilityRole="button"
             accessibilityLabel="Book this service"
           >
-            <Text style={styles.modernBookButtonIcon}>📅</Text>
+            <Feather name="calendar" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
             <Text style={styles.modernBookButtonText}>Book Now</Text>
           </TouchableOpacity>
         )}
@@ -199,45 +215,52 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
   );
 
   return (
-    <AppLayout role="user" activeRoute="dashboard" title="Service Details" user={user} onNavigate={onNavigate} onLogout={onLogout}>
-    <View style={styles.container}>
-      {/* Background Decorative Elements */}
-      <View style={styles.backgroundContainer}>
-        {isWeb ? (
-          <View style={styles.backgroundGradientWeb} />
-        ) : (
-          <View style={styles.backgroundGradient} />
-        )}
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-      </View>
-
-      {/* Web: Centered Card Container */}
-      {isWeb ? (
-        <View style={styles.webCardContainer}>
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {scrollContent}
-          </ScrollView>
-          {footerContent}
+    <AppLayout
+      role="user"
+      activeRoute="dashboard"
+      title="Service Details"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        {/* Background Decorative Elements */}
+        <View style={styles.backgroundContainer}>
+          {isWeb ? (
+            <View style={styles.backgroundGradientWeb} />
+          ) : (
+            <View style={styles.backgroundGradient} />
+          )}
+          <View style={styles.backgroundCircle1} />
+          <View style={styles.backgroundCircle2} />
         </View>
-      ) : (
-        <>
-          {/* Mobile: Full Screen Layout */}
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {scrollContent}
-          </ScrollView>
-          {footerContent}
-        </>
-      )}
-    </View>
+
+        {/* Web: Centered Card Container */}
+        {isWeb ? (
+          <View style={styles.webCardContainer}>
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {scrollContent}
+            </ScrollView>
+            {footerContent}
+          </View>
+        ) : (
+          <>
+            {/* Mobile: Full Screen Layout */}
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {scrollContent}
+            </ScrollView>
+            {footerContent}
+          </>
+        )}
+      </View>
     </AppLayout>
   );
 };

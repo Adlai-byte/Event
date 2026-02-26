@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
@@ -321,7 +322,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
         {Platform.OS === 'web' && showSuccessTooltip && successMessage && (
           <View style={styles.successTooltip}>
             <View style={styles.successTooltipContent}>
-              <Text style={styles.successTooltipIcon}>✓</Text>
+              <Feather name="check-circle" size={18} color="#059669" />
               <Text style={styles.successTooltipText}>{successMessage}</Text>
               <TouchableOpacity
                 style={styles.successTooltipClose}
@@ -339,7 +340,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
         {Platform.OS === 'web' && showErrorTooltip && errorMessage && (
           <View style={styles.errorTooltip}>
             <View style={styles.errorTooltipContent}>
-              <Text style={styles.errorTooltipIcon}>⚠️</Text>
+              <Feather name="alert-triangle" size={18} color="#DC2626" />
               <Text style={styles.errorTooltipText}>{errorMessage}</Text>
               <TouchableOpacity
                 style={styles.errorTooltipClose}
@@ -421,7 +422,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
               <View style={styles.accountSection}>
                 <View style={styles.accountHeader}>
                   <View style={styles.accountIconContainer}>
-                    <Text style={styles.accountIcon}>📋</Text>
+                    <Feather name="clipboard" size={20} color="#6C63FF" />
                   </View>
                   <Text style={styles.accountTitle}>Account Information</Text>
                 </View>
@@ -431,7 +432,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                   <View style={styles.accountInfoItem}>
                     <View style={styles.accountInfoLeft}>
                       <View style={styles.accountInfoIconContainer}>
-                        <Text style={styles.accountInfoIcon}>📅</Text>
+                        <Feather name="calendar" size={16} color="#6C63FF" />
                       </View>
                       <Text style={styles.accountInfoLabel}>Account Created</Text>
                     </View>
@@ -455,7 +456,11 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                           { backgroundColor: user.emailVerified ? '#D1FAE5' : '#FEE2E2' },
                         ]}
                       >
-                        <Text style={styles.accountInfoIcon}>{user.emailVerified ? '✓' : '✗'}</Text>
+                        <Feather
+                          name={user.emailVerified ? 'check-circle' : 'x-circle'}
+                          size={16}
+                          color={user.emailVerified ? '#059669' : '#DC2626'}
+                        />
                       </View>
                       <Text style={styles.accountInfoLabel}>Email Verified</Text>
                     </View>
@@ -516,7 +521,12 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                           disabled={sendingVerification}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.modernVerifyButtonIcon}>✉️</Text>
+                          <Feather
+                            name="mail"
+                            size={16}
+                            color="#FFFFFF"
+                            style={{ marginRight: 6 }}
+                          />
                           <Text style={styles.modernVerifyButtonText}>
                             {sendingVerification ? 'Sending...' : 'Send Verification Email'}
                           </Text>
@@ -561,7 +571,12 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                           disabled={checkingVerification}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.modernCheckButtonIcon}>🔄</Text>
+                          <Feather
+                            name="refresh-cw"
+                            size={16}
+                            color="#6C63FF"
+                            style={{ marginRight: 6 }}
+                          />
                           <Text style={styles.modernCheckButtonText}>
                             {checkingVerification ? 'Checking...' : 'Check Verification'}
                           </Text>
@@ -579,9 +594,11 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                           { backgroundColor: user.isProfileComplete() ? '#D1FAE5' : '#FEE2E2' },
                         ]}
                       >
-                        <Text style={styles.accountInfoIcon}>
-                          {user.isProfileComplete() ? '✓' : '✗'}
-                        </Text>
+                        <Feather
+                          name={user.isProfileComplete() ? 'check-circle' : 'x-circle'}
+                          size={16}
+                          color={user.isProfileComplete() ? '#059669' : '#DC2626'}
+                        />
                       </View>
                       <Text style={styles.accountInfoLabel}>Profile Complete</Text>
                     </View>
@@ -629,9 +646,12 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
               {/* Bottom Colored Section */}
               <View style={styles.bottomColoredSection}>
                 <View style={styles.bottomColoredContent}>
-                  <Text style={styles.bottomColoredText}>
-                    💡 Tip: Keep your information up to date for better service experience
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Feather name="info" size={16} color="#6C63FF" />
+                    <Text style={styles.bottomColoredText}>
+                      Tip: Keep your information up to date for better service experience
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>

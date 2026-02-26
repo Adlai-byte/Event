@@ -1,14 +1,6 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface BookingEvent {
   id: string;
@@ -33,6 +25,8 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
   onWeekChange,
   onEventPress,
 }) => {
+  const { screenWidth } = useBreakpoints();
+  const styles = createStyles(screenWidth);
   // Get the start of the week (Monday)
   const getWeekStart = (date: Date): Date => {
     const d = new Date(date);
@@ -45,7 +39,8 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
   const getWeekDays = (): Date[] => {
     const start = getWeekStart(currentWeek);
     const days: Date[] = [];
-    for (let i = 0; i < 7; i++) { // Monday to Sunday
+    for (let i = 0; i < 7; i++) {
+      // Monday to Sunday
       const day = new Date(start);
       day.setDate(start.getDate() + i);
       days.push(day);
@@ -76,27 +71,27 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
   // Get all events for a specific day
   const getEventsForDay = (date: Date): BookingEvent[] => {
     const dateStr = date.toISOString().split('T')[0];
-    return bookings.filter(booking => booking.date === dateStr);
+    return bookings.filter((booking) => booking.date === dateStr);
   };
 
   // Calculate event position and height
-  const getEventStyle = (event: BookingEvent, date: Date): any => {
+  const getEventStyle = (event: BookingEvent, _date: Date): any => {
     const startParts = event.startTime.split(':');
     const endParts = event.endTime.split(':');
-    
+
     const startHour = parseInt(startParts[0]);
     const startMin = parseInt(startParts[1] || '0');
     const endHour = parseInt(endParts[0]);
     const endMin = parseInt(endParts[1] || '0');
-    
+
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
     const duration = endMinutes - startMinutes;
-    
+
     // Position from top (8 AM = 0, each hour = 60px)
     const topOffset = (startMinutes - 8 * 60) * (60 / 60);
     const height = duration * (60 / 60);
-    
+
     // Default colors based on status or random
     const colors = [
       '#4285F4', // Blue
@@ -107,7 +102,7 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
     ];
     const colorIndex = parseInt(event.id) % colors.length;
     const eventColor = event.color || colors[colorIndex];
-    
+
     return {
       position: 'absolute' as const,
       top: topOffset,
@@ -122,7 +117,7 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
   };
 
   const weekDays = getWeekDays();
-  const weekStart = getWeekStart(currentWeek);
+  const _weekStart = getWeekStart(currentWeek);
 
   // Navigation
   const goToPreviousWeek = () => {
@@ -165,16 +160,12 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
       </View>
 
       {/* Calendar Grid */}
-      <ScrollView 
-        style={styles.scrollView}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.calendarContainer}>
           {/* Time Column */}
           <View style={styles.timeColumn}>
             <View style={styles.timeHeader} />
-            {timeSlots.map(hour => (
+            {timeSlots.map((hour) => (
               <View key={hour} style={styles.timeSlot}>
                 <Text style={styles.timeText}>{formatTime(hour)}</Text>
               </View>
@@ -182,7 +173,7 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
           </View>
 
           {/* Days Columns */}
-          <ScrollView 
+          <ScrollView
             style={styles.daysContainer}
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
@@ -204,12 +195,12 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
                   {/* Time Slots Container with Events */}
                   <View style={styles.dayTimeSlots}>
                     {/* Render time slot cells */}
-                    {timeSlots.map(hour => (
+                    {timeSlots.map((hour) => (
                       <View key={hour} style={styles.hourCell} />
                     ))}
-                    
+
                     {/* Render events on top of time slots */}
-                    {getEventsForDay(day).map(event => (
+                    {getEventsForDay(day).map((event) => (
                       <TouchableOpacity
                         key={event.id}
                         style={getEventStyle(event, day)}
@@ -235,138 +226,138 @@ export const WeekCalendarView: React.FC<WeekCalendarViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF',
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navButtonText: {
-    fontSize: 24,
-    color: '#5F6368',
-    fontWeight: 'bold',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  monthYear: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#3C4043',
-  },
-  todayButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-    backgroundColor: '#F1F3F4',
-    marginLeft: 8,
-  },
-  todayButtonText: {
-    fontSize: 14,
-    color: '#1A73E8',
-    fontWeight: '500',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  calendarContainer: {
-    flexDirection: 'row',
-    minWidth: screenWidth,
-  },
-  timeColumn: {
-    width: 60,
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-  },
-  timeHeader: {
-    height: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  timeSlot: {
-    height: 60,
-    justifyContent: 'flex-start',
-    paddingTop: 4,
-    paddingRight: 8,
-    alignItems: 'flex-end',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F3F4',
-  },
-  timeText: {
-    fontSize: 11,
-    color: '#5F6368',
-  },
-  daysContainer: {
-    flex: 1,
-  },
-  dayHeaders: {
-    flexDirection: 'row',
-    height: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  dayHeader: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-  },
-  dayName: {
-    fontSize: 11,
-    color: '#5F6368',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  dayNumber: {
-    fontSize: 16,
-    color: '#3C4043',
-    fontWeight: '500',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-  },
-  dayColumn: {
-    flex: 1,
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    position: 'relative',
-  },
-  dayTimeSlots: {
-    position: 'relative',
-    minHeight: 720, // 12 hours * 60px per hour
-  },
-  hourCell: {
-    height: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F3F4',
-    position: 'relative',
-  },
-  eventTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  eventTime: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-});
-
+const createStyles = (screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E0E0E0',
+      backgroundColor: '#FFFFFF',
+    },
+    navButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    navButtonText: {
+      fontSize: 24,
+      color: '#5F6368',
+      fontWeight: 'bold',
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    monthYear: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: '#3C4043',
+    },
+    todayButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 4,
+      backgroundColor: '#F1F3F4',
+      marginLeft: 8,
+    },
+    todayButtonText: {
+      fontSize: 14,
+      color: '#1A73E8',
+      fontWeight: '500',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    calendarContainer: {
+      flexDirection: 'row',
+      minWidth: screenWidth,
+    },
+    timeColumn: {
+      width: 60,
+      borderRightWidth: 1,
+      borderRightColor: '#E0E0E0',
+    },
+    timeHeader: {
+      height: 50,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E0E0E0',
+    },
+    timeSlot: {
+      height: 60,
+      justifyContent: 'flex-start',
+      paddingTop: 4,
+      paddingRight: 8,
+      alignItems: 'flex-end',
+      borderBottomWidth: 1,
+      borderBottomColor: '#F1F3F4',
+    },
+    timeText: {
+      fontSize: 11,
+      color: '#5F6368',
+    },
+    daysContainer: {
+      flex: 1,
+    },
+    dayHeaders: {
+      flexDirection: 'row',
+      height: 50,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E0E0E0',
+    },
+    dayHeader: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRightWidth: 1,
+      borderRightColor: '#E0E0E0',
+    },
+    dayName: {
+      fontSize: 11,
+      color: '#5F6368',
+      fontWeight: '500',
+      marginBottom: 2,
+    },
+    dayNumber: {
+      fontSize: 16,
+      color: '#3C4043',
+      fontWeight: '500',
+    },
+    calendarGrid: {
+      flexDirection: 'row',
+    },
+    dayColumn: {
+      flex: 1,
+      borderRightWidth: 1,
+      borderRightColor: '#E0E0E0',
+      position: 'relative',
+    },
+    dayTimeSlots: {
+      position: 'relative',
+      minHeight: 720, // 12 hours * 60px per hour
+    },
+    hourCell: {
+      height: 60,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F1F3F4',
+      position: 'relative',
+    },
+    eventTitle: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#FFFFFF',
+      marginBottom: 2,
+    },
+    eventTime: {
+      fontSize: 10,
+      color: '#FFFFFF',
+      opacity: 0.9,
+    },
+  });

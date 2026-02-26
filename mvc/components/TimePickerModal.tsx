@@ -8,9 +8,10 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Dimensions,
 } from 'react-native';
-import { colors, semantic } from '../theme';
+import { Feather } from '@expo/vector-icons';
+import { semantic } from '../theme';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface TimeSlot {
   start: string;
@@ -32,8 +33,8 @@ interface TimePickerModalProps {
 
 export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   visible,
-  selectedDate,
-  availableSlots = [],
+  selectedDate: _selectedDate,
+  availableSlots: _availableSlots = [],
   existingBookings = [],
   initialStartTime,
   initialDuration = 60,
@@ -41,23 +42,46 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-  const isTablet = screenWidth >= 768;
+  const { screenWidth, screenHeight, isTablet } = useBreakpoints();
   const isWeb = Platform.OS === 'web';
-  
-  const sheetHeight = isWeb
-    ? undefined
-    : Math.min(screenHeight * 0.92, screenHeight - 32);
+
+  const sheetHeight = isWeb ? undefined : Math.min(screenHeight * 0.92, screenHeight - 32);
   const pickerMaxHeight = isWeb
-    ? isTablet ? 400 : 320
+    ? isTablet
+      ? 400
+      : 320
     : Math.min(screenHeight * 0.4, isTablet ? 400 : 320);
-  
+
   // Responsive font sizes - larger on web
-  const baseFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(16, screenWidth * 0.04));
-  const labelFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(16, screenWidth * 0.042));
-  const pickerItemFontSize = isWeb ? (isTablet ? 20 : 18) : (isTablet ? 18 : Math.max(17, screenWidth * 0.045));
-  const endTimeFontSize = isWeb ? (isTablet ? 24 : 22) : (isTablet ? 22 : Math.max(20, screenWidth * 0.052));
-  
+  const _baseFontSize = isWeb
+    ? isTablet
+      ? 20
+      : 18
+    : isTablet
+      ? 18
+      : Math.max(16, screenWidth * 0.04);
+  const labelFontSize = isWeb
+    ? isTablet
+      ? 20
+      : 18
+    : isTablet
+      ? 18
+      : Math.max(16, screenWidth * 0.042);
+  const pickerItemFontSize = isWeb
+    ? isTablet
+      ? 20
+      : 18
+    : isTablet
+      ? 18
+      : Math.max(17, screenWidth * 0.045);
+  const endTimeFontSize = isWeb
+    ? isTablet
+      ? 24
+      : 22
+    : isTablet
+      ? 22
+      : Math.max(20, screenWidth * 0.052);
+
   // Web-specific modal dimensions
   const modalWidth = isWeb ? (isTablet ? 600 : Math.min(500, screenWidth * 0.9)) : '100%';
   const modalMaxHeight = isWeb ? (isTablet ? 700 : Math.min(600, screenHeight * 0.9)) : undefined;
@@ -139,32 +163,32 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
     if (startTime) {
       // For catering (hideDuration), use default 1 hour duration
       const effectiveDuration = hideDuration ? 60 : duration;
-      
+
       if (effectiveDuration) {
-      const startParts = startTime.split(':').map(Number);
-      const startHour = startParts[0];
-      const startMin = startParts[1];
-      const startMinutes = startHour * 60 + startMin;
+        const startParts = startTime.split(':').map(Number);
+        const startHour = startParts[0];
+        const startMin = startParts[1];
+        const startMinutes = startHour * 60 + startMin;
         const endMinutes = startMinutes + effectiveDuration;
-      
-      // Handle times that go past midnight (24 hours = 1440 minutes)
-      const totalMinutesInDay = 24 * 60;
-      const endMinutesInDay = endMinutes % totalMinutesInDay;
-      const isNextDay = endMinutes >= totalMinutesInDay;
-      
-      const endHour = Math.floor(endMinutesInDay / 60);
-      const endMin = endMinutesInDay % 60;
-      
-      // Format end time (can be next day)
-      const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
-      setEndTime(endTimeStr);
-      
-      // Store if it's next day for display purposes
-      setEndTimeIsNextDay(isNextDay);
-      
-      // Check for conflicts
-      checkConflict(startTime, endTimeStr);
-    }
+
+        // Handle times that go past midnight (24 hours = 1440 minutes)
+        const totalMinutesInDay = 24 * 60;
+        const endMinutesInDay = endMinutes % totalMinutesInDay;
+        const isNextDay = endMinutes >= totalMinutesInDay;
+
+        const endHour = Math.floor(endMinutesInDay / 60);
+        const endMin = endMinutesInDay % 60;
+
+        // Format end time (can be next day)
+        const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}:00`;
+        setEndTime(endTimeStr);
+
+        // Store if it's next day for display purposes
+        setEndTimeIsNextDay(isNextDay);
+
+        // Check for conflicts
+        checkConflict(startTime, endTimeStr);
+      }
     }
   }, [startTime, duration, hideDuration, existingBookings]);
 
@@ -182,7 +206,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
       const bookingEndMinutes = bookingEndParts[0] * 60 + bookingEndParts[1];
 
       // Check for overlap
-      if ((startMinutes < bookingEndMinutes) && (endMinutes > bookingStartMinutes)) {
+      if (startMinutes < bookingEndMinutes && endMinutes > bookingStartMinutes) {
         const formatTime = (timeStr: string): string => {
           const [hours, minutes] = timeStr.split(':');
           const hour = parseInt(hours);
@@ -212,11 +236,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
   const handleConfirm = () => {
     if (conflict) {
-      Alert.alert(
-        'Time Conflict',
-        conflict.message,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Time Conflict', conflict.message, [{ text: 'OK' }]);
       return;
     }
 
@@ -229,22 +249,21 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   const availableStartTimes = getAvailableStartTimes();
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[
-          styles.modalContent,
-          isWeb ? {
-            width: modalWidth,
-            maxHeight: modalMaxHeight,
-            borderRadius: 16,
-            alignSelf: 'center',
-          } : { height: sheetHeight }
-        ]}>
+        <View
+          style={[
+            styles.modalContent,
+            isWeb
+              ? {
+                  width: modalWidth,
+                  maxHeight: modalMaxHeight,
+                  borderRadius: 16,
+                  alignSelf: 'center',
+                }
+              : { height: sheetHeight },
+          ]}
+        >
           {!isWeb && <View style={styles.dragHandle} />}
           {/* Header */}
           <View style={styles.header}>
@@ -256,7 +275,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               style={styles.closeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Feather name="x" size={18} color={semantic.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -276,19 +295,21 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                       key={time}
                       style={[
                         styles.pickerItem,
-                        { 
-                          minHeight: isWeb ? (isTablet ? 60 : 52) : (isTablet ? 64 : 56),
+                        {
+                          minHeight: isWeb ? (isTablet ? 60 : 52) : isTablet ? 64 : 56,
                         },
-                        startTime === time && styles.pickerItemSelected
+                        startTime === time && styles.pickerItemSelected,
                       ]}
                       onPress={() => setStartTime(time)}
                       activeOpacity={0.7}
                     >
-                      <Text style={[
-                        styles.pickerItemText,
-                        { fontSize: pickerItemFontSize },
-                        startTime === time && styles.pickerItemTextSelected
-                      ]}>
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          { fontSize: pickerItemFontSize },
+                          startTime === time && styles.pickerItemTextSelected,
+                        ]}
+                      >
                         {formatTime(time)}
                       </Text>
                     </TouchableOpacity>
@@ -299,38 +320,40 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
             {/* Duration Dropdown - Hidden for catering */}
             {!hideDuration && (
-            <View style={styles.section}>
+              <View style={styles.section}>
                 <Text style={[styles.label, { fontSize: labelFontSize }]}>Duration</Text>
-              <View style={[styles.pickerContainer, { maxHeight: pickerMaxHeight }]}>
-                <ScrollView
-                  style={[styles.pickerScrollView, { maxHeight: pickerMaxHeight }]}
-                  nestedScrollEnabled
-                >
-                  {durationOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.minutes}
-                      style={[
-                        styles.pickerItem,
-                          { 
-                            minHeight: isWeb ? (isTablet ? 60 : 52) : (isTablet ? 64 : 56),
+                <View style={[styles.pickerContainer, { maxHeight: pickerMaxHeight }]}>
+                  <ScrollView
+                    style={[styles.pickerScrollView, { maxHeight: pickerMaxHeight }]}
+                    nestedScrollEnabled
+                  >
+                    {durationOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.minutes}
+                        style={[
+                          styles.pickerItem,
+                          {
+                            minHeight: isWeb ? (isTablet ? 60 : 52) : isTablet ? 64 : 56,
                           },
-                        duration === option.minutes && styles.pickerItemSelected
-                      ]}
-                      onPress={() => setDuration(option.minutes)}
+                          duration === option.minutes && styles.pickerItemSelected,
+                        ]}
+                        onPress={() => setDuration(option.minutes)}
                         activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.pickerItemText,
-                          { fontSize: pickerItemFontSize },
-                        duration === option.minutes && styles.pickerItemTextSelected
-                      ]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            { fontSize: pickerItemFontSize },
+                            duration === option.minutes && styles.pickerItemTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
               </View>
-            </View>
             )}
 
             {/* End Time Display */}
@@ -338,7 +361,9 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               <Text style={[styles.label, { fontSize: labelFontSize }]}>End Time</Text>
               <View style={styles.endTimeDisplay}>
                 <Text style={[styles.endTimeText, { fontSize: endTimeFontSize }]}>
-                  {endTime ? `${formatTime(endTime)}${endTimeIsNextDay ? ' (next day)' : ''}` : '--:-- --'}
+                  {endTime
+                    ? `${formatTime(endTime)}${endTimeIsNextDay ? ' (next day)' : ''}`
+                    : '--:-- --'}
                 </Text>
               </View>
             </View>
@@ -346,7 +371,12 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
             {/* Conflict Indicator */}
             {conflict && (
               <View style={styles.conflictContainer}>
-                <Text style={styles.conflictIcon}>⚠️</Text>
+                <Feather
+                  name="alert-triangle"
+                  size={20}
+                  color="#F44336"
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.conflictText}>{conflict.message}</Text>
               </View>
             )}
@@ -354,9 +384,17 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
             {/* Info Message */}
             {!conflict && endTime && (
               <View style={styles.infoContainer}>
-                <Text style={styles.infoText}>
-                  ✓ This time slot is available
-                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Feather name="check-circle" size={16} color="#2E7D32" />
+                  <Text style={styles.infoText}>This time slot is available</Text>
+                </View>
               </View>
             )}
           </ScrollView>
@@ -364,10 +402,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
           {/* Confirm Button */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[
-                styles.confirmButton,
-                conflict && styles.confirmButtonDisabled
-              ]}
+              style={[styles.confirmButton, conflict && styles.confirmButtonDisabled]}
               onPress={handleConfirm}
               disabled={!!conflict}
             >
@@ -393,15 +428,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Platform.OS === 'web' ? 16 : 20,
     borderTopRightRadius: Platform.OS === 'web' ? 16 : 20,
     width: Platform.OS === 'web' ? 'auto' : '100%',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 20,
-      elevation: 10,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+        }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          elevation: 10,
+        }),
   },
   dragHandle: {
     width: 48,
@@ -553,15 +590,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     minHeight: 60,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 4px 12px rgba(66, 133, 244, 0.3)',
-    } : {
-      shadowColor: '#4285F4',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 4,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 4px 12px rgba(66, 133, 244, 0.3)',
+        }
+      : {
+          shadowColor: '#4285F4',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 4,
+        }),
   },
   confirmButtonDisabled: {
     backgroundColor: '#CCCCCC',
@@ -574,4 +613,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
-

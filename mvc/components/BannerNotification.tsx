@@ -1,13 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 interface BannerNotificationProps {
   visible: boolean;
@@ -18,9 +11,6 @@ interface BannerNotificationProps {
   onClose: () => void;
   onPress?: () => void;
 }
-
-const { width: screenWidth } = Dimensions.get('window');
-const _isMobile = screenWidth < 768 || Platform.OS !== 'web';
 
 export const BannerNotification: React.FC<BannerNotificationProps> = ({
   visible,
@@ -82,16 +72,20 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
 
   if (!visible) return null;
 
-  const getTypeStyles = () => {
+  const getTypeStyles = (): {
+    bg: string;
+    border: string;
+    iconName: React.ComponentProps<typeof Feather>['name'];
+  } => {
     switch (type) {
       case 'success':
-        return { bg: '#10b981', border: '#059669', icon: '✓' };
+        return { bg: '#10b981', border: '#059669', iconName: 'check-circle' };
       case 'error':
-        return { bg: '#ef4444', border: '#dc2626', icon: '✕' };
+        return { bg: '#ef4444', border: '#dc2626', iconName: 'x-circle' };
       case 'warning':
-        return { bg: '#f59e0b', border: '#d97706', icon: '⚠' };
+        return { bg: '#f59e0b', border: '#d97706', iconName: 'alert-triangle' };
       default:
-        return { bg: '#3b82f6', border: '#2563eb', icon: 'ℹ' };
+        return { bg: '#3b82f6', border: '#2563eb', iconName: 'info' };
     }
   };
 
@@ -116,7 +110,7 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
           activeOpacity={0.8}
         >
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>{typeStyles.icon}</Text>
+            <Feather name={typeStyles.iconName} size={20} color="#ffffff" />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.title} numberOfLines={1}>
@@ -131,7 +125,7 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
             style={styles.closeButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.closeIcon}>×</Text>
+            <Feather name="x" size={20} color="#ffffff" />
           </TouchableOpacity>
         </TouchableOpacity>
       </Animated.View>

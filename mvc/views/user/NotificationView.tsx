@@ -12,7 +12,9 @@ import {
 import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { Feather } from '@expo/vector-icons';
 import { colors, semantic } from '../../theme';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface Notification {
   idnotification: number | string; // Can be number or "system_123" format
@@ -33,15 +35,15 @@ interface NotificationViewProps {
   onLogout: () => void;
 }
 
-const { width: screenWidth } = require('react-native').Dimensions.get('window');
-const isMobile = screenWidth < 768 || Platform.OS !== 'web';
-
 export const NotificationView: React.FC<NotificationViewProps> = ({
   userEmail,
   user,
   onNavigate,
   onLogout,
 }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = createStyles(isMobile, screenWidth);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,19 +52,21 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   useEffect(() => {
     loadNotifications();
     loadUnreadCount();
-    
+
     // Real-time polling for notifications (every 2 seconds)
     const interval = setInterval(() => {
       loadNotifications();
       loadUnreadCount();
     }, 2000);
-    
+
     return () => clearInterval(interval);
   }, [userEmail]);
 
   const loadNotifications = async () => {
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/notifications?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/notifications?email=${encodeURIComponent(userEmail)}`,
+      );
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok) {
@@ -79,7 +83,9 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
 
   const loadUnreadCount = async () => {
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/notifications/unread-count?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/notifications/unread-count?email=${encodeURIComponent(userEmail)}`,
+      );
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok) {
@@ -101,14 +107,12 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
     try {
       const resp = await fetch(
         `${getApiBaseUrl()}/api/notifications/${encodeURIComponent(notificationId.toString())}/read?email=${encodeURIComponent(userEmail)}`,
-        { method: 'POST' }
+        { method: 'POST' },
       );
       if (resp.ok) {
         // Update local state
-        setNotifications(prev =>
-          prev.map(n =>
-            n.idnotification === notificationId ? { ...n, n_is_read: 1 } : n
-          )
+        setNotifications((prev) =>
+          prev.map((n) => (n.idnotification === notificationId ? { ...n, n_is_read: 1 } : n)),
         );
         loadUnreadCount();
       }
@@ -121,11 +125,11 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
     try {
       const resp = await fetch(
         `${getApiBaseUrl()}/api/notifications/mark-all-read?email=${encodeURIComponent(userEmail)}`,
-        { method: 'POST' }
+        { method: 'POST' },
       );
       if (resp.ok) {
         // Update local state
-        setNotifications(prev => prev.map(n => ({ ...n, n_is_read: 1 })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, n_is_read: 1 })));
         setUnreadCount(0);
         Alert.alert('Success', 'All notifications marked as read');
       }
@@ -159,35 +163,35 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
     switch (type) {
       case 'provider_application_rejected':
         return {
-          icon: '✕',
+          icon: 'x-circle' as const,
           iconBg: colors.error[50],
           iconColor: colors.error[600],
           borderColor: '#FECACA',
         };
       case 'provider_application_approved':
         return {
-          icon: '✓',
+          icon: 'check-circle' as const,
           iconBg: colors.success[50],
           iconColor: colors.success[600],
           borderColor: '#A7F3D0',
         };
       case 'booking_confirmed':
         return {
-          icon: '📅',
+          icon: 'calendar' as const,
           iconBg: '#DBEAFE',
           iconColor: '#2563EB',
           borderColor: '#BFDBFE',
         };
       case 'booking_cancelled':
         return {
-          icon: '🚫',
+          icon: 'slash' as const,
           iconBg: colors.error[50],
           iconColor: colors.error[600],
           borderColor: '#FECACA',
         };
       default:
         return {
-          icon: '🔔',
+          icon: 'bell' as const,
           iconBg: '#EFF6FF',
           iconColor: semantic.primary,
           borderColor: '#DBEAFE',
@@ -199,10 +203,10 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
     // Extract reason if it's a rejection message
     const reasonMatch = message.match(/Reason:\s*(.+?)(\n\n|$)/i);
     const reason = reasonMatch ? reasonMatch[1].trim() : null;
-    
+
     // Extract main message
     const mainMessage = message.split('\n\n')[0] || message;
-    
+
     return {
       mainMessage,
       reason,
@@ -214,14 +218,11 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
     const isUnread = notification.n_is_read === 0;
     const config = getNotificationConfig(notification.n_type);
     const parsed = parseNotificationMessage(notification.n_message);
-    
+
     return (
       <TouchableOpacity
         key={notification.idnotification}
-        style={[
-          styles.notificationItem,
-          isUnread && styles.unreadNotification,
-        ]}
+        style={[styles.notificationItem, isUnread && styles.unreadNotification]}
         onPress={() => {
           if (isUnread) {
             markAsRead(notification.idnotification);
@@ -233,25 +234,14 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
       >
         <View style={styles.notificationContent}>
           {/* Icon with colored background */}
-          <View style={[
-            styles.notificationIconContainer,
-            { backgroundColor: config.iconBg }
-          ]}>
-            <Text style={[
-              styles.notificationIcon,
-              { color: config.iconColor }
-            ]}>
-              {config.icon}
-            </Text>
+          <View style={[styles.notificationIconContainer, { backgroundColor: config.iconBg }]}>
+            <Feather name={config.icon as any} size={isMobile ? 22 : 24} color={config.iconColor} />
           </View>
 
           {/* Content */}
           <View style={styles.notificationTextContainer}>
             <View style={styles.notificationHeader}>
-              <Text style={[
-                styles.notificationTitle,
-                isUnread && styles.unreadTitle
-              ]}>
+              <Text style={[styles.notificationTitle, isUnread && styles.unreadTitle]}>
                 {notification.n_title}
               </Text>
               {isUnread && (
@@ -261,10 +251,7 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
               )}
             </View>
 
-            <Text style={[
-              styles.notificationMessage,
-              isUnread && styles.unreadMessage
-            ]}>
+            <Text style={[styles.notificationMessage, isUnread && styles.unreadMessage]}>
               {parsed.mainMessage}
             </Text>
 
@@ -281,9 +268,7 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
               </Text>
             )}
 
-            <Text style={styles.notificationTime}>
-              {formatTime(notification.n_created_at)}
-            </Text>
+            <Text style={styles.notificationTime}>{formatTime(notification.n_created_at)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -292,7 +277,14 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
 
   if (loading) {
     return (
-      <AppLayout role="user" activeRoute="notifications" title="Notifications" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+      <AppLayout
+        role="user"
+        activeRoute="notifications"
+        title="Notifications"
+        user={user}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      >
         <View style={{ padding: 16 }}>
           <SkeletonListItem />
           <SkeletonListItem />
@@ -305,7 +297,14 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   }
 
   return (
-    <AppLayout role="user" activeRoute="notifications" title="Notifications" user={user} onNavigate={onNavigate} onLogout={onLogout}>
+    <AppLayout
+      role="user"
+      activeRoute="notifications"
+      title="Notifications"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
       {/* Mark All Read bar */}
       {unreadCount > 0 && (
         <View style={styles.markAllReadBar}>
@@ -344,7 +343,7 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
           {notifications.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Text style={styles.emptyIcon}>🔔</Text>
+                <Feather name="bell" size={56} color="#94A3B8" />
               </View>
               <Text style={styles.emptyTitle}>All caught up!</Text>
               <Text style={styles.emptyText}>
@@ -364,237 +363,240 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  markAllReadBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: isMobile ? 16 : 24,
-    paddingVertical: 12,
-    backgroundColor: semantic.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  unreadCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  unreadLabel: {
-    fontSize: 14,
-    color: semantic.textSecondary,
-    fontWeight: '500',
-  },
-  headerBadge: {
-    backgroundColor: semantic.error,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: semantic.surface,
-  },
-  markAllReadButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: semantic.background,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        backgroundColor: semantic.border,
-      },
-    }),
-  },
-  markAllReadText: {
-    fontSize: isMobile ? 13 : 14,
-    color: semantic.primary,
-    fontWeight: '600',
-  },
-  contentWrapper: {
-    flex: 1,
-    ...(Platform.OS === 'web' && !isMobile && {
-      maxWidth: 800,
-      width: '100%',
-      alignSelf: 'center',
-    }),
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: isMobile ? 16 : 20,
-    paddingBottom: 24,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationItem: {
-    backgroundColor: semantic.surface,
-    borderRadius: 16,
-    padding: isMobile ? 16 : 20,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: semantic.border,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        transform: 'translateY(-1px)',
-      },
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
-    }),
-  },
-  unreadNotification: {
-    backgroundColor: '#F0F9FF',
-    borderLeftWidth: 4,
-    borderLeftColor: semantic.primary,
-    borderColor: '#BFDBFE',
-  },
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  notificationIconContainer: {
-    width: isMobile ? 48 : 52,
-    height: isMobile ? 48 : 52,
-    borderRadius: isMobile ? 24 : 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  notificationIcon: {
-    fontSize: isMobile ? 22 : 24,
-    fontWeight: '600',
-  },
-  notificationTextContainer: {
-    flex: 1,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  notificationTitle: {
-    fontSize: isMobile ? 16 : 18,
-    fontWeight: '600',
-    color: semantic.textPrimary,
-    flex: 1,
-    letterSpacing: -0.3,
-  },
-  unreadTitle: {
-    fontWeight: '700',
-    color: '#030712',
-  },
-  unreadBadge: {
-    marginLeft: 8,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: semantic.primary,
-  },
-  notificationMessage: {
-    fontSize: isMobile ? 14 : 15,
-    color: '#4B5563',
-    lineHeight: isMobile ? 20 : 22,
-    marginBottom: 8,
-  },
-  unreadMessage: {
-    color: semantic.textPrimary,
-    fontWeight: '500',
-  },
-  reasonContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: semantic.border,
-  },
-  reasonLabel: {
-    fontSize: isMobile ? 12 : 13,
-    fontWeight: '600',
-    color: semantic.textSecondary,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  reasonText: {
-    fontSize: isMobile ? 14 : 15,
-    color: '#374151',
-    lineHeight: isMobile ? 20 : 22,
-    fontWeight: '500',
-  },
-  reapplyText: {
-    fontSize: isMobile ? 13 : 14,
-    color: semantic.textSecondary,
-    fontStyle: 'italic',
-    marginBottom: 8,
-    lineHeight: isMobile ? 18 : 20,
-  },
-  notificationTime: {
-    fontSize: isMobile ? 12 : 13,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 32,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: semantic.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyIcon: {
-    fontSize: 56,
-  },
-  emptyTitle: {
-    fontSize: isMobile ? 24 : 28,
-    fontWeight: '700',
-    color: semantic.textPrimary,
-    marginBottom: 12,
-    letterSpacing: -0.5,
-  },
-  emptyText: {
-    fontSize: isMobile ? 15 : 16,
-    color: semantic.textSecondary,
-    textAlign: 'center',
-    lineHeight: isMobile ? 22 : 24,
-  },
-  listFooter: {
-    height: 20,
-  },
-});
-
+const createStyles = (isMobile: boolean, _screenWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#F5F7FA',
+    },
+    markAllReadBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: isMobile ? 16 : 24,
+      paddingVertical: 12,
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    unreadCountContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    unreadLabel: {
+      fontSize: 14,
+      color: semantic.textSecondary,
+      fontWeight: '500',
+    },
+    headerBadge: {
+      backgroundColor: semantic.error,
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      minWidth: 24,
+      height: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: semantic.surface,
+    },
+    markAllReadButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: semantic.background,
+      ...(Platform.OS === 'web' && {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        ':hover': {
+          backgroundColor: semantic.border,
+        },
+      }),
+    },
+    markAllReadText: {
+      fontSize: isMobile ? 13 : 14,
+      color: semantic.primary,
+      fontWeight: '600',
+    },
+    contentWrapper: {
+      flex: 1,
+      ...(Platform.OS === 'web' &&
+        !isMobile && {
+          maxWidth: 800,
+          width: '100%',
+          alignSelf: 'center',
+        }),
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: isMobile ? 16 : 20,
+      paddingBottom: 24,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    notificationItem: {
+      backgroundColor: semantic.surface,
+      borderRadius: 16,
+      padding: isMobile ? 16 : 20,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            ':hover': {
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              transform: 'translateY(-1px)',
+            },
+          }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 2,
+          }),
+    },
+    unreadNotification: {
+      backgroundColor: '#F0F9FF',
+      borderLeftWidth: 4,
+      borderLeftColor: semantic.primary,
+      borderColor: '#BFDBFE',
+    },
+    notificationContent: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    notificationIconContainer: {
+      width: isMobile ? 48 : 52,
+      height: isMobile ? 48 : 52,
+      borderRadius: isMobile ? 24 : 26,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 16,
+    },
+    notificationIcon: {
+      fontSize: isMobile ? 22 : 24,
+      fontWeight: '600',
+    },
+    notificationTextContainer: {
+      flex: 1,
+    },
+    notificationHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    notificationTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      flex: 1,
+      letterSpacing: -0.3,
+    },
+    unreadTitle: {
+      fontWeight: '700',
+      color: '#030712',
+    },
+    unreadBadge: {
+      marginLeft: 8,
+    },
+    unreadDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: semantic.primary,
+    },
+    notificationMessage: {
+      fontSize: isMobile ? 14 : 15,
+      color: '#4B5563',
+      lineHeight: isMobile ? 20 : 22,
+      marginBottom: 8,
+    },
+    unreadMessage: {
+      color: semantic.textPrimary,
+      fontWeight: '500',
+    },
+    reasonContainer: {
+      backgroundColor: '#F9FAFB',
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: semantic.border,
+    },
+    reasonLabel: {
+      fontSize: isMobile ? 12 : 13,
+      fontWeight: '600',
+      color: semantic.textSecondary,
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    reasonText: {
+      fontSize: isMobile ? 14 : 15,
+      color: '#374151',
+      lineHeight: isMobile ? 20 : 22,
+      fontWeight: '500',
+    },
+    reapplyText: {
+      fontSize: isMobile ? 13 : 14,
+      color: semantic.textSecondary,
+      fontStyle: 'italic',
+      marginBottom: 8,
+      lineHeight: isMobile ? 18 : 20,
+    },
+    notificationTime: {
+      fontSize: isMobile ? 12 : 13,
+      color: '#9CA3AF',
+      fontWeight: '500',
+      marginTop: 4,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 80,
+      paddingHorizontal: 32,
+    },
+    emptyIconContainer: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: semantic.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    emptyIcon: {
+      fontSize: 56,
+    },
+    emptyTitle: {
+      fontSize: isMobile ? 24 : 28,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 12,
+      letterSpacing: -0.5,
+    },
+    emptyText: {
+      fontSize: isMobile ? 15 : 16,
+      color: semantic.textSecondary,
+      textAlign: 'center',
+      lineHeight: isMobile ? 22 : 24,
+    },
+    listFooter: {
+      height: 20,
+    },
+  });

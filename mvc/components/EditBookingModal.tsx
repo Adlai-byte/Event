@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getApiBaseUrl } from '../services/api';
-import { getShadowStyle } from '../utils/shadowStyles';
 import { BookingWeekCalendar } from './BookingWeekCalendar';
 import { TimePickerModal } from './TimePickerModal';
 
@@ -147,7 +147,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const handleTimeSelect = (selectedStartTime: string, selectedEndTime: string) => {
     const startTimeStr = selectedStartTime.substring(0, 5); // Extract HH:MM from HH:MM:SS
     const endTimeStr = selectedEndTime.substring(0, 5); // Extract HH:MM from HH:MM:SS
-    
+
     if (timePickerMode === 'start') {
       setStartTime(startTimeStr);
       // Auto-adjust end time if it's before the new start time
@@ -181,7 +181,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Feather name="x" size={22} color="#636E72" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Booking</Text>
           <View style={styles.placeholder} />
@@ -282,11 +282,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
         {/* Action Buttons */}
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={onClose}
-            disabled={saving}
-          >
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -412,15 +408,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E9ECEF',
     gap: 12,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 5,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
+        }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }),
   },
   cancelButton: {
     flex: 1,
@@ -452,4 +450,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
-
