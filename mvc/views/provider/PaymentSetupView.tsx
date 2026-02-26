@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
-  Platform
+  Platform,
 } from 'react-native';
 import { SkeletonCard } from '../../components/ui';
 import { Feather } from '@expo/vector-icons';
@@ -64,10 +64,12 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
   const loadPaymentData = async () => {
     try {
       setLoading(true);
-      const encodedEmail = encodeURIComponent(user.email);
-      
+      const encodedEmail = encodeURIComponent(user.email ?? '');
+
       // Load API credentials
-      const credentialsResp = await fetch(`${getApiBaseUrl()}/api/provider/paymongo-credentials?providerEmail=${encodedEmail}`);
+      const credentialsResp = await fetch(
+        `${getApiBaseUrl()}/api/provider/paymongo-credentials?providerEmail=${encodedEmail}`,
+      );
       if (credentialsResp.ok) {
         const credentialsData = await credentialsResp.json();
         if (credentialsData.ok) {
@@ -76,9 +78,11 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
           setMode(credentialsData.mode || 'live');
         }
       }
-      
+
       // Load payment link
-      const linkResp = await fetch(`${getApiBaseUrl()}/api/provider/payment-link?providerEmail=${encodedEmail}`);
+      const linkResp = await fetch(
+        `${getApiBaseUrl()}/api/provider/payment-link?providerEmail=${encodedEmail}`,
+      );
       if (linkResp.ok) {
         const linkData = await linkResp.json();
         if (linkData.ok && linkData.paymentLink) {
@@ -99,35 +103,47 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
     }
 
     if (!secretKey.trim().startsWith('sk_')) {
-      Alert.alert('Error', 'Invalid secret key format. PayMongo secret keys must start with "sk_".');
+      Alert.alert(
+        'Error',
+        'Invalid secret key format. PayMongo secret keys must start with "sk_".',
+      );
       return;
     }
 
     if (publicKey && !publicKey.trim().startsWith('pk_')) {
-      Alert.alert('Error', 'Invalid public key format. PayMongo public keys must start with "pk_".');
+      Alert.alert(
+        'Error',
+        'Invalid public key format. PayMongo public keys must start with "pk_".',
+      );
       return;
     }
 
     // Validate that key prefixes match the selected mode
-    const secretKeyPrefix = secretKey.trim().startsWith('sk_live_') ? 'live' : 
-                           secretKey.trim().startsWith('sk_test_') ? 'test' : null;
-    
+    const secretKeyPrefix = secretKey.trim().startsWith('sk_live_')
+      ? 'live'
+      : secretKey.trim().startsWith('sk_test_')
+        ? 'test'
+        : null;
+
     if (secretKeyPrefix && secretKeyPrefix !== mode) {
       Alert.alert(
         'Mode Mismatch',
-        `Your secret key is for ${secretKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, but you have selected ${mode.toUpperCase()} mode. Please either:\n\n1. Switch to ${secretKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, or\n2. Use ${mode === 'live' ? 'LIVE' : 'TEST'} mode keys (starting with ${mode === 'live' ? 'sk_live_' : 'sk_test_'})`
+        `Your secret key is for ${secretKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, but you have selected ${mode.toUpperCase()} mode. Please either:\n\n1. Switch to ${secretKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, or\n2. Use ${mode === 'live' ? 'LIVE' : 'TEST'} mode keys (starting with ${mode === 'live' ? 'sk_live_' : 'sk_test_'})`,
       );
       return;
     }
 
     if (publicKey && publicKey.trim()) {
-      const publicKeyPrefix = publicKey.trim().startsWith('pk_live_') ? 'live' : 
-                             publicKey.trim().startsWith('pk_test_') ? 'test' : null;
-      
+      const publicKeyPrefix = publicKey.trim().startsWith('pk_live_')
+        ? 'live'
+        : publicKey.trim().startsWith('pk_test_')
+          ? 'test'
+          : null;
+
       if (publicKeyPrefix && publicKeyPrefix !== mode) {
         Alert.alert(
           'Mode Mismatch',
-          `Your public key is for ${publicKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, but you have selected ${mode.toUpperCase()} mode. Please either:\n\n1. Switch to ${publicKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, or\n2. Use ${mode === 'live' ? 'LIVE' : 'TEST'} mode keys (starting with ${mode === 'live' ? 'pk_live_' : 'pk_test_'})`
+          `Your public key is for ${publicKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, but you have selected ${mode.toUpperCase()} mode. Please either:\n\n1. Switch to ${publicKeyPrefix === 'live' ? 'LIVE' : 'TEST'} mode, or\n2. Use ${mode === 'live' ? 'LIVE' : 'TEST'} mode keys (starting with ${mode === 'live' ? 'pk_live_' : 'pk_test_'})`,
         );
         return;
       }
@@ -136,7 +152,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
       if (secretKeyPrefix && publicKeyPrefix && secretKeyPrefix !== publicKeyPrefix) {
         Alert.alert(
           'Key Mismatch',
-          'Your secret key and public key are from different modes. Please use keys from the same mode (both LIVE or both TEST).'
+          'Your secret key and public key are from different modes. Please use keys from the same mode (both LIVE or both TEST).',
         );
         return;
       }
@@ -183,7 +199,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
     if (!paymongoLinkPattern.test(paymentLink.trim())) {
       Alert.alert(
         'Invalid Link',
-        'Please enter a valid PayMongo payment link.\n\nExample: https://paymongo.page/l/eventbookingpayment'
+        'Please enter a valid PayMongo payment link.\n\nExample: https://paymongo.page/l/eventbookingpayment',
       );
       return;
     }
@@ -197,7 +213,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
         },
         body: JSON.stringify({
           providerEmail: user.email,
-          paymentLink: paymentLink.trim()
+          paymentLink: paymentLink.trim(),
         }),
       });
 
@@ -255,258 +271,254 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
       onLogout={() => onLogout?.()}
     >
       <ScrollView
-        style={styles.scrollView} 
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.contentWrapper}>
           <View style={styles.content}>
-        {/* Tab Selector */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'api' && styles.tabActive]}
-            onPress={() => setActiveTab('api')}
-            accessibilityRole="button"
-            accessibilityLabel="API credentials tab"
-          >
-            <Text style={[styles.tabText, activeTab === 'api' && styles.tabTextActive]}>
-              API Credentials
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'link' && styles.tabActive]}
-            onPress={() => setActiveTab('link')}
-            accessibilityRole="button"
-            accessibilityLabel="Payment link tab"
-          >
-            <Text style={[styles.tabText, activeTab === 'link' && styles.tabTextActive]}>
-              Payment Link
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {activeTab === 'api' ? (
-          <>
-            {/* API Credentials Info */}
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>🔑 PayMongo API Credentials</Text>
-              <Text style={styles.infoText}>
-                Enter your PayMongo API credentials to receive payments directly to your account. 
-                Payments will go to YOUR PayMongo account, not a central account.
-              </Text>
-              <Text style={styles.infoSubtext}>
-                Get your keys from: https://dashboard.paymongo.com/
-              </Text>
-            </View>
-
-            {/* API Credentials Inputs */}
-            <View style={styles.inputSection}>
-              <Text style={styles.label}>Secret Key (Required) *</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={secretKey}
-                  onChangeText={setSecretKey}
-                  placeholder={mode === 'live' ? 'sk_live_...' : 'sk_test_...'}
-                  placeholderTextColor="#95A5A6"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry={!showSecretKey}
-                  accessibilityLabel="Secret key"
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowSecretKey(!showSecretKey)}
-                  accessibilityRole="button"
-                  accessibilityLabel={showSecretKey ? 'Hide secret key' : 'Show secret key'}
-                >
-                  <Feather
-                    name={showSecretKey ? 'eye-off' : 'eye'}
-                    size={20}
-                    color="#95A5A6"
-                  />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.helperText}>
-                Your PayMongo secret key (starts with sk_)
-              </Text>
-              {secretKeyMismatch && (
-                <Text style={styles.warningText}>
-                  ⚠️ This key is for {secretKeyMode?.toUpperCase()} mode, but you have selected {mode.toUpperCase()} mode
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.inputSection}>
-              <Text style={styles.label}>Public Key (Optional)</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={publicKey}
-                  onChangeText={setPublicKey}
-                  placeholder={mode === 'live' ? 'pk_live_...' : 'pk_test_...'}
-                  placeholderTextColor="#95A5A6"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry={!showPublicKey}
-                  accessibilityLabel="Public key"
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPublicKey(!showPublicKey)}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPublicKey ? 'Hide public key' : 'Show public key'}
-                >
-                  <Feather
-                    name={showPublicKey ? 'eye-off' : 'eye'}
-                    size={20}
-                    color="#95A5A6"
-                  />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.helperText}>
-                Your PayMongo public key (starts with pk_)
-              </Text>
-              {publicKeyMismatch && (
-                <Text style={styles.warningText}>
-                  ⚠️ This key is for {publicKeyMode?.toUpperCase()} mode, but you have selected {mode.toUpperCase()} mode
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.inputSection}>
-              <Text style={styles.label}>Mode</Text>
-              <View style={styles.radioContainer}>
-                <TouchableOpacity
-                  style={[styles.radio, mode === 'live' && styles.radioActive]}
-                  onPress={() => setMode('live')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Live mode"
-                >
-                  <Text style={[styles.radioText, mode === 'live' && styles.radioTextActive]}>
-                    Live
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.radio, mode === 'test' && styles.radioActive]}
-                  onPress={() => setMode('test')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Test mode"
-                >
-                  <Text style={[styles.radioText, mode === 'test' && styles.radioTextActive]}>
-                    Test
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.helperText}>
-                Use "Live" for real payments, "Test" for testing
-              </Text>
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={handleSaveCredentials}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel="Save API credentials"
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save API Credentials</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            {/* Payment Link Info */}
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>💰 PayMongo Payment Link</Text>
-              <Text style={styles.infoText}>
-                Set up your PayMongo payment link as a fallback option. 
-                This is only used if API credentials fail.
-              </Text>
-              <Text style={styles.infoSubtext}>
-                Example: https://paymongo.page/l/eventbookingpayment
-              </Text>
-            </View>
-
-            {/* Payment Link Input */}
-            <View style={styles.inputSection}>
-              <Text style={styles.label}>PayMongo Payment Link</Text>
-              <TextInput
-                style={styles.input}
-                value={paymentLink}
-                onChangeText={setPaymentLink}
-                placeholder="https://paymongo.page/l/your-link"
-                placeholderTextColor="#95A5A6"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                accessibilityLabel="Payment link URL"
-              />
-              <Text style={styles.helperText}>
-                Enter your complete PayMongo payment page URL
-              </Text>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
+            {/* Tab Selector */}
+            <View style={styles.tabContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.testButton]}
-                onPress={handleTestLink}
-                disabled={!paymentLink.trim() || saving}
+                style={[styles.tab, activeTab === 'api' && styles.tabActive]}
+                onPress={() => setActiveTab('api')}
                 accessibilityRole="button"
-                accessibilityLabel="Test payment link"
+                accessibilityLabel="API credentials tab"
               >
-                <Text style={styles.testButtonText}>Test Link</Text>
+                <Text style={[styles.tabText, activeTab === 'api' && styles.tabTextActive]}>
+                  API Credentials
+                </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
-                onPress={handleSaveLink}
-                disabled={saving}
+                style={[styles.tab, activeTab === 'link' && styles.tabActive]}
+                onPress={() => setActiveTab('link')}
                 accessibilityRole="button"
-                accessibilityLabel="Save payment link"
+                accessibilityLabel="Payment link tab"
               >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save Payment Link</Text>
-                )}
+                <Text style={[styles.tabText, activeTab === 'link' && styles.tabTextActive]}>
+                  Payment Link
+                </Text>
               </TouchableOpacity>
             </View>
-          </>
-        )}
 
-        {/* Help Section */}
-        {activeTab === 'api' ? (
-          <View style={styles.helpCard}>
-            <Text style={styles.helpTitle}>📖 How to get your PayMongo API keys:</Text>
-            <View style={styles.helpSteps}>
-              <Text style={styles.helpStep}>1. Log in to your PayMongo account at dashboard.paymongo.com</Text>
-              <Text style={styles.helpStep}>2. Go to Settings → API Keys</Text>
-              <Text style={styles.helpStep}>3. Copy your Secret Key (starts with sk_)</Text>
-              <Text style={styles.helpStep}>4. Optionally copy your Public Key (starts with pk_)</Text>
-              <Text style={styles.helpStep}>5. Select Live or Test mode</Text>
-              <Text style={styles.helpStep}>6. Paste the keys in the fields above</Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.helpCard}>
-            <Text style={styles.helpTitle}>📖 How to get your PayMongo payment link:</Text>
-            <View style={styles.helpSteps}>
-              <Text style={styles.helpStep}>1. Log in to your PayMongo account</Text>
-              <Text style={styles.helpStep}>2. Go to Payment Links section</Text>
-              <Text style={styles.helpStep}>3. Create a new payment link or copy an existing one</Text>
-              <Text style={styles.helpStep}>4. Paste the link in the field above</Text>
-            </View>
-          </View>
-        )}
+            {activeTab === 'api' ? (
+              <>
+                {/* API Credentials Info */}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoTitle}>🔑 PayMongo API Credentials</Text>
+                  <Text style={styles.infoText}>
+                    Enter your PayMongo API credentials to receive payments directly to your
+                    account. Payments will go to YOUR PayMongo account, not a central account.
+                  </Text>
+                  <Text style={styles.infoSubtext}>
+                    Get your keys from: https://dashboard.paymongo.com/
+                  </Text>
+                </View>
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
+                {/* API Credentials Inputs */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>Secret Key (Required) *</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={secretKey}
+                      onChangeText={setSecretKey}
+                      placeholder={mode === 'live' ? 'sk_live_...' : 'sk_test_...'}
+                      placeholderTextColor="#95A5A6"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      secureTextEntry={!showSecretKey}
+                      accessibilityLabel="Secret key"
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => setShowSecretKey(!showSecretKey)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showSecretKey ? 'Hide secret key' : 'Show secret key'}
+                    >
+                      <Feather name={showSecretKey ? 'eye-off' : 'eye'} size={20} color="#95A5A6" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Your PayMongo secret key (starts with sk_)</Text>
+                  {secretKeyMismatch && (
+                    <Text style={styles.warningText}>
+                      ⚠️ This key is for {secretKeyMode?.toUpperCase()} mode, but you have selected{' '}
+                      {mode.toUpperCase()} mode
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>Public Key (Optional)</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={publicKey}
+                      onChangeText={setPublicKey}
+                      placeholder={mode === 'live' ? 'pk_live_...' : 'pk_test_...'}
+                      placeholderTextColor="#95A5A6"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      secureTextEntry={!showPublicKey}
+                      accessibilityLabel="Public key"
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => setShowPublicKey(!showPublicKey)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPublicKey ? 'Hide public key' : 'Show public key'}
+                    >
+                      <Feather name={showPublicKey ? 'eye-off' : 'eye'} size={20} color="#95A5A6" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Your PayMongo public key (starts with pk_)</Text>
+                  {publicKeyMismatch && (
+                    <Text style={styles.warningText}>
+                      ⚠️ This key is for {publicKeyMode?.toUpperCase()} mode, but you have selected{' '}
+                      {mode.toUpperCase()} mode
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>Mode</Text>
+                  <View style={styles.radioContainer}>
+                    <TouchableOpacity
+                      style={[styles.radio, mode === 'live' && styles.radioActive]}
+                      onPress={() => setMode('live')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Live mode"
+                    >
+                      <Text style={[styles.radioText, mode === 'live' && styles.radioTextActive]}>
+                        Live
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.radio, mode === 'test' && styles.radioActive]}
+                      onPress={() => setMode('test')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Test mode"
+                    >
+                      <Text style={[styles.radioText, mode === 'test' && styles.radioTextActive]}>
+                        Test
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>
+                    Use "Live" for real payments, "Test" for testing
+                  </Text>
+                </View>
+
+                {/* Save Button */}
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
+                  onPress={handleSaveCredentials}
+                  disabled={saving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save API credentials"
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save API Credentials</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* Payment Link Info */}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoTitle}>💰 PayMongo Payment Link</Text>
+                  <Text style={styles.infoText}>
+                    Set up your PayMongo payment link as a fallback option. This is only used if API
+                    credentials fail.
+                  </Text>
+                  <Text style={styles.infoSubtext}>
+                    Example: https://paymongo.page/l/eventbookingpayment
+                  </Text>
+                </View>
+
+                {/* Payment Link Input */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>PayMongo Payment Link</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={paymentLink}
+                    onChangeText={setPaymentLink}
+                    placeholder="https://paymongo.page/l/your-link"
+                    placeholderTextColor="#95A5A6"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    accessibilityLabel="Payment link URL"
+                  />
+                  <Text style={styles.helperText}>
+                    Enter your complete PayMongo payment page URL
+                  </Text>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.testButton]}
+                    onPress={handleTestLink}
+                    disabled={!paymentLink.trim() || saving}
+                    accessibilityRole="button"
+                    accessibilityLabel="Test payment link"
+                  >
+                    <Text style={styles.testButtonText}>Test Link</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
+                    onPress={handleSaveLink}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save payment link"
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save Payment Link</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* Help Section */}
+            {activeTab === 'api' ? (
+              <View style={styles.helpCard}>
+                <Text style={styles.helpTitle}>📖 How to get your PayMongo API keys:</Text>
+                <View style={styles.helpSteps}>
+                  <Text style={styles.helpStep}>
+                    1. Log in to your PayMongo account at dashboard.paymongo.com
+                  </Text>
+                  <Text style={styles.helpStep}>2. Go to Settings → API Keys</Text>
+                  <Text style={styles.helpStep}>3. Copy your Secret Key (starts with sk_)</Text>
+                  <Text style={styles.helpStep}>
+                    4. Optionally copy your Public Key (starts with pk_)
+                  </Text>
+                  <Text style={styles.helpStep}>5. Select Live or Test mode</Text>
+                  <Text style={styles.helpStep}>6. Paste the keys in the fields above</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.helpCard}>
+                <Text style={styles.helpTitle}>📖 How to get your PayMongo payment link:</Text>
+                <View style={styles.helpSteps}>
+                  <Text style={styles.helpStep}>1. Log in to your PayMongo account</Text>
+                  <Text style={styles.helpStep}>2. Go to Payment Links section</Text>
+                  <Text style={styles.helpStep}>
+                    3. Create a new payment link or copy an existing one
+                  </Text>
+                  <Text style={styles.helpStep}>4. Paste the link in the field above</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Bottom Spacing */}
+            <View style={styles.bottomSpacing} />
           </View>
         </View>
       </ScrollView>
@@ -531,34 +543,40 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     flex: 1,
-    ...(Platform.OS === 'web' ? {
-      alignItems: 'center',
-      paddingVertical: 20,
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          alignItems: 'center',
+          paddingVertical: 20,
+        }
+      : {}),
   },
   content: {
-    ...(Platform.OS === 'web' ? {
-      width: '100%',
-      maxWidth: 800,
-      backgroundColor: '#ffffff',
-      borderRadius: 12,
-      marginHorizontal: 'auto',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 3,
-      marginTop: 20,
-      marginBottom: 20,
-      padding: 20,
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          width: '100%',
+          maxWidth: 800,
+          backgroundColor: '#ffffff',
+          borderRadius: 12,
+          marginHorizontal: 'auto',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+          marginTop: 20,
+          marginBottom: 20,
+          padding: 20,
+        }
+      : {}),
   },
   scrollContent: {
-    ...(Platform.OS === 'web' ? {
-      padding: 0,
-    } : {
-    padding: 20,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          padding: 0,
+        }
+      : {
+          padding: 20,
+        }),
   },
   infoCard: {
     backgroundColor: '#ffffff',
@@ -738,4 +756,3 @@ const styles = StyleSheet.create({
 });
 
 export default PaymentSetupView;
-

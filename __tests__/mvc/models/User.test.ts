@@ -1,7 +1,7 @@
 import { User } from '../../../mvc/models/User';
 
 describe('User Model', () => {
-  const createUser = (overrides = {}) =>
+  const createUser = () =>
     new User(
       'uid-123',
       'test@example.com',
@@ -21,7 +21,6 @@ describe('User Model', () => {
       '1000',
       'user',
       undefined,
-      ...Object.values(overrides),
     );
 
   describe('constructor', () => {
@@ -59,13 +58,13 @@ describe('User Model', () => {
       expect(user.getFullName()).toBe('Display Name');
     });
 
-    it('should fall back to email when displayName is null', () => {
-      const user = new User('uid-1', 'a@b.com', null, false);
+    it('should fall back to email when displayName is undefined', () => {
+      const user = new User('uid-1', 'a@b.com', undefined, false);
       expect(user.getFullName()).toBe('a@b.com');
     });
 
     it('should return "Unknown User" when nothing is available', () => {
-      const user = new User('uid-1', null, null, false);
+      const user = new User('uid-1', undefined, undefined, false);
       expect(user.getFullName()).toBe('Unknown User');
     });
   });
@@ -77,7 +76,7 @@ describe('User Model', () => {
     });
 
     it('should return false when displayName is missing', () => {
-      const user = new User('uid-1', 'a@b.com', null, false);
+      const user = new User('uid-1', 'a@b.com', undefined, false);
       expect(user.isProfileComplete()).toBe(false);
     });
   });
@@ -139,12 +138,12 @@ describe('User Model', () => {
     });
 
     it('should return first char of email as last fallback', () => {
-      const user = new User('uid-1', 'a@b.com', null, false);
+      const user = new User('uid-1', 'a@b.com', undefined, false);
       expect(user.getInitials()).toBe('A');
     });
 
     it('should return "U" when nothing is available', () => {
-      const user = new User('uid-1', null, null, false);
+      const user = new User('uid-1', undefined, undefined, false);
       expect(user.getInitials()).toBe('U');
     });
   });

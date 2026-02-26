@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as Location from 'expo-location';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../models/User';
 import { apiClient } from '../services/apiClient';
 import { getApiBaseUrl } from '../services/api';
@@ -18,7 +18,9 @@ export function useDashboardData(
   const queryClient = useQueryClient();
 
   // Location state (not a fetch concern)
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const isMountedRef = useRef(true);
 
   // Category browsing state
@@ -51,10 +53,10 @@ export function useDashboardData(
             if (error.code !== 1) console.log('Geolocation error:', error);
             if (isMountedRef.current) setUserLocation(defaultLocation);
           },
-          { timeout: 10000, enableHighAccuracy: false }
+          { timeout: 10000, enableHighAccuracy: false },
         );
       } else {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         if (!isMountedRef.current) return;
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -82,7 +84,9 @@ export function useDashboardData(
       }
     };
     getLocation();
-    return () => { isMountedRef.current = false; };
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // --- Queries ---
@@ -140,7 +144,7 @@ export function useDashboardData(
     queryFn: async () => {
       const categories = ['photography', 'venue', 'music', 'catering'];
       const responses = await Promise.all(
-        categories.map(cat => apiClient.get('/api/services', { category: cat }))
+        categories.map((cat) => apiClient.get('/api/services', { category: cat })),
       );
       const counts: Record<string, number> = {};
       categories.forEach((cat, i) => {
@@ -167,9 +171,11 @@ export function useDashboardData(
         ...photographyServices,
         ...venueServices,
         ...musicServices,
-        ...categoryServices
+        ...categoryServices,
       ];
-      const serviceToBook = allServices.find(s => s.idservice.toString() === serviceIdToBook);
+      const serviceToBook = allServices.find(
+        (s: Service) => s.idservice.toString() === serviceIdToBook,
+      );
       if (serviceToBook) {
         setSelectedService(serviceToBook);
         setShowBookingModal(true);
@@ -177,10 +183,22 @@ export function useDashboardData(
         fetchServiceById(serviceIdToBook);
       }
     }
-  }, [serviceIdToBook, featuredServices, nearbyQuery.data, photographyServices, venueServices, musicServices, categoryServices]);
+  }, [
+    serviceIdToBook,
+    featuredServices,
+    nearbyQuery.data,
+    photographyServices,
+    venueServices,
+    musicServices,
+    categoryServices,
+  ]);
 
   // --- Category browsing ---
-  const loadCategoryServices = async (category: string, useFilters: boolean = false, buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string) => {
+  const loadCategoryServices = async (
+    category: string,
+    useFilters: boolean = false,
+    buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string,
+  ) => {
     setLoadingCategory(true);
     try {
       let url: string;
@@ -237,12 +255,18 @@ export function useDashboardData(
     }
   };
 
-  const handleConfirmBooking = async (date: string, startTime: string, endTime: string, attendees?: number, notes?: string): Promise<void> => {
+  const handleConfirmBooking = async (
+    date: string,
+    startTime: string,
+    endTime: string,
+    attendees?: number,
+    notes?: string,
+  ): Promise<void> => {
     if (!selectedService || !user.email) {
       throw new Error('Unable to create booking. Please try again.');
     }
 
-    let dateRangeInfo = null;
+    let dateRangeInfo: any;
     let eventName = '';
     let eventDate = date;
 
@@ -250,8 +274,16 @@ export function useDashboardData(
       try {
         dateRangeInfo = JSON.parse(notes);
         if (dateRangeInfo.startDate && dateRangeInfo.endDate) {
-          const startFormatted = new Date(dateRangeInfo.startDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
-          const endFormatted = new Date(dateRangeInfo.endDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+          const startFormatted = new Date(dateRangeInfo.startDate).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          const endFormatted = new Date(dateRangeInfo.endDate).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+          });
           eventName = `${selectedService.s_name} - ${startFormatted} - ${endFormatted}`;
           eventDate = dateRangeInfo.startDate;
         }
@@ -261,13 +293,17 @@ export function useDashboardData(
     }
 
     if (!eventName) {
-      const formattedDate = new Date(date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      });
       eventName = `${selectedService.s_name} - ${formattedDate}`;
     }
 
     const location = selectedService.s_city || 'TBD';
 
-    const data = await apiClient.post('/api/bookings', {
+    const _data = await apiClient.post('/api/bookings', {
       clientEmail: user.email,
       serviceId: selectedService.idservice,
       eventName,
@@ -286,14 +322,18 @@ export function useDashboardData(
 
   // --- Category image helper ---
   const getCategoryImage = (category: string): string | null => {
-    if (category === 'photography' && photographyServices.length > 0 && photographyServices[0].primary_image) {
+    if (
+      category === 'photography' &&
+      photographyServices.length > 0 &&
+      photographyServices[0].primary_image
+    ) {
       return photographyServices[0].primary_image;
     } else if (category === 'venue' && venueServices.length > 0 && venueServices[0].primary_image) {
       return venueServices[0].primary_image;
     } else if (category === 'music' && musicServices.length > 0 && musicServices[0].primary_image) {
       return musicServices[0].primary_image;
     } else if (category === 'catering') {
-      const cateringService = featuredServices.find(s => s.s_category === 'catering');
+      const cateringService = featuredServices.find((s: Service) => s.s_category === 'catering');
       if (cateringService && cateringService.primary_image) {
         return cateringService.primary_image;
       }

@@ -57,6 +57,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
       return () => clearTimeout(timer);
     } else {
       handleClose();
+      return undefined;
     }
   }, [visible, duration]);
 
@@ -190,4 +191,3 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
-

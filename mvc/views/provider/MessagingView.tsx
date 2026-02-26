@@ -18,7 +18,7 @@ import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { User } from '../../models/User';
 import { AppLayout } from '../../components/layout';
-import { colors, semantic } from '../../theme';
+import { semantic } from '../../theme';
 
 const { width } = Dimensions.get('window');
 const isMobile = width < 768;
@@ -31,7 +31,13 @@ interface MessagingViewProps {
   onLogout?: () => void | Promise<void>;
 }
 
-export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBack, onNavigate, onLogout }) => {
+export const MessagingView: React.FC<MessagingViewProps> = ({
+  userId: _userId,
+  user,
+  onBack: _onBack,
+  onNavigate,
+  onLogout,
+}) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,7 +63,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
       userEmail,
       (updatedConversations) => {
         setConversations(updatedConversations);
-      }
+      },
     );
 
     return () => {
@@ -69,7 +75,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   useEffect(() => {
     if (selectedConversation && userEmail) {
       loadMessages(selectedConversation.id);
-      
+
       const unsubscribeMessages = messagingService.subscribeToConversationMessages(
         selectedConversation.id,
         userEmail,
@@ -78,7 +84,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }, 100);
-        }
+        },
       );
 
       messagingService.markMessagesAsRead(selectedConversation.id, userEmail);
@@ -87,6 +93,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
         unsubscribeMessages();
       };
     }
+    return undefined;
   }, [selectedConversation, userEmail]);
 
   const loadConversations = async () => {
@@ -116,7 +123,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const loadUnreadCount = async () => {
     if (!userEmail) return;
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/user/messages/count?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/user/messages/count?email=${encodeURIComponent(userEmail)}`,
+      );
       const data = await resp.json();
       if (data.ok) {
         setUnreadCount(data.count || 0);
@@ -133,7 +142,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
     const result = await messagingService.sendMessage(
       selectedConversation.id,
       userEmail,
-      messageText.trim()
+      messageText.trim(),
     );
 
     setSending(false);
@@ -151,7 +160,11 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const getOtherParticipantName = (): string => {
     if (!selectedConversation) return 'User';
     if (selectedConversation.otherParticipant) {
-      return selectedConversation.otherParticipant.name || selectedConversation.otherParticipant.email || 'User';
+      return (
+        selectedConversation.otherParticipant.name ||
+        selectedConversation.otherParticipant.email ||
+        'User'
+      );
     }
     return 'User';
   };
@@ -162,15 +175,24 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
 
   const getMessageTypeIcon = (messageType: MessageType): string => {
     switch (messageType) {
-      case MessageType.BOOKING_REQUEST: return '📅';
-      case MessageType.BOOKING_CONFIRMATION: return '✅';
-      case MessageType.BOOKING_CANCELLATION: return '❌';
-      case MessageType.PAYMENT_REQUEST: return '💳';
-      case MessageType.PAYMENT_CONFIRMATION: return '💰';
-      case MessageType.SYSTEM: return '🔔';
-      case MessageType.IMAGE: return '🖼️';
-      case MessageType.FILE: return '📎';
-      default: return '💬';
+      case MessageType.BOOKING_REQUEST:
+        return '📅';
+      case MessageType.BOOKING_CONFIRMATION:
+        return '✅';
+      case MessageType.BOOKING_CANCELLATION:
+        return '❌';
+      case MessageType.PAYMENT_REQUEST:
+        return '💳';
+      case MessageType.PAYMENT_CONFIRMATION:
+        return '💰';
+      case MessageType.SYSTEM:
+        return '🔔';
+      case MessageType.IMAGE:
+        return '🖼️';
+      case MessageType.FILE:
+        return '📎';
+      default:
+        return '💬';
     }
   };
 
@@ -184,38 +206,40 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
           <Text style={styles.systemMessageText}>
             {getMessageTypeIcon(message.messageType)} {message.content}
           </Text>
-          <Text style={styles.systemMessageTime}>
-            {formatTime(message.timestamp)}
-          </Text>
+          <Text style={styles.systemMessageTime}>{formatTime(message.timestamp)}</Text>
         </View>
       );
     }
 
     return (
-      <View key={message.id} style={[
-        styles.messageContainer,
-        isOwnMessage ? styles.ownMessage : styles.otherMessage
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble
-        ]}>
+      <View
+        key={message.id}
+        style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble,
+          ]}
+        >
           {message.messageType !== MessageType.TEXT && (
-            <Text style={styles.messageTypeIcon}>
-              {getMessageTypeIcon(message.messageType)}
-            </Text>
+            <Text style={styles.messageTypeIcon}>{getMessageTypeIcon(message.messageType)}</Text>
           )}
-          <Text style={[
-            styles.messageText,
-            isOwnMessage ? styles.ownMessageText : styles.otherMessageText
-          ]}>
+          <Text
+            style={[
+              styles.messageText,
+              isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
+            ]}
+          >
             {message.content}
           </Text>
         </View>
-        <Text style={[
-          styles.messageTime,
-          isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime
-        ]}>
+        <Text
+          style={[
+            styles.messageTime,
+            isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
+          ]}
+        >
           {formatTime(message.timestamp)}
         </Text>
       </View>
@@ -225,10 +249,16 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
   const renderConversationItem = (conversation: Conversation) => {
     const hasUnread = conversation.unreadCount > 0;
     const otherParticipant = conversation.otherParticipant;
-    const displayName = otherParticipant 
-      ? (otherParticipant.name || otherParticipant.email || 'Client')
+    const displayName = otherParticipant
+      ? otherParticipant.name || otherParticipant.email || 'Client'
       : 'Client';
-    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'C';
+    const initials =
+      displayName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2) || 'C';
 
     return (
       <TouchableOpacity
@@ -239,32 +269,24 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
         accessibilityLabel={`Conversation with ${displayName}${hasUnread ? `, ${conversation.unreadCount} unread` : ''}`}
       >
         <View style={styles.conversationAvatar}>
-          <Text style={styles.conversationAvatarText}>
-            {initials}
-          </Text>
+          <Text style={styles.conversationAvatarText}>{initials}</Text>
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.conversationTitle}>
-              {displayName}
-            </Text>
-            <Text style={styles.conversationTime}>
-              {formatTime(conversation.lastMessageTime)}
-            </Text>
+            <Text style={styles.conversationTitle}>{displayName}</Text>
+            <Text style={styles.conversationTime}>{formatTime(conversation.lastMessageTime)}</Text>
           </View>
-          <Text style={[
-            styles.conversationPreview,
-            hasUnread && styles.unreadPreview
-          ]} numberOfLines={1}>
-            {typeof conversation.lastMessage === 'string' 
-              ? conversation.lastMessage 
-              : (conversation.lastMessage?.content || 'No messages yet')}
+          <Text
+            style={[styles.conversationPreview, hasUnread && styles.unreadPreview]}
+            numberOfLines={1}
+          >
+            {typeof conversation.lastMessage === 'string'
+              ? conversation.lastMessage
+              : conversation.lastMessage?.content || 'No messages yet'}
           </Text>
           {hasUnread && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {conversation.unreadCount}
-              </Text>
+              <Text style={styles.unreadCount}>{conversation.unreadCount}</Text>
             </View>
           )}
         </View>
@@ -343,9 +365,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
               >
                 <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
-              <Text style={styles.chatTitle}>
-                {getOtherParticipantName()}
-              </Text>
+              <Text style={styles.chatTitle}>{getOtherParticipantName()}</Text>
               <View style={{ width: 60 }} />
             </View>
 
@@ -371,7 +391,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onBa
                 onPress={handleSendMessage}
                 style={[
                   styles.sendButton,
-                  (!messageText.trim() || sending) && styles.sendButtonDisabled
+                  (!messageText.trim() || sending) && styles.sendButtonDisabled,
                 ]}
                 disabled={!messageText.trim() || sending}
                 accessibilityRole="button"
@@ -665,11 +685,3 @@ const styles = StyleSheet.create({
 });
 
 export default MessagingView;
-
-
-
-
-
-
-
-

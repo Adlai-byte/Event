@@ -57,6 +57,7 @@ export function useServiceForm(user?: UserModel) {
       const timer = setTimeout(() => setSuccessMessage(''), 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [successMessage]);
 
   // Auto-hide error message after 5 seconds
@@ -65,12 +66,13 @@ export function useServiceForm(user?: UserModel) {
       const timer = setTimeout(() => setErrorMessage(''), 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [errorMessage]);
 
   // Set default location + attempt geolocation on mount
   useEffect(() => {
     setMapLocation(DEFAULT_LOCATION);
-    setNewService(prev => ({
+    setNewService((prev) => ({
       ...prev,
       latitude: DEFAULT_LOCATION.lat.toString(),
       longitude: DEFAULT_LOCATION.lng.toString(),
@@ -83,7 +85,7 @@ export function useServiceForm(user?: UserModel) {
             (position) => {
               const { latitude, longitude } = position.coords;
               setMapLocation({ lat: latitude, lng: longitude });
-              setNewService(prev => ({
+              setNewService((prev) => ({
                 ...prev,
                 latitude: latitude.toString(),
                 longitude: longitude.toString(),
@@ -104,7 +106,7 @@ export function useServiceForm(user?: UserModel) {
               });
               const { latitude, longitude } = location.coords;
               setMapLocation({ lat: latitude, lng: longitude });
-              setNewService(prev => ({
+              setNewService((prev) => ({
                 ...prev,
                 latitude: latitude.toString(),
                 longitude: longitude.toString(),
@@ -113,10 +115,15 @@ export function useServiceForm(user?: UserModel) {
               try {
                 const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
                 if (address) {
-                  const addressString = [address.street, address.city, address.region, address.country]
+                  const addressString = [
+                    address.street,
+                    address.city,
+                    address.region,
+                    address.country,
+                  ]
                     .filter(Boolean)
                     .join(', ');
-                  setNewService(prev => ({ ...prev, address: addressString }));
+                  setNewService((prev) => ({ ...prev, address: addressString }));
                 }
               } catch (geocodeError) {
                 console.log('Reverse geocoding error:', geocodeError);
@@ -147,7 +154,12 @@ export function useServiceForm(user?: UserModel) {
 
   // Initialize Leaflet map for web platform
   useEffect(() => {
-    if (Platform.OS !== 'web' || !mapLocation || typeof window === 'undefined' || mapInitializedRef.current) {
+    if (
+      Platform.OS !== 'web' ||
+      !mapLocation ||
+      typeof window === 'undefined' ||
+      mapInitializedRef.current
+    ) {
       return;
     }
 
@@ -206,14 +218,14 @@ export function useServiceForm(user?: UserModel) {
       const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
 
       const updateLocation = async (lat: number, lng: number) => {
-        setNewService(prev => ({
+        setNewService((prev) => ({
           ...prev,
           latitude: lat.toString(),
           longitude: lng.toString(),
         }));
 
         try {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -241,7 +253,7 @@ export function useServiceForm(user?: UserModel) {
           }
 
           if (address && address.trim()) {
-            setNewService(prev => ({ ...prev, address }));
+            setNewService((prev) => ({ ...prev, address }));
           } else {
             try {
               const retryResponse = await fetch(
@@ -252,7 +264,7 @@ export function useServiceForm(user?: UserModel) {
               const retryAddress = retryData.display_name || '';
 
               if (retryAddress && retryAddress.trim()) {
-                setNewService(prev => ({ ...prev, address: retryAddress }));
+                setNewService((prev) => ({ ...prev, address: retryAddress }));
               } else if (retryData.address) {
                 const addr = retryData.address;
                 const parts = [
@@ -265,7 +277,7 @@ export function useServiceForm(user?: UserModel) {
                 ].filter(Boolean);
                 const constructedAddress = parts.join(', ');
                 if (constructedAddress) {
-                  setNewService(prev => ({ ...prev, address: constructedAddress }));
+                  setNewService((prev) => ({ ...prev, address: constructedAddress }));
                 }
               }
             } catch (retryError) {
@@ -277,7 +289,7 @@ export function useServiceForm(user?: UserModel) {
         }
       };
 
-      marker.on('dragend', function (e: any) {
+      marker.on('dragend', function (_e: any) {
         const position = marker.getLatLng();
         updateLocation(position.lat, position.lng);
       });
@@ -298,7 +310,7 @@ export function useServiceForm(user?: UserModel) {
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.remove();
-        } catch (e) {
+        } catch {
           // Ignore cleanup errors
         }
         mapInstanceRef.current = null;
@@ -314,7 +326,11 @@ export function useServiceForm(user?: UserModel) {
     setMapLocation(DEFAULT_LOCATION);
     mapInitializedRef.current = false;
     if (mapInstanceRef.current) {
-      try { mapInstanceRef.current.remove(); } catch (e) { /* */ }
+      try {
+        mapInstanceRef.current.remove();
+      } catch {
+        /* */
+      }
       mapInstanceRef.current = null;
     }
   };
@@ -331,9 +347,17 @@ export function useServiceForm(user?: UserModel) {
           try {
             if (Platform.OS !== 'web') {
               try {
-                const [expoAddress] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+                const [expoAddress] = await Location.reverseGeocodeAsync({
+                  latitude: lat,
+                  longitude: lng,
+                });
                 if (expoAddress) {
-                  address = [expoAddress.street, expoAddress.city, expoAddress.region, expoAddress.country]
+                  address = [
+                    expoAddress.street,
+                    expoAddress.city,
+                    expoAddress.region,
+                    expoAddress.country,
+                  ]
                     .filter(Boolean)
                     .join(', ');
                 }
@@ -358,7 +382,7 @@ export function useServiceForm(user?: UserModel) {
           }
         }
 
-        setNewService(prev => ({
+        setNewService((prev) => ({
           ...prev,
           latitude: lat.toString(),
           longitude: lng.toString(),
@@ -387,7 +411,7 @@ export function useServiceForm(user?: UserModel) {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64String = reader.result as string;
-              setNewService(prev => ({ ...prev, image: base64String }));
+              setNewService((prev) => ({ ...prev, image: base64String }));
             };
             reader.onerror = () => {
               Alert.alert('Error', 'Failed to read image file');
@@ -423,9 +447,12 @@ export function useServiceForm(user?: UserModel) {
           if (asset.base64) {
             const imageExtension = asset.uri.split('.').pop()?.toLowerCase() || 'jpeg';
             const base64String = `data:image/${imageExtension};base64,${asset.base64}`;
-            setNewService(prev => ({ ...prev, image: base64String }));
+            setNewService((prev) => ({ ...prev, image: base64String }));
           } else {
-            Alert.alert('Warning', 'Image processing failed. Please try selecting the image again.');
+            Alert.alert(
+              'Warning',
+              'Image processing failed. Please try selecting the image again.',
+            );
           }
         }
       }
@@ -436,7 +463,7 @@ export function useServiceForm(user?: UserModel) {
   };
 
   const handleRemoveImage = () => {
-    setNewService(prev => ({ ...prev, image: null }));
+    setNewService((prev) => ({ ...prev, image: null }));
   };
 
   // --- Mutations ---
@@ -607,8 +634,12 @@ export function useServiceForm(user?: UserModel) {
       };
 
       if (newService.category !== 'catering') {
-        requestBody.hourlyPrice = newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null;
-        requestBody.perDayPrice = newService.perDayPrice ? parseFloat(newService.perDayPrice) : null;
+        requestBody.hourlyPrice = newService.hourlyPrice
+          ? parseFloat(newService.hourlyPrice)
+          : null;
+        requestBody.perDayPrice = newService.perDayPrice
+          ? parseFloat(newService.perDayPrice)
+          : null;
       }
 
       if (newService.maxCapacity) {
@@ -633,11 +664,18 @@ export function useServiceForm(user?: UserModel) {
         requestBody.longitude = newService.longitude ? parseFloat(newService.longitude) : '';
       }
 
-      if (newService.image && typeof newService.image === 'string' && newService.image.startsWith('data:image')) {
+      if (
+        newService.image &&
+        typeof newService.image === 'string' &&
+        newService.image.startsWith('data:image')
+      ) {
         requestBody.image = newService.image;
       }
 
-      const data = await updateServiceMutation.mutateAsync({ id: editingServiceId, body: requestBody });
+      const data = await updateServiceMutation.mutateAsync({
+        id: editingServiceId,
+        body: requestBody,
+      });
 
       if (data.ok) {
         setNewService({ ...EMPTY_FORM });

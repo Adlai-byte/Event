@@ -4,8 +4,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HiringController } from '../controllers/HiringController';
-import { HiringRequest, HiringStatus, Proposal, ProposalStatus, ExperienceLevel, ContractType } from '../models/Hiring';
-import { getApiBaseUrl } from '../services/api';
+import {
+  HiringRequest,
+  HiringStatus,
+  Proposal,
+  ProposalStatus,
+  ExperienceLevel,
+  ContractType,
+} from '../models/Hiring';
 import { apiClient } from '../services/apiClient';
 import { ApiError } from '../types/api';
 
@@ -30,7 +36,9 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
   const [hiringRequests, setHiringRequests] = useState<HiringRequest[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'proposals' | 'jobPostings' | 'myApplications'>('jobPostings');
+  const [activeTab, setActiveTab] = useState<'proposals' | 'jobPostings' | 'myApplications'>(
+    'jobPostings',
+  );
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showProposalForm, setShowProposalForm] = useState(false);
   const [showProposalsModal, setShowProposalsModal] = useState(false);
@@ -83,12 +91,15 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       }
       const data = await apiClient.get<any>('/api/job-postings', params);
       if (data.ok && data.jobPostings) {
-        console.log('Job postings with location:', data.jobPostings.map((j: any) => ({
-          id: j.id,
-          title: j.jobTitle,
-          provider: `${j.providerFirstName} ${j.providerLastName}`,
-          location: j.location
-        })));
+        console.log(
+          'Job postings with location:',
+          data.jobPostings.map((j: any) => ({
+            id: j.id,
+            title: j.jobTitle,
+            provider: `${j.providerFirstName} ${j.providerLastName}`,
+            location: j.location,
+          })),
+        );
         return data.jobPostings as any[];
       }
       return [] as any[];
@@ -124,7 +135,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
           b_event_date: b.b_event_date,
           b_start_time: b.b_start_time,
           b_end_time: b.b_end_time,
-          b_location: b.b_location
+          b_location: b.b_location,
         })) as Booking[];
       }
       return [] as Booking[];
@@ -154,20 +165,25 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
 
   const getApplicationStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'reviewed': return '#3b82f6';
-      case 'accepted': return '#10b981';
-      case 'rejected': return '#ef4444';
-      default: return '#64748b';
+      case 'pending':
+        return '#f59e0b';
+      case 'reviewed':
+        return '#3b82f6';
+      case 'accepted':
+        return '#10b981';
+      case 'rejected':
+        return '#ef4444';
+      default:
+        return '#64748b';
     }
   };
 
   const hasAppliedToJob = (jobId: number): boolean => {
-    return myApplications.some(app => app.jobPostingId === jobId);
+    return myApplications.some((app) => app.jobPostingId === jobId);
   };
 
   const getApplicationStatusForJob = (jobId: number): string | null => {
-    const application = myApplications.find(app => app.jobPostingId === jobId);
+    const application = myApplications.find((app) => app.jobPostingId === jobId);
     return application ? application.status : null;
   };
 
@@ -233,7 +249,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       userType,
       (updatedRequests) => {
         setHiringRequests(updatedRequests);
-      }
+      },
     );
 
     const unsubscribeProposals = hiringController.subscribeToProposals(
@@ -241,7 +257,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       userType,
       (updatedProposals) => {
         setProposals(updatedProposals);
-      }
+      },
     );
 
     return () => {
@@ -396,7 +412,8 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
         }
       }
 
-      let errorMsg = 'Failed to submit application. Please check your internet connection and try again.';
+      let errorMsg =
+        'Failed to submit application. Please check your internet connection and try again.';
 
       if (error.message) {
         if (error.message.includes('Network') || error.message.includes('fetch')) {
@@ -413,13 +430,28 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
   };
 
   const handleCreateHiringRequest = async () => {
-    if (!title || !description || !minBudget || !maxBudget || !startDate || !endDate || !city || !state) {
+    if (
+      !title ||
+      !description ||
+      !minBudget ||
+      !maxBudget ||
+      !startDate ||
+      !endDate ||
+      !city ||
+      !state
+    ) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    const requirementsList = requirements.split(',').map(req => req.trim()).filter(req => req);
-    const skillsList = skills.split(',').map(skill => skill.trim()).filter(skill => skill);
+    const requirementsList = requirements
+      .split(',')
+      .map((req) => req.trim())
+      .filter((req) => req);
+    const skillsList = skills
+      .split(',')
+      .map((skill) => skill.trim())
+      .filter((skill) => skill);
 
     setLoading(true);
     const result = await hiringController.createHiringRequest({
@@ -431,24 +463,24 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       budget: {
         min: parseFloat(minBudget),
         max: parseFloat(maxBudget),
-        currency: 'PHP'
+        currency: 'PHP',
       },
       timeline: {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        isFlexible: false
+        isFlexible: false,
       },
       location: {
         type: locationType,
         address: address || undefined,
         city: city,
-        state: state
+        state: state,
       },
       requirements: requirementsList,
       skillsRequired: skillsList,
       experienceLevel,
       contractType,
-      status: HiringStatus.DRAFT
+      status: HiringStatus.DRAFT,
     });
 
     setLoading(false);
@@ -473,7 +505,14 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
   };
 
   const handleSubmitProposal = async () => {
-    if (!proposalTitle || !proposalDescription || !proposedBudget || !proposalStartDate || !proposalEndDate || !deliverables) {
+    if (
+      !proposalTitle ||
+      !proposalDescription ||
+      !proposedBudget ||
+      !proposalStartDate ||
+      !proposalEndDate ||
+      !deliverables
+    ) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -483,8 +522,14 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       return;
     }
 
-    const deliverablesList = deliverables.split(',').map(del => del.trim()).filter(del => del);
-    const termsList = terms.split(',').map(term => term.trim()).filter(term => term);
+    const deliverablesList = deliverables
+      .split(',')
+      .map((del) => del.trim())
+      .filter((del) => del);
+    const termsList = terms
+      .split(',')
+      .map((term) => term.trim())
+      .filter((term) => term);
 
     setLoading(true);
     const result = await hiringController.submitProposal({
@@ -495,11 +540,11 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       proposedBudget: parseFloat(proposedBudget),
       timeline: {
         startDate: new Date(proposalStartDate),
-        endDate: new Date(proposalEndDate)
+        endDate: new Date(proposalEndDate),
       },
       deliverables: deliverablesList,
       terms: termsList,
-      status: ProposalStatus.SUBMITTED
+      status: ProposalStatus.SUBMITTED,
     });
 
     setLoading(false);
@@ -514,47 +559,39 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
   };
 
   const handleAcceptProposal = async (proposalId: string, hiringRequestId: string) => {
-    Alert.alert(
-      'Accept Proposal',
-      'Are you sure you want to accept this proposal?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          style: 'default',
-          onPress: async () => {
-            const result = await hiringController.acceptProposal(proposalId, hiringRequestId);
-            if (result.success) {
-              Alert.alert('Success', 'Proposal accepted successfully!');
-            } else {
-              Alert.alert('Error', result.error || 'Failed to accept proposal');
-            }
+    Alert.alert('Accept Proposal', 'Are you sure you want to accept this proposal?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Accept',
+        style: 'default',
+        onPress: async () => {
+          const result = await hiringController.acceptProposal(proposalId, hiringRequestId);
+          if (result.success) {
+            Alert.alert('Success', 'Proposal accepted successfully!');
+          } else {
+            Alert.alert('Error', result.error || 'Failed to accept proposal');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const handleRejectProposal = async (proposalId: string) => {
-    Alert.prompt(
-      'Reject Proposal',
-      'Please provide a reason for rejection (optional):',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async (reason) => {
-            const result = await hiringController.rejectProposal(proposalId, reason);
-            if (result.success) {
-              Alert.alert('Success', 'Proposal rejected');
-            } else {
-              Alert.alert('Error', result.error || 'Failed to reject proposal');
-            }
+    Alert.prompt('Reject Proposal', 'Please provide a reason for rejection (optional):', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async (reason?: string) => {
+          const result = await hiringController.rejectProposal(proposalId, reason);
+          if (result.success) {
+            Alert.alert('Success', 'Proposal rejected');
+          } else {
+            Alert.alert('Error', result.error || 'Failed to reject proposal');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const resetCreateForm = () => {
@@ -587,7 +624,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
     setSelectedHiringRequest(null);
   };
 
-  const filteredHiringRequests = hiringRequests.filter(request => {
+  const filteredHiringRequests = hiringRequests.filter((request) => {
     if (filterStatus !== 'all' && request.status !== filterStatus) {
       return false;
     }
@@ -605,18 +642,30 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
 
   const getStatusColor = (status: HiringStatus | ProposalStatus): string => {
     switch (status) {
-      case HiringStatus.DRAFT: return '#FFA500';
-      case HiringStatus.OPEN: return '#4CAF50';
-      case HiringStatus.IN_REVIEW: return '#2196F3';
-      case HiringStatus.CLOSED: return '#9C27B0';
-      case HiringStatus.CANCELLED: return '#F44336';
-      case ProposalStatus.SUBMITTED: return '#FFA500';
-      case ProposalStatus.UNDER_REVIEW: return '#2196F3';
-      case ProposalStatus.ACCEPTED: return '#4CAF50';
-      case ProposalStatus.REJECTED: return '#F44336';
-      case ProposalStatus.REVISED: return '#FF9800';
-      case ProposalStatus.WITHDRAWN: return '#757575';
-      default: return '#757575';
+      case HiringStatus.DRAFT:
+        return '#FFA500';
+      case HiringStatus.OPEN:
+        return '#4CAF50';
+      case HiringStatus.IN_REVIEW:
+        return '#2196F3';
+      case HiringStatus.CLOSED:
+        return '#9C27B0';
+      case HiringStatus.CANCELLED:
+        return '#F44336';
+      case ProposalStatus.SUBMITTED:
+        return '#FFA500';
+      case ProposalStatus.UNDER_REVIEW:
+        return '#2196F3';
+      case ProposalStatus.ACCEPTED:
+        return '#4CAF50';
+      case ProposalStatus.REJECTED:
+        return '#F44336';
+      case ProposalStatus.REVISED:
+        return '#FF9800';
+      case ProposalStatus.WITHDRAWN:
+        return '#757575';
+      default:
+        return '#757575';
     }
   };
 
@@ -661,36 +710,62 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
     errorMessage,
 
     // Create form state
-    title, setTitle,
-    description, setDescription,
-    serviceId, setServiceId,
-    eventId, setEventId,
-    minBudget, setMinBudget,
-    maxBudget, setMaxBudget,
-    startDate, setStartDate,
-    endDate, setEndDate,
-    city, setCity,
-    state, setState,
-    address, setAddress,
-    locationType, setLocationType,
-    requirements, setRequirements,
-    skills, setSkills,
-    experienceLevel, setExperienceLevel,
-    contractType, setContractType,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    serviceId,
+    setServiceId,
+    eventId,
+    setEventId,
+    minBudget,
+    setMinBudget,
+    maxBudget,
+    setMaxBudget,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    city,
+    setCity,
+    state,
+    setState,
+    address,
+    setAddress,
+    locationType,
+    setLocationType,
+    requirements,
+    setRequirements,
+    skills,
+    setSkills,
+    experienceLevel,
+    setExperienceLevel,
+    contractType,
+    setContractType,
 
     // Proposal form state
-    proposalTitle, setProposalTitle,
-    proposalDescription, setProposalDescription,
-    proposedBudget, setProposedBudget,
-    proposalStartDate, setProposalStartDate,
-    proposalEndDate, setProposalEndDate,
-    deliverables, setDeliverables,
-    terms, setTerms,
+    proposalTitle,
+    setProposalTitle,
+    proposalDescription,
+    setProposalDescription,
+    proposedBudget,
+    setProposedBudget,
+    proposalStartDate,
+    setProposalStartDate,
+    proposalEndDate,
+    setProposalEndDate,
+    deliverables,
+    setDeliverables,
+    terms,
+    setTerms,
 
     // Search / filter
-    filterStatus, setFilterStatus,
-    searchQuery, setSearchQuery,
-    jobPostingSearch, setJobPostingSearch,
+    filterStatus,
+    setFilterStatus,
+    searchQuery,
+    setSearchQuery,
+    jobPostingSearch,
+    setJobPostingSearch,
 
     // Setters
     setActiveTab,

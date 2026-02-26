@@ -15,8 +15,12 @@ import { AppLayout } from '../../components/layout';
 import { PaymentModal } from '../../components/PaymentModal';
 import { EditBookingModal } from '../../components/EditBookingModal';
 import { RatingModal } from '../../components/RatingModal';
-import { BookingCard, EventDetailsModal, CancelBookingModal } from '../../components/booking';
-import type { Booking } from '../../components/booking';
+import {
+  BookingCard,
+  EventDetailsModal,
+  CancelBookingModal,
+  type Booking,
+} from '../../components/booking';
 import { useBookingData } from '../../hooks/useBookingData';
 import { styles } from './BookingView.styles';
 
@@ -33,23 +37,20 @@ interface BookingViewProps {
 }
 
 export const BookingView: React.FC<BookingViewProps> = ({
-  userId,
+  userId: _userId,
   userEmail,
   user,
   onNavigate,
   onLogout,
-  onNavigateToBookingDetails,
-  onNavigateToEditEvent,
+  onNavigateToBookingDetails: _onNavigateToBookingDetails,
+  onNavigateToEditEvent: _onNavigateToEditEvent,
   onNavigateToMessages,
-  refreshKey
+  refreshKey,
 }) => {
-  const {
-    bookings,
-    loading,
-    serviceRatings,
-    loadBookings,
-    loadServiceRatings,
-  } = useBookingData({ userEmail, refreshKey });
+  const { bookings, loading, serviceRatings, loadBookings, loadServiceRatings } = useBookingData({
+    userEmail,
+    refreshKey,
+  });
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showEventDetails, setShowEventDetails] = useState(false);
@@ -57,21 +58,29 @@ export const BookingView: React.FC<BookingViewProps> = ({
   const [paymentBooking, setPaymentBooking] = useState<Booking | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'paid' | 'cancelled' | 'completed'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'paid' | 'cancelled' | 'completed'>(
+    'all',
+  );
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [ratingService, setRatingService] = useState<{ serviceId: number; serviceName: string } | null>(null);
+  const [ratingService, setRatingService] = useState<{
+    serviceId: number;
+    serviceName: string;
+  } | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
-  const handleViewDetails = useCallback((booking: Booking) => {
-    setSelectedBooking(booking);
-    setShowEventDetails(true);
-    // Load ratings for services in this booking if it's completed
-    if (booking.bookingStatus === 'completed' && userEmail) {
-      loadServiceRatings(booking.id, booking.services || []);
-    }
-  }, [userEmail, loadServiceRatings]);
+  const handleViewDetails = useCallback(
+    (booking: Booking) => {
+      setSelectedBooking(booking);
+      setShowEventDetails(true);
+      // Load ratings for services in this booking if it's completed
+      if (booking.bookingStatus === 'completed' && userEmail) {
+        loadServiceRatings(booking.id, booking.services || []);
+      }
+    },
+    [userEmail, loadServiceRatings],
+  );
 
   const handleRateService = (serviceId: number, serviceName: string) => {
     setRatingService({ serviceId, serviceName });
@@ -84,28 +93,31 @@ export const BookingView: React.FC<BookingViewProps> = ({
     }
   };
 
-  const handleEditEvent = useCallback((bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking) {
-      Alert.alert('Error', 'Booking not found');
-      return;
-    }
-    if (booking.isPaid) {
-      Alert.alert('Cannot Edit', 'This booking has already been paid and cannot be edited.');
-      return;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const eventDate = new Date(booking.dateStr || booking.date);
-    eventDate.setHours(0, 0, 0, 0);
-    if (eventDate < today) {
-      Alert.alert('Cannot Edit', 'This booking is in the past and cannot be edited.');
-      return;
-    }
-    setEditingBooking(booking || null);
-    setShowEditModal(true);
-    setShowEventDetails(false);
-  }, [bookings]);
+  const handleEditEvent = useCallback(
+    (bookingId: string) => {
+      const booking = bookings.find((b: Booking) => b.id === bookingId);
+      if (!booking) {
+        Alert.alert('Error', 'Booking not found');
+        return;
+      }
+      if (booking.isPaid) {
+        Alert.alert('Cannot Edit', 'This booking has already been paid and cannot be edited.');
+        return;
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = new Date(booking.dateStr || booking.date);
+      eventDate.setHours(0, 0, 0, 0);
+      if (eventDate < today) {
+        Alert.alert('Cannot Edit', 'This booking is in the past and cannot be edited.');
+        return;
+      }
+      setEditingBooking(booking || null);
+      setShowEditModal(true);
+      setShowEventDetails(false);
+    },
+    [bookings],
+  );
 
   const handleCancelEvent = useCallback((booking: Booking) => {
     if (booking.isPaid) {
@@ -173,46 +185,49 @@ export const BookingView: React.FC<BookingViewProps> = ({
     }
   };
 
-  const handleMessageProvider = useCallback(async (bookingId: string) => {
-    if (!userEmail) {
-      Alert.alert('Error', 'User email is required');
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}/conversation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userEmail }),
-      });
-
-      const data = await resp.json();
-
-      if (resp.ok && data.ok && data.conversation) {
-        const conversationId = data.conversation.idconversation.toString();
-        if (onNavigateToMessages) {
-          onNavigateToMessages(conversationId);
-        }
-      } else {
-        Alert.alert('Error', data.error || 'Failed to start conversation');
+  const handleMessageProvider = useCallback(
+    async (bookingId: string) => {
+      if (!userEmail) {
+        Alert.alert('Error', 'User email is required');
+        return;
       }
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      Alert.alert('Error', 'Failed to start conversation. Please try again.');
-    }
-  }, [userEmail, onNavigateToMessages]);
+
+      try {
+        const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingId}/conversation`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userEmail }),
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok && data.ok && data.conversation) {
+          const conversationId = data.conversation.idconversation.toString();
+          if (onNavigateToMessages) {
+            onNavigateToMessages(conversationId);
+          }
+        } else {
+          Alert.alert('Error', data.error || 'Failed to start conversation');
+        }
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+        Alert.alert('Error', 'Failed to start conversation. Please try again.');
+      }
+    },
+    [userEmail, onNavigateToMessages],
+  );
 
   // Filter bookings based on active filter
   const filteredBookings = useMemo(() => {
     switch (activeFilter) {
       case 'paid':
-        return bookings.filter(b => b.isPaid === true);
+        return bookings.filter((b: Booking) => b.isPaid === true);
       case 'cancelled':
-        return bookings.filter(b => b.bookingStatus === 'cancelled');
+        return bookings.filter((b: Booking) => b.bookingStatus === 'cancelled');
       case 'completed':
-        return bookings.filter(b => b.bookingStatus === 'completed');
+        return bookings.filter((b: Booking) => b.bookingStatus === 'completed');
       case 'all':
       default:
         return bookings;
@@ -220,35 +235,46 @@ export const BookingView: React.FC<BookingViewProps> = ({
   }, [bookings, activeFilter]);
 
   const upcomingBookings = useMemo(
-    () => filteredBookings.filter(b => b.status === 'upcoming' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'completed'),
-    [filteredBookings]
+    () =>
+      filteredBookings.filter(
+        (b: Booking) =>
+          b.status === 'upcoming' &&
+          b.bookingStatus !== 'cancelled' &&
+          b.bookingStatus !== 'completed',
+      ),
+    [filteredBookings],
   );
   const completedBookings = useMemo(
-    () => filteredBookings.filter(b => b.bookingStatus === 'completed'),
-    [filteredBookings]
+    () => filteredBookings.filter((b: Booking) => b.bookingStatus === 'completed'),
+    [filteredBookings],
   );
   const cancelledBookings = useMemo(
-    () => filteredBookings.filter(b => b.bookingStatus === 'cancelled'),
-    [filteredBookings]
+    () => filteredBookings.filter((b: Booking) => b.bookingStatus === 'cancelled'),
+    [filteredBookings],
   );
   const pastBookings = useMemo(
-    () => filteredBookings.filter(b => b.status === 'past' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'completed'),
-    [filteredBookings]
+    () =>
+      filteredBookings.filter(
+        (b: Booking) =>
+          b.status === 'past' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'completed',
+      ),
+    [filteredBookings],
   );
 
   const orderedBookings = useMemo(
     () => [...upcomingBookings, ...cancelledBookings, ...completedBookings, ...pastBookings],
-    [upcomingBookings, cancelledBookings, completedBookings, pastBookings]
+    [upcomingBookings, cancelledBookings, completedBookings, pastBookings],
   );
 
   const getSectionTitle = useCallback(
     (booking: Booking): 'Upcoming' | 'Completed' | 'Cancelled' | 'Past' => {
       if (booking.bookingStatus === 'cancelled') return 'Cancelled';
-      if (booking.bookingStatus === 'completed' || booking.status === 'completed') return 'Completed';
+      if (booking.bookingStatus === 'completed' || booking.status === 'completed')
+        return 'Completed';
       if (booking.status === 'upcoming') return 'Upcoming';
       return 'Past';
     },
-    []
+    [],
   );
 
   if (loading) {
@@ -297,7 +323,12 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={`Filter by ${filter}`}
               >
-                <Text style={[styles.filterButtonText, activeFilter === filter && styles.filterButtonTextActive]}>
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    activeFilter === filter && styles.filterButtonTextActive,
+                  ]}
+                >
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -311,9 +342,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateIcon}>{'\uD83D\uDCC5'}</Text>
               <Text style={styles.emptyStateText}>
-                {activeFilter === 'all'
-                  ? 'No bookings yet'
-                  : `No ${activeFilter} bookings`}
+                {activeFilter === 'all' ? 'No bookings yet' : `No ${activeFilter} bookings`}
               </Text>
               <Text style={styles.emptyStateSubtext}>
                 {activeFilter === 'all'
@@ -335,11 +364,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
 
                 return (
                   <View>
-                    {showSectionHeader && (
-                      <Text style={styles.sectionTitle}>
-                        {sectionTitle}
-                      </Text>
-                    )}
+                    {showSectionHeader && <Text style={styles.sectionTitle}>{sectionTitle}</Text>}
                     <BookingCard
                       booking={item}
                       onViewDetails={() => handleViewDetails(item)}
@@ -422,7 +447,9 @@ export const BookingView: React.FC<BookingViewProps> = ({
             serviceId={ratingService.serviceId}
             bookingId={selectedBooking.id}
             userEmail={userEmail}
-            existingRating={ratingService.serviceId ? serviceRatings[ratingService.serviceId] : null}
+            existingRating={
+              ratingService.serviceId ? serviceRatings[ratingService.serviceId] : null
+            }
             onClose={() => {
               setShowRatingModal(false);
               setRatingService(null);
@@ -440,8 +467,8 @@ export const BookingView: React.FC<BookingViewProps> = ({
               title: editingBooking.title,
               date: editingBooking.date,
               dateStr: editingBooking.dateStr,
-              startTime: editingBooking.startTime,
-              endTime: editingBooking.endTime,
+              startTime: editingBooking.startTime ?? '',
+              endTime: editingBooking.endTime ?? '',
               location: editingBooking.location,
               attendees: editingBooking.attendees,
               description: editingBooking.description,

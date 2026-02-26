@@ -10,18 +10,18 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
-  Image,
-  Alert
+  // Image,
+  Alert,
 } from 'react-native';
 import { SkeletonListItem } from '../../components/ui';
 import { MySQLMessagingService } from '../../services/MySQLMessagingService';
 import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { AppLayout } from '../../components/layout';
-import { colors, semantic } from '../../theme';
+import { semantic } from '../../theme';
 
 const { width, height: screenHeight } = Dimensions.get('window');
-const isMobile = width < 768 || Platform.OS !== 'web';
+const _isMobile = width < 768 || Platform.OS !== 'web';
 
 interface MessagingViewProps {
   userId: string;
@@ -32,14 +32,21 @@ interface MessagingViewProps {
   onLogout: () => void;
 }
 
-export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail, user, conversationId, onNavigate, onLogout }) => {
+export const MessagingView: React.FC<MessagingViewProps> = ({
+  userId,
+  userEmail,
+  user,
+  conversationId,
+  onNavigate,
+  onLogout,
+}) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [_unreadCount, setUnreadCount] = useState(0);
 
   const messagingService = MySQLMessagingService.getInstance();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -54,10 +61,10 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 
     // Update the ref with current conversationId
     conversationIdRef.current = conversationId;
-    
+
     // Reset the flag when conversationId changes
     hasHandledInitialConversation.current = false;
-    
+
     // Clear selected conversation when conversationId is undefined
     if (!conversationId) {
       setSelectedConversation(null);
@@ -65,35 +72,39 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 
     loadConversations();
     loadUnreadCount();
-    
-      // Subscribe to real-time updates
-      const unsubscribeConversations = messagingService.subscribeToUserConversations(
-        userEmail,
-        (updatedConversations) => {
-          // Deduplicate conversations by ID (in case of duplicates from API)
-          const uniqueConvs = updatedConversations.filter((conv, index, self) => 
-            index === self.findIndex(c => c.id === conv.id)
-          );
-          
-          setConversations(uniqueConvs);
-          
-          // Use ref to get the current conversationId value (captured at effect time)
-          // Only auto-select if conversationId is explicitly provided (not undefined/null/empty)
-          // AND we haven't handled it yet
-          // This prevents auto-selecting on every polling update (which happens every 2-3 seconds)
-          // AND prevents auto-selecting when navigating to messages list without a specific conversation
-          const currentConvId = conversationIdRef.current;
-          if (currentConvId && currentConvId.trim() !== '' && !hasHandledInitialConversation.current) {
-            const conv = uniqueConvs.find(c => c.id === currentConvId);
-            if (conv) {
-              setSelectedConversation(conv);
-              hasHandledInitialConversation.current = true;
-            }
+
+    // Subscribe to real-time updates
+    const unsubscribeConversations = messagingService.subscribeToUserConversations(
+      userEmail,
+      (updatedConversations) => {
+        // Deduplicate conversations by ID (in case of duplicates from API)
+        const uniqueConvs = updatedConversations.filter(
+          (conv, index, self) => index === self.findIndex((c) => c.id === conv.id),
+        );
+
+        setConversations(uniqueConvs);
+
+        // Use ref to get the current conversationId value (captured at effect time)
+        // Only auto-select if conversationId is explicitly provided (not undefined/null/empty)
+        // AND we haven't handled it yet
+        // This prevents auto-selecting on every polling update (which happens every 2-3 seconds)
+        // AND prevents auto-selecting when navigating to messages list without a specific conversation
+        const currentConvId = conversationIdRef.current;
+        if (
+          currentConvId &&
+          currentConvId.trim() !== '' &&
+          !hasHandledInitialConversation.current
+        ) {
+          const conv = uniqueConvs.find((c) => c.id === currentConvId);
+          if (conv) {
+            setSelectedConversation(conv);
+            hasHandledInitialConversation.current = true;
           }
-          // Do NOT auto-select or clear selection when conversationId is undefined
-          // This allows users to manually select conversations without interference
         }
-      );
+        // Do NOT auto-select or clear selection when conversationId is undefined
+        // This allows users to manually select conversations without interference
+      },
+    );
 
     return () => {
       unsubscribeConversations();
@@ -104,7 +115,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   useEffect(() => {
     if (selectedConversation && userEmail) {
       loadMessages(selectedConversation.id);
-      
+
       // Subscribe to real-time message updates
       const unsubscribeMessages = messagingService.subscribeToConversationMessages(
         selectedConversation.id,
@@ -115,7 +126,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }, 100);
-        }
+        },
       );
 
       // Mark messages as read
@@ -125,6 +136,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
         unsubscribeMessages();
       };
     }
+    return undefined;
   }, [selectedConversation, userEmail]);
 
   const loadConversations = async () => {
@@ -132,19 +144,24 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
     setLoading(true);
     try {
       const convs = await messagingService.getUserConversations(userEmail);
-      
+
       // Deduplicate conversations by ID (in case of duplicates from API)
-      const uniqueConvs = convs.filter((conv, index, self) => 
-        index === self.findIndex(c => c.id === conv.id)
+      const uniqueConvs = convs.filter(
+        (conv, index, self) => index === self.findIndex((c) => c.id === conv.id),
       );
-      
+
       setConversations(uniqueConvs);
-      
+
       // Only auto-select if conversationId is explicitly provided (not undefined/null/empty)
       // AND we haven't handled it yet
       // This prevents auto-selecting on every load AND when navigating to messages list
-      if (conversationId && conversationId.trim() !== '' && !selectedConversation && !hasHandledInitialConversation.current) {
-        const conv = uniqueConvs.find(c => c.id === conversationId);
+      if (
+        conversationId &&
+        conversationId.trim() !== '' &&
+        !selectedConversation &&
+        !hasHandledInitialConversation.current
+      ) {
+        const conv = uniqueConvs.find((c) => c.id === conversationId);
         if (conv) {
           setSelectedConversation(conv);
           hasHandledInitialConversation.current = true;
@@ -175,7 +192,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   const loadUnreadCount = async () => {
     if (!userEmail) return;
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/user/messages/count?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/user/messages/count?email=${encodeURIComponent(userEmail)}`,
+      );
       const data = await resp.json();
       if (data.ok) {
         setUnreadCount(data.count || 0);
@@ -187,10 +206,13 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation || sending || !userEmail) return;
-    
+
     // Prevent sending messages to system conversations
     if (isSystemConversation()) {
-      Alert.alert('Read Only', 'You cannot send messages to system notifications. These are read-only messages from the system.');
+      Alert.alert(
+        'Read Only',
+        'You cannot send messages to system notifications. These are read-only messages from the system.',
+      );
       return;
     }
 
@@ -198,7 +220,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
     const result = await messagingService.sendMessage(
       selectedConversation.id,
       userEmail,
-      messageText.trim()
+      messageText.trim(),
     );
 
     setSending(false);
@@ -217,7 +239,11 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   const getOtherParticipantName = (): string => {
     if (!selectedConversation) return 'Provider';
     if (selectedConversation.otherParticipant) {
-      return selectedConversation.otherParticipant.name || selectedConversation.otherParticipant.email || 'Provider';
+      return (
+        selectedConversation.otherParticipant.name ||
+        selectedConversation.otherParticipant.email ||
+        'Provider'
+      );
     }
     return 'Provider';
   };
@@ -227,42 +253,56 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
     // Check if it's a system conversation
     const subject = selectedConversation.metadata?.subject;
     const otherParticipant = selectedConversation.otherParticipant;
-    return subject === 'System Notifications' || 
-           (otherParticipant && (otherParticipant.name === 'System' || otherParticipant.email === 'system@event.com'));
+    return (
+      subject === 'System Notifications' ||
+      !!(
+        otherParticipant &&
+        (otherParticipant.name === 'System' || otherParticipant.email === 'system@event.com')
+      )
+    );
   };
 
   const formatTime = (date: Date): string => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (date: Date): string => {
+  const _formatDate = (date: Date): string => {
     const today = new Date();
     const messageDate = new Date(date);
-    
+
     if (messageDate.toDateString() === today.toDateString()) {
       return 'Today';
     }
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     if (messageDate.toDateString() === yesterday.toDateString()) {
       return 'Yesterday';
     }
-    
+
     return messageDate.toLocaleDateString();
   };
 
   const getMessageTypeIcon = (messageType: MessageType): string => {
     switch (messageType) {
-      case MessageType.BOOKING_REQUEST: return '📅';
-      case MessageType.BOOKING_CONFIRMATION: return '✅';
-      case MessageType.BOOKING_CANCELLATION: return '❌';
-      case MessageType.PAYMENT_REQUEST: return '💳';
-      case MessageType.PAYMENT_CONFIRMATION: return '💰';
-      case MessageType.SYSTEM: return '🔔';
-      case MessageType.IMAGE: return '🖼️';
-      case MessageType.FILE: return '📎';
-      default: return '💬';
+      case MessageType.BOOKING_REQUEST:
+        return '📅';
+      case MessageType.BOOKING_CONFIRMATION:
+        return '✅';
+      case MessageType.BOOKING_CANCELLATION:
+        return '❌';
+      case MessageType.PAYMENT_REQUEST:
+        return '💳';
+      case MessageType.PAYMENT_CONFIRMATION:
+        return '💰';
+      case MessageType.SYSTEM:
+        return '🔔';
+      case MessageType.IMAGE:
+        return '🖼️';
+      case MessageType.FILE:
+        return '📎';
+      default:
+        return '💬';
     }
   };
 
@@ -276,31 +316,31 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
           <Text style={styles.systemMessageText}>
             {getMessageTypeIcon(message.messageType)} {message.content}
           </Text>
-          <Text style={styles.systemMessageTime}>
-            {formatTime(message.timestamp)}
-          </Text>
+          <Text style={styles.systemMessageTime}>{formatTime(message.timestamp)}</Text>
         </View>
       );
     }
 
     return (
-      <View key={message.id} style={[
-        styles.messageContainer,
-        isOwnMessage ? styles.ownMessage : styles.otherMessage
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble
-        ]}>
+      <View
+        key={message.id}
+        style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble,
+          ]}
+        >
           {message.messageType !== MessageType.TEXT && (
-            <Text style={styles.messageTypeIcon}>
-              {getMessageTypeIcon(message.messageType)}
-            </Text>
+            <Text style={styles.messageTypeIcon}>{getMessageTypeIcon(message.messageType)}</Text>
           )}
-          <Text style={[
-            styles.messageText,
-            isOwnMessage ? styles.ownMessageText : styles.otherMessageText
-          ]}>
+          <Text
+            style={[
+              styles.messageText,
+              isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
+            ]}
+          >
             {message.content}
           </Text>
           {message.attachments && message.attachments.length > 0 && (
@@ -316,10 +356,12 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
             </View>
           )}
         </View>
-        <Text style={[
-          styles.messageTime,
-          isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime
-        ]}>
+        <Text
+          style={[
+            styles.messageTime,
+            isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
+          ]}
+        >
           {formatTime(message.timestamp)}
         </Text>
       </View>
@@ -329,17 +371,24 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
   const renderConversationItem = (conversation: Conversation) => {
     const hasUnread = conversation.unreadCount > 0;
     const otherParticipant = conversation.otherParticipant;
-    const displayName = otherParticipant 
-      ? (otherParticipant.name || otherParticipant.email || 'Provider')
+    const displayName = otherParticipant
+      ? otherParticipant.name || otherParticipant.email || 'Provider'
       : 'Provider';
-    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'P';
-    
+    const initials =
+      displayName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2) || 'P';
+
     // Add booking context if available to distinguish conversations with same provider
     const bookingId = conversation.metadata?.bookingId;
     const subject = conversation.metadata?.subject;
-    const titleWithContext = bookingId || subject 
-      ? `${displayName}${bookingId ? ` (Booking #${bookingId})` : subject ? ` - ${subject}` : ''}`
-      : displayName;
+    const titleWithContext =
+      bookingId || subject
+        ? `${displayName}${bookingId ? ` (Booking #${bookingId})` : subject ? ` - ${subject}` : ''}`
+        : displayName;
 
     return (
       <TouchableOpacity
@@ -350,32 +399,26 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
         accessibilityLabel={`Conversation with ${titleWithContext}${hasUnread ? `, ${conversation.unreadCount} unread` : ''}`}
       >
         <View style={styles.conversationAvatar}>
-          <Text style={styles.conversationAvatarText}>
-            {initials}
-          </Text>
+          <Text style={styles.conversationAvatarText}>{initials}</Text>
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
             <Text style={styles.conversationTitle} numberOfLines={1}>
               {titleWithContext}
             </Text>
-            <Text style={styles.conversationTime}>
-              {formatTime(conversation.lastMessageTime)}
-            </Text>
+            <Text style={styles.conversationTime}>{formatTime(conversation.lastMessageTime)}</Text>
           </View>
-          <Text style={[
-            styles.conversationPreview,
-            hasUnread && styles.unreadPreview
-          ]} numberOfLines={1}>
-            {typeof conversation.lastMessage === 'string' 
-              ? conversation.lastMessage 
-              : (conversation.lastMessage?.content || 'No messages yet')}
+          <Text
+            style={[styles.conversationPreview, hasUnread && styles.unreadPreview]}
+            numberOfLines={1}
+          >
+            {typeof conversation.lastMessage === 'string'
+              ? conversation.lastMessage
+              : conversation.lastMessage?.content || 'No messages yet'}
           </Text>
           {hasUnread && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {conversation.unreadCount}
-              </Text>
+              <Text style={styles.unreadCount}>{conversation.unreadCount}</Text>
             </View>
           )}
         </View>
@@ -403,7 +446,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
       </AppLayout>
     );
   }
-  
+
   return (
     <AppLayout
       role="user"
@@ -419,196 +462,186 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, userEmail,
           <View style={styles.webContainer}>
             {/* Conversations List - Always visible on web */}
             <View style={styles.conversationsContainer}>
+              <ScrollView style={styles.conversationsList}>
+                {conversations.map(renderConversationItem)}
 
-            <ScrollView style={styles.conversationsList}>
-              {conversations.map(renderConversationItem)}
-              
-              {conversations.length === 0 && (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateIcon}>💬</Text>
-                  <Text style={styles.emptyStateText}>No conversations yet</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Start a conversation by booking a service
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-
-          {/* Chat Area - Right side on web */}
-          {(() => {
-            const os = Platform.OS;
-            let keyboardBehavior: 'padding' | 'height' | undefined;
-            if (os === 'web') {
-              keyboardBehavior = undefined;
-            } else if (os === 'ios') {
-              keyboardBehavior = 'padding';
-            } else {
-              keyboardBehavior = 'height';
-            }
-            return selectedConversation ? (
-            <KeyboardAvoidingView 
-              style={styles.chatContainer}
-              behavior={keyboardBehavior}
-            >
-              <View style={styles.chatHeader}>
-                <Text style={styles.chatTitle}>
-                  {getOtherParticipantName()}
-                </Text>
-              </View>
-
-              <ScrollView
-                ref={scrollViewRef}
-                style={styles.messagesContainer}
-                contentContainerStyle={styles.messagesContent}
-              >
-                {messages.map(renderMessage)}
+                {conversations.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateIcon}>💬</Text>
+                    <Text style={styles.emptyStateText}>No conversations yet</Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      Start a conversation by booking a service
+                    </Text>
+                  </View>
+                )}
               </ScrollView>
-
-              {isSystemConversation() ? (
-                <View style={styles.systemInputContainer}>
-                  <Text style={styles.systemInputText}>
-                    ℹ️ System notifications are read-only. You cannot reply to these messages.
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.messageInput}
-                    value={messageText}
-                    onChangeText={setMessageText}
-                    placeholder="Type a message..."
-                    multiline
-                    maxLength={1000}
-                    accessibilityLabel="Message input"
-                  />
-                  <TouchableOpacity
-                    onPress={handleSendMessage}
-                    style={[
-                      styles.sendButton,
-                      (!messageText.trim() || sending) && styles.sendButtonDisabled
-                    ]}
-                    disabled={!messageText.trim() || sending}
-                    accessibilityRole="button"
-                    accessibilityLabel="Send message"
-                  >
-                    {sending ? (
-                      <ActivityIndicator size="small" color={semantic.surface} />
-                    ) : (
-                      <Text style={styles.sendButtonText}>Send</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-            </KeyboardAvoidingView>
-            ) : (
-            <View style={styles.emptyChatArea}>
-              <Text style={styles.emptyChatIcon}>💬</Text>
-              <Text style={styles.emptyChatText}>Select a conversation to start messaging</Text>
             </View>
-            );
-          })()}
-        </View>
+
+            {/* Chat Area - Right side on web */}
+            {(() => {
+              const os = Platform.OS;
+              let keyboardBehavior: 'padding' | 'height' | undefined;
+              if (os === 'web') {
+                keyboardBehavior = undefined;
+              } else if (os === 'ios') {
+                keyboardBehavior = 'padding';
+              } else {
+                keyboardBehavior = 'height';
+              }
+              return selectedConversation ? (
+                <KeyboardAvoidingView style={styles.chatContainer} behavior={keyboardBehavior}>
+                  <View style={styles.chatHeader}>
+                    <Text style={styles.chatTitle}>{getOtherParticipantName()}</Text>
+                  </View>
+
+                  <ScrollView
+                    ref={scrollViewRef}
+                    style={styles.messagesContainer}
+                    contentContainerStyle={styles.messagesContent}
+                  >
+                    {messages.map(renderMessage)}
+                  </ScrollView>
+
+                  {isSystemConversation() ? (
+                    <View style={styles.systemInputContainer}>
+                      <Text style={styles.systemInputText}>
+                        ℹ️ System notifications are read-only. You cannot reply to these messages.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.inputContainer}>
+                      <TextInput
+                        style={styles.messageInput}
+                        value={messageText}
+                        onChangeText={setMessageText}
+                        placeholder="Type a message..."
+                        multiline
+                        maxLength={1000}
+                        accessibilityLabel="Message input"
+                      />
+                      <TouchableOpacity
+                        onPress={handleSendMessage}
+                        style={[
+                          styles.sendButton,
+                          (!messageText.trim() || sending) && styles.sendButtonDisabled,
+                        ]}
+                        disabled={!messageText.trim() || sending}
+                        accessibilityRole="button"
+                        accessibilityLabel="Send message"
+                      >
+                        {sending ? (
+                          <ActivityIndicator size="small" color={semantic.surface} />
+                        ) : (
+                          <Text style={styles.sendButtonText}>Send</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </KeyboardAvoidingView>
+              ) : (
+                <View style={styles.emptyChatArea}>
+                  <Text style={styles.emptyChatIcon}>💬</Text>
+                  <Text style={styles.emptyChatText}>Select a conversation to start messaging</Text>
+                </View>
+              );
+            })()}
+          </View>
         ) : (
           /* Mobile: Full screen view */
           <>
-        {!selectedConversation ? (
-          // Conversations List
-          <View style={styles.conversationsContainer}>
+            {!selectedConversation ? (
+              // Conversations List
+              <View style={styles.conversationsContainer}>
+                <ScrollView style={styles.conversationsList}>
+                  {conversations.map(renderConversationItem)}
 
-          <ScrollView style={styles.conversationsList}>
-            {conversations.map(renderConversationItem)}
-            
-            {conversations.length === 0 && (
-              <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateIcon}>💬</Text>
-                <Text style={styles.emptyStateText}>No conversations yet</Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Start a conversation by booking a service
-                </Text>
+                  {conversations.length === 0 && (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateIcon}>💬</Text>
+                      <Text style={styles.emptyStateText}>No conversations yet</Text>
+                      <Text style={styles.emptyStateSubtext}>
+                        Start a conversation by booking a service
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
               </View>
+            ) : (
+              (() => {
+                const os = Platform.OS as 'ios' | 'android' | 'web' | 'windows' | 'macos';
+                let keyboardBehavior: 'padding' | 'height' | undefined;
+                if (os === 'web') {
+                  keyboardBehavior = undefined;
+                } else if (os === 'ios') {
+                  keyboardBehavior = 'padding';
+                } else {
+                  keyboardBehavior = 'height';
+                }
+                return (
+                  <KeyboardAvoidingView style={styles.chatContainer} behavior={keyboardBehavior}>
+                    <View style={styles.chatHeader}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedConversation(null);
+                          hasHandledInitialConversation.current = false;
+                        }}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Back to conversations"
+                      >
+                        <Text style={styles.backButtonText}>← Back</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.chatTitle}>{getOtherParticipantName()}</Text>
+                      <View style={{ width: 60 }} />
+                    </View>
+
+                    <ScrollView
+                      ref={scrollViewRef}
+                      style={styles.messagesContainer}
+                      contentContainerStyle={styles.messagesContent}
+                    >
+                      {messages.map(renderMessage)}
+                    </ScrollView>
+
+                    {isSystemConversation() ? (
+                      <View style={styles.systemInputContainer}>
+                        <Text style={styles.systemInputText}>
+                          ℹ️ System notifications are read-only. You cannot reply to these messages.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.inputContainer}>
+                        <TextInput
+                          style={styles.messageInput}
+                          value={messageText}
+                          onChangeText={setMessageText}
+                          placeholder="Type a message..."
+                          multiline
+                          maxLength={1000}
+                          accessibilityLabel="Message input"
+                        />
+                        <TouchableOpacity
+                          onPress={handleSendMessage}
+                          style={[
+                            styles.sendButton,
+                            (!messageText.trim() || sending) && styles.sendButtonDisabled,
+                          ]}
+                          disabled={!messageText.trim() || sending}
+                          accessibilityRole="button"
+                          accessibilityLabel="Send message"
+                        >
+                          {sending ? (
+                            <ActivityIndicator size="small" color={semantic.surface} />
+                          ) : (
+                            <Text style={styles.sendButtonText}>Send</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </KeyboardAvoidingView>
+                );
+              })()
             )}
-          </ScrollView>
-        </View>
-      ) : (() => {
-        const os = Platform.OS as 'ios' | 'android' | 'web' | 'windows' | 'macos';
-        let keyboardBehavior: 'padding' | 'height' | undefined;
-        if (os === 'web') {
-          keyboardBehavior = undefined;
-        } else if (os === 'ios') {
-          keyboardBehavior = 'padding';
-        } else {
-          keyboardBehavior = 'height';
-        }
-        return (
-        <KeyboardAvoidingView 
-          style={styles.chatContainer}
-          behavior={keyboardBehavior}
-        >
-          <View style={styles.chatHeader}>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedConversation(null);
-                hasHandledInitialConversation.current = false;
-              }}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="Back to conversations"
-            >
-              <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.chatTitle}>
-              {getOtherParticipantName()}
-            </Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.messagesContainer}
-            contentContainerStyle={styles.messagesContent}
-          >
-            {messages.map(renderMessage)}
-          </ScrollView>
-
-          {isSystemConversation() ? (
-            <View style={styles.systemInputContainer}>
-              <Text style={styles.systemInputText}>
-                ℹ️ System notifications are read-only. You cannot reply to these messages.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.messageInput}
-                value={messageText}
-                onChangeText={setMessageText}
-                placeholder="Type a message..."
-                multiline
-                maxLength={1000}
-                accessibilityLabel="Message input"
-              />
-              <TouchableOpacity
-                onPress={handleSendMessage}
-                style={[
-                  styles.sendButton,
-                  (!messageText.trim() || sending) && styles.sendButtonDisabled
-                ]}
-                disabled={!messageText.trim() || sending}
-                accessibilityRole="button"
-                accessibilityLabel="Send message"
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color={semantic.surface} />
-                ) : (
-                  <Text style={styles.sendButtonText}>Send</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-        );
-      })()}
           </>
         )}
       </View>
@@ -622,22 +655,26 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
     paddingTop: Platform.OS === 'web' ? 20 : 10,
     paddingBottom: Platform.OS === 'web' ? 20 : 10,
-    ...(Platform.OS === 'web' ? {
-      justifyContent: 'center',
-      alignItems: 'center',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          justifyContent: 'center',
+          alignItems: 'center',
+        }
+      : {}),
   },
   webContainer: {
     flexDirection: 'row',
     width: Platform.OS === 'web' ? '90%' : '100%',
     maxWidth: Platform.OS === 'web' ? 1200 : '100%',
-    height: Platform.OS === 'web' ? (screenHeight * 0.85) : '100%',
+    height: Platform.OS === 'web' ? screenHeight * 0.85 : '100%',
     backgroundColor: semantic.surface,
     borderRadius: Platform.OS === 'web' ? 16 : 0,
     overflow: 'hidden',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+        }
+      : {}),
   },
   loadingContainer: {
     flex: 1,
@@ -668,10 +705,12 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderBottomWidth: 1,
     borderBottomColor: semantic.border,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      transition: 'background-color 0.2s ease',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease',
+        }
+      : {}),
   },
   unreadConversation: {
     backgroundColor: '#F0F8FF',
@@ -786,9 +825,11 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     borderBottomWidth: 1,
     borderBottomColor: semantic.border,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        }
+      : {}),
   },
   chatTitle: {
     fontSize: 18,
@@ -833,15 +874,17 @@ const styles = StyleSheet.create({
   otherMessageBubble: {
     backgroundColor: semantic.surface,
     borderBottomLeftRadius: 4,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-    } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
-    }),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+        }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2,
+        }),
   },
   messageTypeIcon: {
     fontSize: 16,
@@ -925,11 +968,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderWidth: 1,
     borderColor: semantic.border,
-    ...((Platform.OS as string) === 'web' ? {
-      outlineWidth: 0,
-      outlineStyle: 'none' as any,
-      transition: 'border-color 0.2s ease',
-    } : {}),
+    ...((Platform.OS as string) === 'web'
+      ? {
+          outlineWidth: 0,
+          outlineStyle: 'none' as any,
+          transition: 'border-color 0.2s ease',
+        }
+      : {}),
   },
   sendButton: {
     backgroundColor: semantic.primary,
@@ -937,11 +982,13 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'web' ? 14 : 12,
     borderRadius: 24,
     minWidth: Platform.OS === 'web' ? 80 : undefined,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
-      transition: 'all 0.2s ease',
-      cursor: 'pointer',
-    } : {}),
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+        }
+      : {}),
   },
   sendButtonDisabled: {
     backgroundColor: '#A4B0BE',
@@ -967,14 +1014,3 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
-
-
-
-
-
-
-
-
-
-
-

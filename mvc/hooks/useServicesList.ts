@@ -121,7 +121,8 @@ export function useServicesList(user?: UserModel) {
 
   // Package UI state (not data-fetching)
   const [showPackageBuilder, setShowPackageBuilder] = useState(false);
-  const [selectedServiceForPackage, setSelectedServiceForPackage] = useState<ProviderService | null>(null);
+  const [selectedServiceForPackage, setSelectedServiceForPackage] =
+    useState<ProviderService | null>(null);
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
 
   // --- Queries ---
@@ -205,7 +206,7 @@ export function useServicesList(user?: UserModel) {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            deletePackageMutation.mutate(pkg.id, {
+            deletePackageMutation.mutate(pkg.id!, {
               onSuccess: () => onSuccess(),
             });
           },

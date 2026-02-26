@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Alert,
+  TextInput,
+  Platform,
+} from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import UserService, { AdminUserRow } from '../../services/UserService';
@@ -56,23 +66,30 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                 name: [r.u_fname, r.u_lname].filter(Boolean).join(' ').trim(),
                 email: r.u_email,
                 role: r.u_role ? r.u_role.charAt(0).toUpperCase() + r.u_role.slice(1) : 'User',
-                status: (r.u_disabled && Number(r.u_disabled) === 1) ? 'Blocked' : 'Active',
+                status: r.u_disabled && Number(r.u_disabled) === 1 ? 'Blocked' : 'Active',
               }));
             setRows(mapped);
             return;
           }
         }
-      } catch {}
+      } catch {
+        /* ignored */
+      }
       // Fallback: Firebase subscription
-      const unsubscribe = UserService.subscribeUsers((rows) => {
-        const filtered = rows.filter(r => r.email !== 'admin@gmail.com');
-        setRows(filtered);
-      }, (err) => {
-        console.error('Failed to subscribe to users:', err);
-      });
+      const unsubscribe = UserService.subscribeUsers(
+        (rows) => {
+          const filtered = rows.filter((r) => r.email !== 'admin@gmail.com');
+          setRows(filtered);
+        },
+        (err) => {
+          console.error('Failed to subscribe to users:', err);
+        },
+      );
       return () => unsubscribe();
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Auto-hide success message after 5 seconds
@@ -83,6 +100,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [successMessage]);
 
   // Auto-hide error message after 5 seconds
@@ -93,6 +111,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [errorMessage]);
 
   // Filter rows based on search query
@@ -109,7 +128,9 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   const handleEditUser = async (userEmail: string) => {
     try {
       // Fetch user details by email
-      const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(userEmail)}`,
+      );
       if (!resp.ok) throw new Error('Failed to fetch user details');
       const data = await resp.json();
       if (!data.ok || !data.exists) throw new Error('User not found');
@@ -159,8 +180,8 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
           lastName: editLastName,
           suffix: editSuffix,
           email: editEmail,
-          password: editPassword || undefined
-        })
+          password: editPassword || undefined,
+        }),
       });
       const data = await resp.json();
       if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update user');
@@ -179,12 +200,14 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       const r = await fetch(`${getApiBaseUrl()}/api/users`);
       const j = await r.json();
       if (r.ok && j.ok) {
-        const mapped = j.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({
-          name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(),
-          email: x.u_email,
-          role: x.u_role ? x.u_role.charAt(0).toUpperCase() + x.u_role.slice(1) : 'User',
-          status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active'
-        }));
+        const mapped = j.rows
+          .filter((x: any) => x.u_email !== 'admin@gmail.com')
+          .map((x: any) => ({
+            name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(),
+            email: x.u_email,
+            role: x.u_role ? x.u_role.charAt(0).toUpperCase() + x.u_role.slice(1) : 'User',
+            status: x.u_disabled && Number(x.u_disabled) === 1 ? 'Blocked' : 'Active',
+          }));
         setRows(mapped);
       }
 
@@ -224,23 +247,29 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
 
         {/* Tab Buttons */}
         <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
-                onPress={() => setActiveTab('list')}
-                accessibilityRole="button"
-                accessibilityLabel="View all users tab"
-              >
-                <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>View All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
-                onPress={() => setActiveTab('add')}
-                accessibilityRole="button"
-                accessibilityLabel="Add user tab"
-              >
-                <Text style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}>Add User</Text>
-              </TouchableOpacity>
-            </View>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'list' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('list')}
+            accessibilityRole="button"
+            accessibilityLabel="View all users tab"
+          >
+            <Text
+              style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}
+            >
+              View All
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'add' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('add')}
+            accessibilityRole="button"
+            accessibilityLabel="Add user tab"
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'add' && styles.tabButtonTextActive]}>
+              Add User
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.card}>
           {activeTab === 'add' && (
@@ -248,7 +277,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               {errorMessage ? (
                 <View style={styles.errorMessage}>
                   <Text style={styles.errorMessageText}>{errorMessage}</Text>
-                  <TouchableOpacity onPress={() => setErrorMessage('')} style={styles.errorCloseButton} accessibilityRole="button" accessibilityLabel="Dismiss error">
+                  <TouchableOpacity
+                    onPress={() => setErrorMessage('')}
+                    style={styles.errorCloseButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss error"
+                  >
                     <Text style={styles.errorCloseText}>×</Text>
                   </TouchableOpacity>
                 </View>
@@ -318,7 +352,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="New password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditPassword ? 'Hide password' : 'Show password'}>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowEditPassword((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showEditPassword ? 'Hide password' : 'Show password'}
+                    >
                       <Text style={styles.eyeText}>{showEditPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
@@ -333,15 +372,32 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Confirm new password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowEditConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showEditConfirm ? 'Hide confirm password' : 'Show confirm password'}>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowEditConfirm((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showEditConfirm ? 'Hide confirm password' : 'Show confirm password'
+                      }
+                    >
                       <Text style={styles.eyeText}>{showEditConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.editButtonRow}>
-                    <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel edit">
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={handleCancelEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel edit"
+                    >
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.updateButton} onPress={handleUpdateUser} accessibilityRole="button" accessibilityLabel="Update user">
+                    <TouchableOpacity
+                      style={styles.updateButton}
+                      onPress={handleUpdateUser}
+                      accessibilityRole="button"
+                      accessibilityLabel="Update user"
+                    >
                       <Text style={styles.updateButtonText}>Update User</Text>
                     </TouchableOpacity>
                   </View>
@@ -410,7 +466,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(prev => !prev)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    >
                       <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
@@ -425,40 +486,80 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       placeholderTextColor={semantic.textMuted}
                       accessibilityLabel="Confirm password"
                     />
-                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirm(prev => !prev)} accessibilityRole="button" accessibilityLabel={showConfirm ? 'Hide confirm password' : 'Show confirm password'}>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowConfirm((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showConfirm ? 'Hide confirm password' : 'Show confirm password'
+                      }
+                    >
                       <Text style={styles.eyeText}>{showConfirm ? '🙈' : '👁️'}</Text>
                     </TouchableOpacity>
                   </View>
-                  <TouchableOpacity style={styles.addButtonLarge} accessibilityRole="button" accessibilityLabel="Add user" onPress={async () => {
-                    // Clear previous error message
-                    setErrorMessage('');
+                  <TouchableOpacity
+                    style={styles.addButtonLarge}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add user"
+                    onPress={async () => {
+                      // Clear previous error message
+                      setErrorMessage('');
 
-                    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-                      setErrorMessage('First name, last name, and email are required.');
-                      return;
-                    }
-                    if (password !== confirmPassword) {
-                      setErrorMessage('Passwords do not match.');
-                      return;
-                    }
-                    try {
-                      const resp = await fetch(`${getApiBaseUrl()}/api/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName, middleName, lastName, suffix, email, password: password || undefined }) });
-                      const data = await resp.json();
-                      if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to add user');
-                      setFirstName(''); setMiddleName(''); setLastName(''); setSuffix(''); setEmail(''); setPassword(''); setConfirmPassword('');
-                      const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                      const j = await r.json();
-                      if (r.ok && j.ok) {
-                        const mapped = j.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({ name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(), email: x.u_email, role: x.u_role ? x.u_role.charAt(0).toUpperCase() + x.u_role.slice(1) : 'User', status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active' }));
-                        setRows(mapped);
+                      if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+                        setErrorMessage('First name, last name, and email are required.');
+                        return;
                       }
-                      // Switch back to list view and show success message
-                      setActiveTab('list');
-                      setSuccessMessage('User successfully added!');
-                    } catch (e: any) {
-                      setErrorMessage(e.message || 'Failed to add user. Please try again.');
-                    }
-                  }}>
+                      if (password !== confirmPassword) {
+                        setErrorMessage('Passwords do not match.');
+                        return;
+                      }
+                      try {
+                        const resp = await fetch(`${getApiBaseUrl()}/api/users`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            firstName,
+                            middleName,
+                            lastName,
+                            suffix,
+                            email,
+                            password: password || undefined,
+                          }),
+                        });
+                        const data = await resp.json();
+                        if (!resp.ok || !data.ok)
+                          throw new Error(data.error || 'Failed to add user');
+                        setFirstName('');
+                        setMiddleName('');
+                        setLastName('');
+                        setSuffix('');
+                        setEmail('');
+                        setPassword('');
+                        setConfirmPassword('');
+                        const r = await fetch(`${getApiBaseUrl()}/api/users`);
+                        const j = await r.json();
+                        if (r.ok && j.ok) {
+                          const mapped = j.rows
+                            .filter((x: any) => x.u_email !== 'admin@gmail.com')
+                            .map((x: any) => ({
+                              name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(),
+                              email: x.u_email,
+                              role: x.u_role
+                                ? x.u_role.charAt(0).toUpperCase() + x.u_role.slice(1)
+                                : 'User',
+                              status:
+                                x.u_disabled && Number(x.u_disabled) === 1 ? 'Blocked' : 'Active',
+                            }));
+                          setRows(mapped);
+                        }
+                        // Switch back to list view and show success message
+                        setActiveTab('list');
+                        setSuccessMessage('User successfully added!');
+                      } catch (e: any) {
+                        setErrorMessage(e.message || 'Failed to add user. Please try again.');
+                      }
+                    }}
+                  >
                     <Text style={styles.addButtonText}>Add user</Text>
                   </TouchableOpacity>
                 </>
@@ -470,7 +571,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               {successMessage ? (
                 <View style={styles.successMessage}>
                   <Text style={styles.successMessageText}>{successMessage}</Text>
-                  <TouchableOpacity onPress={() => setSuccessMessage('')} style={styles.successCloseButton} accessibilityRole="button" accessibilityLabel="Dismiss success message">
+                  <TouchableOpacity
+                    onPress={() => setSuccessMessage('')}
+                    style={styles.successCloseButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss success message"
+                  >
                     <Text style={styles.successCloseText}>×</Text>
                   </TouchableOpacity>
                 </View>
@@ -489,52 +595,116 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
               </View>
 
               {isMobile ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableScrollView}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.tableScrollView}
+                >
                   <View style={styles.tableContainer}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.th, { flex: 2 }]}>Name</Text>
-                <Text style={[styles.th, { flex: 2 }]}>Email</Text>
-                <Text style={[styles.th, { flex: 1 }]}>Role</Text>
-                <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Actions</Text>
-              </View>
-              {filteredRows.map((u, i) => (
-                <View key={i} style={[styles.row, i % 2 === 1 && styles.rowAlt]}>
-                  <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
-                  <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
-                  <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
-                      <View style={[styles.tdStatus, { flex: 1 }]}>
-                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? colors.success[50] : colors.error[50] }]}>
-                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : colors.error[600] }]}>{u.status}</Text>
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.th, { flex: 2 }]}>Name</Text>
+                      <Text style={[styles.th, { flex: 2 }]}>Email</Text>
+                      <Text style={[styles.th, { flex: 1 }]}>Role</Text>
+                      <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+                      <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Actions</Text>
+                    </View>
+                    {filteredRows.map((u, i) => (
+                      <View key={i} style={[styles.row, i % 2 === 1 && styles.rowAlt]}>
+                        <Text style={[styles.td, { flex: 2 }]}>{u.name}</Text>
+                        <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
+                        <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
+                        <View style={[styles.tdStatus, { flex: 1 }]}>
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              {
+                                backgroundColor:
+                                  u.status === 'Active' ? colors.success[50] : colors.error[50],
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: u.status === 'Active' ? '#16A34A' : colors.error[600] },
+                              ]}
+                            >
+                              {u.status}
+                            </Text>
+                          </View>
+                        </View>
+                        <View
+                          style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            justifyContent: 'flex-end',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => handleEditUser(u.email)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit ${u.name}`}
+                          >
+                            <Text style={styles.editButtonText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              styles.actionButton,
+                              u.status === 'Active' ? styles.blockButton : styles.unblockButton,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                              u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`
+                            }
+                            onPress={async () => {
+                              try {
+                                const r = await fetch(`${getApiBaseUrl()}/api/users`);
+                                const j = await r.json();
+                                if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
+                                const match = j.rows.find((x: any) => x.u_email === u.email);
+                                if (!match) throw new Error('User not found');
+                                const resp = await fetch(
+                                  `${getApiBaseUrl()}/api/users/${match.iduser}/block`,
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ blocked: u.status === 'Active' }),
+                                  },
+                                );
+                                const data = await resp.json();
+                                if (!resp.ok || !data.ok)
+                                  throw new Error(data.error || 'Failed to update');
+                                const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
+                                const j2 = await r2.json();
+                                if (r2.ok && j2.ok) {
+                                  const mapped2 = j2.rows
+                                    .filter((x: any) => x.u_email !== 'admin@gmail.com')
+                                    .map((x: any) => ({
+                                      name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(),
+                                      email: x.u_email,
+                                      role: 'User',
+                                      status:
+                                        x.u_disabled && Number(x.u_disabled) === 1
+                                          ? 'Blocked'
+                                          : 'Active',
+                                    }));
+                                  setRows(mapped2);
+                                }
+                              } catch (e: any) {
+                                Alert.alert('Update User', e.message);
+                              }
+                            }}
+                          >
+                            <Text style={styles.actionButtonText}>
+                              {u.status === 'Active' ? 'Block' : 'Unblock'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
-                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-                    <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)} accessibilityRole="button" accessibilityLabel={`Edit ${u.name}`}>
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} accessibilityRole="button" accessibilityLabel={u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`} onPress={async () => {
-                      try {
-                        const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                        const j = await r.json();
-                        if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
-                        const match = j.rows.find((x: any) => x.u_email === u.email);
-                        if (!match) throw new Error('User not found');
-                        const resp = await fetch(`${getApiBaseUrl()}/api/users/${match.iduser}/block`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blocked: u.status === 'Active' }) });
-                        const data = await resp.json();
-                        if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update');
-                        const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
-                        const j2 = await r2.json();
-                        if (r2.ok && j2.ok) {
-                          const mapped2 = j2.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({ name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(), email: x.u_email, role: 'User', status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active' }));
-                          setRows(mapped2);
-                        }
-                      } catch (e: any) { Alert.alert('Update User', e.message); }
-                    }}>
-                      <Text style={styles.actionButtonText}>{u.status === 'Active' ? 'Block' : 'Unblock'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
+                    ))}
                   </View>
                 </ScrollView>
               ) : (
@@ -552,33 +722,91 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                       <Text style={[styles.td, { flex: 2 }]}>{u.email}</Text>
                       <Text style={[styles.td, { flex: 1 }]}>{u.role}</Text>
                       <View style={[styles.tdStatus, { flex: 1 }]}>
-                        <View style={[styles.statusBadge, { backgroundColor: u.status === 'Active' ? colors.success[50] : colors.error[50] }]}>
-                          <Text style={[styles.statusText, { color: u.status === 'Active' ? '#16A34A' : colors.error[600] }]}>{u.status}</Text>
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor:
+                                u.status === 'Active' ? colors.success[50] : colors.error[50],
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusText,
+                              { color: u.status === 'Active' ? '#16A34A' : colors.error[600] },
+                            ]}
+                          >
+                            {u.status}
+                          </Text>
                         </View>
                       </View>
-                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-                        <TouchableOpacity style={styles.editButton} onPress={() => handleEditUser(u.email)}>
+                      <View
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          justifyContent: 'flex-end',
+                          gap: 8,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => handleEditUser(u.email)}
+                        >
                           <Text style={styles.editButtonText}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionButton, u.status === 'Active' ? styles.blockButton : styles.unblockButton]} accessibilityRole="button" accessibilityLabel={u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`} onPress={async () => {
-                          try {
-                            const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                            const j = await r.json();
-                            if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
-                            const match = j.rows.find((x: any) => x.u_email === u.email);
-                            if (!match) throw new Error('User not found');
-                            const resp = await fetch(`${getApiBaseUrl()}/api/users/${match.iduser}/block`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blocked: u.status === 'Active' }) });
-                            const data = await resp.json();
-                            if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update');
-                            const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
-                            const j2 = await r2.json();
-                            if (r2.ok && j2.ok) {
-                              const mapped2 = j2.rows.filter((x: any) => x.u_email !== 'admin@gmail.com').map((x: any) => ({ name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(), email: x.u_email, role: 'User', status: (x.u_disabled && Number(x.u_disabled) === 1) ? 'Blocked' : 'Active' }));
-                              setRows(mapped2);
+                        <TouchableOpacity
+                          style={[
+                            styles.actionButton,
+                            u.status === 'Active' ? styles.blockButton : styles.unblockButton,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            u.status === 'Active' ? `Block ${u.name}` : `Unblock ${u.name}`
+                          }
+                          onPress={async () => {
+                            try {
+                              const r = await fetch(`${getApiBaseUrl()}/api/users`);
+                              const j = await r.json();
+                              if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
+                              const match = j.rows.find((x: any) => x.u_email === u.email);
+                              if (!match) throw new Error('User not found');
+                              const resp = await fetch(
+                                `${getApiBaseUrl()}/api/users/${match.iduser}/block`,
+                                {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ blocked: u.status === 'Active' }),
+                                },
+                              );
+                              const data = await resp.json();
+                              if (!resp.ok || !data.ok)
+                                throw new Error(data.error || 'Failed to update');
+                              const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
+                              const j2 = await r2.json();
+                              if (r2.ok && j2.ok) {
+                                const mapped2 = j2.rows
+                                  .filter((x: any) => x.u_email !== 'admin@gmail.com')
+                                  .map((x: any) => ({
+                                    name: [x.u_fname, x.u_lname].filter(Boolean).join(' ').trim(),
+                                    email: x.u_email,
+                                    role: 'User',
+                                    status:
+                                      x.u_disabled && Number(x.u_disabled) === 1
+                                        ? 'Blocked'
+                                        : 'Active',
+                                  }));
+                                setRows(mapped2);
+                              }
+                            } catch (e: any) {
+                              Alert.alert('Update User', e.message);
                             }
-                          } catch (e: any) { Alert.alert('Update User', e.message); }
-                        }}>
-                          <Text style={styles.actionButtonText}>{u.status === 'Active' ? 'Block' : 'Unblock'}</Text>
+                          }}
+                        >
+                          <Text style={styles.actionButtonText}>
+                            {u.status === 'Active' ? 'Block' : 'Unblock'}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -677,10 +905,12 @@ const styles = StyleSheet.create({
     color: semantic.textPrimary,
     borderWidth: 1,
     borderColor: semantic.border,
-    ...(Platform.OS === 'web' ? {
-      outlineStyle: 'none' as any,
-      cursor: 'text' as any,
-    } as any : {}),
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none' as any,
+          cursor: 'text' as any,
+        } as any)
+      : {}),
   },
   tableScrollView: {
     marginTop: 8,

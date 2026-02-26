@@ -1,12 +1,12 @@
 // User Model - Represents user data and business logic
 export class User {
   public uid: string;
-  public email: string | null;
-  public displayName: string | null;
+  public email: string | undefined;
+  public displayName: string | undefined;
   public emailVerified: boolean;
   public createdAt?: Date;
   public lastLoginAt?: Date;
-  
+
   // Additional profile information
   public firstName?: string;
   public middleName?: string;
@@ -23,8 +23,8 @@ export class User {
 
   constructor(
     uid: string,
-    email: string | null,
-    displayName: string | null,
+    email: string | undefined,
+    displayName: string | undefined,
     emailVerified: boolean = false,
     createdAt?: Date,
     lastLoginAt?: Date,
@@ -39,7 +39,7 @@ export class User {
     state?: string,
     zipCode?: string,
     role?: 'user' | 'admin' | 'provider',
-    profilePicture?: string
+    profilePicture?: string,
   ) {
     this.uid = uid;
     this.email = email;
@@ -78,13 +78,13 @@ export class User {
   public isPersonalInfoComplete(): boolean {
     // Check if required personal details are filled
     const hasPersonalDetails = !!(
-      this.firstName && 
+      this.firstName &&
       this.firstName.trim() !== '' &&
-      this.lastName && 
+      this.lastName &&
       this.lastName.trim() !== '' &&
-      this.phone && 
+      this.phone &&
       this.phone.trim() !== '' &&
-      this.dateOfBirth && 
+      this.dateOfBirth &&
       this.dateOfBirth.trim() !== ''
     );
     return hasPersonalDetails;
@@ -93,13 +93,13 @@ export class User {
   public isAddressComplete(): boolean {
     // Check if required address information is filled
     const hasAddress = !!(
-      this.address && 
+      this.address &&
       this.address.trim() !== '' &&
-      this.city && 
+      this.city &&
       this.city.trim() !== '' &&
-      this.state && 
+      this.state &&
       this.state.trim() !== '' &&
-      this.zipCode && 
+      this.zipCode &&
       this.zipCode.trim() !== ''
     );
     return hasAddress;
@@ -119,7 +119,7 @@ export class User {
     if (this.displayName) {
       return this.displayName
         .split(' ')
-        .map(name => name.charAt(0))
+        .map((name) => name.charAt(0))
         .join('')
         .toUpperCase()
         .slice(0, 2);
@@ -150,21 +150,22 @@ export class User {
       state: this.state,
       zipCode: this.zipCode,
       role: this.role,
-      profilePicture: this.profilePicture
+      profilePicture: this.profilePicture,
     };
   }
 
   public static fromFirebaseUser(firebaseUser: any): User {
     return new User(
       firebaseUser.uid,
-      firebaseUser.email,
-      firebaseUser.displayName,
+      firebaseUser.email ?? undefined,
+      firebaseUser.displayName ?? undefined,
       firebaseUser.emailVerified,
-      firebaseUser.metadata?.creationTime ? new Date(firebaseUser.metadata.creationTime) : undefined,
-      firebaseUser.metadata?.lastSignInTime ? new Date(firebaseUser.metadata.lastSignInTime) : undefined
+      firebaseUser.metadata?.creationTime
+        ? new Date(firebaseUser.metadata.creationTime)
+        : undefined,
+      firebaseUser.metadata?.lastSignInTime
+        ? new Date(firebaseUser.metadata.lastSignInTime)
+        : undefined,
     );
   }
 }
-
-
-

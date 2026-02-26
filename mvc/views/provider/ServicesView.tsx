@@ -29,7 +29,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   // Service list + packages state
   const {
     services,
-    loading,
+    loading: _loading,
     packages,
     loadingPackages,
     showPackageBuilder,
@@ -81,7 +81,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   }, [activeTab, services]);
 
   // ---- Derived data ----
-  const filteredServices = services.filter((s) => {
+  const filteredServices = services.filter((s: ProviderService) => {
     const matchesSearch =
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -108,7 +108,9 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   };
 
   const handlePackageSaved = () => {
-    setSuccessMessage(editingPackage ? 'Package updated successfully!' : 'Package created successfully!');
+    setSuccessMessage(
+      editingPackage ? 'Package updated successfully!' : 'Package created successfully!',
+    );
     loadPackages();
     setShowPackageBuilder(false);
     setEditingPackage(null);
@@ -157,7 +159,9 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
             accessibilityRole="button"
             accessibilityLabel="My services tab"
           >
-            <Text style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}>
+            <Text
+              style={[styles.tabButtonText, activeTab === 'list' && styles.tabButtonTextActive]}
+            >
               My Services
             </Text>
           </TouchableOpacity>
@@ -243,9 +247,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               onCreatePackage={handleCreatePackage}
               onEditPackage={handleEditPackage}
               onDeletePackage={(pkg) =>
-                handleDeletePackage(pkg, () =>
-                  setSuccessMessage('Package deleted successfully'),
-                )
+                handleDeletePackage(pkg, () => setSuccessMessage('Package deleted successfully'))
               }
               isMobile={isMobile}
               screenWidth={screenWidth}

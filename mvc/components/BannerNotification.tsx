@@ -20,7 +20,7 @@ interface BannerNotificationProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const isMobile = screenWidth < 768 || Platform.OS !== 'web';
+const _isMobile = screenWidth < 768 || Platform.OS !== 'web';
 
 export const BannerNotification: React.FC<BannerNotificationProps> = ({
   visible,
@@ -59,6 +59,7 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
       return () => clearTimeout(timer);
     } else {
       handleClose();
+      return undefined;
     }
   }, [visible, duration]);
 
@@ -209,4 +210,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-

@@ -64,6 +64,7 @@
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.29.0",
     "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
     "cross-env": "^10.1.0",
     "eas-cli": "^16.28.0",

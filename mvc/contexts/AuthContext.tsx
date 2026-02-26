@@ -23,7 +23,9 @@ interface AuthContextValue {
   clearError: () => void;
   sendVerificationEmail: () => Promise<{ success: boolean; error?: string }>;
   checkEmailVerification: () => Promise<{ success: boolean; verified: boolean; error?: string }>;
-  updateUserEmail: (newEmail: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  updateUserEmail: (
+    newEmail: string,
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   refreshUser: () => Promise<boolean>;
   authController: AuthController | null;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, delayMs);
       return () => clearTimeout(timeout);
     }
+    return undefined;
   }, [authState.isAuthenticated, authState.user?.uid, authState.user?.email, authState.user?.role]);
 
   // Setup notification listeners (mobile only)
@@ -85,15 +88,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Notification tap navigation is handled by individual route files
             // or a dedicated notification handler — not here
             console.log('Notification tapped:', response.notification.request.content.data);
-          }
+          },
         );
         return () => {
-          try { subscription.remove(); } catch {}
+          try {
+            subscription.remove();
+          } catch {
+            /* intentionally empty */
+          }
         };
       } catch (error) {
         console.error('Failed to setup notification listeners (non-critical):', error);
       }
     }
+    return undefined;
   }, [authState.isAuthenticated, authState.user]);
 
   // Suppress Datadog Browser SDK warnings from third-party services
@@ -102,7 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const originalWarn = console.warn;
       console.warn = (...args: any[]) => {
         const message = args.join(' ');
-        if (message.includes('Datadog Browser SDK') && message.includes('Application ID is not configured')) {
+        if (
+          message.includes('Datadog Browser SDK') &&
+          message.includes('Application ID is not configured')
+        ) {
           return;
         }
         originalWarn.apply(console, args);
@@ -111,32 +122,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn = originalWarn;
       };
     }
+    return undefined;
   }, []);
 
-  const login = useCallback(async (formData: LoginFormData) => {
-    if (!authController) return { success: false, error: 'Controller not initialized' };
-    const result = await authController.login(formData);
-    if (result.success && Platform.OS === 'web' && typeof window !== 'undefined') {
-      localStorage.setItem('justLoggedIn', 'true');
-      setTimeout(() => window.location.reload(), 100);
-    }
-    return result;
-  }, [authController]);
+  const login = useCallback(
+    async (formData: LoginFormData) => {
+      if (!authController) return { success: false, error: 'Controller not initialized' };
+      const result = await authController.login(formData);
+      if (result.success && Platform.OS === 'web' && typeof window !== 'undefined') {
+        localStorage.setItem('justLoggedIn', 'true');
+        setTimeout(() => window.location.reload(), 100);
+      }
+      return result;
+    },
+    [authController],
+  );
 
-  const register = useCallback(async (formData: RegisterFormData) => {
-    if (!authController) return { success: false, error: 'Controller not initialized' };
-    return await authController.register(formData);
-  }, [authController]);
+  const register = useCallback(
+    async (formData: RegisterFormData) => {
+      if (!authController) return { success: false, error: 'Controller not initialized' };
+      return await authController.register(formData);
+    },
+    [authController],
+  );
 
   const loginWithGoogle = useCallback(async () => {
     if (!authController) return false;
     return await authController.loginWithGoogle();
   }, [authController]);
 
-  const forgotPassword = useCallback(async (email: string) => {
-    if (!authController) return false;
-    return await authController.resetPassword(email);
-  }, [authController]);
+  const forgotPassword = useCallback(
+    async (email: string) => {
+      if (!authController) return false;
+      return await authController.resetPassword(email);
+    },
+    [authController],
+  );
 
   const logout = useCallback(async () => {
     if (!authController) return false;
@@ -163,21 +184,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [authController]);
 
   const checkEmailVerification = useCallback(async () => {
-    if (!authController) return { success: false, verified: false, error: 'Controller not available' };
+    if (!authController)
+      return { success: false, verified: false, error: 'Controller not available' };
     return await authController.checkEmailVerification();
   }, [authController]);
 
-  const updateUserEmail = useCallback(async (newEmail: string) => {
-    if (!authController) return { success: false, error: 'Controller not available' };
-    return await authController.updateUserEmail(newEmail);
-  }, [authController]);
+  const updateUserEmail = useCallback(
+    async (newEmail: string) => {
+      if (!authController) return { success: false, error: 'Controller not available' };
+      return await authController.updateUserEmail(newEmail);
+    },
+    [authController],
+  );
 
   // Refresh current user data from the server
   const refreshUser = useCallback(async () => {
     try {
       if (!authState.user?.email) return false;
       const refreshResp = await fetch(
-        `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(authState.user.email)}`
+        `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(authState.user.email)}`,
       );
       if (refreshResp.ok) {
         const data = await refreshResp.json();
@@ -201,9 +226,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             data.state || authState.user.state,
             data.zipCode || authState.user.zipCode,
             data.role || authState.user.role,
-            data.profilePicture || authState.user.profilePicture
+            data.profilePicture || authState.user.profilePicture,
           );
-          setAuthState(prev => prev.setUser(updatedObj));
+          setAuthState((prev) => prev.setUser(updatedObj));
           return true;
         }
       }

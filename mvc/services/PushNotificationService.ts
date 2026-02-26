@@ -6,7 +6,7 @@ import { getApiBaseUrl } from './api';
 let Device: any = null;
 try {
   Device = require('expo-device');
-} catch (error) {
+} catch {
   console.log('⚠️ expo-device module not available');
 }
 
@@ -15,7 +15,7 @@ let notificationHandlerConfigured = false;
 
 function configureNotificationHandler() {
   if (notificationHandlerConfigured) return;
-  
+
   try {
     if (Notifications && Notifications.setNotificationHandler) {
       Notifications.setNotificationHandler({
@@ -41,23 +41,26 @@ export class PushNotificationService {
   /**
    * Register for push notifications and get the Expo push token (mobile) or Web Push subscription (web)
    */
-  static async registerForPushNotificationsAsync(userId: string, userEmail: string): Promise<string | null> {
+  static async registerForPushNotificationsAsync(
+    userId: string,
+    userEmail: string,
+  ): Promise<string | null> {
     try {
       console.log('🔔 Starting push notification registration...');
       console.log('   User ID:', userId);
       console.log('   User Email:', userEmail);
       console.log('   Platform:', Platform.OS);
-      
+
       // Web Push Notifications
       if (Platform.OS === 'web') {
         return await this.registerWebPushNotifications(userId, userEmail);
       }
-      
+
       // Mobile Push Notifications (Expo)
       // Configure notification handler first
       configureNotificationHandler();
       console.log('✅ Notification handler configured');
-      
+
       // Check if Device module is available
       if (!Device || typeof Device.isDevice === 'undefined') {
         console.log('⚠️ Device module not available, skipping push notification registration');
@@ -72,7 +75,7 @@ export class PushNotificationService {
         return null;
       }
       console.log('✅ Running on physical device');
-      
+
       // Request permissions
       console.log('📋 Checking notification permissions...');
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -126,7 +129,7 @@ export class PushNotificationService {
 
       console.log('✅ Push notification registration completed successfully');
       return pushToken;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error registering for push notifications:', error);
       console.error('   Error type:', error?.constructor?.name);
       console.error('   Error message:', error?.message);
@@ -138,28 +141,31 @@ export class PushNotificationService {
   /**
    * Register for Web Push Notifications using Web Push API
    */
-  private static async registerWebPushNotifications(userId: string, userEmail: string): Promise<string | null> {
+  private static async registerWebPushNotifications(
+    userId: string,
+    userEmail: string,
+  ): Promise<string | null> {
     try {
       console.log('🌐 Registering for web push notifications...');
       console.log('   User ID:', userId);
       console.log('   User Email:', userEmail);
-      
+
       // Check if browser supports Push API
       if (typeof window === 'undefined') {
         console.log('⚠️ Window object not available');
         return null;
       }
-      
+
       if (!('serviceWorker' in navigator)) {
         console.log('⚠️ Service Worker not supported in this browser');
         return null;
       }
-      
+
       if (!('PushManager' in window)) {
         console.log('⚠️ PushManager not supported in this browser');
         return null;
       }
-      
+
       console.log('✅ Browser supports Push Notifications');
 
       // Check if notifications are allowed
@@ -168,7 +174,7 @@ export class PushNotificationService {
         console.log('📋 Requesting notification permission...');
         permission = await Notification.requestPermission();
       }
-      
+
       if (permission !== 'granted') {
         console.log('⚠️ Notification permission not granted:', permission);
         return null;
@@ -201,7 +207,7 @@ export class PushNotificationService {
 
       // Get existing subscription or create new one
       let subscription = await registration.pushManager.getSubscription();
-      
+
       if (!subscription) {
         // Get VAPID public key from server
         const vapidPublicKey = await this.getVapidPublicKey();
@@ -262,10 +268,8 @@ export class PushNotificationService {
    * Convert VAPID key from base64 URL to Uint8Array
    */
   private static urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
@@ -279,7 +283,7 @@ export class PushNotificationService {
   /**
    * Setup web push notification listener
    */
-  private static setupWebPushListener(registration: ServiceWorkerRegistration) {
+  private static setupWebPushListener(_registration: ServiceWorkerRegistration) {
     if (typeof window === 'undefined') return;
 
     // Listen for push events (handled by service worker)
@@ -292,18 +296,24 @@ export class PushNotificationService {
   /**
    * Send push token to backend
    */
-  static async registerTokenWithBackend(userId: string, userEmail: string, pushToken: string, subscriptionData?: string): Promise<void> {
+  static async registerTokenWithBackend(
+    userId: string,
+    userEmail: string,
+    pushToken: string,
+    subscriptionData?: string,
+  ): Promise<void> {
     try {
-      const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
+      const platform =
+        Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
       const apiUrl = `${getApiBaseUrl()}/api/notifications/register-token`;
-      
+
       console.log('📡 Sending token to backend...');
       console.log('   API URL:', apiUrl);
       console.log('   User ID:', userId);
       console.log('   User Email:', userEmail);
       console.log('   Platform:', platform);
       console.log('   Token length:', pushToken.length);
-      
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -334,20 +344,20 @@ export class PushNotificationService {
         console.error('📡 Response status:', response.status);
         console.error('📡 Response status text:', response.statusText);
         console.error('📋 Error response:', errorText);
-        
+
         try {
           const error = JSON.parse(errorText);
           console.error('📋 Error details:', JSON.stringify(error, null, 2));
-        } catch (e) {
+        } catch {
           console.error('📋 Error response (not JSON):', errorText);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error registering push token with backend:');
       console.error('   Error type:', error?.constructor?.name);
       console.error('   Error message:', error?.message);
       console.error('   Error stack:', error?.stack);
-      
+
       // Check if it's a network error
       if (error?.message?.includes('Network') || error?.message?.includes('fetch')) {
         console.error('⚠️ Network error - check if backend server is running');
@@ -361,11 +371,11 @@ export class PushNotificationService {
    */
   static setupNotificationListeners(
     onNotificationReceived?: (notification: Notifications.Notification) => void,
-    onNotificationTapped?: (response: Notifications.NotificationResponse) => void
+    onNotificationTapped?: (response: Notifications.NotificationResponse) => void,
   ) {
     // Configure notification handler first
     configureNotificationHandler();
-    
+
     // Listener for notifications received while app is in foreground
     const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
       console.log('📬 Notification received:', notification);
@@ -386,4 +396,3 @@ export class PushNotificationService {
     };
   }
 }
-

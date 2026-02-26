@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { SkeletonListItem } from '../../components/ui';
 import { MessagingController } from '../../controllers/MessagingController';
@@ -27,7 +27,12 @@ interface MessagingViewProps {
   onLogout?: () => void | Promise<void>;
 }
 
-export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNavigate, onLogout }) => {
+export const MessagingView: React.FC<MessagingViewProps> = ({
+  userId,
+  user,
+  onNavigate,
+  onLogout,
+}) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,7 +59,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
       userId,
       (updatedConversations) => {
         setConversations(updatedConversations);
-      }
+      },
     );
 
     return () => {
@@ -74,7 +79,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }, 100);
-        }
+        },
       );
 
       messagingController.markMessagesAsRead(selectedConversation.id, userId);
@@ -83,6 +88,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
         unsubscribeMessages();
       };
     }
+    return undefined;
   }, [selectedConversation]);
 
   const loadConversations = async () => {
@@ -116,7 +122,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
       selectedConversation.id,
       userId,
       getOtherParticipantId(),
-      messageText.trim()
+      messageText.trim(),
     );
 
     setSending(false);
@@ -130,14 +136,14 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
 
   const getOtherParticipantId = (): string => {
     if (!selectedConversation) return '';
-    return selectedConversation.participants.find(id => id !== userId) || '';
+    return selectedConversation.participants.find((id) => id !== userId) || '';
   };
 
   const formatTime = (date: Date): string => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (date: Date): string => {
+  const _formatDate = (date: Date): string => {
     const today = new Date();
     const messageDate = new Date(date);
 
@@ -156,15 +162,24 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
 
   const getMessageTypeIcon = (messageType: MessageType): string => {
     switch (messageType) {
-      case MessageType.BOOKING_REQUEST: return '📅';
-      case MessageType.BOOKING_CONFIRMATION: return '✅';
-      case MessageType.BOOKING_CANCELLATION: return '❌';
-      case MessageType.PAYMENT_REQUEST: return '💳';
-      case MessageType.PAYMENT_CONFIRMATION: return '💰';
-      case MessageType.SYSTEM: return '🔔';
-      case MessageType.IMAGE: return '🖼️';
-      case MessageType.FILE: return '📎';
-      default: return '💬';
+      case MessageType.BOOKING_REQUEST:
+        return '📅';
+      case MessageType.BOOKING_CONFIRMATION:
+        return '✅';
+      case MessageType.BOOKING_CANCELLATION:
+        return '❌';
+      case MessageType.PAYMENT_REQUEST:
+        return '💳';
+      case MessageType.PAYMENT_CONFIRMATION:
+        return '💰';
+      case MessageType.SYSTEM:
+        return '🔔';
+      case MessageType.IMAGE:
+        return '🖼️';
+      case MessageType.FILE:
+        return '📎';
+      default:
+        return '💬';
     }
   };
 
@@ -173,23 +188,25 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
 
     // Filter by type
     if (filterType === 'unread') {
-      filtered = filtered.filter(conv => conv.unreadCount > 0);
+      filtered = filtered.filter((conv) => conv.unreadCount > 0);
     } else if (filterType === 'recent') {
       const oneDayAgo = new Date();
       oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      filtered = filtered.filter(conv => new Date(conv.lastMessageTime) > oneDayAgo);
+      filtered = filtered.filter((conv) => new Date(conv.lastMessageTime) > oneDayAgo);
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(conv => {
-        const otherParticipantId = conv.participants.find(id => id !== userId) || '';
-        const lastMessageContent = typeof conv.lastMessage === 'string'
-          ? conv.lastMessage.toLowerCase()
-          : conv.lastMessage?.content.toLowerCase() || '';
-        return otherParticipantId.toLowerCase().includes(query) ||
-               lastMessageContent.includes(query);
+      filtered = filtered.filter((conv) => {
+        const otherParticipantId = conv.participants.find((id) => id !== userId) || '';
+        const lastMessageContent =
+          typeof conv.lastMessage === 'string'
+            ? conv.lastMessage.toLowerCase()
+            : conv.lastMessage?.content.toLowerCase() || '';
+        return (
+          otherParticipantId.toLowerCase().includes(query) || lastMessageContent.includes(query)
+        );
       });
     }
 
@@ -206,38 +223,40 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
           <Text style={styles.systemMessageText}>
             {getMessageTypeIcon(message.messageType)} {message.content}
           </Text>
-          <Text style={styles.systemMessageTime}>
-            {formatTime(message.timestamp)}
-          </Text>
+          <Text style={styles.systemMessageTime}>{formatTime(message.timestamp)}</Text>
         </View>
       );
     }
 
     return (
-      <View key={message.id} style={[
-        styles.messageContainer,
-        isOwnMessage ? styles.ownMessage : styles.otherMessage
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble
-        ]}>
+      <View
+        key={message.id}
+        style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isOwnMessage ? styles.ownMessageBubble : styles.otherMessageBubble,
+          ]}
+        >
           {message.messageType !== MessageType.TEXT && (
-            <Text style={styles.messageTypeIcon}>
-              {getMessageTypeIcon(message.messageType)}
-            </Text>
+            <Text style={styles.messageTypeIcon}>{getMessageTypeIcon(message.messageType)}</Text>
           )}
-          <Text style={[
-            styles.messageText,
-            isOwnMessage ? styles.ownMessageText : styles.otherMessageText
-          ]}>
+          <Text
+            style={[
+              styles.messageText,
+              isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
+            ]}
+          >
             {message.content}
           </Text>
         </View>
-        <Text style={[
-          styles.messageTime,
-          isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime
-        ]}>
+        <Text
+          style={[
+            styles.messageTime,
+            isOwnMessage ? styles.ownMessageTime : styles.otherMessageTime,
+          ]}
+        >
           {formatTime(message.timestamp)}
         </Text>
       </View>
@@ -245,7 +264,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
   };
 
   const renderConversationItem = (conversation: Conversation) => {
-    const otherParticipantId = conversation.participants.find(id => id !== userId) || '';
+    const otherParticipantId = conversation.participants.find((id) => id !== userId) || '';
     const hasUnread = conversation.unreadCount > 0;
 
     return (
@@ -263,26 +282,20 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
         </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.conversationTitle}>
-              User {otherParticipantId.substring(0, 8)}
-            </Text>
-            <Text style={styles.conversationTime}>
-              {formatTime(conversation.lastMessageTime)}
-            </Text>
+            <Text style={styles.conversationTitle}>User {otherParticipantId.substring(0, 8)}</Text>
+            <Text style={styles.conversationTime}>{formatTime(conversation.lastMessageTime)}</Text>
           </View>
-          <Text style={[
-            styles.conversationPreview,
-            hasUnread && styles.unreadPreview
-          ]} numberOfLines={1}>
+          <Text
+            style={[styles.conversationPreview, hasUnread && styles.unreadPreview]}
+            numberOfLines={1}
+          >
             {typeof conversation.lastMessage === 'string'
               ? conversation.lastMessage
               : conversation.lastMessage?.content || 'No messages yet'}
           </Text>
           {hasUnread && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>
-                {conversation.unreadCount}
-              </Text>
+              <Text style={styles.unreadCount}>{conversation.unreadCount}</Text>
             </View>
           )}
         </View>
@@ -348,7 +361,11 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 accessibilityLabel="Search conversations"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                >
                   <Text style={styles.clearIcon}>✕</Text>
                 </TouchableOpacity>
               )}
@@ -370,7 +387,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 accessibilityRole="button"
                 accessibilityLabel="Filter unread conversations"
               >
-                <Text style={[styles.filterText, filterType === 'unread' && styles.filterTextActive]}>
+                <Text
+                  style={[styles.filterText, filterType === 'unread' && styles.filterTextActive]}
+                >
                   Unread
                 </Text>
               </TouchableOpacity>
@@ -380,7 +399,9 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 accessibilityRole="button"
                 accessibilityLabel="Filter recent conversations"
               >
-                <Text style={[styles.filterText, filterType === 'recent' && styles.filterTextActive]}>
+                <Text
+                  style={[styles.filterText, filterType === 'recent' && styles.filterTextActive]}
+                >
                   Recent
                 </Text>
               </TouchableOpacity>
@@ -427,9 +448,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
                 </Text>
               </View>
               <View>
-                <Text style={styles.chatTitle}>
-                  User {getOtherParticipantId().substring(0, 8)}
-                </Text>
+                <Text style={styles.chatTitle}>User {getOtherParticipantId().substring(0, 8)}</Text>
                 <Text style={styles.chatSubtitle}>Active now</Text>
               </View>
             </View>
@@ -459,7 +478,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({ userId, user, onNa
               onPress={handleSendMessage}
               style={[
                 styles.sendButton,
-                (!messageText.trim() || sending) && styles.sendButtonDisabled
+                (!messageText.trim() || sending) && styles.sendButtonDisabled,
               ]}
               disabled={!messageText.trim() || sending}
               accessibilityRole="button"

@@ -43,11 +43,7 @@ export function useJobPostings(user?: User) {
   const errorToastOpacity = useRef(new Animated.Value(0)).current;
 
   // ── Query: load job postings ──────────────────────────────────────────
-  const {
-    data: queryData,
-    isLoading,
-    refetch,
-  } = useQuery<JobPostingsResponse>({
+  const { data: queryData, isLoading } = useQuery<JobPostingsResponse>({
     queryKey: ['provider-job-postings', user?.email],
     queryFn: () =>
       apiClient.get<JobPostingsResponse>('/api/provider/job-postings', {
@@ -117,7 +113,8 @@ export function useJobPostings(user?: User) {
     onError: (error: any) => {
       console.error('Failed to create job posting:', error);
 
-      let errorMsg = 'Failed to create job posting. Please check your internet connection and try again.';
+      let errorMsg =
+        'Failed to create job posting. Please check your internet connection and try again.';
 
       if (error.message) {
         if (error.message.includes('Network') || error.message.includes('fetch')) {
@@ -160,7 +157,7 @@ export function useJobPostings(user?: User) {
   const deleteJobMutation = useMutation<MutationResponse, Error, number>({
     mutationFn: (jobId: number) =>
       apiClient.delete<MutationResponse>(
-        `/api/provider/job-postings/${jobId}?providerEmail=${encodeURIComponent(user!.email)}`
+        `/api/provider/job-postings/${jobId}?providerEmail=${encodeURIComponent(user!.email ?? '')}`,
       ),
     onSuccess: (data) => {
       if (data.ok) {
@@ -176,20 +173,13 @@ export function useJobPostings(user?: User) {
     },
   });
 
-  const toggleStatusMutation = useMutation<
-    MutationResponse,
-    Error,
-    { job: JobPosting }
-  >({
+  const toggleStatusMutation = useMutation<MutationResponse, Error, { job: JobPosting }>({
     mutationFn: ({ job }) => {
       const newStatus = job.status === 'active' ? 'closed' : 'active';
-      return apiClient.put<MutationResponse>(
-        `/api/provider/job-postings/${job.id}`,
-        {
-          providerEmail: user!.email,
-          status: newStatus,
-        }
-      );
+      return apiClient.put<MutationResponse>(`/api/provider/job-postings/${job.id}`, {
+        providerEmail: user!.email,
+        status: newStatus,
+      });
     },
     onSuccess: (data) => {
       if (data.ok) {
@@ -316,18 +306,14 @@ export function useJobPostings(user?: User) {
         deleteJobMutation.mutate(jobId);
       }
     } else {
-      Alert.alert(
-        'Delete Job Posting',
-        'Are you sure you want to delete this job posting?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => deleteJobMutation.mutate(jobId),
-          },
-        ]
-      );
+      Alert.alert('Delete Job Posting', 'Are you sure you want to delete this job posting?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteJobMutation.mutate(jobId),
+        },
+      ]);
     }
   };
 
@@ -346,7 +332,7 @@ export function useJobPostings(user?: User) {
         if (filterStatus === 'all') return true;
         return job.status === filterStatus;
       }),
-    [jobPostings, filterStatus]
+    [jobPostings, filterStatus],
   );
 
   return {
