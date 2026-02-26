@@ -2,8 +2,17 @@ const request = require('supertest');
 const { app } = require('../../index');
 const { _resetStore } = require('../../middleware/rateLimiter');
 
+// Rate limiter skips when NODE_ENV === 'test', so we temporarily
+// switch to 'production' for these tests and restore afterwards.
+const originalEnv = process.env.NODE_ENV;
+
 beforeEach(() => {
   _resetStore();
+  process.env.NODE_ENV = 'production';
+});
+
+afterEach(() => {
+  process.env.NODE_ENV = originalEnv;
 });
 
 describe('Rate Limiter', () => {

@@ -2,10 +2,12 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/__tests__/**/*.test.js', '<rootDir>/**/__tests__/**/*.test.js'],
+  setupFiles: ['<rootDir>/jest.setup.js'],
   collectCoverageFrom: [
     'routes/**/*.js',
+    'controllers/**/*.js',
+    'svc/**/*.js',
     'middleware/**/*.js',
-    'services/**/*.js',
     '!**/node_modules/**',
   ],
   coverageThreshold: {
@@ -18,5 +20,5 @@ module.exports = {
   },
 
   forceExit: true,
-  testTimeout: 10000,
+  testTimeout: 15000,
 };

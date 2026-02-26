@@ -1,5 +1,5 @@
 const logger = require('../lib/logger');
-const pool = require('../db');
+const { getPool } = require('../db');
 
 /**
  * Role-based authorization middleware.
@@ -14,7 +14,7 @@ function requireRole(...allowedRoles) {
         return res.status(401).json({ ok: false, error: 'Authentication required' });
       }
 
-      const [rows] = await pool.query(
+      const [rows] = await getPool().query(
         'SELECT u_role FROM user WHERE u_email = ? AND u_disabled = 0 LIMIT 1',
         [req.user.email],
       );

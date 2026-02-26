@@ -52,44 +52,29 @@ async function requireUserIdByEmail(email) {
 async function registerPushToken(userId, userEmail, pushToken, platform, subscriptionData) {
     const pool = getPool();
 
-    // Create device_tokens table if it doesn't exist
+    // Create device_tokens table if it doesn't exist (migration-aligned columns)
     await pool.query(`
         CREATE TABLE IF NOT EXISTS \`device_tokens\` (
             \`id\` INT(11) NOT NULL AUTO_INCREMENT,
-            \`user_id\` VARCHAR(255) NOT NULL,
-            \`user_email\` VARCHAR(255) NOT NULL,
-            \`push_token\` TEXT NOT NULL,
-            \`platform\` VARCHAR(50) NOT NULL,
-            \`subscription_data\` TEXT NULL,
-            \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            \`dt_user_email\` VARCHAR(255) NOT NULL,
+            \`dt_token\` TEXT NOT NULL,
+            \`dt_platform\` VARCHAR(20) DEFAULT 'web',
+            \`dt_created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            \`dt_updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (\`id\`),
-            UNIQUE KEY \`unique_user_token\` (\`user_id\`, \`push_token\`(255)),
-            INDEX \`idx_user_email\` (\`user_email\`),
-            INDEX \`idx_user_id\` (\`user_id\`)
+            INDEX \`idx_user_email\` (\`dt_user_email\`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Check if subscription_data column exists, if not add it
-    try {
-        await pool.query('ALTER TABLE `device_tokens` ADD COLUMN `subscription_data` TEXT NULL');
-        console.log('Added subscription_data column to device_tokens table');
-    } catch (alterErr) {
-        if (!alterErr.message.includes('Duplicate column name')) {
-            console.log('Could not add subscription_data column (may already exist):', alterErr.message);
-        }
-    }
-
     // Insert or update token
     const [result] = await pool.query(`
-        INSERT INTO \`device_tokens\` (user_id, user_email, push_token, platform, subscription_data)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO \`device_tokens\` (dt_user_email, dt_token, dt_platform)
+        VALUES (?, ?, ?)
         ON DUPLICATE KEY UPDATE
-            push_token = VALUES(push_token),
-            platform = VALUES(platform),
-            subscription_data = VALUES(subscription_data),
-            updated_at = CURRENT_TIMESTAMP
-    `, [userId, userEmail, pushToken, platform || 'unknown', subscriptionData || null]);
+            dt_token = VALUES(dt_token),
+            dt_platform = VALUES(dt_platform),
+            dt_updated_at = CURRENT_TIMESTAMP
+    `, [userEmail, pushToken, platform || 'unknown']);
 
     console.log('Push token registered for user:', userEmail);
     console.log('   Platform:', platform || 'unknown');
@@ -113,7 +98,7 @@ async function sendPushNotification(userEmail, title, body, data = {}) {
 
         // Get all push tokens for the user
         const [tokens] = await pool.query(
-            'SELECT push_token, platform, created_at, updated_at FROM `device_tokens` WHERE user_email = ?',
+            'SELECT dt_token as push_token, dt_platform as platform, dt_created_at as created_at, dt_updated_at as updated_at FROM `device_tokens` WHERE dt_user_email = ?',
             [userEmail]
         );
 
@@ -419,7 +404,7 @@ async function getPushTokens(userEmail) {
     const pool = getPool();
 
     const [tokens] = await pool.query(
-        'SELECT id, user_id, user_email, platform, created_at, updated_at, LEFT(push_token, 50) as push_token_preview FROM `device_tokens` WHERE user_email = ? ORDER BY updated_at DESC',
+        'SELECT id, dt_user_email as user_email, dt_platform as platform, dt_created_at as created_at, dt_updated_at as updated_at, LEFT(dt_token, 50) as push_token_preview FROM `device_tokens` WHERE dt_user_email = ? ORDER BY dt_updated_at DESC',
         [userEmail]
     );
 
@@ -431,7 +416,7 @@ async function deletePushTokens(userEmail) {
     const pool = getPool();
 
     const [result] = await pool.query(
-        'DELETE FROM `device_tokens` WHERE user_email = ?',
+        'DELETE FROM `device_tokens` WHERE dt_user_email = ?',
         [userEmail]
     );
 

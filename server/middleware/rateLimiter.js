@@ -22,6 +22,9 @@ setInterval(() => {
  */
 function rateLimiter(maxRequests = 100, windowMs = 60000, prefix = 'default') {
   return (req, res, next) => {
+    // Skip rate limiting in test environment
+    if (process.env.NODE_ENV === 'test') return next();
+
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const key = `${prefix}:${ip}`;
     const now = Date.now();

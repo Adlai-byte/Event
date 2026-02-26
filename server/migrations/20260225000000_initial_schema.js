@@ -22,6 +22,8 @@ exports.up = async function (knex) {
       \`u_state\` VARCHAR(100) DEFAULT NULL,
       \`u_zip_code\` VARCHAR(20) DEFAULT NULL,
       \`u_profile_image\` VARCHAR(500) DEFAULT NULL,
+      \`u_profile_picture\` VARCHAR(500) DEFAULT NULL,
+      \`u_date_of_birth\` VARCHAR(50) DEFAULT NULL,
       \`u_bio\` TEXT DEFAULT NULL,
       \`u_provider_status\` ENUM('pending','approved','rejected') DEFAULT NULL,
       \`u_business_document\` VARCHAR(500) DEFAULT NULL,
