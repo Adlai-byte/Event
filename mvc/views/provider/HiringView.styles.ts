@@ -1,8 +1,10 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors, semantic } from '../../theme';
 
-export const createStyles = (isMobile: boolean, _screenWidth: number) =>
-  StyleSheet.create({
+export const createStyles = (isMobile: boolean, screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+
+  return StyleSheet.create({
     mainContent: {
       flex: 1,
     },
@@ -139,11 +141,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
         maxHeight: '100%',
       }),
     },
-    tableScrollContent: {
-      ...(isMobile && {
-        minWidth: 900, // Minimum width to ensure all columns are visible
-      }),
-    },
+    tableScrollContent: {},
     tableContainer: {
       backgroundColor: semantic.surface,
       borderRadius: 12,
@@ -153,7 +151,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
-      width: isMobile ? 900 : '100%', // Fixed width on mobile for horizontal scroll, full width on web
+      width: '100%',
     },
     tableHeader: {
       flexDirection: 'row',
@@ -1211,13 +1209,13 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       marginBottom: 12,
     },
     mobileCardTitle: {
-      fontSize: 16,
+      fontSize: isExtraSmall ? 14 : 16,
       fontWeight: '700',
       color: semantic.textPrimary,
       flex: 1,
     },
     mobileCardSubtitle: {
-      fontSize: 13,
+      fontSize: isExtraSmall ? 11 : 13,
       color: semantic.textSecondary,
       marginTop: 2,
     },
@@ -1247,3 +1245,4 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       marginTop: 12,
     },
   });
+};

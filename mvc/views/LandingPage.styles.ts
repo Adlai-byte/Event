@@ -19,8 +19,11 @@ export const createLandingStyles = ({
   isMobileWeb,
   isDesktop,
   isLargeDesktop,
-}: BreakpointFlags) =>
-  StyleSheet.create({
+  screenWidth,
+}: BreakpointFlags) => {
+  const isExtraSmall = screenWidth < 360;
+
+  return StyleSheet.create({
     wrapper: {
       flex: 1,
       position: 'relative',
@@ -259,11 +262,11 @@ export const createLandingStyles = ({
       letterSpacing: 1,
     },
     heroTitle: {
-      fontSize: isMobile || isMobileWeb ? 32 : isDesktop ? 48 : 40,
+      fontSize: isExtraSmall ? 24 : isMobile || isMobileWeb ? 28 : isDesktop ? 48 : 40,
       fontWeight: '700',
       color: semantic.textPrimary,
       marginBottom: 16,
-      lineHeight: isMobile || isMobileWeb ? 40 : isDesktop ? 56 : 48,
+      lineHeight: isExtraSmall ? 32 : isMobile || isMobileWeb ? 36 : isDesktop ? 56 : 48,
     },
     heroDescription: {
       fontSize: isMobile || isMobileWeb ? 16 : 18,
@@ -319,7 +322,7 @@ export const createLandingStyles = ({
     mainContentArea: { flex: isMobile ? 1 : 2 },
     recommendedSection: { marginBottom: isMobile ? 32 : isDesktop ? 48 : 40 },
     recommendedTitle: {
-      fontSize: isMobile ? 28 : isDesktop ? 36 : 32,
+      fontSize: isExtraSmall ? 22 : isMobile ? 26 : isDesktop ? 36 : 32,
       fontWeight: '700',
       color: semantic.textPrimary,
       marginBottom: 8,
@@ -385,9 +388,9 @@ export const createLandingStyles = ({
     featuredImage: { width: '100%', height: '100%' },
     featuredImagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     featuredImageText: { color: semantic.surface, fontSize: 18, fontWeight: '600' },
-    featuredContent: { padding: 24 },
+    featuredContent: { padding: isMobile ? 16 : 24 },
     featuredTitle: {
-      fontSize: isMobile ? 24 : 32,
+      fontSize: isExtraSmall ? 18 : isMobile ? 22 : 32,
       fontWeight: '700',
       color: semantic.textPrimary,
       marginBottom: 12,
@@ -549,7 +552,7 @@ export const createLandingStyles = ({
     entertainmentSection: { marginBottom: 48 },
     sectionHeader: { marginBottom: 24 },
     sectionTitle: {
-      fontSize: isMobile ? 24 : 28,
+      fontSize: isExtraSmall ? 18 : isMobile ? 22 : 28,
       fontWeight: '700',
       color: semantic.textPrimary,
       alignSelf: 'flex-start',
@@ -629,14 +632,14 @@ export const createLandingStyles = ({
     ctaSection: {
       backgroundColor: semantic.background,
       borderRadius: 12,
-      padding: 40,
+      padding: isMobile ? 24 : 40,
       alignItems: 'center',
       marginBottom: 48,
       borderWidth: 1,
       borderColor: semantic.border,
     },
     ctaTitle: {
-      fontSize: isMobile ? 28 : 36,
+      fontSize: isExtraSmall ? 22 : isMobile ? 26 : 36,
       fontWeight: '700',
       color: semantic.textPrimary,
       marginBottom: 12,
@@ -987,7 +990,7 @@ export const createLandingStyles = ({
       backgroundColor: semantic.surface,
       borderRadius: Platform.OS === 'web' ? 20 : 16,
       width: Platform.OS === 'web' ? '90%' : '100%',
-      maxWidth: 520,
+      maxWidth: isMobile ? screenWidth - 32 : 520,
       maxHeight: Platform.OS === 'web' ? ('90vh' as any) : '90%',
       overflow: 'hidden',
       position: 'relative',
@@ -1058,7 +1061,7 @@ export const createLandingStyles = ({
       top: 0,
       right: 0,
       bottom: 0,
-      width: 260,
+      width: Math.min(260, screenWidth * 0.8),
       backgroundColor: semantic.surface,
       paddingTop: 60,
       paddingHorizontal: 24,
@@ -1084,3 +1087,4 @@ export const createLandingStyles = ({
     mobileMenuClose: { position: 'absolute', top: 16, right: 16, padding: 8 },
     mobileMenuCloseText: { fontSize: 24, color: semantic.textSecondary },
   });
+};

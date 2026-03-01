@@ -1,8 +1,9 @@
 // mvc/components/layout/BottomNav.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, semantic, typography, spacing, shadow } from '../../theme';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface BottomNavItem {
   key: string;
@@ -18,6 +19,9 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ items, activeRoute, unreadMessages = 0, onNavigate }: BottomNavProps) {
+  const { screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(screenWidth), [screenWidth]);
+
   return (
     <View style={[styles.container, shadow('md')]}>
       {items.map((item) => {
@@ -53,48 +57,52 @@ export function BottomNav({ items, activeRoute, unreadMessages = 0, onNavigate }
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: colors.neutral[0],
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral[200],
-    paddingBottom: spacing.xs,
-    paddingTop: spacing.sm,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xs,
-  },
-  iconContainer: {
-    position: 'relative',
-    marginBottom: 2,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.neutral[500],
-  },
-  labelActive: {
-    color: semantic.primary,
-    fontWeight: '600',
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: colors.error[500],
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.neutral[0],
-  },
-});
+const createStyles = (screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[0],
+      borderTopWidth: 1,
+      borderTopColor: colors.neutral[200],
+      paddingBottom: spacing.xs,
+      paddingTop: spacing.sm,
+    },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xs,
+    },
+    iconContainer: {
+      position: 'relative',
+      marginBottom: 2,
+    },
+    label: {
+      ...typography.caption,
+      fontSize: isExtraSmall ? 9 : 10,
+      color: colors.neutral[500],
+    },
+    labelActive: {
+      color: semantic.primary,
+      fontWeight: '600',
+    },
+    badge: {
+      position: 'absolute',
+      top: -4,
+      right: -8,
+      backgroundColor: colors.error[500],
+      borderRadius: 8,
+      minWidth: isExtraSmall ? 14 : 16,
+      height: isExtraSmall ? 14 : 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    badgeText: {
+      fontSize: isExtraSmall ? 7 : 9,
+      fontWeight: '700',
+      color: colors.neutral[0],
+    },
+  });
+};

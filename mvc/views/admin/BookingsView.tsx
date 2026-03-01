@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { colors, semantic } from '../../theme';
 
 interface AdminBookingsProps {
   user?: UserModel;
@@ -36,6 +38,9 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
   const [_loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   useEffect(() => {
     loadBookings();
@@ -119,7 +124,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
               placeholder="Search bookings by event name, client, location, date, or service..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={semantic.textMuted}
               accessibilityLabel="Search bookings"
             />
           </View>
@@ -168,29 +173,57 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
 
               <View style={styles.bookingDetails}>
                 <View style={styles.bookingDetailRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
-                    <Feather name="calendar" size={13} color="#64748B" />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      width: isMobile ? 60 : 80,
+                    }}
+                  >
+                    <Feather name="calendar" size={13} color={semantic.textSecondary} />
                     <Text style={styles.bookingDetailLabel}>Date:</Text>
                   </View>
                   <Text style={styles.bookingDetailValue}>{booking.date}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
-                    <Feather name="clock" size={13} color="#64748B" />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      width: isMobile ? 60 : 80,
+                    }}
+                  >
+                    <Feather name="clock" size={13} color={semantic.textSecondary} />
                     <Text style={styles.bookingDetailLabel}>Time:</Text>
                   </View>
                   <Text style={styles.bookingDetailValue}>{booking.time}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
-                    <Feather name="map-pin" size={13} color="#64748B" />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      width: isMobile ? 60 : 80,
+                    }}
+                  >
+                    <Feather name="map-pin" size={13} color={semantic.textSecondary} />
                     <Text style={styles.bookingDetailLabel}>Location:</Text>
                   </View>
                   <Text style={styles.bookingDetailValue}>{booking.location}</Text>
                 </View>
                 <View style={styles.bookingDetailRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 }}>
-                    <Feather name="dollar-sign" size={13} color="#64748B" />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      width: isMobile ? 60 : 80,
+                    }}
+                  >
+                    <Feather name="dollar-sign" size={13} color={semantic.textSecondary} />
                     <Text style={styles.bookingDetailLabel}>Total Cost:</Text>
                   </View>
                   <Text style={styles.bookingDetailValue}>
@@ -327,198 +360,203 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EEF1F5',
-  },
-  content: {
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  statusFilter: {
-    marginBottom: 16,
-  },
-  statusChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    marginRight: 8,
-  },
-  statusChipActive: {
-    backgroundColor: '#4a55e1',
-  },
-  statusChipText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  statusChipTextActive: {
-    color: '#FFFFFF',
-  },
-  bookingCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  bookingCardMargin: {
-    marginTop: 0,
-  },
-  bookingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  bookingHeaderLeft: {
-    flex: 1,
-  },
-  bookingEventName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  bookingClientName: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  bookingDetails: {
-    marginBottom: 12,
-  },
-  bookingDetailRow: {
-    flexDirection: 'row',
-    marginBottom: 6,
-  },
-  bookingDetailLabel: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  bookingDetailValue: {
-    fontSize: 13,
-    color: '#1E293B',
-    fontWeight: '600',
-    flex: 1,
-  },
-  servicesContainer: {
-    marginBottom: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  servicesLabel: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  servicesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  serviceTag: {
-    backgroundColor: '#E0E7FF',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  serviceTagText: {
-    fontSize: 12,
-    color: '#4a55e1',
-    fontWeight: '600',
-  },
-  bookingActions: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  confirmButton: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
-  },
-  cancelButton: {
-    backgroundColor: '#ef4444',
-    borderColor: '#ef4444',
-  },
-  actionButtonText: {
-    color: '#1E293B',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-  },
-  cancelButtonText: {
-    color: '#FFFFFF',
-  },
-  emptyState: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    color: '#64748B',
-    fontSize: 14,
-  },
-  searchContainer: {
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#1E293B',
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) => {
+  const _isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: semantic.background,
+    },
+    content: {
+      padding: isMobile ? 12 : 20,
+    },
+    card: {
+      backgroundColor: semantic.surface,
+      borderRadius: 12,
+      padding: isMobile ? 12 : 16,
+      elevation: 2,
+    },
+    header: {
+      flexDirection: isMobile ? 'column' : 'row',
+      justifyContent: 'space-between',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      marginBottom: 16,
+      gap: isMobile ? 8 : 0,
+    },
+    title: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+    },
+    subtitle: {
+      fontSize: isMobile ? 12 : 14,
+      color: semantic.textSecondary,
+      marginTop: 4,
+    },
+    statusFilter: {
+      marginBottom: 16,
+    },
+    statusChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: semantic.background,
+      marginRight: 8,
+    },
+    statusChipActive: {
+      backgroundColor: semantic.primary,
+    },
+    statusChipText: {
+      fontSize: 12,
+      color: semantic.textSecondary,
+      fontWeight: '600',
+    },
+    statusChipTextActive: {
+      color: semantic.surface,
+    },
+    bookingCard: {
+      backgroundColor: semantic.background,
+      borderRadius: 8,
+      padding: isMobile ? 12 : 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    bookingCardMargin: {
+      marginTop: 0,
+    },
+    bookingHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    bookingHeaderLeft: {
+      flex: 1,
+    },
+    bookingEventName: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '700',
+      color: semantic.textPrimary,
+      marginBottom: 4,
+    },
+    bookingClientName: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+    },
+    statusBadge: {
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 4,
+    },
+    statusBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    bookingDetails: {
+      marginBottom: 12,
+    },
+    bookingDetailRow: {
+      flexDirection: 'row',
+      marginBottom: 6,
+    },
+    bookingDetailLabel: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+    },
+    bookingDetailValue: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textPrimary,
+      fontWeight: '600',
+      flex: 1,
+    },
+    servicesContainer: {
+      marginBottom: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    servicesLabel: {
+      fontSize: isMobile ? 12 : 13,
+      color: semantic.textSecondary,
+      marginBottom: 8,
+      fontWeight: '600',
+    },
+    servicesList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    serviceTag: {
+      backgroundColor: colors.primary[100],
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 4,
+      marginRight: 6,
+      marginBottom: 6,
+    },
+    serviceTagText: {
+      fontSize: 12,
+      color: semantic.primary,
+      fontWeight: '600',
+    },
+    bookingActions: {
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: 8,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+    },
+    actionButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 6,
+      backgroundColor: semantic.background,
+      borderWidth: 1,
+      borderColor: semantic.border,
+    },
+    confirmButton: {
+      backgroundColor: semantic.success,
+      borderColor: semantic.success,
+    },
+    cancelButton: {
+      backgroundColor: semantic.error,
+      borderColor: semantic.error,
+    },
+    actionButtonText: {
+      color: semantic.textPrimary,
+      fontWeight: '600',
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    confirmButtonText: {
+      color: semantic.surface,
+    },
+    cancelButtonText: {
+      color: semantic.surface,
+    },
+    emptyState: {
+      paddingVertical: 40,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      color: semantic.textSecondary,
+      fontSize: 14,
+    },
+    searchContainer: {
+      marginBottom: 16,
+      paddingHorizontal: isMobile ? 0 : 16,
+    },
+    searchInput: {
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      paddingHorizontal: isMobile ? 12 : 16,
+      paddingVertical: isMobile ? 10 : 12,
+      fontSize: isMobile ? 13 : 14,
+      color: semantic.textPrimary,
+    },
+  });
+};
 
 export default BookingsView;

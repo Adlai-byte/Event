@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { User as UserModel } from '../../models/User';
 import { AppLayout } from '../../components/layout';
 import { useAdminServices, Service } from '../../hooks/useAdminServices';
-import { styles } from './ServicesView.styles';
+import { createStyles } from './ServicesView.styles';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface AdminServicesProps {
   user?: UserModel;
@@ -14,6 +15,9 @@ interface AdminServicesProps {
 }
 
 export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, onLogout }) => {
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
+
   const {
     submitting,
     activeTab,
@@ -245,11 +249,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
               </Text>
               <View style={styles.mapContainer}>
                 {mapLocation && Platform.OS === 'web' ? (
-                  <View
-                    style={styles.map}
-                    // @ts-expect-error - web-specific prop
-                    nativeID="map-container"
-                  />
+                  <View style={styles.map} nativeID="map-container" />
                 ) : mapLocation ? (
                   <WebView
                     ref={mapWebViewRef}
