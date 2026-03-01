@@ -9,6 +9,7 @@ const { searchLimiter } = require('../middleware/rateLimiter');
 const { serviceValidation } = require('../middleware/validationSchemas');
 const { validate } = require('../middleware/validate');
 const { paginate } = require('../middleware/paginate');
+const { query } = require('express-validator');
 
 const ctrl = require('../controllers/serviceController');
 
@@ -17,7 +18,12 @@ const ctrl = require('../controllers/serviceController');
 // ---------------------------------------------------------------------------
 
 // Get all services (public, paginated)
-router.get('/services', paginate, ctrl.listServices);
+router.get('/services',
+    query('availableDate').optional().isISO8601().withMessage('availableDate must be a valid date (YYYY-MM-DD)'),
+    validate,
+    paginate,
+    ctrl.listServices
+);
 
 // Get service by ID (public)
 router.get('/services/:id', ctrl.getServiceById);

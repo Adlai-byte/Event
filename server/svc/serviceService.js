@@ -198,6 +198,7 @@ async function listServices(query, pagination) {
     const minPrice = query.minPrice ? parseFloat(first(query.minPrice)) : null;
     const maxPrice = query.maxPrice ? parseFloat(first(query.maxPrice)) : null;
     const minRating = query.minRating ? parseFloat(first(query.minRating)) : null;
+    const availableDate = first(query.availableDate);
 
     const { hasHourlyPrice, hasPerDayPrice } = await checkPricingColumns(pool);
 
@@ -250,6 +251,30 @@ async function listServices(query, pagination) {
     if (minRating !== null && !isNaN(minRating)) {
         where += ` AND s.s_rating >= ?`;
         params.push(minRating);
+    }
+
+    if (availableDate) {
+        // Exclude services whose provider has blocked this date
+        where += ` AND s.s_provider_id NOT IN (
+            SELECT pbd_provider_id FROM provider_blocked_date WHERE pbd_date = ?
+        )`;
+        params.push(availableDate);
+
+        // Require service has availability for this day of week OR a specific date override
+        where += ` AND (
+            EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice AND sa_day_of_week = DAYOFWEEK(?) - 1 AND sa_is_available = 1 AND sa_specific_date IS NULL)
+            OR EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice AND sa_specific_date = ? AND sa_is_available = 1)
+        )`;
+        params.push(availableDate, availableDate);
+
+        // Exclude services whose provider already has a confirmed booking on this date
+        where += ` AND s.s_provider_id NOT IN (
+            SELECT s2.s_provider_id FROM booking b
+            JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
+            JOIN service s2 ON bs.bs_service_id = s2.idservice
+            WHERE b.b_event_date = ? AND b.b_status IN ('pending', 'confirmed')
+        )`;
+        params.push(availableDate);
     }
 
     let orderBy = '';
