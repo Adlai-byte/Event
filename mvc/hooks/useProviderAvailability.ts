@@ -29,7 +29,10 @@ export function useBlockedDates(startDate: string, endDate: string) {
   return useQuery({
     queryKey: ['blocked-dates', startDate, endDate],
     queryFn: () =>
-      apiClient.get<BlockedDate[]>('/provider/availability/blocked-dates', { startDate, endDate }),
+      apiClient.get<BlockedDate[]>('/api/provider/availability/blocked-dates', {
+        startDate,
+        endDate,
+      }),
     enabled: !!startDate && !!endDate,
   });
 }
@@ -39,7 +42,7 @@ export function useBlockDateMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { date?: string; startDate?: string; endDate?: string; reason?: string }) =>
-      apiClient.post('/provider/availability/blocked-dates', data),
+      apiClient.post('/api/provider/availability/blocked-dates', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blocked-dates'] });
     },
@@ -61,7 +64,8 @@ export function useUnblockDateMutation() {
 export function useSchedule(serviceId: number) {
   return useQuery({
     queryKey: ['schedule', serviceId],
-    queryFn: () => apiClient.get<ScheduleEntry[]>('/provider/availability/schedule', { serviceId }),
+    queryFn: () =>
+      apiClient.get<ScheduleEntry[]>('/api/provider/availability/schedule', { serviceId }),
     enabled: !!serviceId,
   });
 }
@@ -71,7 +75,7 @@ export function useUpdateScheduleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { serviceId: number; schedule: ScheduleEntry[] }) =>
-      apiClient.put('/provider/availability/schedule', data),
+      apiClient.put('/api/provider/availability/schedule', data),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['schedule', vars.serviceId] });
     },
@@ -86,7 +90,7 @@ export function useAvailabilityCheck(serviceId: number, date: string) {
     queryKey: ['availability-check', serviceId, date],
     queryFn: () =>
       apiClient.get<{ available: boolean; reason?: string }>(
-        `/services/${serviceId}/availability/check`,
+        `/api/services/${serviceId}/availability/check`,
         { date },
       ),
     enabled: !!serviceId && !!date,
@@ -99,7 +103,7 @@ export function useMonthCalendar(serviceId: number, month: string) {
   return useQuery({
     queryKey: ['availability-calendar', serviceId, month],
     queryFn: () =>
-      apiClient.get<CalendarDay[]>(`/services/${serviceId}/availability/calendar`, {
+      apiClient.get<CalendarDay[]>(`/api/services/${serviceId}/availability/calendar`, {
         year: yearStr,
         month: String(parseInt(monthStr, 10)),
       }),

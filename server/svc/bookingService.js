@@ -1609,53 +1609,49 @@ async function getPaymentSchedule(bookingId) {
 async function payDeposit(bookingId, userEmail, paymentMethod) {
   const pool = getPool();
 
-  // Get booking
-  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  // Verify user and ownership
+  const userId = await getUserIdByEmail(userEmail);
+  if (!userId) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ? AND b_client_id = ?', [bookingId, userId]);
   if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
-  const booking = bookings[0];
 
-  // Get deposit schedule entry
-  const [schedules] = await pool.query(
-    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
-    [bookingId, 'deposit', 'pending']
-  );
-  if (!schedules.length) throw Object.assign(new Error('No pending deposit found'), { statusCode: 400 });
-  const schedule = schedules[0];
-  const amount = parseFloat(schedule.ps_amount);
+  // Use transaction to prevent duplicate payments
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  if (paymentMethod === 'cash') {
-    // Create cash payment record
-    const [result] = await pool.query(
+    // Lock the schedule row to prevent concurrent payments
+    const [schedules] = await conn.query(
+      'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ? FOR UPDATE',
+      [bookingId, 'deposit', 'pending']
+    );
+    if (!schedules.length) {
+      await conn.rollback();
+      throw Object.assign(new Error('No pending deposit found'), { statusCode: 400 });
+    }
+    const schedule = schedules[0];
+    const amount = parseFloat(schedule.ps_amount);
+
+    const [result] = await conn.query(
       `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
-       SELECT ?, u.iduser, ?, 'deposit', 'PHP', 'pending', 'Cash on Hand'
-       FROM user u WHERE u.u_email = ?`,
-      [bookingId, amount, userEmail]
+       VALUES (?, ?, ?, 'deposit', 'PHP', 'pending', ?)`,
+      [bookingId, userId, amount, paymentMethod === 'cash' ? 'Cash on Hand' : 'PayMongo']
     );
     const paymentId = result.insertId;
 
-    // Link to schedule
-    await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+    await conn.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+    await conn.commit();
 
-    return { paymentId, amount, method: 'cash', message: 'Cash deposit recorded. Awaiting provider confirmation.' };
-  } else {
-    // PayMongo — create a payment record and return info for PayMongo checkout
-    const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
-    if (!userRows.length) throw Object.assign(new Error('User not found'), { statusCode: 404 });
-
-    const [result] = await pool.query(
-      `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
-       VALUES (?, ?, ?, 'deposit', 'PHP', 'pending', 'PayMongo')`,
-      [bookingId, userRows[0].iduser, amount]
-    );
-    const paymentId = result.insertId;
-
-    await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+    if (paymentMethod === 'cash') {
+      return { paymentId, amount, method: 'cash', message: 'Cash deposit recorded. Awaiting provider confirmation.' };
+    }
 
     // Attempt PayMongo checkout session if available
     try {
       if (createCheckoutSession) {
         const session = await createCheckoutSession({
-          amount: amount * 100, // PayMongo expects centavos
+          amount, // createCheckoutSession converts to centavos internally
           description: `Deposit for booking #${bookingId}`,
           bookingId,
           paymentId,
@@ -1665,66 +1661,94 @@ async function payDeposit(bookingId, userEmail, paymentMethod) {
     } catch (e) {
       // PayMongo not configured — fall back to recording the payment
     }
-
     return { paymentId, amount, method: 'paymongo', message: 'Deposit payment created' };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 }
 
 async function payBalance(bookingId, userEmail, paymentMethod) {
   const pool = getPool();
 
-  // Verify deposit is paid first
-  const [depositCheck] = await pool.query(
-    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
-    [bookingId, 'deposit', 'pending']
-  );
-  if (depositCheck.length) throw Object.assign(new Error('Deposit must be paid before balance'), { statusCode: 400 });
+  // Verify user and ownership
+  const userId = await getUserIdByEmail(userEmail);
+  if (!userId) throw Object.assign(new Error('User not found'), { statusCode: 404 });
 
-  // Get balance schedule entry
-  const [schedules] = await pool.query(
-    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
-    [bookingId, 'balance', 'pending']
-  );
-  if (!schedules.length) throw Object.assign(new Error('No pending balance found'), { statusCode: 400 });
-  const schedule = schedules[0];
-  const amount = parseFloat(schedule.ps_amount);
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ? AND b_client_id = ?', [bookingId, userId]);
+  if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
 
-  const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
-  if (!userRows.length) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+  // Use transaction to prevent duplicate payments
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  const paymentType = paymentMethod === 'cash' ? 'Cash on Hand' : 'PayMongo';
+    // Verify deposit is paid first
+    const [depositCheck] = await conn.query(
+      'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
+      [bookingId, 'deposit', 'pending']
+    );
+    if (depositCheck.length) {
+      await conn.rollback();
+      throw Object.assign(new Error('Deposit must be paid before balance'), { statusCode: 400 });
+    }
 
-  const [result] = await pool.query(
-    `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
-     VALUES (?, ?, ?, 'balance', 'PHP', 'pending', ?)`,
-    [bookingId, userRows[0].iduser, amount, paymentType]
-  );
-  const paymentId = result.insertId;
+    // Lock the schedule row to prevent concurrent payments
+    const [schedules] = await conn.query(
+      'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ? FOR UPDATE',
+      [bookingId, 'balance', 'pending']
+    );
+    if (!schedules.length) {
+      await conn.rollback();
+      throw Object.assign(new Error('No pending balance found'), { statusCode: 400 });
+    }
+    const schedule = schedules[0];
+    const amount = parseFloat(schedule.ps_amount);
 
-  await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+    const [result] = await conn.query(
+      `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+       VALUES (?, ?, ?, 'balance', 'PHP', 'pending', ?)`,
+      [bookingId, userId, amount, paymentMethod === 'cash' ? 'Cash on Hand' : 'PayMongo']
+    );
+    const paymentId = result.insertId;
 
-  if (paymentMethod !== 'cash') {
-    try {
-      if (createCheckoutSession) {
-        const session = await createCheckoutSession({
-          amount: amount * 100,
-          description: `Balance payment for booking #${bookingId}`,
-          bookingId,
-          paymentId,
-        });
-        return { paymentId, amount, method: 'paymongo', checkoutUrl: session.checkout_url };
-      }
-    } catch (e) { /* PayMongo not configured */ }
+    await conn.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+    await conn.commit();
+
+    if (paymentMethod !== 'cash') {
+      try {
+        if (createCheckoutSession) {
+          const session = await createCheckoutSession({
+            amount, // createCheckoutSession converts to centavos internally
+            description: `Balance payment for booking #${bookingId}`,
+            bookingId,
+            paymentId,
+          });
+          return { paymentId, amount, method: 'paymongo', checkoutUrl: session.checkout_url };
+        }
+      } catch (e) { /* PayMongo not configured */ }
+    }
+
+    return { paymentId, amount, method: paymentMethod, message: `${paymentMethod === 'cash' ? 'Cash balance' : 'Balance payment'} recorded` };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-
-  return { paymentId, amount, method: paymentMethod, message: `${paymentMethod === 'cash' ? 'Cash balance' : 'Balance payment'} recorded` };
 }
 
 async function getRefundEstimate(bookingId, userEmail) {
   const pool = getPool();
   const cancellationPolicyService = require('./cancellationPolicyService');
 
-  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  // Verify ownership
+  const userId = await getUserIdByEmail(userEmail);
+  if (!userId) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ? AND b_client_id = ?', [bookingId, userId]);
   if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
   const booking = bookings[0];
 
@@ -1753,7 +1777,11 @@ async function getRefundEstimate(bookingId, userEmail) {
 async function cancelBookingWithRefund(bookingId, userEmail, reason) {
   const pool = getPool();
 
-  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  // Verify ownership
+  const userId = await getUserIdByEmail(userEmail);
+  if (!userId) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ? AND b_client_id = ?', [bookingId, userId]);
   if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
   const booking = bookings[0];
 
@@ -1778,19 +1806,17 @@ async function cancelBookingWithRefund(bookingId, userEmail, reason) {
   // If refund amount > 0, create a refund payment record
   let refundPaymentId = null;
   if (refundEstimate.refundAmount > 0) {
-    const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
-    if (userRows.length) {
-      const [result] = await pool.query(
-        `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
-         VALUES (?, ?, ?, 'refund', 'PHP', 'pending', 'Refund')`,
-        [bookingId, userRows[0].iduser, refundEstimate.refundAmount]
-      );
-      refundPaymentId = result.insertId;
-    }
+    const [result] = await pool.query(
+      `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+       VALUES (?, ?, ?, 'refund', 'PHP', 'pending', 'Refund')`,
+      [bookingId, userId, refundEstimate.refundAmount]
+    );
+    refundPaymentId = result.insertId;
   }
 
   return {
     bookingId,
+    clientEmail: userEmail,
     status: 'cancelled',
     reason: reason || null,
     refundAmount: refundEstimate.refundAmount,

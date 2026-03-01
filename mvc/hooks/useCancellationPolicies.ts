@@ -18,7 +18,8 @@ export interface CancellationPolicy {
 export function useCancellationPolicies() {
   return useQuery({
     queryKey: ['cancellation-policies'],
-    queryFn: () => apiClient.get<{ rows: CancellationPolicy[] }>('/provider/cancellation-policies'),
+    queryFn: () =>
+      apiClient.get<{ rows: CancellationPolicy[] }>('/api/provider/cancellation-policies'),
   });
 }
 
@@ -26,7 +27,7 @@ export function useCreatePolicyMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { name: string; depositPercent: number; rules: CancellationRule[] }) =>
-      apiClient.post('/provider/cancellation-policies', data),
+      apiClient.post('/api/provider/cancellation-policies', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cancellation-policies'] });
     },

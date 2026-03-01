@@ -661,10 +661,10 @@ async function cancelBooking(req, res) {
       Number(req.params.bookingId), req.user.email, req.body.reason
     );
 
-    // Emit socket event
+    // Emit socket event to the booking's client
     const io = req.app.get('io');
-    if (io) {
-      io.emit('booking-update', { bookingId: req.params.bookingId, status: 'cancelled' });
+    if (io && result.clientEmail) {
+      io.to(`user:${result.clientEmail}`).emit('booking-update', { bookingId: req.params.bookingId, status: 'cancelled' });
     }
 
     return sendSuccess(res, result);

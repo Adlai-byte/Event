@@ -366,7 +366,13 @@ async function getServiceById(id) {
         WHERE s.idservice = ?
     `, [id]);
 
-    return rows.length > 0 ? rows[0] : null;
+    if (!rows.length) return null;
+    const service = rows[0];
+    // Parse JSON policy_rules if returned as string
+    if (typeof service.policy_rules === 'string') {
+        try { service.policy_rules = JSON.parse(service.policy_rules); } catch { service.policy_rules = null; }
+    }
+    return service;
 }
 
 /**
