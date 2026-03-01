@@ -65,8 +65,10 @@ async function removeBlockedDate(req, res) {
 // ──────────────────────────────────────────────
 
 async function getSchedule(req, res) {
+  const email = req.user.email;
   const serviceId = Number(req.query.serviceId);
   try {
+    await availabilityService.verifyServiceOwnership(serviceId, email);
     const rows = await availabilityService.getSchedule(serviceId);
     return sendSuccess(res, { rows });
   } catch (err) {

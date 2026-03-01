@@ -173,6 +173,8 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
       try {
         const response = await apiClient.get<{ ok: boolean; rows?: any[] }>('/provider/bookings', {
           providerEmail: user.email,
+          startDate,
+          endDate,
         });
         if (cancelled) return;
         const rows = response.rows || [];

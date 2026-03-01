@@ -48,7 +48,7 @@ async function verifyServiceOwnership(serviceId, providerEmail) {
     throw err;
   }
 
-  if (serviceProviderId !== providerId) {
+  if (Number(serviceProviderId) !== Number(providerId)) {
     const err = new Error('You do not own this service');
     err.statusCode = 403;
     err.code = 'FORBIDDEN';
@@ -66,6 +66,16 @@ function formatDateStr(d) {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Safely extract 'YYYY-MM-DD' from a MySQL date value.
+ * Handles both string and Date object inputs without timezone shift.
+ */
+function safeDateStr(d) {
+  if (typeof d === 'string') return d.split('T')[0];
+  // For Date objects from MySQL, use UTC methods to avoid local timezone shift
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
 // ──────────────────────────────────────────────
@@ -142,8 +152,8 @@ async function addBlockedDateRange(providerEmail, startDate, endDate, reason) {
 
   // Build array of dates in range
   const dates = [];
-  const current = new Date(startDate);
-  const end = new Date(endDate);
+  const current = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
   while (current <= end) {
     dates.push(formatDateStr(current));
     current.setDate(current.getDate() + 1);
@@ -329,7 +339,8 @@ async function checkAvailability(serviceId, date) {
     }
   } else {
     // 4. Check day-of-week schedule
-    const dayOfWeek = new Date(date).getDay(); // 0=Sunday
+    const parts = date.split('-');
+    const dayOfWeek = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay(); // 0=Sunday
     const [weeklySchedule] = await pool.query(
       `SELECT sa_start_time AS startTime, sa_end_time AS endTime,
               sa_is_available AS isAvailable, sa_price_override AS priceOverride
@@ -434,13 +445,13 @@ async function getMonthCalendar(serviceId, year, month) {
 
   // Build lookup sets/maps for O(1) access
   const blockedSet = new Set(
-    blockedDates.map(r => formatDateStr(new Date(r.date))),
+    blockedDates.map(r => safeDateStr(r.date)),
   );
   const overrideMap = new Map(
-    specificOverrides.map(r => [formatDateStr(new Date(r.date)), r]),
+    specificOverrides.map(r => [safeDateStr(r.date), r]),
   );
   const bookingSet = new Set(
-    bookings.map(r => formatDateStr(new Date(r.date))),
+    bookings.map(r => safeDateStr(r.date)),
   );
   const weeklyMap = new Map(
     weeklySchedule.map(r => [r.dayOfWeek, r]),
@@ -504,6 +515,7 @@ async function getMonthCalendar(serviceId, year, month) {
 module.exports = {
   // Helpers
   getProviderIdByEmail,
+  verifyServiceOwnership,
   // Blocked dates
   getBlockedDates,
   addBlockedDate,

@@ -95,10 +95,14 @@ export function useAvailabilityCheck(serviceId: number, date: string) {
 
 /** Public: get month calendar for a service */
 export function useMonthCalendar(serviceId: number, month: string) {
+  const [yearStr, monthStr] = month.split('-');
   return useQuery({
     queryKey: ['availability-calendar', serviceId, month],
     queryFn: () =>
-      apiClient.get<CalendarDay[]>(`/services/${serviceId}/availability/calendar`, { month }),
+      apiClient.get<CalendarDay[]>(`/services/${serviceId}/availability/calendar`, {
+        year: yearStr,
+        month: String(parseInt(monthStr, 10)),
+      }),
     enabled: !!serviceId && !!month,
   });
 }

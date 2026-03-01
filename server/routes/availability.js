@@ -36,11 +36,23 @@ router.post('/provider/availability/blocked-dates',
     body('date')
       .optional()
       .isISO8601()
-      .withMessage('date must be a valid date (YYYY-MM-DD)'),
+      .withMessage('date must be a valid date (YYYY-MM-DD)')
+      .custom((val) => {
+        if (val < new Date().toISOString().split('T')[0]) {
+          throw new Error('Cannot block a date in the past');
+        }
+        return true;
+      }),
     body('startDate')
       .optional()
       .isISO8601()
-      .withMessage('startDate must be a valid date (YYYY-MM-DD)'),
+      .withMessage('startDate must be a valid date (YYYY-MM-DD)')
+      .custom((val) => {
+        if (val < new Date().toISOString().split('T')[0]) {
+          throw new Error('startDate cannot be in the past');
+        }
+        return true;
+      }),
     body('endDate')
       .optional()
       .isISO8601()
