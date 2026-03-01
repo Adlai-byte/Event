@@ -1,9 +1,10 @@
 // mvc/components/layout/Sidebar.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, semantic, typography, spacing, borderRadius } from '../../theme';
 import { Avatar } from '../ui/Avatar';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 type Role = 'user' | 'provider' | 'admin';
 
@@ -37,6 +38,7 @@ const navItemsByRole: Record<Role, NavItem[]> = {
     { key: 'dashboard', label: 'Dashboard', icon: 'home' },
     { key: 'services', label: 'Services', icon: 'tool' },
     { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'availability', label: 'Availability', icon: 'clock' },
     { key: 'proposals', label: 'Proposals', icon: 'file-text' },
     { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
     { key: 'messages', label: 'Messages', icon: 'message-circle' },
@@ -64,6 +66,8 @@ export function Sidebar({
   onLogout,
   onClose,
 }: SidebarProps) {
+  const { screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(screenWidth), [screenWidth]);
   const items = navItemsByRole[role];
   const displayName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '';
 
@@ -140,100 +144,104 @@ export function Sidebar({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: 250,
-    backgroundColor: semantic.sidebarBg,
-    paddingVertical: spacing.lg,
-    height: '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  logo: {
-    ...typography.h1,
-    color: colors.neutral[0],
-  },
-  userSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.dark[800],
-  },
-  userInfo: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  userName: {
-    ...typography.label,
-    color: colors.neutral[0],
-  },
-  userEmail: {
-    ...typography.caption,
-    color: colors.neutral[400],
-  },
-  nav: {
-    flex: 1,
-    paddingHorizontal: spacing.sm,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
-  },
-  navItemActive: {
-    backgroundColor: semantic.sidebarActive,
-  },
-  navIconContainer: {
-    width: 28,
-    alignItems: 'center',
-  },
-  navLabel: {
-    ...typography.body,
-    color: colors.neutral[400],
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
-  navLabelActive: {
-    color: colors.neutral[0],
-    fontWeight: '600',
-  },
-  badge: {
-    backgroundColor: colors.error[500],
-    borderRadius: borderRadius.full,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    ...typography.caption,
-    color: colors.neutral[0],
-    fontWeight: '700',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.dark[800],
-    marginTop: spacing.sm,
-  },
-  logoutText: {
-    ...typography.body,
-    color: colors.neutral[400],
-    marginLeft: spacing.sm,
-  },
-});
+const createStyles = (screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
+    container: {
+      width: Math.min(280, screenWidth * 0.8),
+      backgroundColor: semantic.sidebarBg,
+      paddingVertical: spacing.lg,
+      height: '100%',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    logo: {
+      ...typography.h1,
+      color: colors.neutral[0],
+    },
+    userSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+      paddingBottom: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.dark[800],
+    },
+    userInfo: {
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+    userName: {
+      ...typography.label,
+      color: colors.neutral[0],
+    },
+    userEmail: {
+      ...typography.caption,
+      ...(isExtraSmall ? { fontSize: 11 } : {}),
+      color: colors.neutral[400],
+    },
+    nav: {
+      flex: 1,
+      paddingHorizontal: spacing.sm,
+    },
+    navItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.xs,
+    },
+    navItemActive: {
+      backgroundColor: semantic.sidebarActive,
+    },
+    navIconContainer: {
+      width: 28,
+      alignItems: 'center',
+    },
+    navLabel: {
+      ...typography.body,
+      color: colors.neutral[400],
+      flex: 1,
+      marginLeft: spacing.sm,
+    },
+    navLabelActive: {
+      color: colors.neutral[0],
+      fontWeight: '600',
+    },
+    badge: {
+      backgroundColor: colors.error[500],
+      borderRadius: borderRadius.full,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    badgeText: {
+      ...typography.caption,
+      color: colors.neutral[0],
+      fontWeight: '700',
+    },
+    logoutButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.dark[800],
+      marginTop: spacing.sm,
+    },
+    logoutText: {
+      ...typography.body,
+      color: colors.neutral[400],
+      marginLeft: spacing.sm,
+    },
+  });
+};

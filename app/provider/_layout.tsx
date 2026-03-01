@@ -8,6 +8,7 @@ const routeTitleMap: Record<string, string> = {
   dashboard: 'Dashboard',
   services: 'My Services',
   bookings: 'Bookings',
+  availability: 'Availability',
   proposals: 'Proposals',
   hiring: 'Hiring',
   messages: 'Messages',

@@ -41,6 +41,7 @@ const mobileNavItems: Record<
     { key: 'dashboard', label: 'Home', icon: 'home' },
     { key: 'services', label: 'Services', icon: 'tool' },
     { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'availability', label: 'Hours', icon: 'clock' },
     { key: 'messages', label: 'Messages', icon: 'message-circle' },
     { key: 'profile', label: 'Profile', icon: 'user' },
   ],
