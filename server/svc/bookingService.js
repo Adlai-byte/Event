@@ -1199,6 +1199,8 @@ async function getProviderBookings({ providerId, providerEmail }) {
         b.b_total_cost,
         b.b_status,
         b.b_created_at,
+        b.b_deposit_paid,
+        b.b_balance_due_date,
         CONCAT(u.u_fname, ' ', u.u_lname) as client_name,
         u.u_email as client_email,
         u.u_phone as client_phone,
@@ -1226,7 +1228,7 @@ async function getProviderBookings({ providerId, providerEmail }) {
     LEFT JOIN payment p ON b.idbooking = p.p_booking_id
     WHERE s.s_provider_id = ?
     GROUP BY b.idbooking, b.b_event_name, b.b_event_date, b.b_start_time, b.b_end_time,
-             b.b_location, b.b_total_cost, b.b_status, b.b_created_at,
+             b.b_location, b.b_total_cost, b.b_status, b.b_created_at, b.b_deposit_paid, b.b_balance_due_date,
              u.u_fname, u.u_lname, u.u_email, u.u_phone, u.u_address, u.u_city, u.u_state, u.u_zip_code
     ORDER BY b.b_event_date DESC, b.b_created_at DESC
   `, [userId]);

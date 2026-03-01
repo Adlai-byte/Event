@@ -16,13 +16,47 @@ import { ProviderBookingCard } from '../../components/booking/ProviderBookingCar
 import { useProviderBookings, getStatusColor } from '../../hooks/useProviderBookings';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { SkeletonListItem } from '../../components/ui';
-import { semantic } from '../../theme';
+import { colors, semantic } from '../../theme';
 import { createStyles } from './BookingsView.styles';
 
 interface BookingsViewProps {
   user?: User;
   onNavigate?: (route: string) => void;
   onLogout?: () => void | Promise<void>;
+}
+
+/**
+ * Returns payment badge info for mobile card display.
+ */
+function getPaymentBadgeInfo(booking: {
+  status: string;
+  isPaid?: boolean;
+  depositPaid?: boolean;
+  balanceDueDate?: string | null;
+}): {
+  label: string;
+  bgColor: string;
+  textColor: string;
+} | null {
+  if (booking.status === 'cancelled') return null;
+
+  if (booking.isPaid && (booking.status === 'confirmed' || booking.status === 'completed')) {
+    return { label: 'Fully Paid', bgColor: colors.success[50], textColor: colors.success[700] };
+  }
+  if (
+    booking.depositPaid === false &&
+    booking.status === 'pending' &&
+    booking.depositPaid !== undefined
+  ) {
+    return { label: 'Deposit Due', bgColor: colors.warning[50], textColor: colors.warning[600] };
+  }
+  if (booking.depositPaid === true && !booking.isPaid) {
+    const balanceLabel = booking.balanceDueDate
+      ? `Balance Due by ${new Date(booking.balanceDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+      : 'Balance Due';
+    return { label: balanceLabel, bgColor: colors.primary[50], textColor: colors.primary[600] };
+  }
+  return null;
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, onLogout }) => {
@@ -136,7 +170,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                     {booking.location}
                   </Text>
                 </View>
-                <View style={[styles.mobileCardRow, { borderBottomWidth: 0 }]}>
+                <View
+                  style={[
+                    styles.mobileCardRow,
+                    { borderBottomWidth: getPaymentBadgeInfo(booking) ? 1 : 0 },
+                  ]}
+                >
                   <Text style={styles.mobileCardLabel}>Total</Text>
                   <Text
                     style={[styles.mobileCardValue, { color: semantic.primary, fontWeight: '700' }]}
@@ -144,6 +183,31 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                     ₱{booking.totalCost.toLocaleString()}
                   </Text>
                 </View>
+                {(() => {
+                  const badge = getPaymentBadgeInfo(booking);
+                  if (!badge) return null;
+                  return (
+                    <View style={[styles.mobileCardRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.mobileCardLabel}>Payment</Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          backgroundColor: badge.bgColor,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 4,
+                        }}
+                        accessibilityLabel={`Payment status: ${badge.label}`}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: badge.textColor }}>
+                          {badge.label}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })()}
                 <View style={styles.mobileCardActions}>
                   {handleViewClientDetails && (
                     <TouchableOpacity
@@ -334,6 +398,30 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
                       ₱{selectedBooking.totalCost.toLocaleString()}
                     </Text>
                   </View>
+                  {(() => {
+                    const badge = getPaymentBadgeInfo(selectedBooking);
+                    if (!badge) return null;
+                    return (
+                      <View style={styles.clientDetailsRow}>
+                        <Text style={styles.clientDetailsLabel}>Payment:</Text>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            backgroundColor: badge.bgColor,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 4,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: badge.textColor }}>
+                            {badge.label}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
 
                 {/* Client Contact Info */}

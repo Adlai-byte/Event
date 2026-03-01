@@ -23,4 +23,6 @@ export interface Booking {
   }>;
   totalCost: number;
   isPaid?: boolean; // Payment status
+  depositPaid?: boolean; // Phase 2: whether deposit has been paid
+  balanceDueDate?: string | null; // Phase 2: when balance is due (YYYY-MM-DD)
 }

@@ -72,7 +72,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
     serviceName: string;
   } | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
   const handleViewDetails = useCallback(
@@ -125,10 +124,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
   );
 
   const handleCancelEvent = useCallback((booking: Booking) => {
-    if (booking.isPaid) {
-      Alert.alert('Cannot Cancel', 'This booking has already been paid and cannot be canceled.');
-      return;
-    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const eventDate = new Date(booking.dateStr || booking.date);
@@ -138,46 +133,15 @@ export const BookingView: React.FC<BookingViewProps> = ({
       return;
     }
     setBookingToCancel(booking);
-    setCancelReason('');
     setShowCancelModal(true);
   }, []);
 
-  const handleConfirmCancel = useCallback(async () => {
-    if (!bookingToCancel || !userEmail) {
-      Alert.alert('Error', 'Unable to cancel booking. Please try again.');
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/bookings/${bookingToCancel.id}/status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'cancelled',
-          userEmail: userEmail,
-          cancellation_reason: cancelReason.trim() || undefined,
-        }),
-      });
-
-      const data = await resp.json();
-
-      if (resp.ok && data.ok) {
-        Alert.alert('Success', 'Booking cancelled successfully');
-        loadBookings();
-        setShowEventDetails(false);
-        setShowCancelModal(false);
-        setBookingToCancel(null);
-        setCancelReason('');
-      } else {
-        Alert.alert('Error', data.error || 'Failed to cancel booking');
-      }
-    } catch (error) {
-      console.error('Error cancelling booking:', error);
-      Alert.alert('Error', 'Failed to cancel booking. Please try again.');
-    }
-  }, [bookingToCancel, userEmail, cancelReason, loadBookings]);
+  const handleCancelSuccess = useCallback(() => {
+    loadBookings();
+    setShowEventDetails(false);
+    setShowCancelModal(false);
+    setBookingToCancel(null);
+  }, [loadBookings]);
 
   const handlePay = useCallback((booking: Booking) => {
     setPaymentBooking(booking);
@@ -494,18 +458,18 @@ export const BookingView: React.FC<BookingViewProps> = ({
         )}
 
         {/* Cancel Booking Confirmation Modal */}
-        <CancelBookingModal
-          visible={showCancelModal}
-          bookingToCancel={bookingToCancel}
-          cancelReason={cancelReason}
-          onCancelReasonChange={setCancelReason}
-          onConfirm={handleConfirmCancel}
-          onClose={() => {
-            setShowCancelModal(false);
-            setCancelReason('');
-            setBookingToCancel(null);
-          }}
-        />
+        {bookingToCancel && (
+          <CancelBookingModal
+            visible={showCancelModal}
+            bookingId={parseInt(bookingToCancel.id, 10)}
+            serviceName={bookingToCancel.title}
+            onClose={() => {
+              setShowCancelModal(false);
+              setBookingToCancel(null);
+            }}
+            onCancelled={handleCancelSuccess}
+          />
+        )}
       </View>
     </AppLayout>
   );

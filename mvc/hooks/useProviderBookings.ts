@@ -22,6 +22,8 @@ export interface ProviderBooking {
   paymentStatus?: string;
   hasPendingCashPayment?: boolean;
   isPaid?: boolean;
+  depositPaid?: boolean;
+  balanceDueDate?: string | null;
 }
 
 const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const;
@@ -32,7 +34,7 @@ const formatDate = (dateStr: string): string => {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   } catch {
     return dateStr;
@@ -51,21 +53,29 @@ const formatTime = (timeStr: string): string => {
 
 export const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'pending': return '#f59e0b';
-    case 'confirmed': return '#10b981';
-    case 'completed': return '#4a55e1';
-    case 'cancelled': return '#ef4444';
-    default: return '#64748B';
+    case 'pending':
+      return '#f59e0b';
+    case 'confirmed':
+      return '#10b981';
+    case 'completed':
+      return '#4a55e1';
+    case 'cancelled':
+      return '#ef4444';
+    default:
+      return '#64748B';
   }
 };
 
 function mapBooking(b: any): ProviderBooking {
-  const hasPendingCash = b.has_pending_cash_payment === 1 ||
-                         (b.payment_method === 'Cash on Hand' && b.payment_status === 'pending');
+  const hasPendingCash =
+    b.has_pending_cash_payment === 1 ||
+    (b.payment_method === 'Cash on Hand' && b.payment_status === 'pending');
 
   // Debug log
   if (b.b_status === 'confirmed') {
-    console.log(`Booking ${b.idbooking}: payment_method=${b.payment_method}, payment_status=${b.payment_status}, hasPendingCash=${hasPendingCash}`);
+    console.log(
+      `Booking ${b.idbooking}: payment_method=${b.payment_method}, payment_status=${b.payment_status}, hasPendingCash=${hasPendingCash}`,
+    );
   }
 
   // If status is 'completed' but not paid, change to 'cancelled'
@@ -90,7 +100,9 @@ function mapBooking(b: any): ProviderBooking {
     paymentMethod: b.payment_method || null,
     paymentStatus: b.payment_status || null,
     hasPendingCashPayment: hasPendingCash,
-    isPaid: b.is_paid === 1
+    isPaid: b.is_paid === 1,
+    depositPaid: b.b_deposit_paid === 1 || b.b_deposit_paid === true,
+    balanceDueDate: b.b_balance_due_date || null,
   };
 }
 
@@ -111,10 +123,9 @@ export function useProviderBookings(user?: User) {
   const bookingsQuery = useQuery({
     queryKey: ['provider-bookings', user?.email],
     queryFn: async () => {
-      const data = await apiClient.get<{ ok: boolean; rows?: any[] }>(
-        '/api/provider/bookings',
-        { providerEmail: user!.email },
-      );
+      const data = await apiClient.get<{ ok: boolean; rows?: any[] }>('/api/provider/bookings', {
+        providerEmail: user!.email,
+      });
       if (data.ok && Array.isArray(data.rows)) {
         return data.rows.map(mapBooking);
       }
@@ -128,8 +139,18 @@ export function useProviderBookings(user?: User) {
 
   // --- Mutation: update booking status ---
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ bookingId, newStatus, reason }: { bookingId: string; newStatus: string; reason?: string }) => {
-      console.log(`Updating booking ${bookingId} to status: ${newStatus}${reason ? ` with reason: ${reason}` : ''}`);
+    mutationFn: async ({
+      bookingId,
+      newStatus,
+      reason,
+    }: {
+      bookingId: string;
+      newStatus: string;
+      reason?: string;
+    }) => {
+      console.log(
+        `Updating booking ${bookingId} to status: ${newStatus}${reason ? ` with reason: ${reason}` : ''}`,
+      );
       const requestBody: any = { status: newStatus };
       if (reason) {
         requestBody.cancellation_reason = reason;
@@ -145,7 +166,10 @@ export function useProviderBookings(user?: User) {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
-      Alert.alert('Success', `Booking ${variables.newStatus === 'cancelled' ? 'cancelled' : 'confirmed'} successfully`);
+      Alert.alert(
+        'Success',
+        `Booking ${variables.newStatus === 'cancelled' ? 'cancelled' : 'confirmed'} successfully`,
+      );
     },
     onError: (error: Error) => {
       console.error('Error updating booking status:', error);
@@ -177,9 +201,12 @@ export function useProviderBookings(user?: User) {
 
   // --- Handler wrappers (preserve exact same call signatures) ---
 
-  const handleUpdateBookingStatus = useCallback(async (bookingId: string, newStatus: string, reason?: string) => {
-    await updateStatusMutation.mutateAsync({ bookingId, newStatus, reason });
-  }, [updateStatusMutation]);
+  const handleUpdateBookingStatus = useCallback(
+    async (bookingId: string, newStatus: string, reason?: string) => {
+      await updateStatusMutation.mutateAsync({ bookingId, newStatus, reason });
+    },
+    [updateStatusMutation],
+  );
 
   const handleConfirmClick = useCallback((bookingId: string) => {
     setBookingToUpdate(bookingId);
@@ -211,31 +238,40 @@ export function useProviderBookings(user?: User) {
     }
   }, [bookingToUpdate, cancelReason, handleUpdateBookingStatus]);
 
-  const handleMarkPaymentAsPaid = useCallback(async (bookingId: string) => {
-    await markPaidMutation.mutateAsync(bookingId);
-  }, [markPaidMutation]);
+  const handleMarkPaymentAsPaid = useCallback(
+    async (bookingId: string) => {
+      await markPaidMutation.mutateAsync(bookingId);
+    },
+    [markPaidMutation],
+  );
 
-  const handleDownloadInvoice = useCallback(async (bookingId: string) => {
-    try {
-      const invoiceUrl = `${getApiBaseUrl()}/api/provider/bookings/${bookingId}/invoice?providerEmail=${encodeURIComponent(user?.email || '')}`;
+  const handleDownloadInvoice = useCallback(
+    async (bookingId: string) => {
+      try {
+        const invoiceUrl = `${getApiBaseUrl()}/api/provider/bookings/${bookingId}/invoice?providerEmail=${encodeURIComponent(user?.email || '')}`;
 
-      if (Platform.OS === 'web') {
-        // For web, open in new tab to download
-        if (typeof window !== 'undefined') {
-          window.open(invoiceUrl, '_blank');
+        if (Platform.OS === 'web') {
+          // For web, open in new tab to download
+          if (typeof window !== 'undefined') {
+            window.open(invoiceUrl, '_blank');
+          }
+        } else {
+          // For mobile, use Linking
+          Linking.openURL(invoiceUrl).catch((err) => {
+            console.error('Error opening invoice URL:', err);
+            Alert.alert('Error', 'Failed to download invoice. Please try again.');
+          });
         }
-      } else {
-        // For mobile, use Linking
-        Linking.openURL(invoiceUrl).catch((err) => {
-          console.error('Error opening invoice URL:', err);
-          Alert.alert('Error', 'Failed to download invoice. Please try again.');
-        });
+      } catch (error) {
+        console.error('Error downloading invoice:', error);
+        Alert.alert(
+          'Error',
+          `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
-    } catch (error) {
-      console.error('Error downloading invoice:', error);
-      Alert.alert('Error', `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }, [user?.email]);
+    },
+    [user?.email],
+  );
 
   const handleViewClientDetails = useCallback((booking: ProviderBooking) => {
     setSelectedBooking(booking);
@@ -262,9 +298,10 @@ export function useProviderBookings(user?: User) {
   }, [queryClient, user?.email]);
 
   // --- Derived data ---
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b) => {
     const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
-    const matchesSearch = !searchQuery ||
+    const matchesSearch =
+      !searchQuery ||
       b.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
