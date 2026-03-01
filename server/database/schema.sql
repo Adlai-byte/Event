@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS `service` (
     `s_zip_code` VARCHAR(20) DEFAULT NULL,
     `s_address` VARCHAR(255) DEFAULT NULL,
     `s_location_type` ENUM('physical', 'virtual', 'both') NOT NULL DEFAULT 'physical',
+    `s_deposit_percent` DECIMAL(5,2) DEFAULT 100.00,
+    `s_cancellation_policy_id` INT(11) DEFAULT NULL,
     `s_rating` DECIMAL(3, 2) DEFAULT 0.00 COMMENT 'Average rating 0-5',
     `s_review_count` INT(11) DEFAULT 0,
     `s_is_active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -77,13 +79,31 @@ CREATE TABLE IF NOT EXISTS `service_availability` (
     `idavailability` INT(11) NOT NULL AUTO_INCREMENT,
     `sa_service_id` INT(11) NOT NULL,
     `sa_day_of_week` TINYINT(1) NOT NULL COMMENT '0=Sunday, 1=Monday, ..., 6=Saturday',
+    `sa_specific_date` DATE DEFAULT NULL,
     `sa_start_time` TIME NOT NULL,
     `sa_end_time` TIME NOT NULL,
     `sa_is_available` TINYINT(1) NOT NULL DEFAULT 1,
     `sa_price_override` DECIMAL(10, 2) DEFAULT NULL,
     PRIMARY KEY (`idavailability`),
     INDEX `idx_service` (`sa_service_id`),
+    INDEX `idx_specific_date` (`sa_specific_date`),
     FOREIGN KEY (`sa_service_id`) REFERENCES `service`(`idservice`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PROVIDER BLOCKED DATES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS `provider_blocked_date` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `pbd_provider_id` INT(11) NOT NULL,
+    `pbd_date` DATE NOT NULL,
+    `pbd_reason` VARCHAR(255) DEFAULT NULL,
+    `pbd_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_provider_date` (`pbd_provider_id`, `pbd_date`),
+    INDEX `idx_provider` (`pbd_provider_id`),
+    INDEX `idx_date` (`pbd_date`),
+    FOREIGN KEY (`pbd_provider_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
