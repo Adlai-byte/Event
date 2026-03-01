@@ -616,6 +616,64 @@ async function getRating(req, res) {
 }
 
 // ──────────────────────────────────────────────
+// Deposit / Balance / Cancellation
+// ──────────────────────────────────────────────
+
+async function getPaymentSchedule(req, res) {
+  try {
+    const schedule = await bookingService.getPaymentSchedule(Number(req.params.bookingId));
+    return sendSuccess(res, { rows: schedule });
+  } catch (err) {
+    return handleServiceError(res, err, 'Get payment schedule failed');
+  }
+}
+
+async function payDeposit(req, res) {
+  try {
+    const result = await bookingService.payDeposit(Number(req.params.bookingId), req.user.email, req.body.paymentMethod);
+    return sendSuccess(res, result);
+  } catch (err) {
+    return handleServiceError(res, err, 'Pay deposit failed');
+  }
+}
+
+async function payBalance(req, res) {
+  try {
+    const result = await bookingService.payBalance(Number(req.params.bookingId), req.user.email, req.body.paymentMethod);
+    return sendSuccess(res, result);
+  } catch (err) {
+    return handleServiceError(res, err, 'Pay balance failed');
+  }
+}
+
+async function getRefundEstimate(req, res) {
+  try {
+    const result = await bookingService.getRefundEstimate(Number(req.params.bookingId), req.user.email);
+    return sendSuccess(res, result);
+  } catch (err) {
+    return handleServiceError(res, err, 'Get refund estimate failed');
+  }
+}
+
+async function cancelBooking(req, res) {
+  try {
+    const result = await bookingService.cancelBookingWithRefund(
+      Number(req.params.bookingId), req.user.email, req.body.reason
+    );
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('booking-update', { bookingId: req.params.bookingId, status: 'cancelled' });
+    }
+
+    return sendSuccess(res, result);
+  } catch (err) {
+    return handleServiceError(res, err, 'Cancel booking failed');
+  }
+}
+
+// ──────────────────────────────────────────────
 module.exports = {
   // Bookings CRUD
   listBookings,
@@ -636,6 +694,12 @@ module.exports = {
   paymongoSuccess,
   paymongoFailed,
   markPaymentComplete,
+  // Deposit / Balance / Cancellation
+  getPaymentSchedule,
+  payDeposit,
+  payBalance,
+  getRefundEstimate,
+  cancelBooking,
   // Provider
   getProviderBookings,
   markCashPaymentPaid,

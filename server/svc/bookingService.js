@@ -332,6 +332,61 @@ async function createBooking({ clientEmail, serviceId, eventName, eventDate, sta
     connection.release();
   }
 
+  // ── Payment schedule creation ──────────────────────────────────
+  // After booking insert, look up the service's deposit config
+  const [serviceConfig] = await pool.query(
+    `SELECT s_deposit_percent, s_cancellation_policy_id FROM service WHERE idservice = ?`,
+    [serviceId]
+  );
+
+  const depositPercent = serviceConfig[0]?.s_deposit_percent ?? 100;
+  const cancellationPolicyId = serviceConfig[0]?.s_cancellation_policy_id;
+
+  if (depositPercent < 100 && depositPercent > 0) {
+    // Split payment
+    const depositAmount = Math.round(calculatedCost * (depositPercent / 100) * 100) / 100;
+    const balanceAmount = Math.round((calculatedCost - depositAmount) * 100) / 100;
+
+    // Balance due 3 days before event
+    const eventDateObj = new Date(eventDate + 'T00:00:00');
+    eventDateObj.setDate(eventDateObj.getDate() - 3);
+    const balanceDueDate = eventDateObj.toISOString().split('T')[0];
+
+    // Create payment schedule entries
+    const today = new Date().toISOString().split('T')[0];
+    await pool.query(
+      'INSERT INTO payment_schedule (ps_booking_id, ps_type, ps_amount, ps_due_date) VALUES (?, ?, ?, ?)',
+      [bookingId, 'deposit', depositAmount, today]
+    );
+    await pool.query(
+      'INSERT INTO payment_schedule (ps_booking_id, ps_type, ps_amount, ps_due_date) VALUES (?, ?, ?, ?)',
+      [bookingId, 'balance', balanceAmount, balanceDueDate]
+    );
+
+    // Update booking with balance due date
+    await pool.query(
+      'UPDATE booking SET b_balance_due_date = ? WHERE idbooking = ?',
+      [balanceDueDate, bookingId]
+    );
+
+    // Snapshot the cancellation policy onto the booking
+    if (cancellationPolicyId) {
+      const cancellationPolicyService = require('./cancellationPolicyService');
+      const policy = await cancellationPolicyService.getPolicy(cancellationPolicyId);
+      await pool.query(
+        'UPDATE booking SET b_cancellation_policy_snapshot = ? WHERE idbooking = ?',
+        [JSON.stringify({ name: policy.name, depositPercent: policy.depositPercent, rules: policy.rules }), bookingId]
+      );
+    }
+  } else {
+    // Full payment (100% deposit or 0%) — single schedule entry
+    const today = new Date().toISOString().split('T')[0];
+    await pool.query(
+      'INSERT INTO payment_schedule (ps_booking_id, ps_type, ps_amount, ps_due_date) VALUES (?, ?, ?, ?)',
+      [bookingId, 'deposit', calculatedCost, today]
+    );
+  }
+
   // Create notification for provider
   if (providerUserId) {
     try {
@@ -1076,6 +1131,28 @@ async function markPaymentComplete(bookingId, userEmail) {
 
   console.log('Payment marked as completed for booking:', bookingId);
 
+  // Check if any completed payments are linked to payment_schedule entries
+  const [scheduleLinks] = await pool.query(
+    `SELECT ps.* FROM payment_schedule ps
+     INNER JOIN payment p ON ps.ps_payment_id = p.idpayment
+     WHERE p.p_booking_id = ? AND p.p_user_id = ? AND p.p_status = 'completed'`,
+    [bookingId, userId]
+  );
+  for (const sl of scheduleLinks) {
+    if (sl.ps_type === 'deposit' && sl.ps_status !== 'paid') {
+      // Mark schedule as paid
+      await pool.query('UPDATE payment_schedule SET ps_status = ? WHERE id = ?', ['paid', sl.id]);
+      // Auto-confirm booking
+      await pool.query(
+        'UPDATE booking SET b_deposit_paid = 1, b_status = ? WHERE idbooking = ? AND b_status = ?',
+        ['confirmed', sl.ps_booking_id, 'pending']
+      );
+    }
+    if (sl.ps_type === 'balance' && sl.ps_status !== 'paid') {
+      await pool.query('UPDATE payment_schedule SET ps_status = ? WHERE id = ?', ['paid', sl.id]);
+    }
+  }
+
   // Get provider email for socket notification
   const [providerRow] = await pool.query(`
     SELECT DISTINCT p.u_email as provider_email
@@ -1502,6 +1579,228 @@ async function getRating(bookingId, serviceId, userEmail) {
 }
 
 // ──────────────────────────────────────────────
+// Deposit / Balance Payment Schedule
+// ──────────────────────────────────────────────
+
+async function getPaymentSchedule(bookingId) {
+  const pool = getPool();
+  const [rows] = await pool.query(
+    `SELECT ps.*, p.p_status as payment_status, p.p_paid_at
+     FROM payment_schedule ps
+     LEFT JOIN payment p ON ps.ps_payment_id = p.idpayment
+     WHERE ps.ps_booking_id = ?
+     ORDER BY FIELD(ps.ps_type, 'deposit', 'balance')`,
+    [bookingId]
+  );
+  return rows.map(r => ({
+    id: r.id,
+    type: r.ps_type,
+    amount: parseFloat(r.ps_amount),
+    dueDate: r.ps_due_date,
+    status: r.ps_status,
+    paymentId: r.ps_payment_id,
+    paymentStatus: r.payment_status,
+    paidAt: r.p_paid_at,
+  }));
+}
+
+async function payDeposit(bookingId, userEmail, paymentMethod) {
+  const pool = getPool();
+
+  // Get booking
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
+  const booking = bookings[0];
+
+  // Get deposit schedule entry
+  const [schedules] = await pool.query(
+    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
+    [bookingId, 'deposit', 'pending']
+  );
+  if (!schedules.length) throw Object.assign(new Error('No pending deposit found'), { statusCode: 400 });
+  const schedule = schedules[0];
+  const amount = parseFloat(schedule.ps_amount);
+
+  if (paymentMethod === 'cash') {
+    // Create cash payment record
+    const [result] = await pool.query(
+      `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+       SELECT ?, u.iduser, ?, 'deposit', 'PHP', 'pending', 'Cash on Hand'
+       FROM user u WHERE u.u_email = ?`,
+      [bookingId, amount, userEmail]
+    );
+    const paymentId = result.insertId;
+
+    // Link to schedule
+    await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+
+    return { paymentId, amount, method: 'cash', message: 'Cash deposit recorded. Awaiting provider confirmation.' };
+  } else {
+    // PayMongo — create a payment record and return info for PayMongo checkout
+    const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
+    if (!userRows.length) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+    const [result] = await pool.query(
+      `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+       VALUES (?, ?, ?, 'deposit', 'PHP', 'pending', 'PayMongo')`,
+      [bookingId, userRows[0].iduser, amount]
+    );
+    const paymentId = result.insertId;
+
+    await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+
+    // Attempt PayMongo checkout session if available
+    try {
+      if (createCheckoutSession) {
+        const session = await createCheckoutSession({
+          amount: amount * 100, // PayMongo expects centavos
+          description: `Deposit for booking #${bookingId}`,
+          bookingId,
+          paymentId,
+        });
+        return { paymentId, amount, method: 'paymongo', checkoutUrl: session.checkout_url };
+      }
+    } catch (e) {
+      // PayMongo not configured — fall back to recording the payment
+    }
+
+    return { paymentId, amount, method: 'paymongo', message: 'Deposit payment created' };
+  }
+}
+
+async function payBalance(bookingId, userEmail, paymentMethod) {
+  const pool = getPool();
+
+  // Verify deposit is paid first
+  const [depositCheck] = await pool.query(
+    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
+    [bookingId, 'deposit', 'pending']
+  );
+  if (depositCheck.length) throw Object.assign(new Error('Deposit must be paid before balance'), { statusCode: 400 });
+
+  // Get balance schedule entry
+  const [schedules] = await pool.query(
+    'SELECT * FROM payment_schedule WHERE ps_booking_id = ? AND ps_type = ? AND ps_status = ?',
+    [bookingId, 'balance', 'pending']
+  );
+  if (!schedules.length) throw Object.assign(new Error('No pending balance found'), { statusCode: 400 });
+  const schedule = schedules[0];
+  const amount = parseFloat(schedule.ps_amount);
+
+  const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
+  if (!userRows.length) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+
+  const paymentType = paymentMethod === 'cash' ? 'Cash on Hand' : 'PayMongo';
+
+  const [result] = await pool.query(
+    `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+     VALUES (?, ?, ?, 'balance', 'PHP', 'pending', ?)`,
+    [bookingId, userRows[0].iduser, amount, paymentType]
+  );
+  const paymentId = result.insertId;
+
+  await pool.query('UPDATE payment_schedule SET ps_payment_id = ? WHERE id = ?', [paymentId, schedule.id]);
+
+  if (paymentMethod !== 'cash') {
+    try {
+      if (createCheckoutSession) {
+        const session = await createCheckoutSession({
+          amount: amount * 100,
+          description: `Balance payment for booking #${bookingId}`,
+          bookingId,
+          paymentId,
+        });
+        return { paymentId, amount, method: 'paymongo', checkoutUrl: session.checkout_url };
+      }
+    } catch (e) { /* PayMongo not configured */ }
+  }
+
+  return { paymentId, amount, method: paymentMethod, message: `${paymentMethod === 'cash' ? 'Cash balance' : 'Balance payment'} recorded` };
+}
+
+async function getRefundEstimate(bookingId, userEmail) {
+  const pool = getPool();
+  const cancellationPolicyService = require('./cancellationPolicyService');
+
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
+  const booking = bookings[0];
+
+  // Get total paid
+  const [payments] = await pool.query(
+    `SELECT COALESCE(SUM(p_amount), 0) as total_paid FROM payment
+     WHERE p_booking_id = ? AND p_status = 'completed' AND p_type IN ('deposit', 'balance', 'full')`,
+    [bookingId]
+  );
+  const totalPaid = parseFloat(payments[0].total_paid);
+
+  // Get policy snapshot from booking
+  let policySnapshot = booking.b_cancellation_policy_snapshot;
+  if (typeof policySnapshot === 'string') policySnapshot = JSON.parse(policySnapshot);
+
+  const refund = cancellationPolicyService.calculateRefund(policySnapshot, totalPaid, booking.b_event_date);
+
+  return {
+    bookingId,
+    totalCost: parseFloat(booking.b_total_cost),
+    totalPaid,
+    ...refund,
+  };
+}
+
+async function cancelBookingWithRefund(bookingId, userEmail, reason) {
+  const pool = getPool();
+
+  const [bookings] = await pool.query('SELECT * FROM booking WHERE idbooking = ?', [bookingId]);
+  if (!bookings.length) throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
+  const booking = bookings[0];
+
+  if (booking.b_status === 'cancelled') throw Object.assign(new Error('Booking already cancelled'), { statusCode: 400 });
+  if (booking.b_status === 'completed') throw Object.assign(new Error('Cannot cancel completed booking'), { statusCode: 400 });
+
+  // Calculate refund
+  const refundEstimate = await getRefundEstimate(bookingId, userEmail);
+
+  // Update booking status
+  await pool.query(
+    'UPDATE booking SET b_status = ? WHERE idbooking = ?',
+    ['cancelled', bookingId]
+  );
+
+  // Waive any pending payment_schedule entries
+  await pool.query(
+    `UPDATE payment_schedule SET ps_status = 'waived' WHERE ps_booking_id = ? AND ps_status = 'pending'`,
+    [bookingId]
+  );
+
+  // If refund amount > 0, create a refund payment record
+  let refundPaymentId = null;
+  if (refundEstimate.refundAmount > 0) {
+    const [userRows] = await pool.query('SELECT iduser FROM user WHERE u_email = ?', [userEmail]);
+    if (userRows.length) {
+      const [result] = await pool.query(
+        `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
+         VALUES (?, ?, ?, 'refund', 'PHP', 'pending', 'Refund')`,
+        [bookingId, userRows[0].iduser, refundEstimate.refundAmount]
+      );
+      refundPaymentId = result.insertId;
+    }
+  }
+
+  return {
+    bookingId,
+    status: 'cancelled',
+    reason: reason || null,
+    refundAmount: refundEstimate.refundAmount,
+    refundPercent: refundEstimate.refundPercent,
+    refundPaymentId,
+    message: refundEstimate.refundAmount > 0
+      ? `Booking cancelled. Refund of ₱${refundEstimate.refundAmount.toFixed(2)} (${refundEstimate.refundPercent}%) will be processed.`
+      : 'Booking cancelled. No refund applicable.',
+  };
+}
+
+// ──────────────────────────────────────────────
 module.exports = {
   // Bookings CRUD
   listBookings,
@@ -1522,6 +1821,12 @@ module.exports = {
   handlePaymongoSuccess,
   handlePaymongoFailed,
   markPaymentComplete,
+  // Deposit / Balance / Cancellation
+  getPaymentSchedule,
+  payDeposit,
+  payBalance,
+  getRefundEstimate,
+  cancelBookingWithRefund,
   // Provider
   getProviderBookings,
   markCashPaymentPaid,

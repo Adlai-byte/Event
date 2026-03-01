@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { param, body } = require('express-validator');
 const { authMiddleware } = require('../middleware/auth');
 const { requireRole } = require('../middleware/roleAuth');
 const { paymentLimiter } = require('../middleware/rateLimiter');
@@ -57,5 +58,48 @@ router.get('/user/bookings/:bookingId/invoice',          authMiddleware,        
 // ============================================
 router.post('/bookings/:bookingId/services/:serviceId/rate',     authMiddleware,                  ctrl.submitRating);
 router.get('/bookings/:bookingId/services/:serviceId/rating',                                    ctrl.getRating);
+
+// ============================================
+// DEPOSIT / BALANCE / CANCELLATION
+// ============================================
+router.get('/bookings/:bookingId/payment-schedule',
+  authMiddleware,
+  param('bookingId').isInt({ min: 1 }),
+  validate,
+  ctrl.getPaymentSchedule
+);
+
+router.post('/bookings/:bookingId/pay-deposit',
+  authMiddleware,
+  paymentLimiter,
+  param('bookingId').isInt({ min: 1 }),
+  body('paymentMethod').isIn(['paymongo', 'cash']),
+  validate,
+  ctrl.payDeposit
+);
+
+router.post('/bookings/:bookingId/pay-balance',
+  authMiddleware,
+  paymentLimiter,
+  param('bookingId').isInt({ min: 1 }),
+  body('paymentMethod').isIn(['paymongo', 'cash']),
+  validate,
+  ctrl.payBalance
+);
+
+router.get('/bookings/:bookingId/refund-estimate',
+  authMiddleware,
+  param('bookingId').isInt({ min: 1 }),
+  validate,
+  ctrl.getRefundEstimate
+);
+
+router.post('/bookings/:bookingId/cancel',
+  authMiddleware,
+  param('bookingId').isInt({ min: 1 }),
+  body('reason').optional().isString().isLength({ max: 500 }),
+  validate,
+  ctrl.cancelBooking
+);
 
 module.exports = router;
