@@ -134,6 +134,16 @@ async function updateBookingStatus(req, res) {
       if (bookingDetails.provider_email && bookingDetails.provider_email !== bookingDetails.client_email) {
         emitBookingUpdate(req, bookingDetails.provider_email);
       }
+
+      // Emit availability-update so provider calendar refreshes in real-time
+      if (finalStatus === 'confirmed' || finalStatus === 'cancelled') {
+        const io = req.app.get('io');
+        if (io && bookingDetails.provider_email) {
+          io.to(`user:${bookingDetails.provider_email}`).emit('availability-update', {
+            date: bookingDetails.b_event_date,
+          });
+        }
+      }
     }
 
     return sendSuccess(res, {});

@@ -1,7 +1,7 @@
 // mvc/hooks/useSocket.ts
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { connectSocket, disconnectSocket, getSocket } from '../services/socketClient';
+import { connectSocket, disconnectSocket } from '../services/socketClient';
 
 /**
  * Manages socket connection lifecycle tied to auth state.
@@ -43,16 +43,24 @@ export function useSocket(userEmail: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['user-applications'] });
     };
 
+    const onAvailabilityUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['availability-calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['blocked-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['availability-check'] });
+    };
+
     socket.on('unread-update', onUnreadUpdate);
     socket.on('new-notification', onNewNotification);
     socket.on('booking-update', onBookingUpdate);
     socket.on('hiring-update', onHiringUpdate);
+    socket.on('availability-update', onAvailabilityUpdate);
 
     return () => {
       socket.off('unread-update', onUnreadUpdate);
       socket.off('new-notification', onNewNotification);
       socket.off('booking-update', onBookingUpdate);
       socket.off('hiring-update', onHiringUpdate);
+      socket.off('availability-update', onAvailabilityUpdate);
       disconnectSocket();
     };
   }, [userEmail, queryClient]);

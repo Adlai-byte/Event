@@ -6,6 +6,7 @@
 const { getPool } = require('../db');
 const { createPaymentLink, createCheckoutSession } = require('../services/paymongo');
 const { generateInvoicePDF } = require('../services/invoice');
+const availabilityService = require('./availabilityService');
 
 // ──────────────────────────────────────────────
 // Helpers (shared across multiple service fns)
@@ -215,6 +216,15 @@ async function createBooking({ clientEmail, serviceId, eventName, eventDate, sta
         console.log(`Multi-day booking detected: ${dateRangeInfo.startDate} to ${dateRangeInfo.endDate} (${checkDates.length} days)`);
       }
     } catch (e) { /* notes is plain text */ }
+  }
+
+  // Check provider availability before proceeding
+  for (const checkDate of checkDates) {
+    const availability = await availabilityService.checkAvailability(serviceId, checkDate);
+    if (!availability.available) {
+      const err = new Error(`Provider is not available on ${checkDate}: ${availability.reason}`);
+      err.statusCode = 409; err.code = 'CONFLICT'; throw err;
+    }
   }
 
   // Check for overlapping bookings
