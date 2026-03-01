@@ -24,3 +24,8 @@ ALTER TABLE `service_availability`
 ALTER TABLE `service`
     ADD COLUMN IF NOT EXISTS `s_deposit_percent` DECIMAL(5,2) DEFAULT 100.00 AFTER `s_location_type`,
     ADD COLUMN IF NOT EXISTS `s_cancellation_policy_id` INT(11) DEFAULT NULL AFTER `s_deposit_percent`;
+
+-- Performance indexes for availability date-filter subqueries
+ALTER TABLE `service_availability`
+    ADD INDEX `idx_service_dow` (`sa_service_id`, `sa_day_of_week`, `sa_is_available`),
+    ADD INDEX `idx_service_date_override` (`sa_service_id`, `sa_specific_date`, `sa_is_available`);

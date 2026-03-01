@@ -19,7 +19,7 @@ const ctrl = require('../controllers/serviceController');
 
 // Get all services (public, paginated)
 router.get('/services',
-    query('availableDate').optional().isISO8601().withMessage('availableDate must be a valid date (YYYY-MM-DD)'),
+    query('availableDate').optional().matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('availableDate must be a valid date (YYYY-MM-DD)'),
     validate,
     paginate,
     ctrl.listServices

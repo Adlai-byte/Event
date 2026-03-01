@@ -261,17 +261,18 @@ async function listServices(query, pagination) {
         params.push(availableDate);
 
         // Require service has availability for this day of week OR a specific date override
+        // Services with no availability rows are treated as "always available"
         where += ` AND (
-            EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice AND sa_day_of_week = DAYOFWEEK(?) - 1 AND sa_is_available = 1 AND sa_specific_date IS NULL)
+            NOT EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice)
+            OR EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice AND sa_day_of_week = DAYOFWEEK(?) - 1 AND sa_is_available = 1 AND sa_specific_date IS NULL)
             OR EXISTS (SELECT 1 FROM service_availability WHERE sa_service_id = s.idservice AND sa_specific_date = ? AND sa_is_available = 1)
         )`;
         params.push(availableDate, availableDate);
 
-        // Exclude services whose provider already has a confirmed booking on this date
-        where += ` AND s.s_provider_id NOT IN (
-            SELECT s2.s_provider_id FROM booking b
+        // Exclude services that already have a confirmed/pending booking on this date
+        where += ` AND s.idservice NOT IN (
+            SELECT bs.bs_service_id FROM booking b
             JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
-            JOIN service s2 ON bs.bs_service_id = s2.idservice
             WHERE b.b_event_date = ? AND b.b_status IN ('pending', 'confirmed')
         )`;
         params.push(availableDate);
