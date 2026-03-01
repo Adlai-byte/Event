@@ -124,6 +124,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setFilterRadius,
     filterCategory,
     setFilterCategory,
+    filterAvailableDate,
+    setFilterAvailableDate,
     showRatingDropdown,
     setShowRatingDropdown,
     handleSearch,
@@ -146,6 +148,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setFilterMinRating('');
     setFilterRadius('100');
     setFilterCategory('');
+    setFilterAvailableDate('');
     setSearchQuery('');
     setProviderResults([]);
     // Load category services without filters
@@ -208,7 +211,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       filterMaxPrice ||
                       filterCity ||
                       filterMinRating ||
-                      filterCategory) &&
+                      filterCategory ||
+                      filterAvailableDate) &&
                       styles.filterButtonActive,
                   ]}
                   onPress={() => setShowFilters(!showFilters)}
@@ -223,7 +227,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         filterMaxPrice ||
                         filterCity ||
                         filterMinRating ||
-                        filterCategory
+                        filterCategory ||
+                        filterAvailableDate
                           ? '#FFFFFF'
                           : '#64748B'
                       }
@@ -234,7 +239,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         filterMaxPrice ||
                         filterCity ||
                         filterMinRating ||
-                        filterCategory
+                        filterCategory ||
+                        filterAvailableDate
                           ? styles.filterButtonTextActive
                           : styles.filterButtonText,
                       ]}
@@ -246,7 +252,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   filterMaxPrice ||
                   filterCity ||
                   filterMinRating ||
-                  filterCategory ? (
+                  filterCategory ||
+                  filterAvailableDate ? (
                     <View style={styles.filterBadge} />
                   ) : null}
                 </TouchableOpacity>
@@ -281,6 +288,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 showRatingDropdown={showRatingDropdown}
                 setShowRatingDropdown={setShowRatingDropdown}
                 userLocation={userLocation}
+                filterAvailableDate={filterAvailableDate}
+                setFilterAvailableDate={setFilterAvailableDate}
                 clearFilters={clearFilters}
                 applyFilters={applyFilters}
               />
@@ -301,7 +310,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             filterMaxPrice ||
             filterCity ||
             filterMinRating ||
-            filterCategory ? (
+            filterCategory ||
+            filterAvailableDate ? (
             <SearchResultsSection
               searchResults={searchResults}
               providerResults={providerResults}
@@ -323,6 +333,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 setFilterMinRating('');
                 setFilterRadius('100');
                 setFilterCategory('');
+                setFilterAvailableDate('');
                 await loadDashboardData();
               }}
               onNavigateToProviderProfile={(email) => onNavigateToProviderProfile?.(email)}

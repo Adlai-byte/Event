@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { createStyles } from '../../views/user/DashboardView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { getCategoryLabel } from '../../utils/serviceHelpers';
+import { semantic } from '../../theme';
 
 interface FilterPanelProps {
   showFilters: boolean;
@@ -23,6 +24,8 @@ interface FilterPanelProps {
   showRatingDropdown: boolean;
   setShowRatingDropdown: (show: boolean) => void;
   userLocation: { latitude: number; longitude: number } | null;
+  filterAvailableDate: string;
+  setFilterAvailableDate: (date: string) => void;
   clearFilters: () => void;
   applyFilters: () => void;
 }
@@ -61,6 +64,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   showRatingDropdown,
   setShowRatingDropdown,
   userLocation,
+  filterAvailableDate,
+  setFilterAvailableDate,
   clearFilters,
   applyFilters,
 }) => {
@@ -218,6 +223,57 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 </Text>
                 <Feather name="chevron-down" size={16} color="#64748B" />
               </TouchableOpacity>
+            </View>
+
+            {/* Available On Date Filter */}
+            <View style={styles.filterSection}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Feather name="calendar" size={16} color="#2563EB" />
+                <Text style={styles.filterLabel}>Available On</Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: semantic.border,
+                  borderRadius: 8,
+                  backgroundColor: semantic.surface,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <TextInput
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: semantic.textPrimary,
+                  }}
+                  placeholder="YYYY-MM-DD"
+                  value={filterAvailableDate}
+                  onChangeText={setFilterAvailableDate}
+                  accessibilityLabel="Filter by available date"
+                  maxLength={10}
+                  placeholderTextColor="#94a3b8"
+                />
+                {filterAvailableDate ? (
+                  <TouchableOpacity
+                    onPress={() => setFilterAvailableDate('')}
+                    style={{ padding: 4 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear date filter"
+                  >
+                    <Feather name="x" size={16} color={semantic.textSecondary} />
+                  </TouchableOpacity>
+                ) : (
+                  <Feather
+                    name="calendar"
+                    size={16}
+                    color={semantic.textSecondary}
+                    style={{ marginLeft: 4 }}
+                  />
+                )}
+              </View>
             </View>
           </ScrollView>
 

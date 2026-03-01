@@ -8,7 +8,11 @@ import { mapImageUrl } from '../utils/serviceHelpers';
 export function useServiceSearch(
   userLocation: { latitude: number; longitude: number } | null,
   selectedCategory: string | null,
-  loadCategoryServices: (category: string, useFilters?: boolean, buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string) => Promise<void>,
+  loadCategoryServices: (
+    category: string,
+    useFilters?: boolean,
+    buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string,
+  ) => Promise<void>,
   loadDashboardData: () => Promise<void>,
   setSelectedCategory?: (category: string | null) => void,
 ) {
@@ -23,6 +27,7 @@ export function useServiceSearch(
   const [filterMinRating, setFilterMinRating] = useState<string>('');
   const [filterRadius, setFilterRadius] = useState<string>('100');
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterAvailableDate, setFilterAvailableDate] = useState<string>('');
   const [showRatingDropdown, setShowRatingDropdown] = useState(false);
 
   const buildFilterQuery = (baseUrl: string, additionalParams: { [key: string]: string } = {}) => {
@@ -44,9 +49,11 @@ export function useServiceSearch(
       if (!isNaN(maxPrice) && maxPrice > 0) params.append('maxPrice', maxPrice.toString());
     }
     if (filterCity.trim()) params.append('city', filterCity.trim());
+    if (filterAvailableDate.trim()) params.append('availableDate', filterAvailableDate.trim());
     if (filterMinRating.trim()) {
       const minRating = parseFloat(filterMinRating);
-      if (!isNaN(minRating) && minRating >= 0 && minRating <= 5) params.append('minRating', minRating.toString());
+      if (!isNaN(minRating) && minRating >= 0 && minRating <= 5)
+        params.append('minRating', minRating.toString());
     }
     if (userLocation) {
       params.append('latitude', userLocation.latitude.toString());
@@ -55,7 +62,7 @@ export function useServiceSearch(
       if (!isNaN(radius) && radius > 0) params.append('radius', radius.toString());
     }
 
-    Object.keys(additionalParams).forEach(key => {
+    Object.keys(additionalParams).forEach((key) => {
       if (additionalParams[key]) params.append(key, additionalParams[key]);
     });
 
@@ -63,7 +70,13 @@ export function useServiceSearch(
   };
 
   const handleSearch = async () => {
-    const hasFilters = filterMinPrice || filterMaxPrice || filterCity || filterMinRating || filterCategory;
+    const hasFilters =
+      filterMinPrice ||
+      filterMaxPrice ||
+      filterCity ||
+      filterMinRating ||
+      filterCategory ||
+      filterAvailableDate;
 
     if (!searchQuery.trim() && !hasFilters) {
       setSearchResults([]);
@@ -79,7 +92,9 @@ export function useServiceSearch(
 
       if (searchQuery.trim()) {
         try {
-          providersData = await apiClient.get('/api/providers/search', { search: searchQuery.trim() });
+          providersData = await apiClient.get('/api/providers/search', {
+            search: searchQuery.trim(),
+          });
 
           if (providersData.providers && providersData.providers.length > 0) {
             const providerEmails = providersData.providers.map((p: Provider) => p.u_email);
@@ -98,7 +113,8 @@ export function useServiceSearch(
               if (filterCity.trim()) params.city = filterCity.trim();
               if (filterMinRating.trim()) {
                 const minRating = parseFloat(filterMinRating);
-                if (!isNaN(minRating) && minRating >= 0 && minRating <= 5) params.minRating = minRating.toString();
+                if (!isNaN(minRating) && minRating >= 0 && minRating <= 5)
+                  params.minRating = minRating.toString();
               }
               if (userLocation) {
                 params.latitude = userLocation.latitude.toString();
@@ -111,7 +127,10 @@ export function useServiceSearch(
 
             const providerServicePromises = providerEmails.map(async (email: string) => {
               try {
-                const data = await apiClient.get('/api/services', buildProviderServicesParams(email));
+                const data = await apiClient.get(
+                  '/api/services',
+                  buildProviderServicesParams(email),
+                );
                 const activeServices = (data.rows || []).filter((s: any) => {
                   return s.s_is_active === 1 || s.s_is_active === '1' || s.s_is_active === true;
                 });
@@ -172,6 +191,7 @@ export function useServiceSearch(
     setFilterMinRating('');
     setFilterRadius('100');
     setFilterCategory('');
+    setFilterAvailableDate('');
 
     if (selectedCategory) {
       await loadCategoryServices(selectedCategory, false);
@@ -191,18 +211,32 @@ export function useServiceSearch(
   };
 
   return {
-    searchQuery, setSearchQuery,
-    searchResults, setSearchResults,
-    providerResults, setProviderResults,
-    isSearching, setIsSearching,
-    showFilters, setShowFilters,
-    filterMinPrice, setFilterMinPrice,
-    filterMaxPrice, setFilterMaxPrice,
-    filterCity, setFilterCity,
-    filterMinRating, setFilterMinRating,
-    filterRadius, setFilterRadius,
-    filterCategory, setFilterCategory,
-    showRatingDropdown, setShowRatingDropdown,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    setSearchResults,
+    providerResults,
+    setProviderResults,
+    isSearching,
+    setIsSearching,
+    showFilters,
+    setShowFilters,
+    filterMinPrice,
+    setFilterMinPrice,
+    filterMaxPrice,
+    setFilterMaxPrice,
+    filterCity,
+    setFilterCity,
+    filterMinRating,
+    setFilterMinRating,
+    filterRadius,
+    setFilterRadius,
+    filterCategory,
+    setFilterCategory,
+    filterAvailableDate,
+    setFilterAvailableDate,
+    showRatingDropdown,
+    setShowRatingDropdown,
     buildFilterQuery,
     handleSearch,
     clearFilters,

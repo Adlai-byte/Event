@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { ServicePackage } from '../models/Package';
 import { useBreakpoints } from '../hooks/useBreakpoints';
 import { useBookingSlots } from '../hooks/useBookingSlots';
 import { useBookingCost } from '../hooks/useBookingCost';
+import { useMonthCalendar } from '../hooks/useProviderAvailability';
 import { ProfileCompleteModal } from './booking/ProfileCompleteModal';
 import { BookingConfirmationModal, ConfirmBookingData } from './booking/BookingConfirmationModal';
 import { createStyles } from './BookingModal.styles';
@@ -106,6 +107,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     formatDuration,
     formatTime,
   } = useBookingCost(serviceId, visible, selectedSlots, selectedDays, preSelectedPackage);
+
+  // Compute current month string from the calendar's current week
+  const currentMonthStr = useMemo(() => {
+    const midWeek = new Date(currentWeek);
+    midWeek.setDate(midWeek.getDate() + 3);
+    return `${midWeek.getFullYear()}-${String(midWeek.getMonth() + 1).padStart(2, '0')}`;
+  }, [currentWeek]);
+
+  // Fetch provider availability calendar for the current month
+  const { data: monthAvailability } = useMonthCalendar(serviceId, currentMonthStr);
+
+  // Build a Set of unavailable (provider-blocked) dates
+  const unavailableDates = useMemo(() => {
+    const dates = new Set<string>();
+    if (monthAvailability && Array.isArray(monthAvailability)) {
+      monthAvailability.forEach((day: any) => {
+        if (!day.available) dates.add(day.date);
+      });
+    }
+    return dates;
+  }, [monthAvailability]);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
@@ -442,7 +464,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               selectedDate={selectedDate}
               noSlotsDates={noSlotsDates}
               allDatesSlots={allDatesSlots}
+              unavailableDates={unavailableDates}
               onDateSelect={(dateStr) => {
+                if (unavailableDates.has(dateStr)) {
+                  Alert.alert(
+                    'Date Unavailable',
+                    'The provider is not available on this date. Please select another date.',
+                    [{ text: 'OK' }],
+                  );
+                  return;
+                }
                 if (isDateNoSlots(dateStr)) {
                   Alert.alert(
                     'No Available Slots',
@@ -484,7 +515,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               onSlotToggle={() => {}}
               selectedDate={null}
               noSlotsDates={noSlotsDates}
+              unavailableDates={unavailableDates}
               onDateSelect={(dateStr) => {
+                if (unavailableDates.has(dateStr)) {
+                  Alert.alert(
+                    'Date Unavailable',
+                    'The provider is not available on this date. Please select another date.',
+                    [{ text: 'OK' }],
+                  );
+                  return;
+                }
                 if (isDateAvailable(dateStr)) {
                   setSelectedDays((prev) => {
                     if (prev.includes(dateStr)) {
@@ -519,7 +559,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               selectedDate={selectedDate}
               noSlotsDates={noSlotsDates}
               allDatesSlots={allDatesSlots}
+              unavailableDates={unavailableDates}
               onDateSelect={(dateStr) => {
+                if (unavailableDates.has(dateStr)) {
+                  Alert.alert(
+                    'Date Unavailable',
+                    'The provider is not available on this date. Please select another date.',
+                    [{ text: 'OK' }],
+                  );
+                  return;
+                }
                 if (isDateNoSlots(dateStr)) {
                   Alert.alert(
                     'No Available Slots',

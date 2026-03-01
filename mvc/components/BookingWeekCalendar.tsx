@@ -30,6 +30,7 @@ interface BookingWeekCalendarProps {
   isPerDayMode?: boolean; // For per-day services (24 hours)
   selectedDays?: string[]; // Selected days for per-day mode
   allDatesSlots?: Record<string, TimeSlot[]>; // Pre-loaded slots for all dates
+  unavailableDates?: Set<string>; // Provider-blocked dates (from availability calendar)
 }
 
 export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
@@ -45,6 +46,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
   isPerDayMode = false,
   selectedDays = [],
   allDatesSlots = {},
+  unavailableDates = new Set<string>(),
 }) => {
   const { screenWidth } = useBreakpoints();
   const styles = createStyles(screenWidth);
@@ -165,6 +167,11 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
     // RESTRICTION: Don't allow booking if date is in the past
     if (isDatePast(date)) {
       return; // Blocked - cannot book past dates
+    }
+
+    // RESTRICTION: Don't allow booking if provider blocked this date
+    if (isDateProviderBlocked(date)) {
+      return; // Blocked - provider marked date as unavailable
     }
 
     // RESTRICTION: Don't allow booking if date has no available slots
@@ -387,6 +394,12 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
     return checkDate < today;
   };
 
+  // Check if date is provider-blocked (unavailable)
+  const isDateProviderBlocked = (date: Date): boolean => {
+    const dateStr = date.toISOString().split('T')[0];
+    return unavailableDates.has(dateStr);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Navigation */}
@@ -446,6 +459,8 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                 const selected = isDateSelected(day);
                 const noSlots = isDateNoSlots(day);
                 const isPast = isDatePast(day);
+                const isBlocked = isDateProviderBlocked(day);
+                const isDisabledDate = noSlots || isPast || isBlocked;
                 return (
                   <TouchableOpacity
                     key={index}
@@ -454,10 +469,11 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                       selected && styles.dayHeaderSelected,
                       isPerDayMode && isDaySelectedForPerDay(day) && styles.dayHeaderSelected,
                       noSlots && styles.dayHeaderNoSlots,
+                      isBlocked && styles.dayHeaderNoSlots,
                       isPast && styles.dayHeaderPast,
                     ]}
                     onPress={() => {
-                      if (!noSlots && !isPast) {
+                      if (!isDisabledDate) {
                         if (isPerDayMode) {
                           // In per-day mode, just select the day (handled by parent)
                           onDateSelect(dateStr);
@@ -466,9 +482,9 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                         }
                       }
                     }}
-                    disabled={noSlots || isPast}
+                    disabled={isDisabledDate}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${formatDateHeader(day)} ${day.getDate()}`}
+                    accessibilityLabel={`Select ${formatDateHeader(day)} ${day.getDate()}${isBlocked ? ', unavailable' : ''}`}
                   >
                     <Text
                       style={[
@@ -476,6 +492,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                         selected && styles.dayNameSelected,
                         isPerDayMode && isDaySelectedForPerDay(day) && styles.dayNameSelected,
                         noSlots && styles.dayNameNoSlots,
+                        isBlocked && styles.dayNameNoSlots,
                         isPast && styles.dayNamePast,
                       ]}
                     >
@@ -487,6 +504,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                         selected && styles.dayNumberSelected,
                         isPerDayMode && isDaySelectedForPerDay(day) && styles.dayNumberSelected,
                         noSlots && styles.dayNumberNoSlots,
+                        isBlocked && styles.dayNumberNoSlots,
                         isPast && styles.dayNumberPast,
                       ]}
                     >
@@ -509,20 +527,23 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                   getSlotsForDay(day);
                   const noSlots = isDateNoSlots(day);
                   const isPast = isDatePast(day);
+                  const isBlocked = isDateProviderBlocked(day);
 
                   return (
                     <View
                       key={dayIndex}
                       style={[
                         styles.dayColumn,
-                        noSlots && styles.dayColumnNoSlots,
+                        (noSlots || isBlocked) && styles.dayColumnNoSlots,
                         isPast && styles.dayColumnPast,
                       ]}
                     >
                       {/* No Available Time Message - Hidden on mobile */}
-                      {noSlots && Platform.OS === 'web' && (
+                      {(noSlots || isBlocked) && Platform.OS === 'web' && (
                         <View style={styles.noAvailableTimeContainer}>
-                          <Text style={styles.noAvailableTimeText}>No available time</Text>
+                          <Text style={styles.noAvailableTimeText}>
+                            {isBlocked ? 'Unavailable' : 'No available time'}
+                          </Text>
                         </View>
                       )}
                       {/* Time Slots Container */}
@@ -535,16 +556,19 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                           const isHourBookedState = isHourBooked(day, hour);
                           const dateHasNoSlots = isDateNoSlots(day); // Check if date has no available slots
                           const isPast = isDatePast(day); // Check if date is in the past
+                          const dateIsBlocked = isDateProviderBlocked(day); // Check if provider blocked
                           const isClickable =
                             isTimeAvailable(hour) &&
                             !isHourBookedState &&
                             !dateHasNoSlots &&
-                            !isPast; // Not clickable if date has no slots or is past
+                            !dateIsBlocked &&
+                            !isPast; // Not clickable if date has no slots, is blocked, or is past
                           const isAvailable =
                             isTimeAvailable(hour) &&
                             !isHourBookedState &&
                             !dateHasNoSlots &&
-                            !isPast; // Not available if date has no slots or is past
+                            !dateIsBlocked &&
+                            !isPast; // Not available if date has no slots, is blocked, or is past
 
                           return (
                             <TouchableOpacity
@@ -553,26 +577,27 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                                 styles.hourCell,
                                 isPast && styles.hourCellPast, // White background for past dates
                                 isHourBookedState && styles.hourCellBooked,
-                                dateHasNoSlots && styles.hourCellNoSlots, // Red background for dates with no slots
+                                (dateHasNoSlots || dateIsBlocked) && styles.hourCellNoSlots, // Red background for dates with no slots or blocked
                                 isAvailable && !isHourSelectedState && styles.hourCellAvailable,
                                 isHourSelectedState && styles.hourCellSelected,
                                 isDaySelected &&
                                   !isHourBookedState &&
                                   !isHourSelectedState &&
                                   !dateHasNoSlots &&
+                                  !dateIsBlocked &&
                                   !isPast &&
                                   styles.hourCellDaySelected,
                               ]}
                               onPress={() => {
-                                // Prevent clicking if date has no available slots or is past
-                                if (!dateHasNoSlots && !isPast) {
+                                // Prevent clicking if date has no available slots, is blocked, or is past
+                                if (!dateHasNoSlots && !dateIsBlocked && !isPast) {
                                   handleTimeSlotClick(day, hour);
                                 }
                               }}
-                              disabled={!isClickable || dateHasNoSlots || isPast}
-                              activeOpacity={dateHasNoSlots || isPast ? 1 : 0.7}
+                              disabled={!isClickable || dateHasNoSlots || dateIsBlocked || isPast}
+                              activeOpacity={dateHasNoSlots || dateIsBlocked || isPast ? 1 : 0.7}
                               accessibilityRole="button"
-                              accessibilityLabel={`${formatTime(hour)} time slot${isHourBookedState ? ', taken' : isHourSelectedState ? ', selected' : ''}`}
+                              accessibilityLabel={`${formatTime(hour)} time slot${isHourBookedState ? ', taken' : dateIsBlocked ? ', unavailable' : isHourSelectedState ? ', selected' : ''}`}
                             >
                               {isHourSelectedState && <View style={styles.hourCellIndicator} />}
                               {isHourBookedState && (
@@ -586,6 +611,7 @@ export const BookingWeekCalendar: React.FC<BookingWeekCalendarProps> = ({
                                 isDaySelected &&
                                 !isHourBookedState &&
                                 !dateHasNoSlots &&
+                                !dateIsBlocked &&
                                 !isPast && (
                                   <View style={styles.tapToBookContainer}>
                                     <Text style={styles.tapToBookText}>Tap to book</Text>
