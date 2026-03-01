@@ -1,7 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors, semantic } from '../../theme';
 
-export const createStyles = (isMobile: boolean, _screenWidth: number) =>
+export const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -220,7 +220,11 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       ...(Platform.OS === 'web'
         ? ({
             display: 'grid' as any,
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
+            gridTemplateColumns: isMobile
+              ? '1fr'
+              : screenWidth < 900
+                ? '1fr'
+                : 'repeat(auto-fill, minmax(400px, 1fr))',
             gap: isMobile ? '12px' : '24px',
             padding: isMobile ? 12 : 24,
           } as any)
@@ -372,7 +376,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
             cursor: 'pointer',
             boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)',
             ':hover': {
-              backgroundColor: '#4F46E5',
+              backgroundColor: colors.primary[700],
               boxShadow: '0 6px 12px -1px rgba(99, 102, 241, 0.4)',
               transform: 'translateY(-1px)',
             },
@@ -971,7 +975,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       borderColor: semantic.border,
     },
     eventOptionSelected: {
-      backgroundColor: '#E8E5FF',
+      backgroundColor: colors.primary[50],
       borderColor: semantic.primary,
     },
     eventOptionText: {
@@ -1056,7 +1060,11 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
       ...(Platform.OS === 'web'
         ? ({
             display: 'grid' as any,
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
+            gridTemplateColumns: isMobile
+              ? '1fr'
+              : screenWidth < 900
+                ? '1fr'
+                : 'repeat(auto-fill, minmax(400px, 1fr))',
             gap: isMobile ? '12px' : '24px',
             padding: isMobile ? 12 : 24,
           } as any)

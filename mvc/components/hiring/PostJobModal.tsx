@@ -229,7 +229,6 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                 <Text style={styles.label}>Deadline Date *</Text>
                 {Platform.OS === 'web' ? (
                   <View style={styles.deadlineInputWrapper}>
-                    {/* @ts-expect-error - HTML input for web date picker */}
                     <input
                       type="date"
                       value={deadlineDate || ''}

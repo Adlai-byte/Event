@@ -189,8 +189,9 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   );
 };
 
-const createStyles = (_isMobile: boolean, _screenWidth: number) =>
-  StyleSheet.create({
+const createStyles = (isMobile: boolean, screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
     card: {
       backgroundColor: semantic.surface,
       borderRadius: 12,
@@ -216,7 +217,7 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     cardHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      padding: 16,
+      padding: isMobile ? 12 : 16,
     },
     headerLeft: {
       flexDirection: 'row',
@@ -235,9 +236,9 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
       marginRight: 12,
     },
     packageName: {
-      fontSize: 16,
+      fontSize: isMobile ? 14 : 16,
       fontWeight: '600',
-      color: '#1F2937',
+      color: semantic.textPrimary,
     },
     packageDescription: {
       fontSize: 13,
@@ -250,11 +251,11 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     },
     priceLabel: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: semantic.textMuted,
       textTransform: 'uppercase',
     },
     priceValue: {
-      fontSize: 18,
+      fontSize: isMobile ? 16 : 18,
       fontWeight: '700',
       color: colors.success[600],
     },
@@ -267,27 +268,27 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     metaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      paddingHorizontal: 16,
+      paddingHorizontal: isMobile ? 12 : 16,
       paddingBottom: 12,
-      gap: 16,
+      gap: isExtraSmall ? 8 : 12,
     },
     metaItem: {
       alignItems: 'center',
     },
     metaLabel: {
       fontSize: 10,
-      color: '#9CA3AF',
+      color: semantic.textMuted,
       textTransform: 'uppercase',
     },
     metaValue: {
       fontSize: 13,
-      color: '#374151',
+      color: semantic.textPrimary,
       fontWeight: '500',
     },
     expandedContent: {
       borderTopWidth: 1,
       borderTopColor: semantic.border,
-      padding: 16,
+      padding: isMobile ? 12 : 16,
     },
     categorySection: {
       marginBottom: 16,
@@ -304,7 +305,7 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     categoryName: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#374151',
+      color: semantic.textPrimary,
     },
     categorySubtotal: {
       fontSize: 14,
@@ -326,11 +327,11 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     },
     itemName: {
       fontSize: 13,
-      color: '#1F2937',
+      color: semantic.textPrimary,
     },
     optionalTag: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: semantic.textMuted,
       fontStyle: 'italic',
     },
     itemDetails: {
@@ -340,7 +341,7 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     },
     itemTotal: {
       fontSize: 13,
-      color: '#374151',
+      color: semantic.textPrimary,
       fontWeight: '500',
     },
     priceSummary: {
@@ -360,7 +361,7 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     },
     summaryValue: {
       fontSize: 13,
-      color: '#1F2937',
+      color: semantic.textPrimary,
     },
     discountValue: {
       color: colors.error[600],
@@ -374,7 +375,7 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     totalLabel: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#1F2937',
+      color: semantic.textPrimary,
     },
     totalValue: {
       fontSize: 16,
@@ -394,11 +395,12 @@ const createStyles = (_isMobile: boolean, _screenWidth: number) =>
     selectButtonText: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#374151',
+      color: semantic.textPrimary,
     },
     selectButtonTextSelected: {
       color: semantic.surface,
     },
   });
+};
 
 export default PackageCard;

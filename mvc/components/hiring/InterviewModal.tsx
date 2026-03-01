@@ -115,7 +115,6 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({
                       <View style={styles.modernPickerIconContainer}>
                         <Feather name="calendar" size={16} color="#2563EB" />
                       </View>
-                      {/* @ts-expect-error - React Native Web supports HTML input elements */}
                       <input
                         type="date"
                         value={interviewDate}
@@ -195,7 +194,6 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({
                       <View style={styles.modernPickerIconContainer}>
                         <Feather name="clock" size={16} color="#2563EB" />
                       </View>
-                      {/* @ts-expect-error - React Native Web supports HTML input elements */}
                       <input
                         type="time"
                         value={interviewTime}
@@ -267,7 +265,6 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({
                   <Text style={styles.modernLabelRequired}> *</Text>
                 </Text>
                 {Platform.OS === 'web' ? (
-                  // @ts-expect-error - React Native Web supports HTML textarea elements
                   <textarea
                     value={interviewDescription}
                     onChange={(e: any) => setInterviewDescription(e.target.value)}

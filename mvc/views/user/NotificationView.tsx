@@ -363,7 +363,7 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   );
 };
 
-const createStyles = (isMobile: boolean, _screenWidth: number) =>
+const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -426,7 +426,7 @@ const createStyles = (isMobile: boolean, _screenWidth: number) =>
       flex: 1,
       ...(Platform.OS === 'web' &&
         !isMobile && {
-          maxWidth: 800,
+          maxWidth: Math.min(800, screenWidth - 40),
           width: '100%',
           alignSelf: 'center',
         }),

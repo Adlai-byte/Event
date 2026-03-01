@@ -6,6 +6,7 @@ import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
+import { semantic } from '../../theme';
 
 interface AnalyticsViewProps {
   user?: User;
@@ -81,7 +82,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
       <View style={styles.statHeader}>
         <Text style={styles.statTitle}>{title}</Text>
         {icon && (
-          <Feather name={icon as any} size={isMobile ? 14 : 16} color={color || '#64748B'} />
+          <Feather
+            name={icon as any}
+            size={isMobile ? 14 : 16}
+            color={color || semantic.textSecondary}
+          />
         )}
       </View>
       <Text style={styles.statValue}>{value}</Text>
@@ -155,28 +160,28 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
                 value={`₱ ${analytics.totalRevenue.toLocaleString()}`}
                 subtitle={`₱ ${analytics.monthlyRevenue.toLocaleString()} this ${timeRange}`}
                 icon="dollar-sign"
-                color="#4a55e1"
+                color={semantic.primary}
               />
               <StatCard
                 title="Bookings"
                 value={analytics.totalBookings.toString()}
                 subtitle={`${analytics.completedBookings} completed`}
                 icon="calendar"
-                color="#10b981"
+                color={semantic.success}
               />
               <StatCard
                 title="Rating"
                 value={analytics.averageRating.toFixed(1)}
                 subtitle={`${analytics.totalReviews} reviews`}
                 icon="star"
-                color="#f59e0b"
+                color={semantic.warning}
               />
               <StatCard
                 title="Services"
                 value={analytics.servicesCount.toString()}
                 subtitle={`${analytics.activeServices} active`}
                 icon="target"
-                color="#ef4444"
+                color={semantic.error}
               />
             </View>
 
@@ -231,17 +236,17 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     headerTitle: {
       fontSize: isMobile ? 20 : 24,
       fontWeight: '700',
-      color: '#1E293B',
+      color: semantic.textPrimary,
       marginBottom: 4,
     },
     headerSubtitle: {
       fontSize: isMobile ? 12 : 14,
-      color: '#64748B',
+      color: semantic.textSecondary,
     },
     timeRangeContainer: {
       flexDirection: 'row',
       marginBottom: 20,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: semantic.surface,
       borderRadius: 8,
       padding: 4,
     },
@@ -253,15 +258,15 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
     },
     timeRangeButtonActive: {
-      backgroundColor: '#4a55e1',
+      backgroundColor: semantic.primary,
     },
     timeRangeText: {
       fontSize: 14,
-      color: '#64748B',
+      color: semantic.textSecondary,
       fontWeight: '600',
     },
     timeRangeTextActive: {
-      color: '#FFFFFF',
+      color: semantic.surface,
     },
     loadingContainer: {
       alignItems: 'center',
@@ -271,7 +276,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     loadingText: {
       marginTop: 12,
       fontSize: 14,
-      color: '#64748B',
+      color: semantic.textSecondary,
     },
     metricsRow: {
       flexDirection: 'row',
@@ -283,7 +288,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       }),
     },
     statCard: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: semantic.surface,
       borderRadius: 12,
       padding: isMobile ? 12 : 16,
       marginRight: isMobile ? 6 : 12,
@@ -301,7 +306,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
     },
     statTitle: {
-      color: '#64748B',
+      color: semantic.textSecondary,
       fontSize: isMobile ? 11 : 12,
       fontWeight: '600',
     },
@@ -312,15 +317,15 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginTop: 8,
       fontSize: isMobile ? 18 : 22,
       fontWeight: '700',
-      color: '#0F172A',
+      color: semantic.textPrimary,
     },
     statSubtitle: {
       fontSize: isMobile ? 11 : 12,
-      color: '#64748B',
+      color: semantic.textSecondary,
       marginTop: 4,
     },
     chartCard: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: semantic.surface,
       borderRadius: 12,
       padding: isMobile ? 12 : 16,
       marginBottom: isMobile ? 12 : 16,
@@ -329,24 +334,24 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     cardTitle: {
       fontSize: isMobile ? 13 : 14,
       fontWeight: '700',
-      color: '#1E293B',
+      color: semantic.textPrimary,
       marginBottom: isMobile ? 10 : 12,
     },
     chartPlaceholder: {
-      height: 200,
+      height: isMobile ? Math.max(160, screenWidth * 0.45) : 200,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#F8FAFC',
+      backgroundColor: semantic.background,
       borderRadius: 8,
     },
     chartPlaceholderText: {
       fontSize: 16,
-      color: '#64748B',
+      color: semantic.textSecondary,
       marginBottom: 4,
     },
     chartPlaceholderSubtext: {
       fontSize: 12,
-      color: '#94A3B8',
+      color: semantic.textMuted,
     },
     statsGrid: {
       flexDirection: 'row',
@@ -354,20 +359,20 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     statsCard: {
       flex: 1,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: semantic.surface,
       borderRadius: 12,
       padding: 16,
       elevation: 2,
     },
     statsCardTitle: {
       fontSize: 14,
-      color: '#64748B',
+      color: semantic.textSecondary,
       marginBottom: 8,
     },
     statsCardValue: {
       fontSize: 24,
       fontWeight: '700',
-      color: '#1E293B',
+      color: semantic.textPrimary,
     },
   });
 
