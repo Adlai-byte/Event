@@ -118,6 +118,9 @@ CREATE TABLE IF NOT EXISTS `booking` (
     `b_end_time` TIME NOT NULL,
     `b_location` VARCHAR(255) NOT NULL,
     `b_total_cost` DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    `b_deposit_paid` TINYINT(1) NOT NULL DEFAULT 0,                     -- Phase 2: deposit tracking
+    `b_balance_due_date` DATE DEFAULT NULL,                              -- Phase 2: balance due date
+    `b_cancellation_policy_snapshot` JSON DEFAULT NULL,                   -- Phase 2: policy snapshot at booking time
     `b_status` ENUM('pending', 'confirmed', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
     `b_attendees` INT(11) DEFAULT NULL,
     `b_notes` TEXT,
@@ -379,6 +382,7 @@ CREATE TABLE IF NOT EXISTS `payment` (
     `p_booking_id` INT(11) NOT NULL,
     `p_user_id` INT(11) NOT NULL,
     `p_amount` DECIMAL(10, 2) NOT NULL,
+    `p_type` ENUM('deposit', 'balance', 'full', 'refund') NOT NULL DEFAULT 'full',  -- Phase 2: payment type
     `p_currency` VARCHAR(3) NOT NULL DEFAULT 'PHP',
     `p_status` ENUM('pending', 'processing', 'completed', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
     `p_payment_method` VARCHAR(50) DEFAULT NULL,
@@ -392,6 +396,42 @@ CREATE TABLE IF NOT EXISTS `payment` (
     INDEX `idx_status` (`p_status`),
     FOREIGN KEY (`p_booking_id`) REFERENCES `booking`(`idbooking`) ON DELETE CASCADE,
     FOREIGN KEY (`p_user_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- CANCELLATION POLICY TABLE (Phase 2)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `cancellation_policy` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `cp_provider_id` INT(11) NOT NULL,
+    `cp_name` VARCHAR(100) NOT NULL,
+    `cp_deposit_percent` DECIMAL(5,2) NOT NULL DEFAULT 50.00,
+    `cp_rules` JSON NOT NULL,
+    `cp_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `cp_updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_provider` (`cp_provider_id`),
+    FOREIGN KEY (`cp_provider_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PAYMENT SCHEDULE TABLE (Phase 2)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `payment_schedule` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `ps_booking_id` INT(11) NOT NULL,
+    `ps_type` ENUM('deposit', 'balance') NOT NULL,
+    `ps_amount` DECIMAL(10,2) NOT NULL,
+    `ps_due_date` DATE NOT NULL,
+    `ps_status` ENUM('pending', 'paid', 'overdue', 'waived') NOT NULL DEFAULT 'pending',
+    `ps_payment_id` INT(11) DEFAULT NULL,
+    `ps_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_booking` (`ps_booking_id`),
+    INDEX `idx_status` (`ps_status`),
+    INDEX `idx_due_date` (`ps_due_date`),
+    FOREIGN KEY (`ps_booking_id`) REFERENCES `booking`(`idbooking`) ON DELETE CASCADE,
+    FOREIGN KEY (`ps_payment_id`) REFERENCES `payment`(`idpayment`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
