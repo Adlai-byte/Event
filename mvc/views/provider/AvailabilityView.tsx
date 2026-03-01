@@ -92,6 +92,9 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
     return { year: now.getFullYear(), month: now.getMonth() };
   });
 
+  // Booked dates state (fetched from provider bookings)
+  const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
+
   // Block modal state
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -161,6 +164,38 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
       cancelled = true;
     };
   }, [user?.email]);
+
+  // Fetch booked dates for the current month
+  useEffect(() => {
+    if (!user?.email) return;
+    let cancelled = false;
+    const fetchBookedDates = async () => {
+      try {
+        const response = await apiClient.get<{ ok: boolean; rows?: any[] }>('/provider/bookings', {
+          providerEmail: user.email,
+        });
+        if (cancelled) return;
+        const rows = response.rows || [];
+        const dates = new Set<string>();
+        for (const booking of rows) {
+          if (booking.b_event_date && ['pending', 'confirmed'].includes(booking.b_status)) {
+            const dateStr = booking.b_event_date.split('T')[0];
+            // Only include dates in the current month
+            if (dateStr >= startDate && dateStr <= endDate) {
+              dates.add(dateStr);
+            }
+          }
+        }
+        setBookedDates(dates);
+      } catch {
+        // silently fail — booked dates are informational
+      }
+    };
+    fetchBookedDates();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMonth, user?.email, startDate, endDate]);
 
   // Sync schedule data to local state
   useEffect(() => {
@@ -321,15 +356,17 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
       const isPast = dateStr < today;
       const isToday = dateStr === today;
       const isBlocked = blockedDatesMap.has(dateStr);
+      const isBooked = bookedDates.has(dateStr);
       const isSelected = dateStr === selectedDate;
 
-      // Determine cell style
-      const cellStyles: StyleProp<ViewStyle> = [
-        styles.dayCellInner,
-        isPast ? styles.dayPast : isBlocked ? styles.dayBlocked : styles.dayAvailable,
-        isToday && styles.dayToday,
-        isSelected && styles.daySelected,
-      ];
+      // Determine cell style — priority: past > blocked > booked > available
+      const cellStyles: StyleProp<ViewStyle> = [styles.dayCellInner];
+      if (isPast) cellStyles.push(styles.dayPast);
+      else if (isBlocked) cellStyles.push(styles.dayBlocked);
+      else if (isBooked) cellStyles.push(styles.dayBooked);
+      else cellStyles.push(styles.dayAvailable);
+      if (isToday) cellStyles.push(styles.dayToday);
+      if (isSelected) cellStyles.push(styles.daySelected);
 
       cells.push(
         <View key={`day-${day}`} style={styles.dayCell}>
@@ -338,7 +375,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
             onPress={() => handleDayPress(day)}
             disabled={isPast}
             accessibilityRole="button"
-            accessibilityLabel={`${MONTH_NAMES[currentMonth.month]} ${day}, ${currentMonth.year}${isBlocked ? ', blocked' : ', available'}${isPast ? ', past date' : ''}`}
+            accessibilityLabel={`${MONTH_NAMES[currentMonth.month]} ${day}, ${currentMonth.year}${isPast ? ', past date' : isBlocked ? ', blocked' : isBooked ? ', booked' : ', available'}`}
           >
             <Text style={[styles.dayText, isPast && { opacity: 0.4 }]}>{day}</Text>
           </TouchableOpacity>
@@ -455,6 +492,10 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, styles.legendDotBlocked]} />
                 <Text style={styles.legendText}>Blocked</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, styles.legendDotBooked]} />
+                <Text style={styles.legendText}>Booked</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, styles.legendDotPast]} />
