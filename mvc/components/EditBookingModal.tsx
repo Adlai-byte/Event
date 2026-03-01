@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useBreakpoints } from '../hooks/useBreakpoints';
+import { semantic } from '../theme';
 import { getApiBaseUrl } from '../services/api';
 import { BookingWeekCalendar } from './BookingWeekCalendar';
 import { TimePickerModal } from './TimePickerModal';
@@ -57,6 +59,9 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     }
     return new Date();
   });
+
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   useEffect(() => {
     if (visible) {
@@ -181,7 +186,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Feather name="x" size={22} color="#636E72" />
+            <Feather name="x" size={22} color={semantic.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Booking</Text>
           <View style={styles.placeholder} />
@@ -196,7 +201,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               value={eventName}
               onChangeText={setEventName}
               placeholder="Enter event name"
-              placeholderTextColor="#95A5A6"
+              placeholderTextColor={semantic.textMuted}
             />
           </View>
 
@@ -260,7 +265,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               value={location}
               onChangeText={setLocation}
               placeholder="Enter location"
-              placeholderTextColor="#95A5A6"
+              placeholderTextColor={semantic.textMuted}
             />
           </View>
 
@@ -272,7 +277,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               value={notes}
               onChangeText={setNotes}
               placeholder="Add any additional notes..."
-              placeholderTextColor="#95A5A6"
+              placeholderTextColor={semantic.textMuted}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -291,7 +296,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={semantic.surface} />
             ) : (
               <Text style={styles.saveButtonText}>Save Changes</Text>
             )}
@@ -313,140 +318,141 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: '#636E72',
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#2C3E50',
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 12,
-  },
-  dateDisplay: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  timeRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  timeButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  timeButtonText: {
-    fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
-    gap: 12,
-    ...(Platform.OS === 'web'
-      ? {
-          boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
-        }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 5,
-        }),
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#636E72',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#6C63FF',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: semantic.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: isMobile ? 16 : 20,
+      paddingVertical: isMobile ? 12 : 16,
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
+    },
+    closeButton: {
+      padding: 8,
+    },
+    closeButtonText: {
+      fontSize: 18,
+      color: semantic.textSecondary,
+      fontWeight: 'bold',
+    },
+    headerTitle: {
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: 'bold',
+      color: semantic.textPrimary,
+    },
+    placeholder: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+      padding: isMobile ? 16 : 20,
+    },
+    inputGroup: {
+      marginBottom: isMobile ? 20 : 24,
+    },
+    label: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: semantic.textPrimary,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      padding: isMobile ? 10 : 12,
+      fontSize: isMobile ? 14 : 16,
+      color: semantic.textPrimary,
+    },
+    textArea: {
+      height: isMobile ? 80 : 100,
+      paddingTop: 12,
+    },
+    dateDisplay: {
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      padding: isMobile ? 10 : 12,
+      marginBottom: 12,
+    },
+    dateText: {
+      fontSize: isMobile ? 14 : 16,
+      color: semantic.textPrimary,
+      fontWeight: '500',
+    },
+    timeRow: {
+      flexDirection: isExtraSmall ? 'column' : 'row',
+      gap: 12,
+    },
+    timeButton: {
+      flex: isExtraSmall ? undefined : 1,
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      borderRadius: 8,
+      padding: isMobile ? 10 : 12,
+      alignItems: 'center',
+    },
+    timeButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      color: semantic.textPrimary,
+      fontWeight: '500',
+    },
+    footer: {
+      flexDirection: 'row',
+      padding: isMobile ? 16 : 20,
+      backgroundColor: semantic.surface,
+      borderTopWidth: 1,
+      borderTopColor: semantic.border,
+      gap: 12,
+      ...(Platform.OS === 'web'
+        ? { boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)' }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 5,
+          }),
+    },
+    cancelButton: {
+      flex: 1,
+      backgroundColor: semantic.surface,
+      borderWidth: 1,
+      borderColor: semantic.border,
+      paddingVertical: isMobile ? 12 : 14,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
+      color: semantic.textSecondary,
+    },
+    saveButton: {
+      flex: 1,
+      backgroundColor: semantic.primary,
+      paddingVertical: isMobile ? 12 : 14,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: 'bold',
+      color: semantic.surface,
+    },
+  });
+};

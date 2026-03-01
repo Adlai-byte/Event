@@ -712,7 +712,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
     },
     conversationsContainer: {
       flex: Platform.OS === 'web' ? 0.4 : 1,
-      width: Platform.OS === 'web' ? 350 : '100%',
+      width: Platform.OS === 'web' ? Math.min(350, screenWidth * 0.35) : '100%',
       borderRightWidth: Platform.OS === 'web' ? 1 : 0,
       borderRightColor: Platform.OS === 'web' ? semantic.border : 'transparent',
       backgroundColor: semantic.surface,

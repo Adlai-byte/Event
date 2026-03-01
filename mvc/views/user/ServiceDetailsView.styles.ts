@@ -485,8 +485,8 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
           }),
     },
     galleryImage: {
-      width: Platform.OS === 'web' ? 240 : 200,
-      height: Platform.OS === 'web' ? 180 : 150,
+      width: Platform.OS === 'web' ? Math.min(240, screenWidth - 48) : 200,
+      height: Platform.OS === 'web' ? Math.min(180, (screenWidth - 48) * 0.75) : 150,
     },
     reviewsCard: {
       backgroundColor: semantic.surface,

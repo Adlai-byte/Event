@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { AppLayout } from '../../components/layout';
 import { PersonalInfoForm, PersonalInfoFormData } from '../../components/profile/PersonalInfoForm';
-import { styles } from './PersonalInfoView.styles';
+import { createStyles } from './PersonalInfoView.styles';
 
 interface PersonalInfoViewProps {
   user: User;
@@ -35,6 +36,9 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   const [showErrorTooltip, setShowErrorTooltip] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showSuccessTooltip, setShowSuccessTooltip] = useState(false);
+
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   // Update profile picture when user prop changes (after save)
   React.useEffect(() => {

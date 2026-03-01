@@ -13,6 +13,7 @@ import { SkeletonCard } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { semantic } from '../../theme';
 
 interface ProviderProfileViewProps {
   providerEmail: string;
@@ -243,19 +244,19 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
             <Text style={styles.sectionTitle}>Contact Information</Text>
             {provider.u_email && (
               <View style={styles.infoRow}>
-                <Feather name="mail" size={18} color="#64748B" />
+                <Feather name="mail" size={18} color={semantic.textSecondary} />
                 <Text style={styles.infoText}>{provider.u_email}</Text>
               </View>
             )}
             {provider.u_phone && (
               <View style={styles.infoRow}>
-                <Feather name="phone" size={18} color="#64748B" />
+                <Feather name="phone" size={18} color={semantic.textSecondary} />
                 <Text style={styles.infoText}>{provider.u_phone}</Text>
               </View>
             )}
             {(provider.u_address || provider.u_city) && (
               <View style={styles.infoRow}>
-                <Feather name="map-pin" size={18} color="#64748B" />
+                <Feather name="map-pin" size={18} color={semantic.textSecondary} />
                 <Text style={styles.infoText}>
                   {[provider.u_address, provider.u_city, provider.u_state]
                     .filter(Boolean)
@@ -345,7 +346,7 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
   );
 };
 
-const createStyles = (isMobile: boolean, _screenWidth: number) =>
+const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -373,7 +374,7 @@ const createStyles = (isMobile: boolean, _screenWidth: number) =>
       width: isMobile ? 100 : 120,
       height: isMobile ? 100 : 120,
       borderRadius: isMobile ? 50 : 60,
-      backgroundColor: '#4a55e1',
+      backgroundColor: semantic.primary,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 16,
@@ -498,7 +499,7 @@ const createStyles = (isMobile: boolean, _screenWidth: number) =>
       gap: 12,
     },
     serviceCard: {
-      width: isMobile ? '100%' : '48%',
+      width: isMobile ? '100%' : screenWidth < 900 ? '100%' : '48%',
       backgroundColor: '#F9FAFB',
       borderRadius: 12,
       overflow: 'hidden',
@@ -562,7 +563,7 @@ const createStyles = (isMobile: boolean, _screenWidth: number) =>
     servicePrice: {
       fontSize: isMobile ? 18 : 20,
       fontWeight: '700',
-      color: '#4a55e1',
+      color: semantic.primary,
     },
     emptyContainer: {
       flex: 1,

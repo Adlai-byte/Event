@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useBreakpoints } from '../hooks/useBreakpoints';
 
 interface BannerNotificationProps {
   visible: boolean;
@@ -23,6 +24,9 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
 }) => {
   const slideAnim = useRef(new Animated.Value(-200)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  const { isMobile, screenWidth } = useBreakpoints();
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   useEffect(() => {
     if (visible) {
@@ -133,74 +137,80 @@ export const BannerNotification: React.FC<BannerNotificationProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10001,
-    elevation: 10001,
-    pointerEvents: 'box-none',
-  },
-  banner: {
-    width: '100%',
-    borderBottomWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Platform.OS === 'web' ? 16 : 20,
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 16 : Platform.OS === 'ios' ? 50 : 20,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 20,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  textContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  message: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.95)',
-    lineHeight: 20,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  closeIcon: {
-    fontSize: 20,
-    color: '#ffffff',
-    fontWeight: 'bold',
-    lineHeight: 20,
-  },
-});
+const createStyles = (isMobile: boolean, screenWidth: number) => {
+  const isExtraSmall = screenWidth < 360;
+  return StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10001,
+      elevation: 10001,
+      pointerEvents: 'box-none',
+      alignItems: isMobile ? 'stretch' : 'center',
+    },
+    banner: {
+      width: isMobile ? '100%' : Math.min(screenWidth * 0.5, 560),
+      borderBottomWidth: 3,
+      borderRadius: isMobile ? 0 : 12,
+      marginTop: isMobile ? 0 : 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    bannerContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Platform.OS === 'web' ? 16 : 20,
+      paddingHorizontal: isMobile ? 12 : 16,
+      paddingTop: Platform.OS === 'web' ? 16 : Platform.OS === 'ios' ? 50 : 20,
+    },
+    iconContainer: {
+      width: isExtraSmall ? 32 : 40,
+      height: isExtraSmall ? 32 : 40,
+      borderRadius: isExtraSmall ? 16 : 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: isExtraSmall ? 8 : 12,
+    },
+    icon: {
+      fontSize: 20,
+      color: '#ffffff',
+      fontWeight: 'bold',
+    },
+    textContainer: {
+      flex: 1,
+    },
+    title: {
+      fontSize: isExtraSmall ? 14 : 16,
+      fontWeight: '700',
+      color: '#ffffff',
+      marginBottom: 4,
+    },
+    message: {
+      fontSize: isExtraSmall ? 12 : 14,
+      fontWeight: '500',
+      color: 'rgba(255, 255, 255, 0.95)',
+      lineHeight: isExtraSmall ? 16 : 20,
+    },
+    closeButton: {
+      width: isExtraSmall ? 24 : 28,
+      height: isExtraSmall ? 24 : 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+      borderRadius: isExtraSmall ? 12 : 14,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    closeIcon: {
+      fontSize: 20,
+      color: '#ffffff',
+      fontWeight: 'bold',
+      lineHeight: 20,
+    },
+  });
+};
