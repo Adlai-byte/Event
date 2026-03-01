@@ -20,6 +20,7 @@ export interface ServiceFormState {
   longitude: string;
   address: string;
   image: string | null;
+  cancellationPolicyId: number | null;
 }
 
 const EMPTY_FORM: ServiceFormState = {
@@ -34,6 +35,7 @@ const EMPTY_FORM: ServiceFormState = {
   longitude: '',
   address: '',
   image: null,
+  cancellationPolicyId: null,
 };
 
 const DEFAULT_LOCATION = { lat: 14.5995, lng: 120.9842 };
@@ -566,6 +568,7 @@ export function useServiceForm(user?: UserModel) {
         city,
         state,
         image: newService.image,
+        cancellationPolicyId: newService.cancellationPolicyId,
       };
 
       const data = await addServiceMutation.mutateAsync(requestBody);
@@ -645,6 +648,8 @@ export function useServiceForm(user?: UserModel) {
       if (newService.maxCapacity) {
         requestBody.maxCapacity = parseInt(newService.maxCapacity) || 1;
       }
+
+      requestBody.cancellationPolicyId = newService.cancellationPolicyId;
 
       let city = null;
       let state = null;
@@ -727,6 +732,7 @@ export function useServiceForm(user?: UserModel) {
       longitude: service.longitude?.toString() || '',
       address: service.address || '',
       image: imageToSet,
+      cancellationPolicyId: service.cancellationPolicyId ?? null,
     });
   };
 

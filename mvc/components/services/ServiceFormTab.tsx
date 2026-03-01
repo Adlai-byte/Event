@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,15 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { ServiceFormState } from '../../hooks/useServiceForm';
+import { useCancellationPolicies } from '../../hooks/useCancellationPolicies';
 import { generateMapHTML } from '../../utils/leafletMap';
 import { createStyles } from '../../views/provider/ServicesView.styles';
+import { colors, semantic } from '../../theme';
 
 interface ServiceFormTabProps {
   activeTab: 'add' | 'edit';
@@ -37,7 +40,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   activeTab,
   newService,
   onFieldChange,
-  onServiceChange: _onServiceChange,
+  onServiceChange,
   submitting,
   errorMessage,
   onDismissError,
@@ -52,6 +55,20 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   screenWidth,
 }) => {
   const styles = createStyles(isMobile, screenWidth);
+
+  // Fetch cancellation policies
+  const { data: policiesData } = useCancellationPolicies();
+  const policies = policiesData?.rows || [];
+
+  const handlePolicyChange = useCallback(
+    (policyId: number | null) => {
+      onServiceChange((prev) => ({
+        ...prev,
+        cancellationPolicyId: policyId,
+      }));
+    },
+    [onServiceChange],
+  );
 
   const hasValidImage =
     newService.image &&
@@ -142,11 +159,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
       <View style={styles.mapContainer}>
         {mapLocation ? (
           Platform.OS === 'web' ? (
-            <View
-              style={styles.map}
-              // @ts-expect-error - web-specific prop
-              nativeID="map-container"
-            />
+            <View style={styles.map} nativeID="map-container" />
           ) : (
             <View style={{ flex: 1, position: 'relative' }}>
               <WebView
@@ -278,12 +291,96 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         keyboardType="numeric"
         value={newService.maxCapacity}
         onChangeText={(text) => onFieldChange('maxCapacity', text)}
+        accessibilityLabel="Max capacity"
       />
+
+      {/* Cancellation Policy */}
+      <Text style={styles.formLabel}>Cancellation Policy</Text>
+      <Text style={policyStyles.helperText}>Sets deposit % and refund rules for bookings</Text>
+      <View style={policyStyles.policyList}>
+        <TouchableOpacity
+          style={[
+            policyStyles.policyOption,
+            !newService.cancellationPolicyId && policyStyles.policyOptionSelected,
+          ]}
+          onPress={() => handlePolicyChange(null)}
+          accessibilityRole="button"
+          accessibilityLabel="No policy - full payment upfront"
+        >
+          <View style={policyStyles.policyOptionContent}>
+            <Feather
+              name="x-circle"
+              size={16}
+              color={!newService.cancellationPolicyId ? semantic.surface : semantic.textSecondary}
+            />
+            <View style={policyStyles.policyOptionTextWrap}>
+              <Text
+                style={[
+                  policyStyles.policyOptionText,
+                  !newService.cancellationPolicyId && policyStyles.policyOptionTextSelected,
+                ]}
+              >
+                No Policy (100% upfront)
+              </Text>
+              <Text
+                style={[
+                  policyStyles.policyOptionDetail,
+                  !newService.cancellationPolicyId && policyStyles.policyOptionDetailSelected,
+                ]}
+              >
+                Full payment required at booking
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {policies.map((policy) => {
+          const isSelected = newService.cancellationPolicyId === policy.id;
+          return (
+            <TouchableOpacity
+              key={policy.id}
+              style={[policyStyles.policyOption, isSelected && policyStyles.policyOptionSelected]}
+              onPress={() => handlePolicyChange(policy.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${policy.name} - ${policy.depositPercent}% deposit`}
+            >
+              <View style={policyStyles.policyOptionContent}>
+                <Feather
+                  name="shield"
+                  size={16}
+                  color={isSelected ? semantic.surface : semantic.textSecondary}
+                />
+                <View style={policyStyles.policyOptionTextWrap}>
+                  <Text
+                    style={[
+                      policyStyles.policyOptionText,
+                      isSelected && policyStyles.policyOptionTextSelected,
+                    ]}
+                  >
+                    {policy.name}
+                  </Text>
+                  <Text
+                    style={[
+                      policyStyles.policyOptionDetail,
+                      isSelected && policyStyles.policyOptionDetailSelected,
+                    ]}
+                  >
+                    Deposit: {policy.depositPercent}% | {policy.rules.length} refund rule
+                    {policy.rules.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <TouchableOpacity
         style={[styles.addButtonLarge, submitting && styles.addButtonDisabled]}
         onPress={onSubmit}
         disabled={submitting}
+        accessibilityRole="button"
+        accessibilityLabel={activeTab === 'edit' ? 'Update service' : 'Add service'}
       >
         {submitting ? (
           <Text style={styles.addButtonText}>
@@ -298,3 +395,52 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
     </View>
   );
 };
+
+const policyStyles = StyleSheet.create({
+  helperText: {
+    fontSize: 12,
+    color: semantic.textSecondary,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  policyList: {
+    marginTop: 4,
+    marginBottom: 12,
+    gap: 8,
+  },
+  policyOption: {
+    borderWidth: 1,
+    borderColor: semantic.border,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: semantic.background,
+  },
+  policyOptionSelected: {
+    borderColor: semantic.primary,
+    backgroundColor: semantic.primary,
+  },
+  policyOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  policyOptionTextWrap: {
+    flex: 1,
+  },
+  policyOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: semantic.textPrimary,
+  },
+  policyOptionTextSelected: {
+    color: semantic.surface,
+  },
+  policyOptionDetail: {
+    fontSize: 12,
+    color: semantic.textSecondary,
+    marginTop: 2,
+  },
+  policyOptionDetailSelected: {
+    color: colors.primary[100],
+  },
+});

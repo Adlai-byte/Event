@@ -24,6 +24,7 @@ export interface ProviderService {
   longitude?: number;
   duration?: number;
   maxCapacity?: number;
+  cancellationPolicyId?: number | null;
 }
 
 function mapToProviderService(s: any): ProviderService {
@@ -77,6 +78,7 @@ function mapToProviderService(s: any): ProviderService {
     longitude: parsedLongitude,
     duration: parseInt(s.s_duration) || 60,
     maxCapacity: parseInt(s.s_max_capacity) || 1,
+    cancellationPolicyId: s.s_cancellation_policy_id ?? null,
   };
 }
 

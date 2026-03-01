@@ -566,7 +566,7 @@ async function createService(data) {
         providerId, providerEmail, name, description, category,
         basePrice, pricingType, duration, maxCapacity,
         city, state, address, latitude, longitude, image,
-        hourlyPrice, perDayPrice,
+        hourlyPrice, perDayPrice, cancellationPolicyId,
     } = data;
 
     console.log('========================================');
@@ -633,6 +633,8 @@ async function createService(data) {
     const parsedHourlyPrice = hourlyPrice ? parseFloat(hourlyPrice) : null;
     const parsedPerDayPrice = perDayPrice ? parseFloat(perDayPrice) : null;
 
+    const parsedCancellationPolicyId = cancellationPolicyId ? parseInt(cancellationPolicyId) : null;
+
     const insertData = [
         dbUserId,
         name.trim(),
@@ -648,13 +650,14 @@ async function createService(data) {
         1,
         parsedHourlyPrice,
         parsedPerDayPrice,
+        parsedCancellationPolicyId,
     ];
 
     console.log('========================================');
     console.log('INSERTING INTO DATABASE:');
     console.log('========================================');
     console.log('SQL: INSERT INTO service');
-    console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price');
+    console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price, s_cancellation_policy_id');
     console.log('Values:');
     console.log('  s_provider_id:', insertData[0]);
     console.log('  s_name:', insertData[1]);
@@ -670,13 +673,15 @@ async function createService(data) {
     console.log('  s_is_active:', insertData[11]);
     console.log('  s_hourly_price:', insertData[12]);
     console.log('  s_per_day_price:', insertData[13]);
+    console.log('  s_cancellation_policy_id:', insertData[14]);
     console.log('========================================');
 
     const [result] = await pool.query(`
         INSERT INTO service
         (s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type,
-         s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price,
+         s_cancellation_policy_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, insertData);
 
     console.log('========================================');
@@ -724,6 +729,7 @@ async function updateService(serviceId, data) {
         name, description, category, basePrice, pricingType,
         duration, maxCapacity, city, state, address,
         latitude, longitude, image, hourlyPrice, perDayPrice,
+        cancellationPolicyId,
     } = data;
 
     // Check existence
@@ -798,6 +804,10 @@ async function updateService(serviceId, data) {
         }
         updateFields.push('s_address = ?');
         updateValues.push(fullAddress || null);
+    }
+    if (cancellationPolicyId !== undefined) {
+        updateFields.push('s_cancellation_policy_id = ?');
+        updateValues.push(cancellationPolicyId ? parseInt(cancellationPolicyId) : null);
     }
 
     if (updateFields.length === 0) {

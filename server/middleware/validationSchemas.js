@@ -148,6 +148,11 @@ const serviceValidation = [
     .optional({ values: 'falsy' })
     .isFloat({ min: -180, max: 180 })
     .withMessage('longitude must be -180 to 180'),
+  body('cancellationPolicyId')
+    .optional({ values: 'falsy' })
+    .isInt({ min: 1 })
+    .withMessage('cancellationPolicyId must be a positive integer')
+    .toInt(),
 ];
 
 // ── Messaging ──────────────────────────────────────────────────────
