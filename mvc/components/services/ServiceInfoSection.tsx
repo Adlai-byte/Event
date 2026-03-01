@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ServiceDTO } from '../../types/service';
@@ -90,6 +90,9 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
         </View>
       </View>
 
+      {/* Deposit & Cancellation Policy */}
+      <DepositPolicySection service={service} styles={styles} />
+
       {/* Available Packages */}
       {packages.length > 0 && (
         <View style={styles.packagesCard}>
@@ -169,6 +172,102 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
 
       {/* Gallery, Reviews, and other content passed as children */}
       {children}
+    </View>
+  );
+};
+
+/** Deposit percentage and cancellation policy display */
+const DepositPolicySection: React.FC<{
+  service: ServiceDTO;
+  styles: ReturnType<typeof createStyles>;
+}> = ({ service, styles }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const depositPercent = Number(service.s_deposit_percent) || 0;
+  const hasDeposit = depositPercent > 0 && depositPercent < 100;
+  const policyName = service.policy_name;
+  const policyRules = service.policy_rules;
+  const hasPolicyRules = Array.isArray(policyRules) && policyRules.length > 0;
+
+  if (!hasDeposit && !hasPolicyRules) return null;
+
+  const formatRuleLabel = (daysBefore: number, index: number, total: number): string => {
+    if (index === 0) return `${daysBefore}+ days before event`;
+    const prevDays = policyRules![index - 1].days_before;
+    if (daysBefore === 0) return index === total - 1 ? `Less than ${prevDays} days` : `0 days`;
+    return `${daysBefore}–${prevDays - 1} days before`;
+  };
+
+  return (
+    <View style={styles.detailsCard}>
+      {hasDeposit && (
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailItem}>
+            <Feather name="credit-card" size={18} color="#64748B" />
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Deposit Required</Text>
+              <Text style={styles.detailValue}>
+                {depositPercent}% at booking
+                {Number(service.s_base_price) > 0
+                  ? ` (${formatPrice(Math.round((Number(service.s_base_price) * depositPercent) / 100))})`
+                  : ''}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {hasPolicyRules && (
+        <TouchableOpacity
+          onPress={() => setExpanded(!expanded)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${expanded ? 'Collapse' : 'Expand'} cancellation policy`}
+          style={{ marginTop: hasDeposit ? 12 : 0 }}
+        >
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Feather name="shield" size={18} color="#64748B" />
+              <View>
+                <Text style={styles.detailLabel}>Cancellation Policy</Text>
+                <Text style={styles.detailValue}>{policyName || 'Standard'}</Text>
+              </View>
+            </View>
+            <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color="#64748B" />
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {expanded && hasPolicyRules && (
+        <View style={{ marginTop: 12, gap: 6 }}>
+          {[...policyRules!]
+            .sort((a, b) => b.days_before - a.days_before)
+            .map((rule, i, arr) => (
+              <View
+                key={rule.days_before}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={styles.detailLabel}>
+                  {formatRuleLabel(rule.days_before, i, arr.length)}
+                </Text>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    { color: rule.refund_percent > 0 ? '#16a34a' : '#dc2626' },
+                  ]}
+                >
+                  {rule.refund_percent > 0 ? `${rule.refund_percent}% refund` : 'No refund'}
+                </Text>
+              </View>
+            ))}
+        </View>
+      )}
     </View>
   );
 };

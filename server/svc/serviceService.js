@@ -357,9 +357,12 @@ async function getServiceById(id) {
                ${hasHourlyPrice ? 'COALESCE(s.s_hourly_price, s.s_base_price)' : 's.s_base_price'} as s_hourly_price,
                ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
                u.u_fname, u.u_lname, u.u_email as provider_email,
-               CONCAT(u.u_fname, ' ', u.u_lname) as provider_name
+               CONCAT(u.u_fname, ' ', u.u_lname) as provider_name,
+               cp.cp_name AS policy_name,
+               cp.cp_rules AS policy_rules
         FROM service s
         LEFT JOIN user u ON s.s_provider_id = u.iduser
+        LEFT JOIN cancellation_policy cp ON s.s_cancellation_policy_id = cp.id
         WHERE s.idservice = ?
     `, [id]);
 

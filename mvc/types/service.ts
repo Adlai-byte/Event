@@ -23,6 +23,10 @@ export interface ServiceDTO {
   provider_email?: string | null;
   primary_image?: string | null;
   distance_km?: number;
+  s_deposit_percent?: number | string | null;
+  s_cancellation_policy_id?: number | null;
+  policy_name?: string | null;
+  policy_rules?: Array<{ days_before: number; refund_percent: number }> | null;
 }
 
 /** Minimal service fields used in listings and cards */
