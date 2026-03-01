@@ -39,6 +39,7 @@ const navItemsByRole: Record<Role, NavItem[]> = {
     { key: 'services', label: 'Services', icon: 'tool' },
     { key: 'bookings', label: 'Bookings', icon: 'calendar' },
     { key: 'availability', label: 'Availability', icon: 'clock' },
+    { key: 'cancellation-policies', label: 'Policies', icon: 'shield' },
     { key: 'proposals', label: 'Proposals', icon: 'file-text' },
     { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
     { key: 'messages', label: 'Messages', icon: 'message-circle' },

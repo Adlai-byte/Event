@@ -9,6 +9,7 @@ const routeTitleMap: Record<string, string> = {
   services: 'My Services',
   bookings: 'Bookings',
   availability: 'Availability',
+  'cancellation-policies': 'Cancellation Policies',
   proposals: 'Proposals',
   hiring: 'Hiring',
   messages: 'Messages',

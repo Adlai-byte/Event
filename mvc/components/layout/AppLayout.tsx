@@ -42,6 +42,7 @@ const mobileNavItems: Record<
     { key: 'services', label: 'Services', icon: 'tool' },
     { key: 'bookings', label: 'Bookings', icon: 'calendar' },
     { key: 'availability', label: 'Hours', icon: 'clock' },
+    { key: 'cancellation-policies', label: 'Policies', icon: 'shield' },
     { key: 'messages', label: 'Messages', icon: 'message-circle' },
     { key: 'profile', label: 'Profile', icon: 'user' },
   ],
