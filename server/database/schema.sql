@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS `booking` (
     `b_deposit_paid` TINYINT(1) NOT NULL DEFAULT 0,                     -- Phase 2: deposit tracking
     `b_balance_due_date` DATE DEFAULT NULL,                              -- Phase 2: balance due date
     `b_cancellation_policy_snapshot` JSON DEFAULT NULL,                   -- Phase 2: policy snapshot at booking time
+    `b_event_id` INT(11) DEFAULT NULL,                                     -- Phase 3: event workspace association
     `b_status` ENUM('pending', 'confirmed', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
     `b_attendees` INT(11) DEFAULT NULL,
     `b_notes` TEXT,
@@ -130,6 +131,7 @@ CREATE TABLE IF NOT EXISTS `booking` (
     INDEX `idx_client` (`b_client_id`),
     INDEX `idx_status` (`b_status`),
     INDEX `idx_event_date` (`b_event_date`),
+    INDEX `idx_event` (`b_event_id`),
     FOREIGN KEY (`b_client_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -530,9 +532,66 @@ CREATE TABLE IF NOT EXISTS `booking_package` (
     FOREIGN KEY (`bp_package_id`) REFERENCES `service_package`(`idpackage`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================
+-- EVENT TABLE (Phase 3: Event Workspace)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `event` (
+    `idevent` INT(11) NOT NULL AUTO_INCREMENT,
+    `e_user_id` INT(11) NOT NULL,
+    `e_name` VARCHAR(255) NOT NULL,
+    `e_date` DATE NOT NULL,
+    `e_end_date` DATE DEFAULT NULL,
+    `e_location` VARCHAR(500) DEFAULT NULL,
+    `e_budget` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `e_guest_count` INT(11) DEFAULT NULL,
+    `e_description` TEXT,
+    `e_status` ENUM('planning','upcoming','in_progress','completed','cancelled') NOT NULL DEFAULT 'planning',
+    `e_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `e_updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`idevent`),
+    INDEX `idx_user` (`e_user_id`),
+    INDEX `idx_status` (`e_status`),
+    INDEX `idx_date` (`e_date`),
+    FOREIGN KEY (`e_user_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================
+-- EVENT CHECKLIST TABLE (Phase 3)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `event_checklist` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `ec_event_id` INT(11) NOT NULL,
+    `ec_title` VARCHAR(255) NOT NULL,
+    `ec_is_completed` TINYINT(1) NOT NULL DEFAULT 0,
+    `ec_due_date` DATE DEFAULT NULL,
+    `ec_category` VARCHAR(100) DEFAULT NULL,
+    `ec_sort_order` INT(11) NOT NULL DEFAULT 0,
+    `ec_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_event` (`ec_event_id`),
+    INDEX `idx_sort` (`ec_event_id`, `ec_sort_order`),
+    FOREIGN KEY (`ec_event_id`) REFERENCES `event`(`idevent`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
+-- ============================================
+-- EVENT TIMELINE TABLE (Phase 3)
+-- ============================================
+CREATE TABLE IF NOT EXISTS `event_timeline` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `et_event_id` INT(11) NOT NULL,
+    `et_start_time` TIME NOT NULL,
+    `et_end_time` TIME DEFAULT NULL,
+    `et_title` VARCHAR(255) NOT NULL,
+    `et_description` TEXT,
+    `et_booking_id` INT(11) DEFAULT NULL,
+    `et_sort_order` INT(11) NOT NULL DEFAULT 0,
+    `et_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_event` (`et_event_id`),
+    INDEX `idx_sort` (`et_event_id`, `et_sort_order`),
+    FOREIGN KEY (`et_event_id`) REFERENCES `event`(`idevent`) ON DELETE CASCADE,
+    FOREIGN KEY (`et_booking_id`) REFERENCES `booking`(`idbooking`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 

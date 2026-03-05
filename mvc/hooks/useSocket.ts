@@ -49,11 +49,21 @@ export function useSocket(userEmail: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['availability-check'] });
     };
 
+    const onEventUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['user-events'] });
+      queryClient.invalidateQueries({ queryKey: ['user-event'] });
+      queryClient.invalidateQueries({ queryKey: ['event-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['event-budget'] });
+      queryClient.invalidateQueries({ queryKey: ['event-checklist'] });
+      queryClient.invalidateQueries({ queryKey: ['event-timeline'] });
+    };
+
     socket.on('unread-update', onUnreadUpdate);
     socket.on('new-notification', onNewNotification);
     socket.on('booking-update', onBookingUpdate);
     socket.on('hiring-update', onHiringUpdate);
     socket.on('availability-update', onAvailabilityUpdate);
+    socket.on('event-update', onEventUpdate);
 
     return () => {
       socket.off('unread-update', onUnreadUpdate);
@@ -61,6 +71,7 @@ export function useSocket(userEmail: string | undefined) {
       socket.off('booking-update', onBookingUpdate);
       socket.off('hiring-update', onHiringUpdate);
       socket.off('availability-update', onAvailabilityUpdate);
+      socket.off('event-update', onEventUpdate);
       disconnectSocket();
     };
   }, [userEmail, queryClient]);

@@ -28,6 +28,7 @@ const hiringRoutes = require('./routes/hiring');
 const bookingsRoutes = require('./routes/bookings');
 const availabilityRoutes = require('./routes/availability');
 const cancellationPolicyRoutes = require('./routes/cancellationPolicies');
+const eventRoutes = require('./routes/events');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -125,6 +126,7 @@ app.use('/api', hiringRoutes);
 app.use('/api', bookingsRoutes);
 app.use('/api', availabilityRoutes);
 app.use('/api', cancellationPolicyRoutes);
+app.use('/api', eventRoutes);
 
 // Root
 app.get('/', (_req, res) => {

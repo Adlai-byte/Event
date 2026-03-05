@@ -10,6 +10,7 @@ const routeTitles: Record<string, string> = {
   messages: 'Messages',
   hiring: 'Hiring',
   profile: 'Profile',
+  events: 'Event Workspace',
   'personal-info': 'Personal Information',
   settings: 'Settings',
   'help-center': 'Help Center',

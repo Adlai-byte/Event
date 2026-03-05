@@ -33,6 +33,7 @@ const mobileNavItems: Record<
   user: [
     { key: 'dashboard', label: 'Home', icon: 'home' },
     { key: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { key: 'events', label: 'Events', icon: 'layers' },
     { key: 'messages', label: 'Messages', icon: 'message-circle' },
     { key: 'hiring', label: 'Hiring', icon: 'briefcase' },
     { key: 'profile', label: 'Profile', icon: 'user' },
