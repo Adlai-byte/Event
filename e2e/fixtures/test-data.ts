@@ -25,15 +25,34 @@ export const VALIDATION_ERRORS = {
 } as const;
 
 export const CATEGORIES = [
-  'venue',
-  'catering',
   'photography',
+  'venue',
   'music',
+  'catering',
   'decoration',
-  'transportation',
+  'planning',
+  'entertainment',
+  'transport',
+  'other',
 ] as const;
 
 export const CATEGORY_LABELS = [
+  'Photography',
+  'Venues',
+  'Music',
+  'Catering',
+  'Decoration',
+  'Planning',
+  'Entertainment',
+  'Transport',
+  'Other',
+] as const;
+
+/**
+ * The 6 categories actually rendered on the landing page (LandingPage.tsx).
+ * These differ from CATEGORY_LABELS which lists 9 categories used elsewhere.
+ */
+export const LANDING_CATEGORY_LABELS = [
   'Venue',
   'Catering',
   'Photography',
@@ -55,7 +74,7 @@ export const LANDING_CONTENT = {
   copyright: '© 2025 E-VENT. All rights reserved.',
   aboutFeatures: ['Wide Selection', 'Quality Assured', 'Easy Booking'],
   footerColumns: ['About Us', 'My Account', 'Services', 'Support', 'Download App'],
-  upcomingEventsTitle: 'Upcoming Events',
+  featuredServicesTitle: 'Featured Services',
   allServicesTitle: 'All Services',
 } as const;
 

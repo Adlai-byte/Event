@@ -38,8 +38,9 @@ test.describe('Public route navigation', () => {
     test.skip(page.viewportSize()!.width < 768, 'Landing page is desktop-oriented');
     await page.goto('/landing');
     await page.waitForSelector('text=E-VENT', { timeout: 30_000 });
-    await page.getByText('Account').click();
-    // Account click should trigger login modal or navigate — either way login form appears
-    await expect(page.locator('[aria-label="Email address"]')).toBeVisible({ timeout: 10_000 });
+    await page.getByText('Account').first().click();
+    // Account click triggers onLogin which may navigate to /login or open a login modal.
+    // Either way, a login form with an email field should become visible.
+    await expect(page.locator('[aria-label="Email address"]')).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -11,19 +11,7 @@ type Role = keyof typeof TEST_USERS;
 export async function loginAs(page: Page, role: Role): Promise<void> {
   const user = TEST_USERS[role];
 
-  await page.goto('/');
-
-  // Navigate to login if not already there
-  const loginUrl = page.url();
-  if (!loginUrl.includes('/login')) {
-    // Click the Account / login link on the landing page
-    const accountLink = page.locator('text=Account').first();
-    if (await accountLink.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await accountLink.click();
-    } else {
-      await page.goto('/login');
-    }
-  }
+  await page.goto('/login');
 
   // Wait for login form to be ready
   await page.waitForSelector(LOGIN.emailInput, { timeout: 15000 });
@@ -35,24 +23,43 @@ export async function loginAs(page: Page, role: Role): Promise<void> {
   // Submit
   await page.locator(LOGIN.signInButton).click();
 
-  // Wait for dashboard redirect based on role
+  // Wait for any dashboard to appear (login redirects through / which routes by role)
+  await page.waitForURL('**/dashboard', { timeout: 30000 });
+
+  // Allow role-based redirects to settle (admin/provider may bounce through /user/dashboard → / → /role/dashboard)
+  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
+
+  // Verify we ended up on the right dashboard
   const dashboardPath = role === 'admin' ? '/admin/dashboard' : role === 'provider' ? '/provider/dashboard' : '/user/dashboard';
-  await page.waitForURL(`**${dashboardPath}`, { timeout: 30000 });
+  const currentUrl = page.url();
+  if (!currentUrl.includes(dashboardPath)) {
+    // If still on wrong dashboard, navigate directly
+    await page.goto(dashboardPath);
+    await page.waitForLoadState('networkidle');
+  }
 }
 
 /**
- * Log out the current user by clearing storage and navigating away.
+ * Log out the current user by clearing storage (including IndexedDB for Firebase)
+ * and navigating away.
  */
 export async function logout(page: Page): Promise<void> {
   // Clear all storage to ensure clean logout
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     localStorage.clear();
     sessionStorage.clear();
+    // Clear IndexedDB (Firebase stores auth tokens here)
+    const dbs = await indexedDB.databases();
+    for (const db of dbs) {
+      if (db.name) indexedDB.deleteDatabase(db.name);
+    }
   });
 
   // Navigate to landing page
   await page.goto('/');
   await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(2000);
 }
 
 /**

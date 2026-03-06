@@ -166,8 +166,8 @@ app.use((err, req, res, _next) => {
 // Export app for testing (before listen)
 module.exports = { app };
 
-// Only start server if not in test mode
-if (process.env.NODE_ENV !== 'test') {
+// Start server (including test mode for E2E tests)
+if (true) {
     const server = http.createServer(app);
     const io = new Server(server, {
         cors: {

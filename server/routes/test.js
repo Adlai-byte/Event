@@ -74,6 +74,37 @@ router.post('/delete-user', async (req, res) => {
 });
 
 /**
+ * POST /api/test/ensure-user
+ * Ensure a test user exists in the MySQL database.
+ * If the user already exists, updates their info. If not, creates them.
+ * Body: { email: string, firstName: string, lastName: string, role?: string }
+ */
+router.post('/ensure-user', async (req, res) => {
+  try {
+    const { email, firstName, lastName, role } = req.body;
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({ ok: false, error: 'email, firstName, and lastName are required' });
+    }
+
+    const pool = getPool();
+    const userRole = role || 'user';
+    const providerStatus = userRole === 'provider' ? 'approved' : null;
+
+    const [result] = await pool.execute(
+      `INSERT INTO user (u_email, u_fname, u_lname, u_role, u_provider_status)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE u_fname = VALUES(u_fname), u_lname = VALUES(u_lname),
+         u_role = VALUES(u_role), u_provider_status = VALUES(u_provider_status)`,
+      [email, firstName, lastName, userRole, providerStatus]
+    );
+
+    return res.json({ ok: true, userId: result.insertId || 0 });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/test/seed-service
  * Create a test service for a provider.
  * Body: { email: string, name: string, category: string, description: string, price: number, city?: string, state?: string }

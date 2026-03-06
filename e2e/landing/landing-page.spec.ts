@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { LANDING_CONTENT, CATEGORY_LABELS } from '../fixtures/test-data';
+import { LANDING_CONTENT, LANDING_CATEGORY_LABELS } from '../fixtures/test-data';
 import { goToLanding } from '../helpers/navigation';
 
 // Landing page tests run only on desktop (full content visible)
@@ -18,7 +18,8 @@ test.describe('Landing Page — sections & content', () => {
   });
 
   test('displays Account link in top bar', async ({ page }) => {
-    await expect(page.getByText('Account')).toBeVisible();
+    // The top bar renders an "Account" link that triggers the login flow
+    await expect(page.getByText('Account').first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('displays search bar with placeholder', async ({ page }) => {
@@ -42,13 +43,13 @@ test.describe('Landing Page — sections & content', () => {
 
   test('shows All Services section with 6 category cards', async ({ page }) => {
     await expect(page.getByText(LANDING_CONTENT.allServicesTitle).first()).toBeVisible({ timeout: 15_000 });
-    for (const label of CATEGORY_LABELS) {
+    for (const label of LANDING_CATEGORY_LABELS) {
       await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     }
   });
 
-  test('displays Upcoming Events section', async ({ page }) => {
-    await expect(page.getByText(LANDING_CONTENT.upcomingEventsTitle)).toBeVisible({ timeout: 15_000 });
+  test('displays Featured Services section', async ({ page }) => {
+    await expect(page.getByText(LANDING_CONTENT.featuredServicesTitle).nth(1)).toBeVisible({ timeout: 15_000 });
   });
 
   test('shows About E-VENT section with 3 feature cards', async ({ page }) => {

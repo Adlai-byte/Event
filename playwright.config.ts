@@ -45,6 +45,7 @@ export default defineConfig({
       command: 'node server/index.js',
       port: 3001,
       env: {
+        ...process.env,
         NODE_ENV: 'test',
         DB_NAME: 'event_test',
       },
@@ -55,6 +56,7 @@ export default defineConfig({
       command: 'npx expo start --web --port 8081 --non-interactive',
       port: 8081,
       env: {
+        ...process.env,
         EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3001',
       },
       reuseExistingServer: !process.env.CI,

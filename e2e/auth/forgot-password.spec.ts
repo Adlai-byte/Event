@@ -24,8 +24,8 @@ test.describe('Forgot Password — modal flow', () => {
   test('empty email shows error', async ({ page }) => {
     await page.locator(LOGIN.forgotPassword).click();
     await page.locator(FORGOT_PASSWORD.sendResetLink).click();
-    // The forgot password form validates the email field
-    await expect(page.getByText(VALIDATION_ERRORS.emailRequired)).toBeVisible();
+    // The forgot password form has its own validation — shows "Please enter your email address"
+    await expect(page.getByText('Please enter your email address')).toBeVisible();
   });
 
   test('invalid email shows validation error', async ({ page }) => {

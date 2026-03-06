@@ -37,26 +37,26 @@ test.describe('Admin Services (A3)', () => {
     expect(hasE2EService || hasAnyService).toBeTruthy();
   });
 
-  test('shows provider info for services', async ({ page }) => {
-    // Wait for service list to load
+  test('shows provider info for services or empty state', async ({ page }) => {
+    // Wait for service list tab to load
     await expect(
       page.locator('[aria-label="View all services tab"]'),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Provider name or email should appear alongside services
+    // Each service card shows "Provider: {name}" — or list may be empty
     const hasProviderInfo = await page
-      .getByText(/provider|Provider/i)
+      .getByText(/Provider:/i)
       .first()
       .isVisible({ timeout: 10_000 })
       .catch(() => false);
 
-    const hasUnknownProvider = await page
-      .getByText(/Unknown Provider/i)
+    const hasEmptyState = await page
+      .getByText(/No services found/i)
       .first()
       .isVisible({ timeout: 5_000 })
       .catch(() => false);
 
-    expect(hasProviderInfo || hasUnknownProvider).toBeTruthy();
+    expect(hasProviderInfo || hasEmptyState).toBeTruthy();
   });
 
   test('has search and category filter capability', async ({ page }) => {

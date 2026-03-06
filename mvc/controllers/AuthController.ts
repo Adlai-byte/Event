@@ -53,14 +53,17 @@ export class AuthController {
         if (firebaseUser.email) {
           try {
             const q = encodeURIComponent(firebaseUser.email);
+            const idToken = await firebaseUser.getIdToken();
             const resp = await fetchWithTimeout(
               `${getApiBaseUrl()}/api/users/by-email?email=${q}`,
-              {},
+              { headers: { Authorization: `Bearer ${idToken}` } },
               10000,
             );
             if (resp.ok) {
-              const data = await resp.json();
-              if (data && data.ok && data.exists) {
+              const json = await resp.json();
+              // Server wraps response in {ok, data}, unwrap it
+              const data = json?.data || json;
+              if (data && data.exists) {
                 // Check if user is blocked
                 if (data.blocked === true) {
                   // Sign out blocked user
@@ -68,8 +71,6 @@ export class AuthController {
                   this.updateState(this.authState.logout().setError("You've been blocked"));
                   return;
                 }
-
-                // Debug: Log the data structure
 
                 // Create new User object with all properties from database
                 const user = new User(
@@ -249,10 +250,12 @@ export class AuthController {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
+          const idToken = await result.user.getIdToken();
           const resp = await fetch(apiUrl, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`,
             },
             signal: controller.signal,
           });
@@ -260,9 +263,11 @@ export class AuthController {
           clearTimeout(timeoutId);
 
           if (resp.ok) {
-            const data = await resp.json();
+            const json = await resp.json();
+            // Server wraps response in {ok, data}, unwrap it
+            const data = json?.data || json;
 
-            if (data && data.ok && data.exists) {
+            if (data && data.exists) {
               if (data.blocked === true) {
                 // Sign out and surface error
                 await AuthService.logout();
@@ -313,10 +318,12 @@ export class AuthController {
             const retryTimeoutId = setTimeout(() => retryController.abort(), 10000); // 10 second timeout
 
             const retryApiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(formData.email)}`;
+            const retryToken = await result.user.getIdToken();
             const retryResp = await fetch(retryApiUrl, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${retryToken}`,
               },
               signal: retryController.signal,
             });
@@ -324,8 +331,9 @@ export class AuthController {
             clearTimeout(retryTimeoutId);
 
             if (retryResp.ok) {
-              const retryData = await retryResp.json();
-              if (retryData && retryData.ok && retryData.exists) {
+              const retryJson = await retryResp.json();
+              const retryData = retryJson?.data || retryJson;
+              if (retryData && retryData.exists) {
                 if (retryData.blocked === true) {
                   await AuthService.logout();
                   this.updateState(
@@ -420,8 +428,9 @@ export class AuthController {
         const q = encodeURIComponent(formData.email);
         const checkResp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
         if (checkResp.ok) {
-          const checkData = await checkResp.json();
-          if (checkData && checkData.ok && checkData.exists) {
+          const checkJson = await checkResp.json();
+          const checkData = checkJson?.data || checkJson;
+          if (checkData && checkData.exists) {
             // Email already exists in database
             this.updateState(
               this.authState
@@ -553,8 +562,9 @@ export class AuthController {
             const q = encodeURIComponent(result.user.email);
             const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
             if (resp.ok) {
-              const data = await resp.json();
-              if (data && data.ok && data.exists) {
+              const json = await resp.json();
+              const data = json?.data || json;
+              if (data && data.exists) {
                 // If user has a password, reject Google login
                 if (data.hasPassword === true) {
                   await AuthService.logout();
@@ -601,8 +611,9 @@ export class AuthController {
             });
 
             if (resp.ok) {
-              const data = await resp.json();
-              if (data && data.ok && data.exists) {
+              const json = await resp.json();
+              const data = json?.data || json;
+              if (data && data.exists) {
                 userExists = true; // User already exists in database
                 if (data.role) userRole = data.role as 'user' | 'admin' | 'provider';
                 if (data.firstName) firstName = data.firstName;

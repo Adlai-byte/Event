@@ -47,11 +47,13 @@ test.describe('Register Form — validation & UI', () => {
 
   test('empty form shows 5 required field errors', async ({ page }) => {
     await page.locator(REGISTER.createAccountButton).click();
-    await expect(page.getByText(VALIDATION_ERRORS.firstNameRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.lastNameRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.emailRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.passwordRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.confirmPasswordRequired)).toBeVisible();
+    // Use exact matching and .first() to avoid strict-mode collisions
+    // (e.g., "Password is required" substring of "Confirm password is required")
+    await expect(page.getByText(VALIDATION_ERRORS.firstNameRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.lastNameRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.emailRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.passwordRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.confirmPasswordRequired, { exact: true }).first()).toBeVisible();
   });
 
   test('partial fill shows remaining required errors', async ({ page }) => {
@@ -59,12 +61,12 @@ test.describe('Register Form — validation & UI', () => {
     await page.locator(REGISTER.emailInput).fill(TEST_EMAILS.valid);
     await page.locator(REGISTER.createAccountButton).click();
     // first name and email should NOT show errors
-    await expect(page.getByText(VALIDATION_ERRORS.firstNameRequired)).not.toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.emailRequired)).not.toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.firstNameRequired, { exact: true }).first()).not.toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.emailRequired, { exact: true }).first()).not.toBeVisible();
     // remaining should show
-    await expect(page.getByText(VALIDATION_ERRORS.lastNameRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.passwordRequired)).toBeVisible();
-    await expect(page.getByText(VALIDATION_ERRORS.confirmPasswordRequired)).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.lastNameRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.passwordRequired, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(VALIDATION_ERRORS.confirmPasswordRequired, { exact: true }).first()).toBeVisible();
   });
 
   test('rejects "not-an-email" format', async ({ page }) => {

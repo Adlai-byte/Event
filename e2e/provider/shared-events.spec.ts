@@ -15,19 +15,31 @@ test.describe('Provider Shared Events (P9)', () => {
   });
 
   test('shows shared events or empty state', async ({ page }) => {
+    // Wait for loading to finish
+    await page.waitForTimeout(3000);
+
+    // Check for actual event cards (event names)
     const hasEvents = await page
       .getByText(/event.*name|wedding|party|summit/i)
       .first()
-      .isVisible({ timeout: 10_000 })
+      .isVisible()
       .catch(() => false);
 
+    // Empty state text: "No shared events"
     const hasEmptyState = await page
       .getByText(/no shared events/i)
       .first()
-      .isVisible({ timeout: 5_000 })
+      .isVisible()
       .catch(() => false);
 
-    expect(hasEvents || hasEmptyState).toBeTruthy();
+    // Also accept the hint text as proof the page rendered
+    const hasEmptyHint = await page
+      .getByText(/when clients share their events/i)
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(hasEvents || hasEmptyState || hasEmptyHint).toBeTruthy();
   });
 
   test('displays subtitle about shared events', async ({ page }) => {

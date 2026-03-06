@@ -114,7 +114,12 @@ export const NavBar: React.FC<NavBarProps> = ({
 
           {/* Navigation on Right - hamburger on narrow widths */}
           {screenWidth < 900 ? (
-            <TouchableOpacity style={styles.hamburgerButton} onPress={onMenuOpen}>
+            <TouchableOpacity
+              style={styles.hamburgerButton}
+              onPress={onMenuOpen}
+              accessibilityRole="button"
+              accessibilityLabel="Open menu"
+            >
               <View style={styles.hamburgerLine} />
               <View style={styles.hamburgerLine} />
               <View style={styles.hamburgerLine} />

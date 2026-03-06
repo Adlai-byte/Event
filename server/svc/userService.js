@@ -23,7 +23,6 @@ function mapUserRow(row) {
         lastName: row.u_lname || null,
         suffix: row.u_suffix || null,
         phone: row.u_phone || null,
-        dateOfBirth: row.u_date_of_birth || null,
         address: row.u_address || null,
         city: row.u_city || null,
         state: row.u_state || null,
@@ -31,7 +30,7 @@ function mapUserRow(row) {
         hasPassword: row.u_password !== null && row.u_password !== '',
         blocked: Number(row.u_disabled) === 1,
         role: row.u_role || 'user',
-        profilePicture: row.u_profile_picture || null,
+        profilePicture: row.u_profile_image || null,
     };
 }
 
@@ -84,38 +83,17 @@ async function listUsers() {
 async function getUserByEmail(email) {
     const pool = getPool();
 
-    // First attempt: include profile picture column
-    let query =
+    const query =
         "SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, " +
         "IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role, " +
-        "u_phone, u_date_of_birth, u_address, u_city, u_state, u_zip_code, u_profile_picture " +
+        "u_phone, u_address, u_city, u_state, u_zip_code, u_profile_image " +
         "FROM `user` WHERE u_email = ? LIMIT 1";
 
-    try {
-        const [rows] = await pool.query(query, [email]);
-        if (!Array.isArray(rows) || rows.length === 0) {
-            return { exists: false };
-        }
-        return mapUserRow(rows[0]);
-    } catch (err) {
-        // If profile picture column doesn't exist, retry without it
-        if (err && err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('u_profile_picture')) {
-            const fallbackQuery =
-                "SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, " +
-                "IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role, " +
-                "u_phone, u_date_of_birth, u_address, u_city, u_state, u_zip_code " +
-                "FROM `user` WHERE u_email = ? LIMIT 1";
-
-            const [rows] = await pool.query(fallbackQuery, [email]);
-            if (!Array.isArray(rows) || rows.length === 0) {
-                return { exists: false };
-            }
-            const mapped = mapUserRow(rows[0]);
-            mapped.profilePicture = null;
-            return mapped;
-        }
-        throw err;
+    const [rows] = await pool.query(query, [email]);
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return { exists: false };
     }
+    return mapUserRow(rows[0]);
 }
 
 // ---------------------------------------------------------------------------

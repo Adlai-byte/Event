@@ -76,6 +76,8 @@ test.describe('Cross-Role Booking Flow', () => {
     await expect(
       page.getByText(/booking/i).first(),
     ).toBeVisible({ timeout: 10_000 });
+
+    await logout(page);
   });
 
   test('provider manages booking status flow', async ({ page }) => {

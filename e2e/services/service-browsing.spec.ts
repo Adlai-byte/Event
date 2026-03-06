@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { CATEGORY_LABELS } from '../fixtures/test-data';
+import { LANDING_CATEGORY_LABELS } from '../fixtures/test-data';
 import { goToLanding } from '../helpers/navigation';
 
 test.describe('Service browsing on landing page', () => {
@@ -17,7 +17,7 @@ test.describe('Service browsing on landing page', () => {
   });
 
   test('category cards display correct labels for all 6 categories', async ({ page }) => {
-    for (const label of CATEGORY_LABELS) {
+    for (const label of LANDING_CATEGORY_LABELS) {
       await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     }
   });
@@ -62,7 +62,7 @@ test.describe('Service browsing on landing page', () => {
     await venueCard.click();
     await page.waitForTimeout(500);
     // All categories should still be visible
-    for (const label of CATEGORY_LABELS) {
+    for (const label of LANDING_CATEGORY_LABELS) {
       await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     }
   });

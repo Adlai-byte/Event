@@ -12,6 +12,7 @@ import {
   getRedirectResult,
   updateProfile,
   verifyBeforeUpdateEmail,
+  getIdToken,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from './firebase';
@@ -31,6 +32,7 @@ interface User {
   email: string | null;
   displayName: string | null;
   emailVerified: boolean;
+  getIdToken: () => Promise<string>;
 }
 
 class AuthService {
@@ -454,6 +456,7 @@ class AuthService {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           emailVerified: firebaseUser.emailVerified,
+          getIdToken: () => getIdToken(firebaseUser),
         };
         callback(user);
       } else {

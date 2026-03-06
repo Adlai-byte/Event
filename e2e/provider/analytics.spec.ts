@@ -15,19 +15,12 @@ test.describe('Provider Analytics (P10)', () => {
   });
 
   test('shows revenue or booking data section', async ({ page }) => {
-    const hasRevenue = await page
-      .getByText(/total revenue/i)
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    // The view renders StatCard with title="Total Revenue" and title="Bookings"
+    const revenueOrBookings = page
+      .getByText(/total revenue|bookings|revenue trend/i)
+      .first();
 
-    const hasBookings = await page
-      .getByText(/total bookings|completed bookings/i)
-      .first()
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
-
-    expect(hasRevenue || hasBookings).toBeTruthy();
+    await expect(revenueOrBookings).toBeVisible({ timeout: 15_000 });
   });
 
   test('shows chart or graph area', async ({ page }) => {

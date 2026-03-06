@@ -3,9 +3,17 @@ const admin = require('firebase-admin');
 
 // Initialize Firebase Admin SDK (if not already)
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-  });
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+  } else {
+    // No service account — initialize with just project ID
+    // verifyIdToken still works using Google's public keys
+    admin.initializeApp({
+      projectId: 'e-vent-aa93e',
+    });
+  }
 }
 
 async function authMiddleware(req, res, next) {
