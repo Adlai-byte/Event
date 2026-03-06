@@ -341,6 +341,16 @@ async function listServices(query, pagination) {
         }
     }
 
+    // Parse JSON columns for each row
+    for (const row of filteredRows) {
+        if (typeof row.s_tags === 'string') {
+            try { row.s_tags = JSON.parse(row.s_tags); } catch { row.s_tags = null; }
+        }
+        if (typeof row.s_inclusions === 'string') {
+            try { row.s_inclusions = JSON.parse(row.s_inclusions); } catch { row.s_inclusions = null; }
+        }
+    }
+
     return { rows: filteredRows, total };
 }
 
@@ -1232,6 +1242,16 @@ async function getProviderServices(providerEmail) {
 
     const [serviceRows] = await pool.query(query, [providerId]);
     console.log(`Found ${serviceRows.length} services for provider ${providerEmail} (ID: ${providerId})`);
+
+    // Parse JSON columns
+    for (const row of serviceRows) {
+        if (typeof row.s_tags === 'string') {
+            try { row.s_tags = JSON.parse(row.s_tags); } catch { row.s_tags = null; }
+        }
+        if (typeof row.s_inclusions === 'string') {
+            try { row.s_inclusions = JSON.parse(row.s_inclusions); } catch { row.s_inclusions = null; }
+        }
+    }
 
     return serviceRows;
 }
