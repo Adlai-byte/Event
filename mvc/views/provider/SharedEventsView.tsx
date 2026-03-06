@@ -5,7 +5,7 @@ import { SkeletonListItem } from '../../components/ui';
 import { useSharedEvents, type SharedEventItem, type EventStatus } from '../../hooks/useEventData';
 import { createStyles } from './SharedEventsView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
-import { colors, semantic } from '../../theme';
+import { colors } from '../../theme';
 import { AppLayout } from '../../components/layout';
 
 interface SharedEventsViewProps {
@@ -65,7 +65,7 @@ export const SharedEventsView: React.FC<SharedEventsViewProps> = ({
         </View>
 
         <View style={styles.infoRow}>
-          <Feather name="calendar" size={14} color={semantic.textSecondary} />
+          <Feather name="calendar" size={14} color="#64748B" />
           <Text style={styles.infoText}>
             {formatDate(item.date)}
             {item.endDate ? ` - ${formatDate(item.endDate)}` : ''}
@@ -74,30 +74,13 @@ export const SharedEventsView: React.FC<SharedEventsViewProps> = ({
 
         {item.location && (
           <View style={styles.infoRow}>
-            <Feather name="map-pin" size={14} color={semantic.textSecondary} />
+            <Feather name="map-pin" size={14} color="#64748B" />
             <Text style={styles.infoText}>{item.location}</Text>
           </View>
         )}
       </View>
     );
   };
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.contentWrapper}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Shared Events</Text>
-          </View>
-          <View style={styles.loadingContainer}>
-            <SkeletonListItem />
-            <SkeletonListItem />
-            <SkeletonListItem />
-          </View>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <AppLayout
@@ -109,19 +92,20 @@ export const SharedEventsView: React.FC<SharedEventsViewProps> = ({
       onLogout={onLogout}
     >
       <View style={styles.container}>
-        <View style={styles.contentWrapper}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Shared Events</Text>
-            <Text style={styles.subtitle}>Events shared with you by clients</Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <SkeletonListItem />
+            <SkeletonListItem />
+            <SkeletonListItem />
           </View>
-
+        ) : (
           <FlatList
             data={events || []}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderEventCard}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Feather name="users" size={48} color={colors.neutral[300]} />
+                <Feather name="users" size={48} color="#CBD5E1" />
                 <Text style={styles.emptyText}>No shared events</Text>
                 <Text style={styles.emptyHint}>
                   When clients share their events with you, they will appear here.
@@ -129,7 +113,7 @@ export const SharedEventsView: React.FC<SharedEventsViewProps> = ({
               </View>
             }
           />
-        </View>
+        )}
       </View>
     </AppLayout>
   );

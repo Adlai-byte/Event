@@ -222,7 +222,7 @@ async function listServices(query, pagination) {
             return { rows: [], total: 0, shortCircuit: true };
         }
     } else {
-        where += ` AND s.s_is_active = 1`;
+        where += ` AND s.s_is_active = 1 AND (s.s_status IS NULL OR s.s_status != 'draft')`;
     }
 
     if (category) {

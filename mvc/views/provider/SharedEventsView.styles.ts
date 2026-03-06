@@ -1,42 +1,22 @@
 import { StyleSheet, Platform } from 'react-native';
-import { semantic } from '../../theme';
-import { getShadowStyle } from '../../utils/shadowStyles';
 
 export const createStyles = (isMobile: boolean, _screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
-      ...(Platform.OS === 'web'
-        ? { justifyContent: 'center', alignItems: 'center', paddingTop: 30, paddingBottom: 20 }
-        : { paddingTop: 20 }),
-    },
-    contentWrapper: {
-      width: '100%',
-      maxWidth: Platform.OS === 'web' ? 900 : undefined,
-      flex: 1,
-    },
-    header: {
-      paddingHorizontal: isMobile ? 16 : 24,
-      paddingBottom: 16,
-    },
-    title: {
-      fontSize: isMobile ? 22 : 26,
-      fontWeight: '700',
-      color: semantic.textPrimary,
-    },
-    subtitle: {
-      fontSize: 14,
-      color: semantic.textSecondary,
-      marginTop: 4,
+      backgroundColor: '#F8FAFC',
+      paddingTop: isMobile ? 16 : 24,
+      paddingBottom: 20,
     },
     card: {
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
       padding: 16,
       marginHorizontal: isMobile ? 16 : 24,
       marginBottom: 12,
-      ...getShadowStyle(0.08, 3, 1),
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)' } : {}),
     },
     cardHeader: {
       flexDirection: 'row',
@@ -47,7 +27,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
     eventName: {
       fontSize: 16,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
     },
     roleBadge: {
@@ -80,21 +60,24 @@ export const createStyles = (isMobile: boolean, _screenWidth: number) =>
     },
     infoText: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     emptyContainer: {
       alignItems: 'center',
-      paddingVertical: 60,
+      paddingVertical: 80,
     },
     emptyText: {
       fontSize: 16,
-      color: semantic.textSecondary,
-      marginTop: 12,
+      fontWeight: '600',
+      color: '#64748B',
+      marginTop: 16,
     },
     emptyHint: {
       fontSize: 14,
-      color: semantic.textMuted,
-      marginTop: 4,
+      color: '#94A3B8',
+      marginTop: 6,
+      textAlign: 'center',
+      paddingHorizontal: 32,
     },
     loadingContainer: {
       padding: 24,
