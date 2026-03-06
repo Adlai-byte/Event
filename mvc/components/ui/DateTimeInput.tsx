@@ -40,7 +40,6 @@ export const DateTimeInput: React.FC<DateTimeInputProps> = ({
         placeholder={placeholder}
         placeholderTextColor={placeholderTextColor}
         accessibilityLabel={accessibilityLabel}
-        // @ts-expect-error — web-only prop for HTML input type
         {...(Platform.OS === 'web' ? { type: inputType } : {})}
       />
     );
