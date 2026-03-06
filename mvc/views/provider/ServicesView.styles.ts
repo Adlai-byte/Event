@@ -170,7 +170,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       paddingVertical: isMobile ? 10 : 8,
       paddingHorizontal: isMobile ? 16 : 12,
       borderRadius: 6,
-      minWidth: isMobile ? '100%' as any : 100,
+      minWidth: isMobile ? ('100%' as any) : 100,
     },
     activateButton: {
       backgroundColor: '#16A34A',
@@ -198,6 +198,32 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       fontWeight: '600',
       fontSize: isMobile ? 10 : 11,
       textAlign: 'center',
+    },
+    backToListButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      marginBottom: 12,
+    },
+    backToListText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: '#2563EB',
+    },
+    packagesButton: {
+      backgroundColor: '#EFF6FF',
+      borderWidth: 1,
+      borderColor: '#BFDBFE',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    packagesButtonText: {
+      color: '#2563EB',
+      fontWeight: '600',
+      fontSize: isMobile ? 10 : 11,
     },
     emptyState: {
       paddingVertical: 40,
@@ -231,11 +257,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       borderWidth: 1,
       borderColor: semantic.border,
       overflow: 'hidden',
-      ...(isMobile ? {
-        width: 800,
-      } : {
-        width: '100%' as any,
-      }),
+      ...(isMobile
+        ? {
+            width: 800,
+          }
+        : {
+            width: '100%' as any,
+          }),
     },
     tableHeader: {
       flexDirection: 'row',
@@ -613,12 +641,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     loadingText: {
       marginTop: 12,
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     servicePackageSection: {
       marginBottom: 24,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       paddingBottom: 20,
     },
     servicePackageHeader: {
@@ -633,11 +661,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     servicePackageName: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#1F2937',
+      color: '#0F172A',
     },
     servicePackageCategory: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 2,
     },
     createPackageButton: {
@@ -645,29 +673,29 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
       paddingVertical: 8,
       paddingHorizontal: 12,
-      backgroundColor: semantic.primary,
-      borderRadius: 8,
+      backgroundColor: '#0F172A',
+      borderRadius: 10,
     },
     createPackageIcon: {
       fontSize: 16,
-      color: semantic.surface,
+      color: '#FFFFFF',
       marginRight: 6,
     },
     createPackageText: {
       fontSize: 13,
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontWeight: '500',
     },
     packagesList: {
       marginTop: 8,
     },
     packageCard: {
-      backgroundColor: '#F9FAFB',
-      borderRadius: 8,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: 12,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     packageCardHeader: {
       flexDirection: 'row',
@@ -681,11 +709,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     packageCardName: {
       fontSize: 15,
       fontWeight: '600',
-      color: '#1F2937',
+      color: '#0F172A',
     },
     packageCardDescription: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 4,
     },
     packageCardPrice: {
@@ -699,11 +727,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     packagePriceValue: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.success[600],
+      color: '#10B981',
     },
     packageDiscount: {
       fontSize: 11,
-      color: colors.error[600],
+      color: '#EF4444',
       fontWeight: '500',
     },
     packageCardMeta: {
@@ -713,11 +741,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginTop: 10,
       paddingTop: 10,
       borderTopWidth: 1,
-      borderTopColor: semantic.border,
+      borderTopColor: '#E2E8F0',
     },
     packageMetaText: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     packageCardActions: {
       flexDirection: 'row',
@@ -726,7 +754,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginTop: 12,
       paddingTop: 12,
       borderTopWidth: 1,
-      borderTopColor: semantic.border,
+      borderTopColor: '#E2E8F0',
     },
     packageActionButton: {
       paddingVertical: 6,
@@ -734,36 +762,145 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       borderRadius: 6,
     },
     packageEditButton: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderWidth: 1,
-      borderColor: '#D1D5DB',
+      borderColor: '#E2E8F0',
     },
     packageEditButtonText: {
       fontSize: 13,
-      color: '#374151',
+      color: '#334155',
       fontWeight: '500',
     },
     packageDeleteButton: {
-      backgroundColor: colors.error[50],
+      backgroundColor: '#FEF2F2',
       borderWidth: 1,
-      borderColor: colors.error[100],
+      borderColor: '#FECACA',
     },
     packageDeleteButtonText: {
       fontSize: 13,
-      color: colors.error[600],
+      color: '#EF4444',
       fontWeight: '500',
     },
     noPackages: {
       padding: 20,
       alignItems: 'center',
-      backgroundColor: '#F9FAFB',
-      borderRadius: 8,
+      backgroundColor: '#F8FAFC',
+      borderRadius: 10,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderStyle: 'dashed',
     },
     noPackagesText: {
       fontSize: 14,
       color: '#9CA3AF',
+    },
+    photoGallery: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 10,
+      marginTop: 8,
+    },
+    photoThumb: {
+      width: 100,
+      height: 100,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      overflow: 'hidden' as const,
+      position: 'relative' as const,
+    },
+    photoThumbImage: {
+      width: '100%' as any,
+      height: '100%' as any,
+    },
+    photoRemoveButton: {
+      position: 'absolute' as const,
+      top: 4,
+      right: 4,
+      backgroundColor: 'rgba(239, 68, 68, 0.9)',
+      borderRadius: 10,
+      width: 20,
+      height: 20,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    photoPrimaryBadge: {
+      position: 'absolute' as const,
+      bottom: 4,
+      left: 4,
+      backgroundColor: 'rgba(37, 99, 235, 0.9)',
+      borderRadius: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+    },
+    photoPrimaryText: {
+      color: '#FFFFFF',
+      fontSize: 9,
+      fontWeight: '600' as const,
+    },
+    photoAddButton: {
+      width: 100,
+      height: 100,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      borderStyle: 'dashed' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: '#F8FAFC',
+    },
+    photoCount: {
+      fontSize: 12,
+      color: '#94A3B8',
+      marginTop: 4,
+    },
+    tagInputRow: {
+      flexDirection: 'row' as const,
+      gap: 8,
+      marginBottom: 8,
+    },
+    tagInput: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 14,
+      color: '#0F172A',
+    },
+    tagAddButton: {
+      backgroundColor: '#0F172A',
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+    tagChipContainer: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 6,
+    },
+    tagChip: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: '#EFF6FF',
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      gap: 4,
+    },
+    tagChipText: {
+      fontSize: 13,
+      color: '#2563EB',
+    },
+    tagRemove: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: '#BFDBFE',
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
     },
   });

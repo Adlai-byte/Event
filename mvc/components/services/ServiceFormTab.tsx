@@ -17,6 +17,76 @@ import { generateMapHTML } from '../../utils/leafletMap';
 import { createStyles } from '../../views/provider/ServicesView.styles';
 import { colors, semantic } from '../../theme';
 
+const TagListInput: React.FC<{
+  label: string;
+  items: string[];
+  onAdd: (item: string) => void;
+  onRemove: (index: number) => void;
+  placeholder: string;
+  suggestions?: string[];
+  styles: any;
+}> = ({ label, items, onAdd, onRemove, placeholder, suggestions, styles }) => {
+  const [inputValue, setInputValue] = React.useState('');
+
+  const handleAdd = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !items.includes(trimmed)) {
+      onAdd(trimmed);
+      setInputValue('');
+    }
+  };
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={styles.formLabel}>{label}</Text>
+      <View style={styles.tagInputRow}>
+        <TextInput
+          style={styles.tagInput}
+          value={inputValue}
+          onChangeText={setInputValue}
+          placeholder={placeholder}
+          onSubmitEditing={handleAdd}
+          accessibilityLabel={label}
+        />
+        <TouchableOpacity
+          style={styles.tagAddButton}
+          onPress={handleAdd}
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${label.toLowerCase()}`}
+        >
+          <Feather name="plus" size={16} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+      {suggestions && suggestions.length > 0 && items.length === 0 && (
+        <View style={[styles.tagChipContainer, { marginBottom: 6 }]}>
+          {suggestions.map((s) => (
+            <TouchableOpacity key={s} onPress={() => onAdd(s)}>
+              <View style={[styles.tagChip, { backgroundColor: '#F1F5F9' }]}>
+                <Text style={[styles.tagChipText, { color: '#64748B' }]}>+ {s}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      <View style={styles.tagChipContainer}>
+        {items.map((item, index) => (
+          <View key={item} style={styles.tagChip}>
+            <Text style={styles.tagChipText}>{item}</Text>
+            <TouchableOpacity
+              style={styles.tagRemove}
+              onPress={() => onRemove(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${item}`}
+            >
+              <Feather name="x" size={10} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
 interface ServiceFormTabProps {
   activeTab: 'add' | 'edit';
   newService: ServiceFormState;
@@ -30,6 +100,7 @@ interface ServiceFormTabProps {
   onMapMessage: (event: any) => void;
   onImagePick: () => void;
   onRemoveImage: (index: number) => void;
+  onSetPrimaryImage: (index: number) => void;
   onSubmit: () => void;
   categories: string[];
   isMobile: boolean;
@@ -49,6 +120,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   onMapMessage,
   onImagePick,
   onRemoveImage,
+  onSetPrimaryImage,
   onSubmit,
   categories,
   isMobile,
@@ -69,14 +141,6 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
     },
     [onServiceChange],
   );
-
-  const hasValidImage =
-    newService.image &&
-    typeof newService.image === 'string' &&
-    (newService.image.startsWith('data:image') ||
-      newService.image.startsWith('http://') ||
-      newService.image.startsWith('https://') ||
-      newService.image.startsWith('/uploads/'));
 
   return (
     <View style={styles.addForm}>
@@ -109,30 +173,48 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         onChangeText={(text) => onFieldChange('description', text)}
       />
 
-      <Text style={styles.formLabel}>Service Photo</Text>
-      {hasValidImage ? (
-        <View style={styles.imagePreviewContainer}>
-          <Image
-            source={{ uri: newService.image! }}
-            style={styles.imagePreview}
-            onError={(e) => {
-              if (__DEV__) console.error('Image display error in edit form');
-              if (__DEV__) console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
-            }}
-            onLoad={() => {}}
-          />
-          <TouchableOpacity style={styles.removeImageButton} onPress={() => onRemoveImage(0)}>
-            <Text style={styles.removeImageText}>Remove Photo</Text>
+      {/* Service Photos (up to 10) */}
+      <Text style={styles.formLabel}>Service Photos</Text>
+      <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8 }}>
+        First photo is the cover image. Tap photo to set as primary. Up to 10 photos.
+      </Text>
+      <View style={styles.photoGallery}>
+        {newService.images.map((img, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.photoThumb}
+            onPress={() => onSetPrimaryImage(index)}
+            accessibilityRole="button"
+            accessibilityLabel={`Photo ${index + 1}${img.isPrimary ? ', primary' : ''}`}
+          >
+            <Image source={{ uri: img.uri }} style={styles.photoThumbImage} />
+            <TouchableOpacity
+              style={styles.photoRemoveButton}
+              onPress={() => onRemoveImage(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove photo ${index + 1}`}
+            >
+              <Feather name="x" size={12} color="#FFFFFF" />
+            </TouchableOpacity>
+            {img.isPrimary && (
+              <View style={styles.photoPrimaryBadge}>
+                <Text style={styles.photoPrimaryText}>Cover</Text>
+              </View>
+            )}
           </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.imageUploadButton} onPress={onImagePick}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="camera" size={16} color="#64748B" />
-            <Text style={styles.imageUploadText}>Choose Photo</Text>
-          </View>
-        </TouchableOpacity>
-      )}
+        ))}
+        {newService.images.length < 10 && (
+          <TouchableOpacity
+            style={styles.photoAddButton}
+            onPress={onImagePick}
+            accessibilityRole="button"
+            accessibilityLabel="Add photo"
+          >
+            <Feather name="plus" size={24} color="#94A3B8" />
+            <Text style={styles.photoCount}>{newService.images.length}/10</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <Text style={styles.formLabel}>Location *</Text>
       <Text style={styles.mapHint}>
@@ -199,6 +281,23 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         <Text style={styles.addressPlaceholder}>Location will appear here after pinning</Text>
       )}
 
+      {newService.category !== 'venue' && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={styles.formLabel}>Service Area (Travel Radius)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TextInput
+              style={[styles.addInputFull, { flex: 1 }]}
+              value={newService.travelRadiusKm}
+              onChangeText={(v) => onFieldChange('travelRadiusKm', v.replace(/[^0-9]/g, ''))}
+              placeholder="e.g. 50"
+              keyboardType="numeric"
+              accessibilityLabel="Travel radius in kilometers"
+            />
+            <Text style={{ fontSize: 14, color: '#64748B' }}>km from base location</Text>
+          </View>
+        </View>
+      )}
+
       <Text style={styles.formLabel}>Category *</Text>
       <View style={styles.categoryGrid}>
         {categories
@@ -262,6 +361,54 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         </View>
       )}
 
+      {/* Booking Duration Limits */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={styles.formLabel}>Booking Duration Limits</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Minimum (hours)</Text>
+            <TextInput
+              style={styles.addInputFull}
+              value={newService.minBookingHours}
+              onChangeText={(v) => onFieldChange('minBookingHours', v.replace(/[^0-9.]/g, ''))}
+              placeholder="e.g. 2"
+              keyboardType="numeric"
+              accessibilityLabel="Minimum booking hours"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Maximum (hours)</Text>
+            <TextInput
+              style={styles.addInputFull}
+              value={newService.maxBookingHours}
+              onChangeText={(v) => onFieldChange('maxBookingHours', v.replace(/[^0-9.]/g, ''))}
+              placeholder="e.g. 12"
+              keyboardType="numeric"
+              accessibilityLabel="Maximum booking hours"
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Advance Booking Required */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={styles.formLabel}>Advance Booking Required</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TextInput
+            style={[styles.addInputFull, { width: 80 }]}
+            value={newService.leadTimeDays}
+            onChangeText={(v) => onFieldChange('leadTimeDays', v.replace(/[^0-9]/g, ''))}
+            placeholder="0"
+            keyboardType="numeric"
+            accessibilityLabel="Minimum days in advance for booking"
+          />
+          <Text style={{ fontSize: 14, color: '#64748B' }}>days before event date</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
+          Customers must book at least this many days in advance. Set to 0 for no restriction.
+        </Text>
+      </View>
+
       <Text style={styles.formLabel}>Max Capacity</Text>
       <TextInput
         style={styles.addInputFull}
@@ -270,6 +417,43 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         value={newService.maxCapacity}
         onChangeText={(text) => onFieldChange('maxCapacity', text)}
         accessibilityLabel="Max capacity"
+      />
+
+      {/* Tags & Amenities */}
+      <TagListInput
+        label="Tags & Amenities"
+        items={newService.tags}
+        onAdd={(tag) => onServiceChange((prev) => ({ ...prev, tags: [...prev.tags, tag] }))}
+        onRemove={(i) =>
+          onServiceChange((prev) => ({ ...prev, tags: prev.tags.filter((_, idx) => idx !== i) }))
+        }
+        placeholder="e.g. outdoor, parking, wheelchair accessible"
+        suggestions={[
+          'Indoor',
+          'Outdoor',
+          'Parking',
+          'WiFi',
+          'Pet Friendly',
+          'Wheelchair Accessible',
+        ]}
+        styles={styles}
+      />
+
+      {/* What's Included */}
+      <TagListInput
+        label="What's Included"
+        items={newService.inclusions}
+        onAdd={(item) =>
+          onServiceChange((prev) => ({ ...prev, inclusions: [...prev.inclusions, item] }))
+        }
+        onRemove={(i) =>
+          onServiceChange((prev) => ({
+            ...prev,
+            inclusions: prev.inclusions.filter((_, idx) => idx !== i),
+          }))
+        }
+        placeholder="e.g. setup, sound system, 100 edited photos"
+        styles={styles}
       />
 
       {/* Cancellation Policy */}
