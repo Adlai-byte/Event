@@ -13,6 +13,7 @@ import {
 import { createStyles } from './EventsView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { colors, semantic } from '../../theme';
+import { AppLayout } from '../../components/layout';
 
 interface EventsViewProps {
   userId: string;
@@ -42,7 +43,9 @@ const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
 export const EventsView: React.FC<EventsViewProps> = ({
   userId: _userId,
   userEmail,
+  user,
   onNavigate,
+  onLogout,
 }) => {
   const { isMobile, screenWidth, screenHeight } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth, screenHeight);
@@ -169,84 +172,93 @@ export const EventsView: React.FC<EventsViewProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Status Filter Bar */}
-      <View style={styles.filterContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-          {STATUS_FILTERS.map((filter) => (
-            <TouchableOpacity
-              key={filter.key}
-              style={[
-                styles.filterButton,
-                activeFilter === filter.key && styles.filterButtonActive,
-              ]}
-              onPress={() => setActiveFilter(filter.key)}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter: ${filter.label}`}
-            >
-              <Text
+    <AppLayout
+      role="user"
+      activeRoute="events"
+      title="Event Workspace"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        {/* Status Filter Bar */}
+        <View style={styles.filterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            {STATUS_FILTERS.map((filter) => (
+              <TouchableOpacity
+                key={filter.key}
                 style={[
-                  styles.filterButtonText,
-                  activeFilter === filter.key && styles.filterButtonActiveText,
+                  styles.filterButton,
+                  activeFilter === filter.key && styles.filterButtonActive,
                 ]}
+                onPress={() => setActiveFilter(filter.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter: ${filter.label}`}
               >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    activeFilter === filter.key && styles.filterButtonActiveText,
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-      {/* Event List */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <SkeletonListItem />
-          <SkeletonListItem />
-          <SkeletonListItem />
-        </View>
-      ) : filteredEvents.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Feather name="layers" size={48} color={colors.neutral[300]} />
-          <Text style={styles.emptyText}>No Events Found</Text>
-          <Text style={styles.emptySubtext}>
-            {activeFilter === 'all'
-              ? 'Create your first event to start planning!'
-              : `No events with status "${activeFilter.replace('_', ' ')}"`}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredEvents}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderEventCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
+        {/* Event List */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <SkeletonListItem />
+            <SkeletonListItem />
+            <SkeletonListItem />
+          </View>
+        ) : filteredEvents.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="layers" size={48} color={colors.neutral[300]} />
+            <Text style={styles.emptyText}>No Events Found</Text>
+            <Text style={styles.emptySubtext}>
+              {activeFilter === 'all'
+                ? 'Create your first event to start planning!'
+                : `No events with status "${activeFilter.replace('_', ' ')}"`}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredEvents}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderEventCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+
+        {/* FAB Create Button */}
+        <TouchableOpacity
+          style={styles.fabButton}
+          onPress={() => setShowCreateModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Create new event"
+        >
+          <Feather name="plus" size={20} color={colors.neutral[0]} />
+          <Text style={styles.fabButtonText}>New Event</Text>
+        </TouchableOpacity>
+
+        {/* Create Event Modal */}
+        <CreateEventModal
+          visible={showCreateModal}
+          isEdit={false}
+          isSubmitting={createMutation.isPending}
+          onSubmit={handleCreateEvent}
+          onClose={() => setShowCreateModal(false)}
         />
-      )}
-
-      {/* FAB Create Button */}
-      <TouchableOpacity
-        style={styles.fabButton}
-        onPress={() => setShowCreateModal(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Create new event"
-      >
-        <Feather name="plus" size={20} color={colors.neutral[0]} />
-        <Text style={styles.fabButtonText}>New Event</Text>
-      </TouchableOpacity>
-
-      {/* Create Event Modal */}
-      <CreateEventModal
-        visible={showCreateModal}
-        isEdit={false}
-        isSubmitting={createMutation.isPending}
-        onSubmit={handleCreateEvent}
-        onClose={() => setShowCreateModal(false)}
-      />
-    </View>
+      </View>
+    </AppLayout>
   );
 };

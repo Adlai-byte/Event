@@ -46,6 +46,7 @@ import { createStyles } from './EventDetailView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { DateTimeInput } from '../../components/ui/DateTimeInput';
 import { colors, semantic } from '../../theme';
+import { AppLayout } from '../../components/layout';
 
 type TabKey = 'overview' | 'vendors' | 'timeline' | 'checklist' | 'budget';
 
@@ -86,7 +87,14 @@ const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
   cancelled: { bg: colors.error[50], text: colors.error[600] },
 };
 
-export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userEmail, onBack }) => {
+export const EventDetailView: React.FC<EventDetailViewProps> = ({
+  eventId,
+  userEmail,
+  user,
+  onNavigate,
+  onLogout,
+  onBack,
+}) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
@@ -906,105 +914,114 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel="Back to events"
-      >
-        <Feather name="arrow-left" size={20} color={colors.primary[500]} />
-        <Text style={styles.backText}>Events</Text>
-      </TouchableOpacity>
+    <AppLayout
+      role="user"
+      activeRoute="events"
+      title="Event Details"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        {/* Back button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back to events"
+        >
+          <Feather name="arrow-left" size={20} color={colors.primary[500]} />
+          <Text style={styles.backText}>Events</Text>
+        </TouchableOpacity>
 
-      {/* Tab bar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
-            accessibilityRole="tab"
-            accessibilityLabel={tab.label}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        {/* Tab bar */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+          {TABS.map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+              onPress={() => setActiveTab(tab.key)}
+              accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+            >
+              <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-      {/* Tab content */}
-      <View style={styles.content}>{tabContent[activeTab]()}</View>
+        {/* Tab content */}
+        <View style={styles.content}>{tabContent[activeTab]()}</View>
 
-      {/* Edit Event Modal */}
-      <CreateEventModal
-        visible={showEditModal}
-        isEdit={true}
-        initialData={event}
-        isSubmitting={updateEventMutation.isPending}
-        onSubmit={handleEditSubmit}
-        onClose={() => setShowEditModal(false)}
-      />
+        {/* Edit Event Modal */}
+        <CreateEventModal
+          visible={showEditModal}
+          isEdit={true}
+          initialData={event}
+          isSubmitting={updateEventMutation.isPending}
+          onSubmit={handleEditSubmit}
+          onClose={() => setShowEditModal(false)}
+        />
 
-      {/* Invite Collaborator Modal */}
-      <InviteCollaboratorModal
-        visible={showInviteModal}
-        eventId={eventId}
-        onClose={() => setShowInviteModal(false)}
-      />
+        {/* Invite Collaborator Modal */}
+        <InviteCollaboratorModal
+          visible={showInviteModal}
+          eventId={eventId}
+          onClose={() => setShowInviteModal(false)}
+        />
 
-      {/* Link Booking Modal */}
-      <Modal
-        visible={showLinkModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLinkModal(false)}
-      >
-        <View style={styles.linkModalOverlay}>
-          <View style={styles.linkModalContainer}>
-            <View style={styles.linkModalHeader}>
-              <Text style={styles.linkModalTitle}>Link Booking</Text>
-              <TouchableOpacity
-                onPress={() => setShowLinkModal(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-              >
-                <Feather name="x" size={24} color={semantic.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={allBookings || []}
-              keyExtractor={(item: UnlinkedBooking) => String(item.idbooking || item.id)}
-              renderItem={({ item }: { item: UnlinkedBooking }) => (
+        {/* Link Booking Modal */}
+        <Modal
+          visible={showLinkModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowLinkModal(false)}
+        >
+          <View style={styles.linkModalOverlay}>
+            <View style={styles.linkModalContainer}>
+              <View style={styles.linkModalHeader}>
+                <Text style={styles.linkModalTitle}>Link Booking</Text>
                 <TouchableOpacity
-                  style={styles.linkModalItem}
-                  onPress={() => handleLinkBooking((item.idbooking || item.id) as number)}
+                  onPress={() => setShowLinkModal(false)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Link ${item.b_event_name || item.eventName || ''}`}
+                  accessibilityLabel="Close"
                 >
-                  <View>
-                    <Text style={styles.linkModalItemName}>
-                      {item.b_event_name || item.eventName}
-                    </Text>
-                    <Text style={styles.linkModalItemDate}>
-                      {formatDate((item.b_event_date || item.eventDate) ?? '')}
-                    </Text>
-                  </View>
-                  <Feather name="plus-circle" size={20} color={colors.primary[500]} />
+                  <Feather name="x" size={24} color={semantic.textSecondary} />
                 </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                <View style={styles.linkModalEmpty}>
-                  <Feather name="inbox" size={32} color={colors.neutral[300]} />
-                  <Text style={styles.linkModalEmptyText}>No unlinked bookings available</Text>
-                </View>
-              }
-            />
+              </View>
+              <FlatList
+                data={allBookings || []}
+                keyExtractor={(item: UnlinkedBooking) => String(item.idbooking || item.id)}
+                renderItem={({ item }: { item: UnlinkedBooking }) => (
+                  <TouchableOpacity
+                    style={styles.linkModalItem}
+                    onPress={() => handleLinkBooking((item.idbooking || item.id) as number)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Link ${item.b_event_name || item.eventName || ''}`}
+                  >
+                    <View>
+                      <Text style={styles.linkModalItemName}>
+                        {item.b_event_name || item.eventName}
+                      </Text>
+                      <Text style={styles.linkModalItemDate}>
+                        {formatDate((item.b_event_date || item.eventDate) ?? '')}
+                      </Text>
+                    </View>
+                    <Feather name="plus-circle" size={20} color={colors.primary[500]} />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View style={styles.linkModalEmpty}>
+                    <Feather name="inbox" size={32} color={colors.neutral[300]} />
+                    <Text style={styles.linkModalEmptyText}>No unlinked bookings available</Text>
+                  </View>
+                }
+              />
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </AppLayout>
   );
 };

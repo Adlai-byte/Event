@@ -6,6 +6,7 @@ import { useSharedEvents, type SharedEventItem, type EventStatus } from '../../h
 import { createStyles } from './SharedEventsView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { colors, semantic } from '../../theme';
+import { AppLayout } from '../../components/layout';
 
 interface SharedEventsViewProps {
   userId: string;
@@ -23,7 +24,12 @@ const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
   cancelled: { bg: colors.error[50], text: colors.error[600] },
 };
 
-export const SharedEventsView: React.FC<SharedEventsViewProps> = ({ userEmail }) => {
+export const SharedEventsView: React.FC<SharedEventsViewProps> = ({
+  userEmail,
+  user,
+  onNavigate,
+  onLogout,
+}) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
   const { data: events, isLoading } = useSharedEvents(userEmail);
@@ -94,28 +100,37 @@ export const SharedEventsView: React.FC<SharedEventsViewProps> = ({ userEmail })
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.contentWrapper}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Shared Events</Text>
-          <Text style={styles.subtitle}>Events shared with you by clients</Text>
-        </View>
+    <AppLayout
+      role="provider"
+      activeRoute="shared-events"
+      title="Shared Events"
+      user={user}
+      onNavigate={onNavigate}
+      onLogout={onLogout}
+    >
+      <View style={styles.container}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Shared Events</Text>
+            <Text style={styles.subtitle}>Events shared with you by clients</Text>
+          </View>
 
-        <FlatList
-          data={events || []}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderEventCard}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="users" size={48} color={colors.neutral[300]} />
-              <Text style={styles.emptyText}>No shared events</Text>
-              <Text style={styles.emptyHint}>
-                When clients share their events with you, they will appear here.
-              </Text>
-            </View>
-          }
-        />
+          <FlatList
+            data={events || []}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderEventCard}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Feather name="users" size={48} color={colors.neutral[300]} />
+                <Text style={styles.emptyText}>No shared events</Text>
+                <Text style={styles.emptyHint}>
+                  When clients share their events with you, they will appear here.
+                </Text>
+              </View>
+            }
+          />
+        </View>
       </View>
-    </View>
+    </AppLayout>
   );
 };
