@@ -102,6 +102,7 @@ interface ServiceFormTabProps {
   onRemoveImage: (index: number) => void;
   onSetPrimaryImage: (index: number) => void;
   onSubmit: () => void;
+  onSaveAsDraft?: () => void;
   categories: string[];
   isMobile: boolean;
   screenWidth: number;
@@ -122,6 +123,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   onRemoveImage,
   onSetPrimaryImage,
   onSubmit,
+  onSaveAsDraft,
   categories,
   isMobile,
   screenWidth,
@@ -537,23 +539,39 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         })}
       </View>
 
-      <TouchableOpacity
-        style={[styles.addButtonLarge, submitting && styles.addButtonDisabled]}
-        onPress={onSubmit}
-        disabled={submitting}
-        accessibilityRole="button"
-        accessibilityLabel={activeTab === 'edit' ? 'Update service' : 'Add service'}
-      >
-        {submitting ? (
-          <Text style={styles.addButtonText}>
-            {activeTab === 'edit' ? 'Updating Service...' : 'Adding Service...'}
-          </Text>
-        ) : (
-          <Text style={styles.addButtonText}>
-            {activeTab === 'edit' ? 'Update Service' : 'Add Service'}
-          </Text>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+        {activeTab === 'add' && onSaveAsDraft && (
+          <TouchableOpacity
+            style={[
+              styles.addButtonLarge,
+              { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', flex: 1 },
+            ]}
+            onPress={onSaveAsDraft}
+            disabled={submitting}
+            accessibilityRole="button"
+            accessibilityLabel="Save as draft"
+          >
+            <Text style={[styles.addButtonText, { color: '#64748B' }]}>Save Draft</Text>
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.addButtonLarge, submitting && styles.addButtonDisabled, { flex: 1 }]}
+          onPress={onSubmit}
+          disabled={submitting}
+          accessibilityRole="button"
+          accessibilityLabel={activeTab === 'edit' ? 'Update service' : 'Add service'}
+        >
+          <Text style={styles.addButtonText}>
+            {submitting
+              ? activeTab === 'edit'
+                ? 'Updating Service...'
+                : 'Adding Service...'
+              : activeTab === 'edit'
+                ? 'Update Service'
+                : 'Publish Service'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

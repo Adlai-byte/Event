@@ -16,6 +16,7 @@ interface ServiceListTabProps {
   onDismissSuccess: () => void;
   onToggleStatus: (service: ProviderService) => void;
   onEdit: (service: ProviderService) => void;
+  onManagePackages: (service: ProviderService) => void;
   isMobile: boolean;
   screenWidth: number;
 }
@@ -31,6 +32,7 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
   onDismissSuccess,
   onToggleStatus,
   onEdit,
+  onManagePackages,
   isMobile,
   screenWidth,
 }) => {
@@ -84,10 +86,16 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
         <View
           style={[
             styles.statusBadge,
-            service.status === 'active' ? styles.statusActive : styles.statusInactive,
+            service.status === 'active'
+              ? styles.statusActive
+              : service.status === 'draft'
+                ? { backgroundColor: '#FEF3C7' }
+                : styles.statusInactive,
           ]}
         >
-          <Text style={styles.statusText}>{service.status}</Text>
+          <Text style={[styles.statusText, service.status === 'draft' && { color: '#D97706' }]}>
+            {service.status}
+          </Text>
         </View>
       </View>
       <View style={styles.tableColActions}>
@@ -100,7 +108,11 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
             onPress={() => onToggleStatus(service)}
           >
             <Text style={styles.tableActionButtonText}>
-              {service.status === 'active' ? 'Deactivate' : 'Activate'}
+              {service.status === 'active'
+                ? 'Deactivate'
+                : service.status === 'draft'
+                  ? 'Publish'
+                  : 'Activate'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -108,6 +120,15 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
             onPress={() => onEdit(service)}
           >
             <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tableActionButton, styles.packagesButton]}
+            onPress={() => onManagePackages(service)}
+            accessibilityRole="button"
+            accessibilityLabel={`Manage packages for ${service.name}`}
+          >
+            <Feather name="package" size={12} color="#2563EB" />
+            <Text style={styles.packagesButtonText}>Packages</Text>
           </TouchableOpacity>
         </View>
       </View>

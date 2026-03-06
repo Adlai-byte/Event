@@ -8,7 +8,12 @@ import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { useServiceForm } from '../../hooks/useServiceForm';
 import { useServicesList, ProviderService } from '../../hooks/useServicesList';
-import { ServiceListTab, ServiceFormTab, PackagesTab } from '../../components/services';
+import {
+  ServiceListTab,
+  ServiceFormTab,
+  PackagesTab,
+  AvailabilityScheduleEditor,
+} from '../../components/services';
 import { createStyles } from './ServicesView.styles';
 
 interface ProviderServicesProps {
@@ -28,6 +33,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     useState<ProviderService | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [newlyCreatedServiceId, setNewlyCreatedServiceId] = useState<number | null>(null);
 
   // Service list + packages state
   const {
@@ -66,6 +72,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     handleRemoveImage,
     handleSetPrimaryImage,
     handleAddService,
+    handleSaveAsDraft,
     handleUpdateService,
     populateForEdit,
   } = useServiceForm(user);
@@ -126,6 +133,13 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     setActiveTab('add');
   };
 
+  const onDraftSave = () => {
+    handleSaveAsDraft(async () => {
+      setActiveTab('list');
+      await loadServices();
+    });
+  };
+
   const onFormSubmit = () => {
     if (activeTab === 'edit') {
       handleUpdateService(async () => {
@@ -133,9 +147,13 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
         await loadServices();
       });
     } else {
-      handleAddService(async () => {
-        setActiveTab('list');
-        await loadServices();
+      handleAddService(async (newServiceId?: number) => {
+        if (newServiceId) {
+          setNewlyCreatedServiceId(newServiceId);
+        } else {
+          setActiveTab('list');
+          await loadServices();
+        }
       });
     }
   };
@@ -219,7 +237,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
             />
           )}
 
-          {(activeTab === 'add' || activeTab === 'edit') && (
+          {(activeTab === 'add' || activeTab === 'edit') && !newlyCreatedServiceId && (
             <ServiceFormTab
               activeTab={activeTab}
               newService={newService}
@@ -235,9 +253,21 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               onRemoveImage={handleRemoveImage}
               onSetPrimaryImage={handleSetPrimaryImage}
               onSubmit={onFormSubmit}
+              onSaveAsDraft={onDraftSave}
               categories={CATEGORIES}
               isMobile={isMobile}
               screenWidth={screenWidth}
+            />
+          )}
+
+          {newlyCreatedServiceId && (
+            <AvailabilityScheduleEditor
+              serviceId={newlyCreatedServiceId}
+              onComplete={() => {
+                setNewlyCreatedServiceId(null);
+                setActiveTab('list');
+                loadServices();
+              }}
             />
           )}
 

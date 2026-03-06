@@ -527,7 +527,84 @@ export function useServiceForm(user?: UserModel) {
     },
   });
 
-  const handleAddService = async (onSuccess: () => Promise<void>) => {
+  const handleSaveAsDraft = (onSuccess?: () => Promise<void> | void) => {
+    setErrorMessage('');
+
+    if (submitting) return;
+
+    if (!newService.name.trim()) {
+      setErrorMessage('Service name is required even for drafts');
+      return;
+    }
+    if (!newService.category) {
+      setErrorMessage('Please select a category');
+      return;
+    }
+    if (!user?.uid) {
+      setErrorMessage('User not authenticated');
+      return;
+    }
+
+    setSubmitting(true);
+
+    // Build body with whatever is filled in, don't require everything
+    let city = null;
+    let state = null;
+    if (newService.address) {
+      const addressParts = newService.address.split(',');
+      if (addressParts.length >= 2) {
+        city = addressParts[addressParts.length - 3]?.trim() || null;
+        state = addressParts[addressParts.length - 2]?.trim() || null;
+      }
+    }
+
+    const body: Record<string, any> = {
+      providerId: user.uid,
+      providerEmail: user.email || null,
+      name: newService.name.trim(),
+      description: newService.description?.trim() || null,
+      category: newService.category,
+      basePrice: newService.price
+        ? parseFloat(newService.price)
+        : newService.hourlyPrice
+          ? parseFloat(newService.hourlyPrice)
+          : 0,
+      hourlyPrice: newService.hourlyPrice ? parseFloat(newService.hourlyPrice) : null,
+      perDayPrice: newService.perDayPrice ? parseFloat(newService.perDayPrice) : null,
+      pricingType: 'fixed',
+      duration: newService.category === 'catering' ? 240 : 60,
+      maxCapacity: newService.maxCapacity ? parseInt(newService.maxCapacity) : 1,
+      latitude: newService.latitude ? parseFloat(newService.latitude) : null,
+      longitude: newService.longitude ? parseFloat(newService.longitude) : null,
+      address: newService.address || null,
+      city,
+      state,
+      image: newService.images.length > 0 ? newService.images[0].uri : null,
+      cancellationPolicyId: newService.cancellationPolicyId || null,
+      travelRadiusKm: newService.travelRadiusKm ? parseInt(newService.travelRadiusKm) : null,
+      minBookingHours: newService.minBookingHours ? parseFloat(newService.minBookingHours) : null,
+      maxBookingHours: newService.maxBookingHours ? parseFloat(newService.maxBookingHours) : null,
+      leadTimeDays: newService.leadTimeDays ? parseInt(newService.leadTimeDays) : 0,
+      tags: newService.tags.length > 0 ? newService.tags : null,
+      inclusions: newService.inclusions.length > 0 ? newService.inclusions : null,
+      status: 'draft',
+    };
+
+    addServiceMutation.mutate(body, {
+      onSuccess: async () => {
+        setSuccessMessage('Draft saved! You can finish editing later.');
+        resetForm();
+        setSubmitting(false);
+        await onSuccess?.();
+      },
+      onError: (err: any) => {
+        setErrorMessage(err?.message || 'Failed to save draft');
+        setSubmitting(false);
+      },
+    });
+  };
+
+  const handleAddService = async (onSuccess: (newServiceId?: number) => Promise<void>) => {
     setErrorMessage('');
 
     if (submitting) return;
@@ -635,7 +712,7 @@ export function useServiceForm(user?: UserModel) {
 
         resetForm();
         setSuccessMessage('Service successfully added!');
-        await onSuccess();
+        await onSuccess(newServiceId);
       } else {
         setErrorMessage(data.error || 'Failed to add service');
       }
@@ -860,6 +937,7 @@ export function useServiceForm(user?: UserModel) {
     handleRemoveImage,
     handleSetPrimaryImage,
     handleAddService,
+    handleSaveAsDraft,
     handleUpdateService,
     populateForEdit,
   };
