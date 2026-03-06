@@ -128,6 +128,12 @@ app.use('/api', availabilityRoutes);
 app.use('/api', cancellationPolicyRoutes);
 app.use('/api', eventRoutes);
 
+// Test-only routes (only available when NODE_ENV=test)
+if (process.env.NODE_ENV === 'test') {
+  const testRoutes = require('./routes/test');
+  app.use('/api/test', testRoutes);
+}
+
 // Root
 app.get('/', (_req, res) => {
     return res.type('text').send('Event API is running. Try GET /api/health or POST /api/register');

@@ -66,3 +66,26 @@ export const PROTECTED_ROUTES = [
   '/user/bookings',
   '/user/messages',
 ] as const;
+
+export const TEST_USERS = {
+  customer: {
+    email: 'e2e-customer@test-event.com',
+    password: 'TestPass123!',
+    firstName: 'Test',
+    lastName: 'Customer',
+  },
+  provider: {
+    email: 'e2e-provider@test-event.com',
+    password: 'TestPass123!',
+    firstName: 'Test',
+    lastName: 'Provider',
+  },
+  admin: {
+    email: 'e2e-admin@test-event.com',
+    password: 'TestPass123!',
+    firstName: 'Test',
+    lastName: 'Admin',
+  },
+} as const;
+
+export const API_BASE = 'http://localhost:3001';
