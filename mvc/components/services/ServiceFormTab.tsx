@@ -87,6 +87,33 @@ const TagListInput: React.FC<{
   );
 };
 
+const CollapsibleSection: React.FC<{
+  title: string;
+  required?: boolean;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  styles: any;
+}> = ({ title, required, defaultOpen = false, children, styles }) => {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return (
+    <View style={styles.formSection}>
+      <TouchableOpacity
+        style={styles.formSectionHeader}
+        onPress={() => setOpen(!open)}
+        accessibilityRole="button"
+        accessibilityLabel={`${title} section, ${open ? 'collapse' : 'expand'}`}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.formSectionTitle}>{title}</Text>
+          {required && <Text style={styles.formSectionRequired}>Required</Text>}
+        </View>
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#64748B" />
+      </TouchableOpacity>
+      {open && <View style={styles.formSectionBody}>{children}</View>}
+    </View>
+  );
+};
+
 interface ServiceFormTabProps {
   activeTab: 'add' | 'edit';
   newService: ServiceFormState;
@@ -157,387 +184,403 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         </View>
       ) : null}
 
-      <Text style={styles.formLabel}>Service Name *</Text>
-      <TextInput
-        style={styles.addInputFull}
-        placeholder="Enter service name"
-        value={newService.name}
-        onChangeText={(text) => onFieldChange('name', text)}
-      />
+      {/* Section 1: Basic Information */}
+      <CollapsibleSection title="Basic Information" required defaultOpen styles={styles}>
+        <Text style={styles.formLabel}>Service Name *</Text>
+        <TextInput
+          style={styles.addInputFull}
+          placeholder="Enter service name"
+          value={newService.name}
+          onChangeText={(text) => onFieldChange('name', text)}
+        />
 
-      <Text style={styles.formLabel}>Description</Text>
-      <TextInput
-        style={[styles.addInputFull, styles.textArea]}
-        placeholder="Enter service description"
-        multiline
-        numberOfLines={4}
-        value={newService.description}
-        onChangeText={(text) => onFieldChange('description', text)}
-      />
-
-      {/* Service Photos (up to 10) */}
-      <Text style={styles.formLabel}>Service Photos</Text>
-      <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8 }}>
-        First photo is the cover image. Tap photo to set as primary. Up to 10 photos.
-      </Text>
-      <View style={styles.photoGallery}>
-        {newService.images.map((img, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.photoThumb}
-            onPress={() => onSetPrimaryImage(index)}
-            accessibilityRole="button"
-            accessibilityLabel={`Photo ${index + 1}${img.isPrimary ? ', primary' : ''}`}
-          >
-            <Image source={{ uri: img.uri }} style={styles.photoThumbImage} />
-            <TouchableOpacity
-              style={styles.photoRemoveButton}
-              onPress={() => onRemoveImage(index)}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove photo ${index + 1}`}
-            >
-              <Feather name="x" size={12} color="#FFFFFF" />
-            </TouchableOpacity>
-            {img.isPrimary && (
-              <View style={styles.photoPrimaryBadge}>
-                <Text style={styles.photoPrimaryText}>Cover</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-        {newService.images.length < 10 && (
-          <TouchableOpacity
-            style={styles.photoAddButton}
-            onPress={onImagePick}
-            accessibilityRole="button"
-            accessibilityLabel="Add photo"
-          >
-            <Feather name="plus" size={24} color="#94A3B8" />
-            <Text style={styles.photoCount}>{newService.images.length}/10</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Text style={styles.formLabel}>Location *</Text>
-      <Text style={styles.mapHint}>
-        Click on the map or drag the marker to pin your service location
-      </Text>
-      <View style={styles.mapContainer}>
-        {mapLocation ? (
-          Platform.OS === 'web' ? (
-            <View style={styles.map} nativeID="map-container" />
-          ) : (
-            <View style={{ flex: 1, position: 'relative' }}>
-              <WebView
-                ref={mapWebViewRef}
-                source={{ html: generateMapHTML(mapLocation.lat, mapLocation.lng) }}
-                style={styles.map}
-                onMessage={onMapMessage}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                scalesPageToFit={true}
-                showsHorizontalScrollIndicator={false}
-                showsVerticalScrollIndicator={false}
-                allowFileAccess={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-                onError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                  if (__DEV__) console.error('WebView error: ', nativeEvent);
-                }}
-                onLoadEnd={() => {}}
-                onLoadStart={() => {}}
-                renderLoading={() => (
-                  <View style={styles.mapLoadingContainer}>
-                    <ActivityIndicator size="large" color="#4a55e1" />
-                    <Text style={styles.mapLoadingText}>Loading map...</Text>
-                  </View>
-                )}
-              />
-            </View>
-          )
-        ) : (
-          <View style={styles.mapLoadingContainer}>
-            <ActivityIndicator size="large" color="#4a55e1" />
-            <Text style={styles.mapLoadingText}>Loading map...</Text>
-          </View>
-        )}
-      </View>
-
-      {newService.address && newService.address.trim() ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Feather name="map-pin" size={14} color="#64748B" />
-          <Text style={styles.addressText} numberOfLines={3}>
-            {newService.address}
-          </Text>
-        </View>
-      ) : newService.latitude && newService.longitude ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Feather name="map-pin" size={14} color="#64748B" />
-          <Text style={styles.addressText} numberOfLines={3}>
-            {newService.latitude}, {newService.longitude}
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.addressPlaceholder}>Location will appear here after pinning</Text>
-      )}
-
-      {newService.category !== 'venue' && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={styles.formLabel}>Service Area (Travel Radius)</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TextInput
-              style={[styles.addInputFull, { flex: 1 }]}
-              value={newService.travelRadiusKm}
-              onChangeText={(v) => onFieldChange('travelRadiusKm', v.replace(/[^0-9]/g, ''))}
-              placeholder="e.g. 50"
-              keyboardType="numeric"
-              accessibilityLabel="Travel radius in kilometers"
-            />
-            <Text style={{ fontSize: 14, color: '#64748B' }}>km from base location</Text>
-          </View>
-        </View>
-      )}
-
-      <Text style={styles.formLabel}>Category *</Text>
-      <View style={styles.categoryGrid}>
-        {categories
-          .filter((c) => c !== 'all')
-          .map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[
-                styles.categoryOption,
-                newService.category === cat && styles.categoryOptionSelected,
-              ]}
-              onPress={() => onFieldChange('category', cat)}
-            >
-              <Text
+        <Text style={styles.formLabel}>Category *</Text>
+        <View style={styles.categoryGrid}>
+          {categories
+            .filter((c) => c !== 'all')
+            .map((cat) => (
+              <TouchableOpacity
+                key={cat}
                 style={[
-                  styles.categoryOptionText,
-                  newService.category === cat && styles.categoryOptionTextSelected,
+                  styles.categoryOption,
+                  newService.category === cat && styles.categoryOptionSelected,
                 ]}
+                onPress={() => onFieldChange('category', cat)}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </Text>
+                <Text
+                  style={[
+                    styles.categoryOptionText,
+                    newService.category === cat && styles.categoryOptionTextSelected,
+                  ]}
+                >
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+
+        <Text style={styles.formLabel}>Description</Text>
+        <TextInput
+          style={[styles.addInputFull, styles.textArea]}
+          placeholder="Enter service description"
+          multiline
+          numberOfLines={4}
+          value={newService.description}
+          onChangeText={(text) => onFieldChange('description', text)}
+        />
+      </CollapsibleSection>
+
+      {/* Section 2: Photos */}
+      <CollapsibleSection title="Photos" defaultOpen styles={styles}>
+        <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8 }}>
+          First photo is the cover image. Tap photo to set as primary. Up to 10 photos.
+        </Text>
+        <View style={styles.photoGallery}>
+          {newService.images.map((img, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.photoThumb}
+              onPress={() => onSetPrimaryImage(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`Photo ${index + 1}${img.isPrimary ? ', primary' : ''}`}
+            >
+              <Image source={{ uri: img.uri }} style={styles.photoThumbImage} />
+              <TouchableOpacity
+                style={styles.photoRemoveButton}
+                onPress={() => onRemoveImage(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove photo ${index + 1}`}
+              >
+                <Feather name="x" size={12} color="#FFFFFF" />
+              </TouchableOpacity>
+              {img.isPrimary && (
+                <View style={styles.photoPrimaryBadge}>
+                  <Text style={styles.photoPrimaryText}>Cover</Text>
+                </View>
+              )}
             </TouchableOpacity>
           ))}
-      </View>
+          {newService.images.length < 10 && (
+            <TouchableOpacity
+              style={styles.photoAddButton}
+              onPress={onImagePick}
+              accessibilityRole="button"
+              accessibilityLabel="Add photo"
+            >
+              <Feather name="plus" size={24} color="#94A3B8" />
+              <Text style={styles.photoCount}>{newService.images.length}/10</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </CollapsibleSection>
 
-      {newService.category === 'catering' ? (
-        <View style={styles.formRow}>
-          <View style={styles.formCol}>
-            <Text style={styles.formLabel}>Price (₱) *</Text>
-            <TextInput
-              style={styles.addInput}
-              placeholder="Enter price per person"
-              keyboardType="numeric"
-              value={newService.price}
-              onChangeText={(text) => onFieldChange('price', text)}
-            />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.formRow}>
-          <View style={styles.formCol}>
-            <Text style={styles.formLabel}>Hourly Price (₱) *</Text>
-            <TextInput
-              style={styles.addInput}
-              placeholder="Enter hourly price"
-              keyboardType="numeric"
-              value={newService.hourlyPrice}
-              onChangeText={(text) => onFieldChange('hourlyPrice', text)}
-            />
-          </View>
-          <View style={styles.formCol}>
-            <Text style={styles.formLabel}>Per Day Price (₱) *</Text>
-            <TextInput
-              style={styles.addInput}
-              placeholder="Enter per day price"
-              keyboardType="numeric"
-              value={newService.perDayPrice}
-              onChangeText={(text) => onFieldChange('perDayPrice', text)}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Booking Duration Limits */}
-      <View style={{ marginBottom: 16 }}>
-        <Text style={styles.formLabel}>Booking Duration Limits</Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Minimum (hours)</Text>
-            <TextInput
-              style={styles.addInputFull}
-              value={newService.minBookingHours}
-              onChangeText={(v) => onFieldChange('minBookingHours', v.replace(/[^0-9.]/g, ''))}
-              placeholder="e.g. 2"
-              keyboardType="numeric"
-              accessibilityLabel="Minimum booking hours"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>Maximum (hours)</Text>
-            <TextInput
-              style={styles.addInputFull}
-              value={newService.maxBookingHours}
-              onChangeText={(v) => onFieldChange('maxBookingHours', v.replace(/[^0-9.]/g, ''))}
-              placeholder="e.g. 12"
-              keyboardType="numeric"
-              accessibilityLabel="Maximum booking hours"
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Advance Booking Required */}
-      <View style={{ marginBottom: 16 }}>
-        <Text style={styles.formLabel}>Advance Booking Required</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TextInput
-            style={[styles.addInputFull, { width: 80 }]}
-            value={newService.leadTimeDays}
-            onChangeText={(v) => onFieldChange('leadTimeDays', v.replace(/[^0-9]/g, ''))}
-            placeholder="0"
-            keyboardType="numeric"
-            accessibilityLabel="Minimum days in advance for booking"
-          />
-          <Text style={{ fontSize: 14, color: '#64748B' }}>days before event date</Text>
-        </View>
-        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-          Customers must book at least this many days in advance. Set to 0 for no restriction.
+      {/* Section 3: Location */}
+      <CollapsibleSection title="Location" required defaultOpen styles={styles}>
+        <Text style={styles.mapHint}>
+          Click on the map or drag the marker to pin your service location
         </Text>
-      </View>
+        <View style={styles.mapContainer}>
+          {mapLocation ? (
+            Platform.OS === 'web' ? (
+              <View style={styles.map} nativeID="map-container" />
+            ) : (
+              <View style={{ flex: 1, position: 'relative' }}>
+                <WebView
+                  ref={mapWebViewRef}
+                  source={{ html: generateMapHTML(mapLocation.lat, mapLocation.lng) }}
+                  style={styles.map}
+                  onMessage={onMapMessage}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  startInLoadingState={true}
+                  scalesPageToFit={true}
+                  showsHorizontalScrollIndicator={false}
+                  showsVerticalScrollIndicator={false}
+                  allowFileAccess={true}
+                  mixedContentMode="always"
+                  originWhitelist={['*']}
+                  onError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    if (__DEV__) console.error('WebView error: ', nativeEvent);
+                  }}
+                  onLoadEnd={() => {}}
+                  onLoadStart={() => {}}
+                  renderLoading={() => (
+                    <View style={styles.mapLoadingContainer}>
+                      <ActivityIndicator size="large" color="#4a55e1" />
+                      <Text style={styles.mapLoadingText}>Loading map...</Text>
+                    </View>
+                  )}
+                />
+              </View>
+            )
+          ) : (
+            <View style={styles.mapLoadingContainer}>
+              <ActivityIndicator size="large" color="#4a55e1" />
+              <Text style={styles.mapLoadingText}>Loading map...</Text>
+            </View>
+          )}
+        </View>
 
-      <Text style={styles.formLabel}>Max Capacity</Text>
-      <TextInput
-        style={styles.addInputFull}
-        placeholder="1"
-        keyboardType="numeric"
-        value={newService.maxCapacity}
-        onChangeText={(text) => onFieldChange('maxCapacity', text)}
-        accessibilityLabel="Max capacity"
-      />
+        {newService.address && newService.address.trim() ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="map-pin" size={14} color="#64748B" />
+            <Text style={styles.addressText} numberOfLines={3}>
+              {newService.address}
+            </Text>
+          </View>
+        ) : newService.latitude && newService.longitude ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="map-pin" size={14} color="#64748B" />
+            <Text style={styles.addressText} numberOfLines={3}>
+              {newService.latitude}, {newService.longitude}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.addressPlaceholder}>Location will appear here after pinning</Text>
+        )}
 
-      {/* Tags & Amenities */}
-      <TagListInput
-        label="Tags & Amenities"
-        items={newService.tags}
-        onAdd={(tag) => onServiceChange((prev) => ({ ...prev, tags: [...prev.tags, tag] }))}
-        onRemove={(i) =>
-          onServiceChange((prev) => ({ ...prev, tags: prev.tags.filter((_, idx) => idx !== i) }))
-        }
-        placeholder="e.g. outdoor, parking, wheelchair accessible"
-        suggestions={[
-          'Indoor',
-          'Outdoor',
-          'Parking',
-          'WiFi',
-          'Pet Friendly',
-          'Wheelchair Accessible',
-        ]}
-        styles={styles}
-      />
-
-      {/* What's Included */}
-      <TagListInput
-        label="What's Included"
-        items={newService.inclusions}
-        onAdd={(item) =>
-          onServiceChange((prev) => ({ ...prev, inclusions: [...prev.inclusions, item] }))
-        }
-        onRemove={(i) =>
-          onServiceChange((prev) => ({
-            ...prev,
-            inclusions: prev.inclusions.filter((_, idx) => idx !== i),
-          }))
-        }
-        placeholder="e.g. setup, sound system, 100 edited photos"
-        styles={styles}
-      />
-
-      {/* Cancellation Policy */}
-      <Text style={styles.formLabel}>Cancellation Policy</Text>
-      <Text style={policyStyles.helperText}>Sets deposit % and refund rules for bookings</Text>
-      <View style={policyStyles.policyList}>
-        <TouchableOpacity
-          style={[
-            policyStyles.policyOption,
-            !newService.cancellationPolicyId && policyStyles.policyOptionSelected,
-          ]}
-          onPress={() => handlePolicyChange(null)}
-          accessibilityRole="button"
-          accessibilityLabel="No policy - full payment upfront"
-        >
-          <View style={policyStyles.policyOptionContent}>
-            <Feather
-              name="x-circle"
-              size={16}
-              color={!newService.cancellationPolicyId ? semantic.surface : semantic.textSecondary}
-            />
-            <View style={policyStyles.policyOptionTextWrap}>
-              <Text
-                style={[
-                  policyStyles.policyOptionText,
-                  !newService.cancellationPolicyId && policyStyles.policyOptionTextSelected,
-                ]}
-              >
-                No Policy (100% upfront)
-              </Text>
-              <Text
-                style={[
-                  policyStyles.policyOptionDetail,
-                  !newService.cancellationPolicyId && policyStyles.policyOptionDetailSelected,
-                ]}
-              >
-                Full payment required at booking
-              </Text>
+        {newService.category !== 'venue' && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.formLabel}>Service Area (Travel Radius)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                style={[styles.addInputFull, { flex: 1 }]}
+                value={newService.travelRadiusKm}
+                onChangeText={(v) => onFieldChange('travelRadiusKm', v.replace(/[^0-9]/g, ''))}
+                placeholder="e.g. 50"
+                keyboardType="numeric"
+                accessibilityLabel="Travel radius in kilometers"
+              />
+              <Text style={{ fontSize: 14, color: '#64748B' }}>km from base location</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        )}
+      </CollapsibleSection>
 
-        {policies.map((policy) => {
-          const isSelected = newService.cancellationPolicyId === policy.id;
-          return (
-            <TouchableOpacity
-              key={policy.id}
-              style={[policyStyles.policyOption, isSelected && policyStyles.policyOptionSelected]}
-              onPress={() => handlePolicyChange(policy.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`${policy.name} - ${policy.depositPercent}% deposit`}
-            >
-              <View style={policyStyles.policyOptionContent}>
-                <Feather
-                  name="shield"
-                  size={16}
-                  color={isSelected ? semantic.surface : semantic.textSecondary}
-                />
-                <View style={policyStyles.policyOptionTextWrap}>
-                  <Text
-                    style={[
-                      policyStyles.policyOptionText,
-                      isSelected && policyStyles.policyOptionTextSelected,
-                    ]}
-                  >
-                    {policy.name}
-                  </Text>
-                  <Text
-                    style={[
-                      policyStyles.policyOptionDetail,
-                      isSelected && policyStyles.policyOptionDetailSelected,
-                    ]}
-                  >
-                    Deposit: {policy.depositPercent}% | {policy.rules.length} refund rule
-                    {policy.rules.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
+      {/* Section 4: Pricing */}
+      <CollapsibleSection title="Pricing" required defaultOpen styles={styles}>
+        {newService.category === 'catering' ? (
+          <View style={styles.formRow}>
+            <View style={styles.formCol}>
+              <Text style={styles.formLabel}>Price (₱) *</Text>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Enter price per person"
+                keyboardType="numeric"
+                value={newService.price}
+                onChangeText={(text) => onFieldChange('price', text)}
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.formRow}>
+            <View style={styles.formCol}>
+              <Text style={styles.formLabel}>Hourly Price (₱) *</Text>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Enter hourly price"
+                keyboardType="numeric"
+                value={newService.hourlyPrice}
+                onChangeText={(text) => onFieldChange('hourlyPrice', text)}
+              />
+            </View>
+            <View style={styles.formCol}>
+              <Text style={styles.formLabel}>Per Day Price (₱) *</Text>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Enter per day price"
+                keyboardType="numeric"
+                value={newService.perDayPrice}
+                onChangeText={(text) => onFieldChange('perDayPrice', text)}
+              />
+            </View>
+          </View>
+        )}
+      </CollapsibleSection>
+
+      {/* Section 5: Booking Rules */}
+      <CollapsibleSection title="Booking Rules" styles={styles}>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={styles.formLabel}>Booking Duration Limits</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+                Minimum (hours)
+              </Text>
+              <TextInput
+                style={styles.addInputFull}
+                value={newService.minBookingHours}
+                onChangeText={(v) => onFieldChange('minBookingHours', v.replace(/[^0-9.]/g, ''))}
+                placeholder="e.g. 2"
+                keyboardType="numeric"
+                accessibilityLabel="Minimum booking hours"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+                Maximum (hours)
+              </Text>
+              <TextInput
+                style={styles.addInputFull}
+                value={newService.maxBookingHours}
+                onChangeText={(v) => onFieldChange('maxBookingHours', v.replace(/[^0-9.]/g, ''))}
+                placeholder="e.g. 12"
+                keyboardType="numeric"
+                accessibilityLabel="Maximum booking hours"
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={styles.formLabel}>Advance Booking Required</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TextInput
+              style={[styles.addInputFull, { width: 80 }]}
+              value={newService.leadTimeDays}
+              onChangeText={(v) => onFieldChange('leadTimeDays', v.replace(/[^0-9]/g, ''))}
+              placeholder="0"
+              keyboardType="numeric"
+              accessibilityLabel="Minimum days in advance for booking"
+            />
+            <Text style={{ fontSize: 14, color: '#64748B' }}>days before event date</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
+            Customers must book at least this many days in advance. Set to 0 for no restriction.
+          </Text>
+        </View>
+
+        <Text style={styles.formLabel}>Max Capacity</Text>
+        <TextInput
+          style={styles.addInputFull}
+          placeholder="1"
+          keyboardType="numeric"
+          value={newService.maxCapacity}
+          onChangeText={(text) => onFieldChange('maxCapacity', text)}
+          accessibilityLabel="Max capacity"
+        />
+      </CollapsibleSection>
+
+      {/* Section 6: Details */}
+      <CollapsibleSection title="Details" styles={styles}>
+        <TagListInput
+          label="Tags & Amenities"
+          items={newService.tags}
+          onAdd={(tag) => onServiceChange((prev) => ({ ...prev, tags: [...prev.tags, tag] }))}
+          onRemove={(i) =>
+            onServiceChange((prev) => ({ ...prev, tags: prev.tags.filter((_, idx) => idx !== i) }))
+          }
+          placeholder="e.g. outdoor, parking, wheelchair accessible"
+          suggestions={[
+            'Indoor',
+            'Outdoor',
+            'Parking',
+            'WiFi',
+            'Pet Friendly',
+            'Wheelchair Accessible',
+          ]}
+          styles={styles}
+        />
+
+        <TagListInput
+          label="What's Included"
+          items={newService.inclusions}
+          onAdd={(item) =>
+            onServiceChange((prev) => ({ ...prev, inclusions: [...prev.inclusions, item] }))
+          }
+          onRemove={(i) =>
+            onServiceChange((prev) => ({
+              ...prev,
+              inclusions: prev.inclusions.filter((_, idx) => idx !== i),
+            }))
+          }
+          placeholder="e.g. setup, sound system, 100 edited photos"
+          styles={styles}
+        />
+      </CollapsibleSection>
+
+      {/* Section 7: Cancellation Policy */}
+      <CollapsibleSection title="Cancellation Policy" styles={styles}>
+        <Text style={policyStyles.helperText}>Sets deposit % and refund rules for bookings</Text>
+        <View style={policyStyles.policyList}>
+          <TouchableOpacity
+            style={[
+              policyStyles.policyOption,
+              !newService.cancellationPolicyId && policyStyles.policyOptionSelected,
+            ]}
+            onPress={() => handlePolicyChange(null)}
+            accessibilityRole="button"
+            accessibilityLabel="No policy - full payment upfront"
+          >
+            <View style={policyStyles.policyOptionContent}>
+              <Feather
+                name="x-circle"
+                size={16}
+                color={!newService.cancellationPolicyId ? semantic.surface : semantic.textSecondary}
+              />
+              <View style={policyStyles.policyOptionTextWrap}>
+                <Text
+                  style={[
+                    policyStyles.policyOptionText,
+                    !newService.cancellationPolicyId && policyStyles.policyOptionTextSelected,
+                  ]}
+                >
+                  No Policy (100% upfront)
+                </Text>
+                <Text
+                  style={[
+                    policyStyles.policyOptionDetail,
+                    !newService.cancellationPolicyId && policyStyles.policyOptionDetailSelected,
+                  ]}
+                >
+                  Full payment required at booking
+                </Text>
               </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            </View>
+          </TouchableOpacity>
+
+          {policies.map((policy) => {
+            const isSelected = newService.cancellationPolicyId === policy.id;
+            return (
+              <TouchableOpacity
+                key={policy.id}
+                style={[policyStyles.policyOption, isSelected && policyStyles.policyOptionSelected]}
+                onPress={() => handlePolicyChange(policy.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${policy.name} - ${policy.depositPercent}% deposit`}
+              >
+                <View style={policyStyles.policyOptionContent}>
+                  <Feather
+                    name="shield"
+                    size={16}
+                    color={isSelected ? semantic.surface : semantic.textSecondary}
+                  />
+                  <View style={policyStyles.policyOptionTextWrap}>
+                    <Text
+                      style={[
+                        policyStyles.policyOptionText,
+                        isSelected && policyStyles.policyOptionTextSelected,
+                      ]}
+                    >
+                      {policy.name}
+                    </Text>
+                    <Text
+                      style={[
+                        policyStyles.policyOptionDetail,
+                        isSelected && policyStyles.policyOptionDetailSelected,
+                      ]}
+                    >
+                      Deposit: {policy.depositPercent}% | {policy.rules.length} refund rule
+                      {policy.rules.length !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </CollapsibleSection>
 
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
         {activeTab === 'add' && onSaveAsDraft && (

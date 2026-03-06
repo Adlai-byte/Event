@@ -903,4 +903,32 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
+    formSection: {
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      borderRadius: 12,
+      marginBottom: 12,
+      overflow: 'hidden' as const,
+    },
+    formSectionHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      padding: 14,
+      backgroundColor: '#F8FAFC',
+    },
+    formSectionTitle: {
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: '#0F172A',
+    },
+    formSectionRequired: {
+      fontSize: 11,
+      color: '#94A3B8',
+      fontWeight: '400' as const,
+    },
+    formSectionBody: {
+      padding: 14,
+      paddingTop: 10,
+    },
   });
