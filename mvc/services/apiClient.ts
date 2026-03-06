@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from './api';
 import { ApiError } from '../types/api';
+import { auth } from './firebase';
 
 const TIMEOUT_MS = 10_000;
 
@@ -29,6 +30,17 @@ async function request<T>(
   try {
     const headers: Record<string, string> = {};
     let fetchBody: string | undefined;
+
+    // Attach Firebase auth token if user is logged in
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const token = await currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } catch {
+        // proceed without token if getIdToken fails
+      }
+    }
 
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';

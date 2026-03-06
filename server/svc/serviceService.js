@@ -1224,7 +1224,7 @@ async function getProviderServices(providerEmail) {
                 si.si_image_url as primary_image
             FROM service s
             LEFT JOIN service_image si ON s.idservice = si.si_service_id AND si.si_is_primary = 1
-            WHERE s.s_provider_id = ? AND s.s_is_active = 1
+            WHERE s.s_provider_id = ?
             ORDER BY s.idservice DESC
         `;
     } else {
@@ -1235,7 +1235,7 @@ async function getProviderServices(providerEmail) {
                 ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
                 NULL as primary_image
             FROM service s
-            WHERE s.s_provider_id = ? AND s.s_is_active = 1
+            WHERE s.s_provider_id = ?
             ORDER BY s.idservice DESC
         `;
     }
