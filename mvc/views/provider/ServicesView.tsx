@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
 import { ServicePackage } from '../../models/Package';
 import { PackageBuilder } from '../../components/PackageBuilder';
@@ -23,6 +24,8 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   const [activeTab, setActiveTab] = useState<'list' | 'add' | 'edit' | 'packages'>('list');
+  const [selectedServiceForPackages, setSelectedServiceForPackages] =
+    useState<ProviderService | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
@@ -61,6 +64,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     handleMapMessage,
     handleImagePick,
     handleRemoveImage,
+    handleSetPrimaryImage,
     handleAddService,
     handleUpdateService,
     populateForEdit,
@@ -72,13 +76,6 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
       resetForm();
     }
   }, [activeTab, editingServiceId]);
-
-  // Load packages when services change or switching to packages tab
-  useEffect(() => {
-    if (activeTab === 'packages' && services.length > 0) {
-      loadPackages();
-    }
-  }, [activeTab, services]);
 
   // ---- Derived data ----
   const filteredServices = services.filter((s: ProviderService) => {
@@ -93,6 +90,12 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
   const handleEditService = (service: ProviderService) => {
     populateForEdit(service);
     setActiveTab('edit');
+  };
+
+  const handleManagePackages = (service: ProviderService) => {
+    setSelectedServiceForPackages(service);
+    setActiveTab('packages');
+    loadPackages();
   };
 
   const handleCreatePackage = (service: ProviderService) => {
@@ -183,18 +186,17 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               {activeTab === 'edit' ? 'Cancel Edit' : 'Add Service'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'packages' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('packages')}
-            accessibilityRole="button"
-            accessibilityLabel="Packages tab"
-          >
-            <Text
-              style={[styles.tabButtonText, activeTab === 'packages' && styles.tabButtonTextActive]}
+          {activeTab === 'packages' && selectedServiceForPackages && (
+            <TouchableOpacity
+              style={[styles.tabButton, styles.tabButtonActive]}
+              accessibilityRole="button"
+              accessibilityLabel="Packages for selected service"
             >
-              Packages
-            </Text>
-          </TouchableOpacity>
+              <Text style={[styles.tabButtonText, styles.tabButtonTextActive]}>
+                Packages: {selectedServiceForPackages.name}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -211,6 +213,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               onDismissSuccess={() => setSuccessMessage('')}
               onToggleStatus={handleToggleServiceStatus}
               onEdit={handleEditService}
+              onManagePackages={handleManagePackages}
               isMobile={isMobile}
               screenWidth={screenWidth}
             />
@@ -230,6 +233,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               onMapMessage={handleMapMessage}
               onImagePick={handleImagePick}
               onRemoveImage={handleRemoveImage}
+              onSetPrimaryImage={handleSetPrimaryImage}
               onSubmit={onFormSubmit}
               categories={CATEGORIES}
               isMobile={isMobile}
@@ -237,21 +241,35 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
             />
           )}
 
-          {activeTab === 'packages' && (
-            <PackagesTab
-              services={services}
-              packages={packages}
-              loadingPackages={loadingPackages}
-              successMessage={successMessage}
-              onDismissSuccess={() => setSuccessMessage('')}
-              onCreatePackage={handleCreatePackage}
-              onEditPackage={handleEditPackage}
-              onDeletePackage={(pkg) =>
-                handleDeletePackage(pkg, () => setSuccessMessage('Package deleted successfully'))
-              }
-              isMobile={isMobile}
-              screenWidth={screenWidth}
-            />
+          {activeTab === 'packages' && selectedServiceForPackages && (
+            <View>
+              <TouchableOpacity
+                style={styles.backToListButton}
+                onPress={() => {
+                  setActiveTab('list');
+                  setSelectedServiceForPackages(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Back to services list"
+              >
+                <Feather name="arrow-left" size={16} color="#2563EB" />
+                <Text style={styles.backToListText}>Back to Services</Text>
+              </TouchableOpacity>
+              <PackagesTab
+                services={[selectedServiceForPackages]}
+                packages={packages}
+                loadingPackages={loadingPackages}
+                successMessage={successMessage}
+                onDismissSuccess={() => setSuccessMessage('')}
+                onCreatePackage={handleCreatePackage}
+                onEditPackage={handleEditPackage}
+                onDeletePackage={(pkg) =>
+                  handleDeletePackage(pkg, () => setSuccessMessage('Package deleted successfully'))
+                }
+                isMobile={isMobile}
+                screenWidth={screenWidth}
+              />
+            </View>
           )}
         </View>
       </ScrollView>

@@ -14,7 +14,7 @@ export interface ProviderService {
   price: number;
   hourlyPrice?: number | null;
   perDayPrice?: number | null;
-  status: 'active' | 'inactive';
+  status: 'draft' | 'active' | 'inactive';
   rating: number;
   bookings: number;
   description: string;
@@ -25,7 +25,19 @@ export interface ProviderService {
   duration?: number;
   maxCapacity?: number;
   cancellationPolicyId?: number | null;
+  travelRadiusKm?: number | null;
+  minBookingHours?: number | null;
+  maxBookingHours?: number | null;
+  leadTimeDays?: number;
+  tags?: string[];
+  inclusions?: string[];
 }
+
+const parseJsonField = (val: any): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try { return JSON.parse(val); } catch { return []; }
+};
 
 function mapToProviderService(s: any): ProviderService {
   let parsedAddress = s.s_address || '';
@@ -68,7 +80,7 @@ function mapToProviderService(s: any): ProviderService {
     price: displayPrice,
     hourlyPrice: s.s_hourly_price ? parseFloat(s.s_hourly_price) : null,
     perDayPrice: s.s_per_day_price ? parseFloat(s.s_per_day_price) : null,
-    status: s.s_is_active ? 'active' : 'inactive',
+    status: s.s_status || s.status || (s.s_is_active === 1 || s.s_is_active === '1' ? 'active' : 'inactive'),
     rating: parseFloat(s.s_rating) || 0,
     bookings: s.s_review_count || 0,
     description: s.s_description || '',
@@ -79,6 +91,12 @@ function mapToProviderService(s: any): ProviderService {
     duration: parseInt(s.s_duration) || 60,
     maxCapacity: parseInt(s.s_max_capacity) || 1,
     cancellationPolicyId: s.s_cancellation_policy_id ?? null,
+    travelRadiusKm: s.s_travel_radius_km ?? s.travelRadiusKm ?? null,
+    minBookingHours: s.s_min_booking_hours != null ? parseFloat(s.s_min_booking_hours) : (s.minBookingHours != null ? parseFloat(s.minBookingHours) : null),
+    maxBookingHours: s.s_max_booking_hours != null ? parseFloat(s.s_max_booking_hours) : (s.maxBookingHours != null ? parseFloat(s.maxBookingHours) : null),
+    leadTimeDays: parseInt(s.s_lead_time_days ?? s.leadTimeDays ?? '0') || 0,
+    tags: parseJsonField(s.s_tags ?? s.tags),
+    inclusions: parseJsonField(s.s_inclusions ?? s.inclusions),
   };
 }
 
