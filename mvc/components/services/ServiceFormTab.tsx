@@ -29,7 +29,7 @@ interface ServiceFormTabProps {
   mapWebViewRef: React.RefObject<WebView | null>;
   onMapMessage: (event: any) => void;
   onImagePick: () => void;
-  onRemoveImage: () => void;
+  onRemoveImage: (index: number) => void;
   onSubmit: () => void;
   categories: string[];
   isMobile: boolean;
@@ -121,7 +121,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
             }}
             onLoad={() => {}}
           />
-          <TouchableOpacity style={styles.removeImageButton} onPress={onRemoveImage}>
+          <TouchableOpacity style={styles.removeImageButton} onPress={() => onRemoveImage(0)}>
             <Text style={styles.removeImageText}>Remove Photo</Text>
           </TouchableOpacity>
         </View>

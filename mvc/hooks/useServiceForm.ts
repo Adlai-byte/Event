@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { User as UserModel } from '../models/User';
 import { apiClient } from '../services/apiClient';
+import { getApiBaseUrl } from '../services/api';
 
 /** Shape of the service form data managed by this hook. */
 export interface ServiceFormState {
@@ -20,6 +21,14 @@ export interface ServiceFormState {
   longitude: string;
   address: string;
   image: string | null;
+  images: Array<{ id?: number; uri: string; isPrimary: boolean }>;
+  travelRadiusKm: string;
+  minBookingHours: string;
+  maxBookingHours: string;
+  leadTimeDays: string;
+  tags: string[];
+  inclusions: string[];
+  status: 'draft' | 'active';
   cancellationPolicyId: number | null;
 }
 
@@ -35,6 +44,14 @@ const EMPTY_FORM: ServiceFormState = {
   longitude: '',
   address: '',
   image: null,
+  images: [],
+  travelRadiusKm: '',
+  minBookingHours: '',
+  maxBookingHours: '',
+  leadTimeDays: '',
+  tags: [],
+  inclusions: [],
+  status: 'active',
   cancellationPolicyId: null,
 };
 
@@ -412,7 +429,13 @@ export function useServiceForm(user?: UserModel) {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64String = reader.result as string;
-              setNewService((prev) => ({ ...prev, image: base64String }));
+              setNewService((prev) => ({
+                ...prev,
+                images: [
+                  ...prev.images,
+                  { uri: base64String, isPrimary: prev.images.length === 0 },
+                ],
+              }));
             };
             reader.onerror = () => {
               Alert.alert('Error', 'Failed to read image file');
@@ -448,7 +471,10 @@ export function useServiceForm(user?: UserModel) {
           if (asset.base64) {
             const imageExtension = asset.uri.split('.').pop()?.toLowerCase() || 'jpeg';
             const base64String = `data:image/${imageExtension};base64,${asset.base64}`;
-            setNewService((prev) => ({ ...prev, image: base64String }));
+            setNewService((prev) => ({
+              ...prev,
+              images: [...prev.images, { uri: base64String, isPrimary: prev.images.length === 0 }],
+            }));
           } else {
             Alert.alert(
               'Warning',
@@ -463,8 +489,21 @@ export function useServiceForm(user?: UserModel) {
     }
   };
 
-  const handleRemoveImage = () => {
-    setNewService((prev) => ({ ...prev, image: null }));
+  const handleRemoveImage = (index: number) => {
+    setNewService((prev) => {
+      const updated = prev.images.filter((_, i) => i !== index);
+      if (updated.length > 0 && !updated.some((img) => img.isPrimary)) {
+        updated[0].isPrimary = true;
+      }
+      return { ...prev, images: updated };
+    });
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    setNewService((prev) => ({
+      ...prev,
+      images: prev.images.map((img, i) => ({ ...img, isPrimary: i === index })),
+    }));
   };
 
   // --- Mutations ---
@@ -566,13 +605,34 @@ export function useServiceForm(user?: UserModel) {
         address: newService.address || null,
         city,
         state,
-        image: newService.image,
+        image: newService.images.length > 0 ? newService.images[0].uri : null,
         cancellationPolicyId: newService.cancellationPolicyId,
+        travelRadiusKm: newService.travelRadiusKm ? parseInt(newService.travelRadiusKm) : null,
+        minBookingHours: newService.minBookingHours ? parseFloat(newService.minBookingHours) : null,
+        maxBookingHours: newService.maxBookingHours ? parseFloat(newService.maxBookingHours) : null,
+        leadTimeDays: newService.leadTimeDays ? parseInt(newService.leadTimeDays) : 0,
+        tags: newService.tags.length > 0 ? newService.tags : null,
+        inclusions: newService.inclusions.length > 0 ? newService.inclusions : null,
+        status: newService.status,
       };
 
       const data = await addServiceMutation.mutateAsync(requestBody);
 
       if (data.ok) {
+        // Upload additional images (index 1+) after service creation
+        const newServiceId = data.serviceId || data.id;
+        if (newServiceId && newService.images.length > 1) {
+          for (let i = 1; i < newService.images.length; i++) {
+            try {
+              await apiClient.post(`/api/services/${newServiceId}/images`, {
+                image: newService.images[i].uri,
+              });
+            } catch (err) {
+              console.warn('Failed to upload additional image:', err);
+            }
+          }
+        }
+
         resetForm();
         setSuccessMessage('Service successfully added!');
         await onSuccess();
@@ -668,13 +728,25 @@ export function useServiceForm(user?: UserModel) {
         requestBody.longitude = newService.longitude ? parseFloat(newService.longitude) : '';
       }
 
-      if (
-        newService.image &&
-        typeof newService.image === 'string' &&
-        newService.image.startsWith('data:image')
-      ) {
-        requestBody.image = newService.image;
+      // Use the primary image from the images array
+      const primaryImage = newService.images.find((img) => img.isPrimary) || newService.images[0];
+      if (primaryImage && primaryImage.uri.startsWith('data:image')) {
+        requestBody.image = primaryImage.uri;
       }
+
+      requestBody.travelRadiusKm = newService.travelRadiusKm
+        ? parseInt(newService.travelRadiusKm)
+        : null;
+      requestBody.minBookingHours = newService.minBookingHours
+        ? parseFloat(newService.minBookingHours)
+        : null;
+      requestBody.maxBookingHours = newService.maxBookingHours
+        ? parseFloat(newService.maxBookingHours)
+        : null;
+      requestBody.leadTimeDays = newService.leadTimeDays ? parseInt(newService.leadTimeDays) : 0;
+      requestBody.tags = newService.tags.length > 0 ? newService.tags : null;
+      requestBody.inclusions = newService.inclusions.length > 0 ? newService.inclusions : null;
+      requestBody.status = newService.status;
 
       const data = await updateServiceMutation.mutateAsync({
         id: editingServiceId,
@@ -682,6 +754,20 @@ export function useServiceForm(user?: UserModel) {
       });
 
       if (data.ok) {
+        // Upload any new images (base64 data URIs) beyond the primary
+        const newImages = newService.images.filter(
+          (img, i) => img.uri.startsWith('data:image') && (i > 0 || !img.isPrimary),
+        );
+        for (const img of newImages) {
+          try {
+            await apiClient.post(`/api/services/${editingServiceId}/images`, {
+              image: img.uri,
+            });
+          } catch (err) {
+            console.warn('Failed to upload additional image:', err);
+          }
+        }
+
         setNewService({ ...EMPTY_FORM });
         setEditingServiceId(null);
         setSuccessMessage('Service updated successfully!');
@@ -719,6 +805,16 @@ export function useServiceForm(user?: UserModel) {
       }
     }
 
+    const apiUrl = getApiBaseUrl();
+    const editImages: Array<{ id?: number; uri: string; isPrimary: boolean }> = imageToSet
+      ? [
+          {
+            uri: imageToSet.startsWith('http') ? imageToSet : `${apiUrl}${imageToSet}`,
+            isPrimary: true,
+          },
+        ]
+      : [];
+
     setNewService({
       name: service.name,
       description: service.description || '',
@@ -731,6 +827,14 @@ export function useServiceForm(user?: UserModel) {
       longitude: service.longitude?.toString() || '',
       address: service.address || '',
       image: imageToSet,
+      images: editImages,
+      travelRadiusKm: service.travelRadiusKm?.toString() || '',
+      minBookingHours: service.minBookingHours?.toString() || '',
+      maxBookingHours: service.maxBookingHours?.toString() || '',
+      leadTimeDays: service.leadTimeDays?.toString() || '0',
+      tags: service.tags || [],
+      inclusions: service.inclusions || [],
+      status: service.status || 'active',
       cancellationPolicyId: service.cancellationPolicyId ?? null,
     });
   };
@@ -754,6 +858,7 @@ export function useServiceForm(user?: UserModel) {
     handleMapMessage,
     handleImagePick,
     handleRemoveImage,
+    handleSetPrimaryImage,
     handleAddService,
     handleUpdateService,
     populateForEdit,
