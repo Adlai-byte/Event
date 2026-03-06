@@ -372,6 +372,13 @@ async function getServiceById(id) {
     if (typeof service.policy_rules === 'string') {
         try { service.policy_rules = JSON.parse(service.policy_rules); } catch { service.policy_rules = null; }
     }
+    // Parse JSON columns (tags, inclusions)
+    if (typeof service.s_tags === 'string') {
+        try { service.s_tags = JSON.parse(service.s_tags); } catch { service.s_tags = null; }
+    }
+    if (typeof service.s_inclusions === 'string') {
+        try { service.s_inclusions = JSON.parse(service.s_inclusions); } catch { service.s_inclusions = null; }
+    }
     return service;
 }
 
@@ -576,6 +583,8 @@ async function createService(data) {
         basePrice, pricingType, duration, maxCapacity,
         city, state, address, latitude, longitude, image,
         hourlyPrice, perDayPrice, cancellationPolicyId,
+        travelRadiusKm, minBookingHours, maxBookingHours,
+        leadTimeDays, tags, inclusions, status,
     } = data;
 
     console.log('========================================');
@@ -644,6 +653,15 @@ async function createService(data) {
 
     const parsedCancellationPolicyId = cancellationPolicyId ? parseInt(cancellationPolicyId) : null;
 
+    const parsedTravelRadiusKm = travelRadiusKm != null ? parseInt(travelRadiusKm) : null;
+    const parsedMinBookingHours = minBookingHours != null ? parseFloat(minBookingHours) : null;
+    const parsedMaxBookingHours = maxBookingHours != null ? parseFloat(maxBookingHours) : null;
+    const parsedLeadTimeDays = leadTimeDays != null ? parseInt(leadTimeDays) : null;
+    const parsedTags = tags ? JSON.stringify(tags) : null;
+    const parsedInclusions = inclusions ? JSON.stringify(inclusions) : null;
+    // Default s_status: if status provided use it, otherwise 'active' (preserves existing behaviour)
+    const parsedStatus = status || 'active';
+
     const insertData = [
         dbUserId,
         name.trim(),
@@ -660,13 +678,20 @@ async function createService(data) {
         parsedHourlyPrice,
         parsedPerDayPrice,
         parsedCancellationPolicyId,
+        parsedTravelRadiusKm,
+        parsedMinBookingHours,
+        parsedMaxBookingHours,
+        parsedLeadTimeDays,
+        parsedTags,
+        parsedInclusions,
+        parsedStatus,
     ];
 
     console.log('========================================');
     console.log('INSERTING INTO DATABASE:');
     console.log('========================================');
     console.log('SQL: INSERT INTO service');
-    console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price, s_cancellation_policy_id');
+    console.log('Columns: s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type, s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price, s_cancellation_policy_id, s_travel_radius_km, s_min_booking_hours, s_max_booking_hours, s_lead_time_days, s_tags, s_inclusions, s_status');
     console.log('Values:');
     console.log('  s_provider_id:', insertData[0]);
     console.log('  s_name:', insertData[1]);
@@ -683,14 +708,22 @@ async function createService(data) {
     console.log('  s_hourly_price:', insertData[12]);
     console.log('  s_per_day_price:', insertData[13]);
     console.log('  s_cancellation_policy_id:', insertData[14]);
+    console.log('  s_travel_radius_km:', insertData[15]);
+    console.log('  s_min_booking_hours:', insertData[16]);
+    console.log('  s_max_booking_hours:', insertData[17]);
+    console.log('  s_lead_time_days:', insertData[18]);
+    console.log('  s_tags:', insertData[19]);
+    console.log('  s_inclusions:', insertData[20]);
+    console.log('  s_status:', insertData[21]);
     console.log('========================================');
 
     const [result] = await pool.query(`
         INSERT INTO service
         (s_provider_id, s_name, s_description, s_category, s_base_price, s_pricing_type,
          s_duration, s_max_capacity, s_city, s_state, s_address, s_is_active, s_hourly_price, s_per_day_price,
-         s_cancellation_policy_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         s_cancellation_policy_id, s_travel_radius_km, s_min_booking_hours, s_max_booking_hours,
+         s_lead_time_days, s_tags, s_inclusions, s_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, insertData);
 
     console.log('========================================');
@@ -738,7 +771,8 @@ async function updateService(serviceId, data) {
         name, description, category, basePrice, pricingType,
         duration, maxCapacity, city, state, address,
         latitude, longitude, image, hourlyPrice, perDayPrice,
-        cancellationPolicyId,
+        cancellationPolicyId, travelRadiusKm, minBookingHours,
+        maxBookingHours, leadTimeDays, tags, inclusions, status,
     } = data;
 
     // Check existence
@@ -817,6 +851,34 @@ async function updateService(serviceId, data) {
     if (cancellationPolicyId !== undefined) {
         updateFields.push('s_cancellation_policy_id = ?');
         updateValues.push(cancellationPolicyId ? parseInt(cancellationPolicyId) : null);
+    }
+    if (travelRadiusKm !== undefined) {
+        updateFields.push('s_travel_radius_km = ?');
+        updateValues.push(travelRadiusKm != null ? parseInt(travelRadiusKm) : null);
+    }
+    if (minBookingHours !== undefined) {
+        updateFields.push('s_min_booking_hours = ?');
+        updateValues.push(minBookingHours != null ? parseFloat(minBookingHours) : null);
+    }
+    if (maxBookingHours !== undefined) {
+        updateFields.push('s_max_booking_hours = ?');
+        updateValues.push(maxBookingHours != null ? parseFloat(maxBookingHours) : null);
+    }
+    if (leadTimeDays !== undefined) {
+        updateFields.push('s_lead_time_days = ?');
+        updateValues.push(leadTimeDays != null ? parseInt(leadTimeDays) : null);
+    }
+    if (tags !== undefined) {
+        updateFields.push('s_tags = ?');
+        updateValues.push(tags ? JSON.stringify(tags) : null);
+    }
+    if (inclusions !== undefined) {
+        updateFields.push('s_inclusions = ?');
+        updateValues.push(inclusions ? JSON.stringify(inclusions) : null);
+    }
+    if (status !== undefined) {
+        updateFields.push('s_status = ?');
+        updateValues.push(status || 'active');
     }
 
     if (updateFields.length === 0) {
@@ -1305,6 +1367,140 @@ async function getPaymongoCredentials(providerEmail) {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-image management
+// ---------------------------------------------------------------------------
+
+/**
+ * Add an image to a service (max 10).
+ * Reuses saveBase64Image() for disk writes.
+ * @returns {{ id: number, url: string, isPrimary: boolean, order: number }}
+ */
+async function addImage(serviceId, base64String) {
+    const pool = getPool();
+
+    // Verify the service exists
+    const [svcRows] = await pool.query('SELECT idservice FROM service WHERE idservice = ?', [serviceId]);
+    if (svcRows.length === 0) {
+        const err = new Error('Service not found');
+        err.code = 'NOT_FOUND';
+        throw err;
+    }
+
+    // Count existing images
+    const [countRows] = await pool.query(
+        'SELECT COUNT(*) as cnt FROM service_image WHERE si_service_id = ?',
+        [serviceId]
+    );
+    const currentCount = countRows[0].cnt;
+    if (currentCount >= 10) {
+        const err = new Error('Maximum of 10 images per service');
+        err.code = 'VALIDATION_ERROR';
+        throw err;
+    }
+
+    // Save to disk
+    const imageUrl = saveBase64Image(base64String, serviceId);
+
+    // Determine order and primary status
+    const isPrimary = currentCount === 0 ? 1 : 0;
+    const order = currentCount + 1;
+
+    const [result] = await pool.query(
+        'INSERT INTO service_image (si_service_id, si_image_url, si_is_primary, si_order) VALUES (?, ?, ?, ?)',
+        [serviceId, imageUrl, isPrimary, order]
+    );
+
+    return {
+        id: result.insertId,
+        url: imageUrl,
+        isPrimary: isPrimary === 1,
+        order,
+    };
+}
+
+/**
+ * Delete an image from a service.
+ * Removes the file from disk and the DB row.
+ * If the deleted image was primary, promotes the next image.
+ */
+async function deleteImage(serviceId, imageId) {
+    const pool = getPool();
+
+    // Fetch the image row
+    const [rows] = await pool.query(
+        'SELECT idimage, si_image_url, si_is_primary FROM service_image WHERE idimage = ? AND si_service_id = ?',
+        [imageId, serviceId]
+    );
+    if (rows.length === 0) {
+        const err = new Error('Image not found');
+        err.code = 'NOT_FOUND';
+        throw err;
+    }
+
+    const image = rows[0];
+
+    // Delete file from disk (best-effort)
+    try {
+        const filename = path.basename(image.si_image_url);
+        const filepath = path.join(uploadsDir, filename);
+        if (fs.existsSync(filepath)) {
+            fs.unlinkSync(filepath);
+        }
+    } catch (fsErr) {
+        console.error('Failed to delete image file:', fsErr.message);
+    }
+
+    // Delete DB row
+    await pool.query('DELETE FROM service_image WHERE idimage = ?', [imageId]);
+
+    // If deleted image was primary, promote the next one
+    if (image.si_is_primary) {
+        const [remaining] = await pool.query(
+            'SELECT idimage FROM service_image WHERE si_service_id = ? ORDER BY si_order ASC LIMIT 1',
+            [serviceId]
+        );
+        if (remaining.length > 0) {
+            await pool.query('UPDATE service_image SET si_is_primary = 1 WHERE idimage = ?', [remaining[0].idimage]);
+        }
+    }
+}
+
+/**
+ * Reorder images for a service.
+ * @param {number} serviceId
+ * @param {number[]} orderedIds — image IDs in desired display order; first becomes primary.
+ */
+async function reorderImages(serviceId, orderedIds) {
+    const pool = getPool();
+
+    // Verify all IDs belong to this service
+    const [existing] = await pool.query(
+        'SELECT idimage FROM service_image WHERE si_service_id = ?',
+        [serviceId]
+    );
+    const existingIds = new Set(existing.map(r => r.idimage));
+    for (const id of orderedIds) {
+        if (!existingIds.has(id)) {
+            const err = new Error(`Image ${id} does not belong to service ${serviceId}`);
+            err.code = 'VALIDATION_ERROR';
+            throw err;
+        }
+    }
+
+    // Reset all to non-primary first
+    await pool.query('UPDATE service_image SET si_is_primary = 0 WHERE si_service_id = ?', [serviceId]);
+
+    // Update order and primary flag
+    for (let i = 0; i < orderedIds.length; i++) {
+        const isPrimary = i === 0 ? 1 : 0;
+        await pool.query(
+            'UPDATE service_image SET si_order = ?, si_is_primary = ? WHERE idimage = ? AND si_service_id = ?',
+            [i + 1, isPrimary, orderedIds[i], serviceId]
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -1326,6 +1522,10 @@ module.exports = {
     getProviderProfile,
     searchProviders,
     getProviderServices,
+    // multi-image
+    addImage,
+    deleteImage,
+    reorderImages,
     // payment
     getProviderPaymentLink,
     updateProviderPaymentLink,

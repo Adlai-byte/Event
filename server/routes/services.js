@@ -9,7 +9,7 @@ const { searchLimiter } = require('../middleware/rateLimiter');
 const { serviceValidation } = require('../middleware/validationSchemas');
 const { validate } = require('../middleware/validate');
 const { paginate } = require('../middleware/paginate');
-const { query } = require('express-validator');
+const { query, body, param } = require('express-validator');
 
 const ctrl = require('../controllers/serviceController');
 
@@ -45,6 +45,40 @@ router.post('/services/:id/status', authMiddleware, requireRole('provider', 'adm
 
 // Update service (provider or admin)
 router.put('/services/:id', authMiddleware, requireRole('provider', 'admin'), ctrl.updateService);
+
+// ---------------------------------------------------------------------------
+// Service images (multi-image management)
+// ---------------------------------------------------------------------------
+
+// Upload additional image (provider or admin, max 10)
+router.post('/services/:id/images',
+    authMiddleware,
+    requireRole('provider', 'admin'),
+    param('id').isInt({ min: 1 }).withMessage('Valid service ID is required'),
+    body('image').isString().withMessage('image must be a base64 string'),
+    validate,
+    ctrl.addServiceImage
+);
+
+// Delete an image (provider or admin)
+router.delete('/services/:id/images/:imageId',
+    authMiddleware,
+    requireRole('provider', 'admin'),
+    param('id').isInt({ min: 1 }).withMessage('Valid service ID is required'),
+    param('imageId').isInt({ min: 1 }).withMessage('Valid image ID is required'),
+    validate,
+    ctrl.deleteServiceImage
+);
+
+// Reorder images (provider or admin)
+router.put('/services/:id/images/reorder',
+    authMiddleware,
+    requireRole('provider', 'admin'),
+    param('id').isInt({ min: 1 }).withMessage('Valid service ID is required'),
+    body('order').isArray({ min: 1 }).withMessage('order must be a non-empty array of image IDs'),
+    validate,
+    ctrl.reorderServiceImages
+);
 
 // ---------------------------------------------------------------------------
 // Reviews

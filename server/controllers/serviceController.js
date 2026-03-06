@@ -132,6 +132,49 @@ async function createService(req, res) {
         return sendError(res, 'VALIDATION_ERROR', 'Invalid price');
     }
 
+    // Validate optional new fields
+    const { travelRadiusKm, minBookingHours, maxBookingHours, leadTimeDays, tags, inclusions, status } = req.body;
+
+    if (travelRadiusKm !== undefined && travelRadiusKm !== null) {
+        const v = parseInt(travelRadiusKm);
+        if (!Number.isInteger(v) || v < 0 || v > 500) {
+            return sendError(res, 'VALIDATION_ERROR', 'travelRadiusKm must be an integer between 0 and 500');
+        }
+    }
+    if (minBookingHours !== undefined && minBookingHours !== null) {
+        const v = parseFloat(minBookingHours);
+        if (isNaN(v) || v < 0.5 || v > 24) {
+            return sendError(res, 'VALIDATION_ERROR', 'minBookingHours must be between 0.5 and 24');
+        }
+    }
+    if (maxBookingHours !== undefined && maxBookingHours !== null) {
+        const v = parseFloat(maxBookingHours);
+        if (isNaN(v) || v < 1 || v > 720) {
+            return sendError(res, 'VALIDATION_ERROR', 'maxBookingHours must be between 1 and 720');
+        }
+    }
+    if (leadTimeDays !== undefined && leadTimeDays !== null) {
+        const v = parseInt(leadTimeDays);
+        if (!Number.isInteger(v) || v < 0 || v > 90) {
+            return sendError(res, 'VALIDATION_ERROR', 'leadTimeDays must be an integer between 0 and 90');
+        }
+    }
+    if (tags !== undefined && tags !== null) {
+        if (!Array.isArray(tags) || !tags.every(t => typeof t === 'string')) {
+            return sendError(res, 'VALIDATION_ERROR', 'tags must be an array of strings');
+        }
+    }
+    if (inclusions !== undefined && inclusions !== null) {
+        if (!Array.isArray(inclusions) || !inclusions.every(i => typeof i === 'string')) {
+            return sendError(res, 'VALIDATION_ERROR', 'inclusions must be an array of strings');
+        }
+    }
+    if (status !== undefined && status !== null) {
+        if (!['draft', 'active'].includes(status)) {
+            return sendError(res, 'VALIDATION_ERROR', 'status must be "draft" or "active"');
+        }
+    }
+
     try {
         const result = await serviceService.createService(req.body);
         return sendSuccess(res, { id: result.id, message: 'Service created successfully' });
@@ -194,6 +237,49 @@ async function updateService(req, res) {
     const price = parseFloat(basePrice);
     if (isNaN(price) || price < 0) {
         return sendError(res, 'VALIDATION_ERROR', 'Invalid price');
+    }
+
+    // Validate optional new fields
+    const { travelRadiusKm, minBookingHours, maxBookingHours, leadTimeDays, tags, inclusions, status } = req.body;
+
+    if (travelRadiusKm !== undefined && travelRadiusKm !== null) {
+        const v = parseInt(travelRadiusKm);
+        if (!Number.isInteger(v) || v < 0 || v > 500) {
+            return sendError(res, 'VALIDATION_ERROR', 'travelRadiusKm must be an integer between 0 and 500');
+        }
+    }
+    if (minBookingHours !== undefined && minBookingHours !== null) {
+        const v = parseFloat(minBookingHours);
+        if (isNaN(v) || v < 0.5 || v > 24) {
+            return sendError(res, 'VALIDATION_ERROR', 'minBookingHours must be between 0.5 and 24');
+        }
+    }
+    if (maxBookingHours !== undefined && maxBookingHours !== null) {
+        const v = parseFloat(maxBookingHours);
+        if (isNaN(v) || v < 1 || v > 720) {
+            return sendError(res, 'VALIDATION_ERROR', 'maxBookingHours must be between 1 and 720');
+        }
+    }
+    if (leadTimeDays !== undefined && leadTimeDays !== null) {
+        const v = parseInt(leadTimeDays);
+        if (!Number.isInteger(v) || v < 0 || v > 90) {
+            return sendError(res, 'VALIDATION_ERROR', 'leadTimeDays must be an integer between 0 and 90');
+        }
+    }
+    if (tags !== undefined && tags !== null) {
+        if (!Array.isArray(tags) || !tags.every(t => typeof t === 'string')) {
+            return sendError(res, 'VALIDATION_ERROR', 'tags must be an array of strings');
+        }
+    }
+    if (inclusions !== undefined && inclusions !== null) {
+        if (!Array.isArray(inclusions) || !inclusions.every(i => typeof i === 'string')) {
+            return sendError(res, 'VALIDATION_ERROR', 'inclusions must be an array of strings');
+        }
+    }
+    if (status !== undefined && status !== null) {
+        if (!['draft', 'active'].includes(status)) {
+            return sendError(res, 'VALIDATION_ERROR', 'status must be "draft" or "active"');
+        }
     }
 
     try {
@@ -434,6 +520,93 @@ async function getPaymongoCredentials(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-image management
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /services/:id/images
+ */
+async function addServiceImage(req, res) {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+        return sendError(res, 'VALIDATION_ERROR', 'Invalid service ID');
+    }
+
+    const { image } = req.body || {};
+    if (!image || typeof image !== 'string' || !image.startsWith('data:image/')) {
+        return sendError(res, 'VALIDATION_ERROR', 'A valid base64 image is required');
+    }
+
+    try {
+        const result = await serviceService.addImage(id, image);
+        return sendSuccess(res, result);
+    } catch (err) {
+        if (err.code === 'NOT_FOUND') {
+            return sendError(res, 'NOT_FOUND', err.message, 404);
+        }
+        if (err.code === 'VALIDATION_ERROR') {
+            return sendError(res, 'VALIDATION_ERROR', err.message);
+        }
+        console.error('Add service image failed:', err.message);
+        return sendError(res, 'SERVER_ERROR', err.message || 'Database error', 500);
+    }
+}
+
+/**
+ * DELETE /services/:id/images/:imageId
+ */
+async function deleteServiceImage(req, res) {
+    const id = Number(req.params.id);
+    const imageId = Number(req.params.imageId);
+    if (!Number.isFinite(id) || !Number.isFinite(imageId)) {
+        return sendError(res, 'VALIDATION_ERROR', 'Invalid service or image ID');
+    }
+
+    try {
+        await serviceService.deleteImage(id, imageId);
+        return sendSuccess(res, { success: true });
+    } catch (err) {
+        if (err.code === 'NOT_FOUND') {
+            return sendError(res, 'NOT_FOUND', err.message, 404);
+        }
+        console.error('Delete service image failed:', err.message);
+        return sendError(res, 'SERVER_ERROR', err.message || 'Database error', 500);
+    }
+}
+
+/**
+ * PUT /services/:id/images/reorder
+ */
+async function reorderServiceImages(req, res) {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+        return sendError(res, 'VALIDATION_ERROR', 'Invalid service ID');
+    }
+
+    const { order } = req.body || {};
+    if (!Array.isArray(order) || order.length === 0) {
+        return sendError(res, 'VALIDATION_ERROR', 'order must be a non-empty array of image IDs');
+    }
+
+    // Ensure all entries are numbers
+    const numericOrder = order.map(Number);
+    if (numericOrder.some(n => !Number.isFinite(n))) {
+        return sendError(res, 'VALIDATION_ERROR', 'All image IDs must be valid numbers');
+    }
+
+    try {
+        await serviceService.reorderImages(id, numericOrder);
+        return sendSuccess(res, { success: true });
+    } catch (err) {
+        if (err.code === 'VALIDATION_ERROR') {
+            return sendError(res, 'VALIDATION_ERROR', err.message);
+        }
+        console.error('Reorder service images failed:', err.message);
+        return sendError(res, 'SERVER_ERROR', err.message || 'Database error', 500);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -454,4 +627,7 @@ module.exports = {
     updateProviderPaymentLink,
     savePaymongoCredentials,
     getPaymongoCredentials,
+    addServiceImage,
+    deleteServiceImage,
+    reorderServiceImages,
 };
