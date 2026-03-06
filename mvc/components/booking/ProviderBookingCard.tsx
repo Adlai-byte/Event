@@ -11,6 +11,7 @@ export interface ProviderBookingCardProps {
   isMobile: boolean;
   onConfirmClick: (bookingId: string) => void;
   onCancelClick: (bookingId: string) => void;
+  onStartService: (bookingId: string) => void;
   onCompleteClick: (bookingId: string) => void;
   onMarkPaymentAsPaid: (bookingId: string) => void;
   onDownloadInvoice: (bookingId: string) => void;
@@ -85,6 +86,7 @@ export const ProviderBookingCard: React.FC<ProviderBookingCardProps> = React.mem
     isMobile,
     onConfirmClick,
     onCancelClick,
+    onStartService,
     onCompleteClick,
     onMarkPaymentAsPaid,
     onDownloadInvoice,
@@ -228,8 +230,28 @@ export const ProviderBookingCard: React.FC<ProviderBookingCardProps> = React.mem
             </>
           )}
 
-          {/* Confirmed actions */}
+          {/* Confirmed actions — Start Service */}
           {booking.status === 'confirmed' && (
+            <>
+              {booking.hasPendingCashPayment && (
+                <MarkAsPaidButton
+                  bookingId={booking.id}
+                  onMarkPaymentAsPaid={onMarkPaymentAsPaid}
+                />
+              )}
+              <TouchableOpacity
+                style={[styles.tableActionButton, styles.confirmButton]}
+                onPress={() => onStartService(booking.id)}
+                accessibilityRole="button"
+                accessibilityLabel="Start service"
+              >
+                <Text style={styles.tableActionButtonText}>Start</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* In-progress actions — Complete Service */}
+          {booking.status === 'in_progress' && (
             <>
               {booking.hasPendingCashPayment && (
                 <MarkAsPaidButton
@@ -241,7 +263,7 @@ export const ProviderBookingCard: React.FC<ProviderBookingCardProps> = React.mem
                 style={[styles.tableActionButton, styles.completeButton]}
                 onPress={() => onCompleteClick(booking.id)}
                 accessibilityRole="button"
-                accessibilityLabel="Complete booking"
+                accessibilityLabel="Complete service"
               >
                 <Text style={styles.tableActionButtonText}>Complete</Text>
               </TouchableOpacity>

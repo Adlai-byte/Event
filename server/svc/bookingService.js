@@ -1082,7 +1082,34 @@ async function handlePaymongoSuccess(bookingId, userEmail) {
   );
 
   if (updateResult.affectedRows > 0) {
-    console.log('Payment marked as completed for booking:', bookingId);
+    // Sync payment_schedule entries and auto-confirm booking if deposit paid
+    const [scheduleLinks] = await pool.query(
+      `SELECT ps.* FROM payment_schedule ps
+       INNER JOIN payment p ON ps.ps_payment_id = p.idpayment
+       WHERE p.p_booking_id = ? AND p.p_user_id = ? AND p.p_status = 'completed'`,
+      [parseInt(bookingId), userId]
+    );
+    for (const sl of scheduleLinks) {
+      if (sl.ps_type === 'deposit' && sl.ps_status !== 'paid') {
+        await pool.query('UPDATE payment_schedule SET ps_status = ? WHERE id = ?', ['paid', sl.id]);
+        await pool.query(
+          'UPDATE booking SET b_deposit_paid = 1, b_status = ? WHERE idbooking = ? AND b_status = ?',
+          ['confirmed', sl.ps_booking_id, 'pending']
+        );
+      }
+      if (sl.ps_type === 'balance' && sl.ps_status !== 'paid') {
+        await pool.query('UPDATE payment_schedule SET ps_status = ? WHERE id = ?', ['paid', sl.id]);
+      }
+    }
+
+    // Check if fully paid
+    const [pendingSchedules] = await pool.query(
+      `SELECT COUNT(*) as cnt FROM payment_schedule WHERE ps_booking_id = ? AND ps_status = 'pending'`,
+      [parseInt(bookingId)]
+    );
+    if (pendingSchedules[0].cnt === 0) {
+      await pool.query('UPDATE booking SET is_paid = 1 WHERE idbooking = ?', [parseInt(bookingId)]);
+    }
   }
 
   return { found: true };

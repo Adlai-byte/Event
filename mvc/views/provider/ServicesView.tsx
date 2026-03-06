@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { User as UserModel } from '../../models/User';
 import { ServicePackage } from '../../models/Package';
@@ -20,7 +20,7 @@ const CATEGORIES = ['all', 'venue', 'catering', 'photography', 'music'];
 
 export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate, onLogout }) => {
   const { screenWidth, isMobile } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth);
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   const [activeTab, setActiveTab] = useState<'list' | 'add' | 'edit' | 'packages'>('list');
   const [searchQuery, setSearchQuery] = useState('');

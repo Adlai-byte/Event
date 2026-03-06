@@ -91,15 +91,6 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
       }
       const data = await apiClient.get<any>('/api/job-postings', params);
       if (data.ok && data.jobPostings) {
-        console.log(
-          'Job postings with location:',
-          data.jobPostings.map((j: any) => ({
-            id: j.id,
-            title: j.jobTitle,
-            provider: `${j.providerFirstName} ${j.providerLastName}`,
-            location: j.location,
-          })),
-        );
         return data.jobPostings as any[];
       }
       return [] as any[];
@@ -237,7 +228,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
         setShowProposalsModal(true);
       }
     } catch (error) {
-      console.error('Error loading proposals:', error);
+      if (__DEV__) console.error('Error loading proposals:', error);
     }
   }, []);
 
@@ -300,7 +291,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
         setErrorMessage(null);
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      if (__DEV__) console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick resume file');
     }
   };
@@ -387,7 +378,7 @@ export function useUserHiring({ userId, userEmail, userType }: UseUserHiringPara
         setIsSubmitting(false);
       }
     } catch (error: any) {
-      console.error('Error submitting application:', error);
+      if (__DEV__) console.error('Error submitting application:', error);
 
       // Handle ApiError with specific status codes
       if (error instanceof ApiError) {

@@ -47,19 +47,9 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
             source={{ uri: service.image }}
             style={styles.tableImage}
             onError={(e) => {
-              console.error('Image load error for service:', service.name);
-              console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
-              console.log('Image URL:', service.image);
-              console.log('Image URL length:', service.image?.length);
+              if (__DEV__) console.error('Image load error for service:', service.name);
+              if (__DEV__) console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
             }}
-            onLoad={() =>
-              console.log(
-                'Image loaded for service:',
-                service.name,
-                'URL:',
-                service.image?.substring(0, 60),
-              )
-            }
           />
         ) : (
           <View style={styles.tableImagePlaceholder}>

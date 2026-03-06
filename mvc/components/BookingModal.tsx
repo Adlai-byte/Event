@@ -19,6 +19,7 @@ import { useBookingCost } from '../hooks/useBookingCost';
 import { useMonthCalendar } from '../hooks/useProviderAvailability';
 import { ProfileCompleteModal } from './booking/ProfileCompleteModal';
 import { BookingConfirmationModal, ConfirmBookingData } from './booking/BookingConfirmationModal';
+import { useToast } from '../contexts/ToastContext';
 import { createStyles } from './BookingModal.styles';
 
 interface BookingModalProps {
@@ -51,6 +52,7 @@ interface BookingModalProps {
   };
   onNavigateToPersonalInfo?: () => void;
   preSelectedPackage?: ServicePackage | null;
+  preSelectedPackageId?: number | null;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -62,9 +64,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   user,
   onNavigateToPersonalInfo,
   preSelectedPackage,
+  preSelectedPackageId,
 }) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
+  const { showToast } = useToast();
 
   const {
     selectedDate,
@@ -106,7 +110,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     calculateTotalDuration,
     formatDuration,
     formatTime,
-  } = useBookingCost(serviceId, visible, selectedSlots, selectedDays, preSelectedPackage);
+  } = useBookingCost(
+    serviceId,
+    visible,
+    selectedSlots,
+    selectedDays,
+    preSelectedPackage,
+    preSelectedPackageId,
+  );
 
   // Compute current month string from the calendar's current week
   const currentMonthStr = useMemo(() => {
@@ -208,7 +219,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         });
         setShowConfirmModal(true);
       } catch (error: any) {
-        console.error('Error creating booking for date range:', error);
+        if (__DEV__) console.error('Error creating booking for date range:', error);
         Alert.alert('Error', `Failed to create booking: ${error.message || 'Unknown error'}`, [
           { text: 'OK' },
         ]);
@@ -274,7 +285,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmBooking = async () => {
     if (!confirmBookingData) {
-      console.error('confirmBookingData is null');
+      if (__DEV__) console.error('confirmBookingData is null');
       setShowConfirmModal(false);
       return;
     }
@@ -323,11 +334,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         }
 
         onClose();
-        Alert.alert(
-          'Success',
-          `Successfully booked ${selectedDays.length} day${selectedDays.length !== 1 ? 's' : ''} (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})!`,
-          [{ text: 'OK' }],
-        );
+        showToast({
+          message: `Successfully booked ${selectedDays.length} day${selectedDays.length !== 1 ? 's' : ''} (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})!`,
+          type: 'success',
+        });
       } else if (confirmBookingData.type === 'hourly' && selectedDate) {
         const sortedSlots = [...selectedSlots].sort((a, b) => {
           const timeA = a.start.split(':').map(Number);
@@ -348,10 +358,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         );
         await reloadSlotsForDate(selectedDate);
         onClose();
-        Alert.alert('Success', 'Booking created successfully!');
+        showToast({ message: 'Booking created successfully!', type: 'success' });
       }
     } catch (error: any) {
-      console.error('Booking error:', error);
+      if (__DEV__) console.error('Booking error:', error);
       Alert.alert('Error', `Failed to create booking: ${error.message || 'Unknown error'}`, [
         { text: 'OK' },
       ]);

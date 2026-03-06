@@ -7,3 +7,4 @@ export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
 export { Avatar } from './Avatar';
 export { Skeleton, SkeletonCard, SkeletonListItem } from './Skeleton';
+export { DateTimeInput } from './DateTimeInput';

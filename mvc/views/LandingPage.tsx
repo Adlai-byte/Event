@@ -67,7 +67,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [_searchLoading, setSearchLoading] = useState(false);
+  const [_searchLoading, _setSearchLoading] = useState(false);
   const [featuredService, setFeaturedService] = useState<Service | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -99,9 +99,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       }
       return;
     }
-    // If email is valid, navigate to register
+    // If email is valid, show success confirmation
     setNewsletterEmailError(null);
-    onRegister();
+    setNewsletterEmail('');
+    Alert.alert(
+      'Success',
+      'Thank you for subscribing! You will receive our latest updates and exclusive offers.',
+    );
   };
   const [trendingServices, setTrendingServices] = useState<Service[]>([]);
   const [entertainmentServices, setEntertainmentServices] = useState<Service[]>([]);
@@ -139,7 +143,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading featured service:', error);
+      if (__DEV__) console.error('Error loading featured service:', error);
     }
   };
 
@@ -159,7 +163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading trending services:', error);
+      if (__DEV__) console.error('Error loading trending services:', error);
     }
   };
 
@@ -185,7 +189,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       setEntertainmentServices(services);
     } catch (error) {
-      console.error('Error loading entertainment services:', error);
+      if (__DEV__) console.error('Error loading entertainment services:', error);
     }
   };
 
@@ -210,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       });
     } catch (error) {
-      console.error('Error loading category services:', error);
+      if (__DEV__) console.error('Error loading category services:', error);
     }
   };
 
@@ -255,7 +259,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error searching services:', error);
+      if (__DEV__) console.error('Error searching services:', error);
       Alert.alert('Error', 'Failed to search services. Please try again.');
     } finally {
       setSearchLoading(false);
@@ -284,7 +288,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error filtering by category:', error);
+      if (__DEV__) console.error('Error filtering by category:', error);
       Alert.alert('Error', 'Failed to filter services. Please try again.');
     } finally {
       setSearchLoading(false);
@@ -349,7 +353,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading all services:', error);
+      if (__DEV__) console.error('Error loading all services:', error);
     } finally {
       setSearchLoading(false);
     }
@@ -557,12 +561,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onLayout={(e) => handleSectionLayout('events', e)}
                 >
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                    <Text style={styles.sectionTitle}>Featured Services</Text>
                   </View>
                   <View style={styles.eventsContent}>
                     <Text style={styles.eventsDescription}>
-                      Discover exciting events happening near you. From weddings to corporate
-                      gatherings, find the perfect event for your occasion.
+                      Discover top-rated services available near you. From venues and catering to
+                      photography and entertainment, find the perfect service for your event.
                     </Text>
                     <View style={styles.eventsGrid}>
                       {entertainmentServices.length > 0 ? (
@@ -857,7 +861,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     } else {
                       // On mobile, open in browser
                       Linking.openURL(apkUrl).catch((err) => {
-                        console.error('Error opening URL:', err);
+                        if (__DEV__) console.error('Error opening URL:', err);
                         Alert.alert('Error', 'Failed to open download link. Please try again.');
                       });
                     }

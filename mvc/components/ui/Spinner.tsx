@@ -1,9 +1,7 @@
 // mvc/components/ui/Spinner.tsx
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors, semantic } from '../../theme';
-import { typography } from '../../theme';
-import { spacing } from '../../theme';
+import { colors, semantic, typography, spacing } from '../../theme';
 
 interface SpinnerProps {
   message?: string;
@@ -13,7 +11,11 @@ interface SpinnerProps {
 
 export function Spinner({ message, size = 'large', fullPage = false }: SpinnerProps) {
   return (
-    <View style={[styles.container, fullPage && styles.fullPage]} accessibilityRole="progressbar" accessibilityLabel={message || 'Loading'}>
+    <View
+      style={[styles.container, fullPage && styles.fullPage]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={message || 'Loading'}
+    >
       <ActivityIndicator size={size} color={semantic.primary} />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>

@@ -9,6 +9,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import { useToast } from '../../contexts/ToastContext';
 import { Feather } from '@expo/vector-icons';
 import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
@@ -24,12 +25,13 @@ interface ProfileViewProps {
 export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onNavigate }) => {
   const { isMobile } = useBreakpoints();
   const styles = createStyles(isMobile);
+  const { showToast } = useToast();
 
   const handleLogout = async (): Promise<void> => {
     try {
       const success = await onLogout();
       if (success) {
-        Alert.alert('Success', 'You have been logged out successfully!');
+        showToast({ message: 'You have been logged out successfully!', type: 'success' });
       } else {
         Alert.alert('Error', 'Failed to logout. Please try again.');
       }
@@ -104,12 +106,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onNavi
                     style={styles.avatarImage}
                     resizeMode="cover"
                     onError={(error) => {
-                      console.error('Image load error:', error.nativeEvent.error);
-                      console.error('Failed to load image from:', getImageUri());
+                      if (__DEV__) console.error('Image load error:', error.nativeEvent.error);
+                      if (__DEV__) console.error('Failed to load image from:', getImageUri());
                     }}
-                    onLoad={() => {
-                      console.log('Image loaded successfully:', getImageUri());
-                    }}
+                    onLoad={() => {}}
                   />
                 ) : (
                   <Text style={styles.avatarText}>{user.getInitials()}</Text>

@@ -1,17 +1,7 @@
 // mvc/components/ui/Input.tsx
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TextInputProps,
-  TouchableOpacity,
-  ViewStyle,
-} from 'react-native';
-import { colors, semantic } from '../../theme';
-import { typography } from '../../theme';
-import { spacing, borderRadius } from '../../theme';
+import { View, Text, TextInput, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
+import { colors, semantic, typography, spacing, borderRadius } from '../../theme';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -31,11 +21,7 @@ export function Input({
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
-  const borderColor = error
-    ? semantic.error
-    : isFocused
-    ? semantic.primary
-    : semantic.border;
+  const borderColor = error ? semantic.error : isFocused ? semantic.primary : semantic.border;
 
   return (
     <View style={[styles.container, containerStyle]}>

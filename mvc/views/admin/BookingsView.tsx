@@ -68,7 +68,7 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
         }
       }
     } catch (error) {
-      console.error('Error loading bookings:', error);
+      if (__DEV__) console.error('Error loading bookings:', error);
       Alert.alert('Error', 'Failed to load bookings');
     } finally {
       setLoading(false);

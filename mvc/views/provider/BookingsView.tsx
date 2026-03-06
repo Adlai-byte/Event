@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -61,7 +61,7 @@ function getPaymentBadgeInfo(booking: {
 
 export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, onLogout }) => {
   const { isMobile, screenWidth } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth);
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   const {
     filteredBookings,
@@ -112,6 +112,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ user, onNavigate, on
         isMobile={!showDetails}
         onConfirmClick={handleConfirmClick}
         onCancelClick={handleCancelClick}
+        onStartService={(id) => handleUpdateBookingStatus(id, 'in_progress')}
         onCompleteClick={(id) => handleUpdateBookingStatus(id, 'completed')}
         onMarkPaymentAsPaid={handleMarkPaymentAsPaid}
         onDownloadInvoice={handleDownloadInvoice}

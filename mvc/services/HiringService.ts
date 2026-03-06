@@ -1,31 +1,29 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
   onSnapshot,
   serverTimestamp,
-  writeBatch
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { 
-  HiringRequest, 
-  HiringStatus, 
-  Proposal, 
-  ProposalStatus, 
-  HiringContract, 
+import {
+  HiringRequest,
+  HiringStatus,
+  Proposal,
+  ProposalStatus,
+  HiringContract,
   ContractStatus,
   ExperienceLevel,
   ContractType,
   HiringRequestModel,
-  ProposalModel
+  ProposalModel,
 } from '../models/Hiring';
 
 export class HiringService {
@@ -43,7 +41,7 @@ export class HiringService {
 
   // Create hiring request
   async createHiringRequest(
-    hiringData: Partial<HiringRequest>
+    hiringData: Partial<HiringRequest>,
   ): Promise<{ success: boolean; hiringRequestId?: string; error?: string }> {
     try {
       const hiringRequest = new HiringRequestModel(
@@ -66,37 +64,37 @@ export class HiringService {
           depositRequired: false,
           depositPercentage: 0,
           latePaymentFee: 0,
-          refundPolicy: ''
+          refundPolicy: '',
         },
         new Date(),
         new Date(),
         [],
-        ''
+        '',
       );
 
       const validation = hiringRequest.validate();
       if (!validation.isValid) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: validation.errors.join(', '),
         };
       }
 
       const hiringRef = await addDoc(collection(db, 'hiringRequests'), {
         ...hiringData,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return {
         success: true,
-        hiringRequestId: hiringRef.id
+        hiringRequestId: hiringRef.id,
       };
     } catch (error: any) {
-      console.error('Error creating hiring request:', error);
+      if (__DEV__) console.error('Error creating hiring request:', error);
       return {
         success: false,
-        error: error.message || 'Failed to create hiring request'
+        error: error.message || 'Failed to create hiring request',
       };
     }
   }
@@ -104,21 +102,21 @@ export class HiringService {
   // Update hiring request
   async updateHiringRequest(
     hiringRequestId: string,
-    updates: Partial<HiringRequest>
+    updates: Partial<HiringRequest>,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const hiringRef = doc(db, 'hiringRequests', hiringRequestId);
       await updateDoc(hiringRef, {
         ...updates,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error updating hiring request:', error);
+      if (__DEV__) console.error('Error updating hiring request:', error);
       return {
         success: false,
-        error: error.message || 'Failed to update hiring request'
+        error: error.message || 'Failed to update hiring request',
       };
     }
   }
@@ -128,7 +126,7 @@ export class HiringService {
     try {
       const hiringRef = doc(db, 'hiringRequests', hiringRequestId);
       const hiringSnap = await getDoc(hiringRef);
-      
+
       if (hiringSnap.exists()) {
         const data = hiringSnap.data();
         return {
@@ -137,15 +135,15 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as HiringRequest;
       }
       return null;
     } catch (error: any) {
-      console.error('Error getting hiring request:', error);
+      if (__DEV__) console.error('Error getting hiring request:', error);
       return null;
     }
   }
@@ -156,7 +154,7 @@ export class HiringService {
       const q = query(
         collection(db, 'hiringRequests'),
         where('clientId', '==', clientId),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -170,16 +168,16 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as HiringRequest);
       });
 
       return hiringRequests;
     } catch (error: any) {
-      console.error('Error getting client hiring requests:', error);
+      if (__DEV__) console.error('Error getting client hiring requests:', error);
       return [];
     }
   }
@@ -188,13 +186,13 @@ export class HiringService {
   async getAvailableHiringRequests(
     category?: string,
     maxBudget?: number,
-    location?: string
+    location?: string,
   ): Promise<HiringRequest[]> {
     try {
       let q = query(
         collection(db, 'hiringRequests'),
         where('status', '==', HiringStatus.OPEN),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
       );
 
       if (category) {
@@ -212,29 +210,30 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as HiringRequest;
 
         // Apply filters
         if (maxBudget && hiringRequest.budget.max > maxBudget) return;
-        if (location && !hiringRequest.location.city.toLowerCase().includes(location.toLowerCase())) return;
+        if (location && !hiringRequest.location.city.toLowerCase().includes(location.toLowerCase()))
+          return;
 
         hiringRequests.push(hiringRequest);
       });
 
       return hiringRequests;
     } catch (error: any) {
-      console.error('Error getting available hiring requests:', error);
+      if (__DEV__) console.error('Error getting available hiring requests:', error);
       return [];
     }
   }
 
   // Submit proposal
   async submitProposal(
-    proposalData: Partial<Proposal>
+    proposalData: Partial<Proposal>,
   ): Promise<{ success: boolean; proposalId?: string; error?: string }> {
     try {
       const proposal = new ProposalModel(
@@ -251,21 +250,21 @@ export class HiringService {
         new Date(),
         new Date(),
         proposalData.clientFeedback || '',
-        proposalData.revisions || []
+        proposalData.revisions || [],
       );
 
       const validation = proposal.validate();
       if (!validation.isValid) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: validation.errors.join(', '),
         };
       }
 
       const proposalRef = await addDoc(collection(db, 'proposals'), {
         ...proposalData,
         submittedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       // Update hiring request with proposal count
@@ -273,13 +272,13 @@ export class HiringService {
 
       return {
         success: true,
-        proposalId: proposalRef.id
+        proposalId: proposalRef.id,
       };
     } catch (error: any) {
-      console.error('Error submitting proposal:', error);
+      if (__DEV__) console.error('Error submitting proposal:', error);
       return {
         success: false,
-        error: error.message || 'Failed to submit proposal'
+        error: error.message || 'Failed to submit proposal',
       };
     }
   }
@@ -290,7 +289,7 @@ export class HiringService {
       const q = query(
         collection(db, 'proposals'),
         where('hiringRequestId', '==', hiringRequestId),
-        orderBy('submittedAt', 'desc')
+        orderBy('submittedAt', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -304,16 +303,16 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           submittedAt: data.submittedAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Proposal);
       });
 
       return proposals;
     } catch (error: any) {
-      console.error('Error getting hiring request proposals:', error);
+      if (__DEV__) console.error('Error getting hiring request proposals:', error);
       return [];
     }
   }
@@ -324,7 +323,7 @@ export class HiringService {
       const q = query(
         collection(db, 'proposals'),
         where('providerId', '==', providerId),
-        orderBy('submittedAt', 'desc')
+        orderBy('submittedAt', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -338,16 +337,16 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           submittedAt: data.submittedAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Proposal);
       });
 
       return proposals;
     } catch (error: any) {
-      console.error('Error getting provider proposals:', error);
+      if (__DEV__) console.error('Error getting provider proposals:', error);
       return [];
     }
   }
@@ -355,7 +354,7 @@ export class HiringService {
   // Accept proposal
   async acceptProposal(
     proposalId: string,
-    hiringRequestId: string
+    hiringRequestId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const batch = writeBatch(db);
@@ -364,7 +363,7 @@ export class HiringService {
       const proposalRef = doc(db, 'proposals', proposalId);
       batch.update(proposalRef, {
         status: ProposalStatus.ACCEPTED,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       // Update hiring request status
@@ -372,7 +371,7 @@ export class HiringService {
       batch.update(hiringRef, {
         status: HiringStatus.CLOSED,
         selectedProposalId: proposalId,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       // Reject other proposals for this hiring request
@@ -382,7 +381,7 @@ export class HiringService {
           const otherProposalRef = doc(db, 'proposals', proposal.id);
           batch.update(otherProposalRef, {
             status: ProposalStatus.REJECTED,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
           });
         }
       }
@@ -391,10 +390,10 @@ export class HiringService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error accepting proposal:', error);
+      if (__DEV__) console.error('Error accepting proposal:', error);
       return {
         success: false,
-        error: error.message || 'Failed to accept proposal'
+        error: error.message || 'Failed to accept proposal',
       };
     }
   }
@@ -402,58 +401,61 @@ export class HiringService {
   // Reject proposal
   async rejectProposal(
     proposalId: string,
-    reason?: string
+    reason?: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const proposalRef = doc(db, 'proposals', proposalId);
       await updateDoc(proposalRef, {
         status: ProposalStatus.REJECTED,
         clientFeedback: reason || 'Proposal rejected',
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error rejecting proposal:', error);
+      if (__DEV__) console.error('Error rejecting proposal:', error);
       return {
         success: false,
-        error: error.message || 'Failed to reject proposal'
+        error: error.message || 'Failed to reject proposal',
       };
     }
   }
 
   // Create hiring contract
   async createHiringContract(
-    contractData: Partial<HiringContract>
+    contractData: Partial<HiringContract>,
   ): Promise<{ success: boolean; contractId?: string; error?: string }> {
     try {
       const contractRef = await addDoc(collection(db, 'hiringContracts'), {
         ...contractData,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return {
         success: true,
-        contractId: contractRef.id
+        contractId: contractRef.id,
       };
     } catch (error: any) {
-      console.error('Error creating hiring contract:', error);
+      if (__DEV__) console.error('Error creating hiring contract:', error);
       return {
         success: false,
-        error: error.message || 'Failed to create hiring contract'
+        error: error.message || 'Failed to create hiring contract',
       };
     }
   }
 
   // Get hiring contracts
-  async getHiringContracts(userId: string, userType: 'client' | 'provider'): Promise<HiringContract[]> {
+  async getHiringContracts(
+    userId: string,
+    userType: 'client' | 'provider',
+  ): Promise<HiringContract[]> {
     try {
       const field = userType === 'client' ? 'clientId' : 'providerId';
       const q = query(
         collection(db, 'hiringContracts'),
         where(field, '==', userId),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -467,13 +469,13 @@ export class HiringService {
           startDate: data.startDate?.toDate() || new Date(),
           endDate: data.endDate?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as HiringContract);
       });
 
       return contracts;
     } catch (error: any) {
-      console.error('Error getting hiring contracts:', error);
+      if (__DEV__) console.error('Error getting hiring contracts:', error);
       return [];
     }
   }
@@ -481,21 +483,21 @@ export class HiringService {
   // Update contract status
   async updateContractStatus(
     contractId: string,
-    status: ContractStatus
+    status: ContractStatus,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const contractRef = doc(db, 'hiringContracts', contractId);
       await updateDoc(contractRef, {
         status,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error updating contract status:', error);
+      if (__DEV__) console.error('Error updating contract status:', error);
       return {
         success: false,
-        error: error.message || 'Failed to update contract status'
+        error: error.message || 'Failed to update contract status',
       };
     }
   }
@@ -504,13 +506,13 @@ export class HiringService {
   subscribeToHiringRequests(
     userId: string,
     userType: 'client' | 'provider',
-    callback: (hiringRequests: HiringRequest[]) => void
+    callback: (hiringRequests: HiringRequest[]) => void,
   ): () => void {
     const field = userType === 'client' ? 'clientId' : 'providerId';
     const q = query(
       collection(db, 'hiringRequests'),
       where(field, '==', userId),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -523,10 +525,10 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as HiringRequest);
       });
       callback(hiringRequests);
@@ -540,13 +542,13 @@ export class HiringService {
   subscribeToProposals(
     userId: string,
     userType: 'client' | 'provider',
-    callback: (proposals: Proposal[]) => void
+    callback: (proposals: Proposal[]) => void,
   ): () => void {
     const field = userType === 'provider' ? 'providerId' : 'clientId';
     const q = query(
       collection(db, 'proposals'),
       where(field, '==', userId),
-      orderBy('submittedAt', 'desc')
+      orderBy('submittedAt', 'desc'),
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -559,10 +561,10 @@ export class HiringService {
           timeline: {
             ...data.timeline,
             startDate: data.timeline.startDate?.toDate() || new Date(),
-            endDate: data.timeline.endDate?.toDate() || new Date()
+            endDate: data.timeline.endDate?.toDate() || new Date(),
           },
           submittedAt: data.submittedAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Proposal);
       });
       callback(proposals);
@@ -577,13 +579,13 @@ export class HiringService {
     try {
       const hiringRef = doc(db, 'hiringRequests', hiringRequestId);
       const proposals = await this.getHiringRequestProposals(hiringRequestId);
-      
+
       await updateDoc(hiringRef, {
         proposalCount: proposals.length,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
     } catch (error: any) {
-      console.error('Error updating proposal count:', error);
+      if (__DEV__) console.error('Error updating proposal count:', error);
     }
   }
 
@@ -595,19 +597,3 @@ export class HiringService {
     this.unsubscribeFunctions.clear();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

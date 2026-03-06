@@ -173,7 +173,8 @@ export function useBookingData({ userEmail, refreshKey }: UseBookingDataOptions)
             };
           }
         } catch (error) {
-          console.error(`Error loading rating for service ${service.serviceId}:`, error);
+          if (__DEV__)
+            console.error(`Error loading rating for service ${service.serviceId}:`, error);
         }
       }
 

@@ -408,9 +408,164 @@ async function getAnalytics() {
     };
 }
 
+/**
+ * Fetch admin dashboard stats: core counts, "new this month" figures, and recent activity.
+ */
+async function getDashboardStats() {
+    const pool = getPool();
+
+    // Core counts
+    const [userStats] = await pool.query(`
+        SELECT
+            COUNT(*) as total_users,
+            SUM(CASE WHEN u_disabled = 0 THEN 1 ELSE 0 END) as active_users
+        FROM user
+        WHERE u_email != 'admin@gmail.com'
+    `);
+
+    const [serviceStats] = await pool.query(`
+        SELECT
+            COUNT(*) as total_services,
+            SUM(CASE WHEN s_is_active = 1 THEN 1 ELSE 0 END) as active_services
+        FROM service
+    `);
+
+    const [bookingStats] = await pool.query(`
+        SELECT
+            COUNT(*) as total_bookings,
+            SUM(CASE WHEN b_status = 'pending' THEN 1 ELSE 0 END) as pending_bookings
+        FROM booking
+    `);
+
+    // "New this month" counts
+    const [newUsersThisMonth] = await pool.query(`
+        SELECT COUNT(*) as count FROM user
+        WHERE u_email != 'admin@gmail.com'
+        AND MONTH(u_created_at) = MONTH(CURRENT_DATE())
+        AND YEAR(u_created_at) = YEAR(CURRENT_DATE())
+    `);
+
+    const [newServicesThisMonth] = await pool.query(`
+        SELECT COUNT(*) as count FROM service
+        WHERE MONTH(s_created_at) = MONTH(CURRENT_DATE())
+        AND YEAR(s_created_at) = YEAR(CURRENT_DATE())
+    `);
+
+    const [completedBookingsThisMonth] = await pool.query(`
+        SELECT COUNT(*) as count FROM booking
+        WHERE b_status = 'completed'
+        AND MONTH(b_created_at) = MONTH(CURRENT_DATE())
+        AND YEAR(b_created_at) = YEAR(CURRENT_DATE())
+    `);
+
+    // Monthly bookings for last 12 months (for bar chart)
+    const [monthlyBookings] = await pool.query(`
+        SELECT
+            MONTH(b_created_at) as month,
+            YEAR(b_created_at) as year,
+            COUNT(*) as bookings
+        FROM booking
+        WHERE b_created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
+        GROUP BY YEAR(b_created_at), MONTH(b_created_at)
+        ORDER BY year, month
+    `);
+
+    const monthLabels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const bookingsMap = {};
+    monthlyBookings.forEach(row => {
+        bookingsMap[`${row.year}-${row.month}`] = parseInt(row.bookings) || 0;
+    });
+
+    const monthlyBookingsData = [];
+    for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        monthlyBookingsData.push({
+            month: monthLabels[date.getMonth()],
+            bookings: bookingsMap[`${year}-${month}`] || 0,
+        });
+    }
+
+    // Recent activity — latest signups, bookings, and provider applications
+    const [recentSignups] = await pool.query(`
+        SELECT u_fname, u_lname, u_created_at
+        FROM user
+        WHERE u_email != 'admin@gmail.com'
+        ORDER BY u_created_at DESC
+        LIMIT 3
+    `);
+
+    const [recentBookings] = await pool.query(`
+        SELECT b.b_status, b.b_created_at, u.u_fname, u.u_lname
+        FROM booking b
+        LEFT JOIN user u ON b.b_user_id = u.iduser
+        ORDER BY b.b_created_at DESC
+        LIMIT 3
+    `);
+
+    const [recentApplications] = await pool.query(`
+        SELECT u_fname, u_lname, u_provider_status,
+               COALESCE(u_provider_applied_at, u_created_at) as applied_at
+        FROM user
+        WHERE u_provider_status IN ('pending', 'approved', 'rejected')
+        ORDER BY COALESCE(u_provider_applied_at, u_created_at) DESC
+        LIMIT 3
+    `);
+
+    // Build recent activity list
+    const recentActivity = [];
+
+    for (const row of recentSignups) {
+        recentActivity.push({
+            type: 'signup',
+            description: `New user registered: ${row.u_fname} ${row.u_lname}`,
+            timestamp: row.u_created_at,
+        });
+    }
+
+    for (const row of recentBookings) {
+        const status = row.b_status.charAt(0).toUpperCase() + row.b_status.slice(1);
+        const name = row.u_fname ? `${row.u_fname} ${row.u_lname}` : 'Unknown';
+        recentActivity.push({
+            type: 'booking',
+            description: `Booking ${status} by ${name}`,
+            timestamp: row.b_created_at,
+        });
+    }
+
+    for (const row of recentApplications) {
+        const status = row.u_provider_status.charAt(0).toUpperCase() + row.u_provider_status.slice(1);
+        recentActivity.push({
+            type: 'application',
+            description: `Provider application (${status}): ${row.u_fname} ${row.u_lname}`,
+            timestamp: row.applied_at,
+        });
+    }
+
+    // Sort by timestamp descending
+    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return {
+        totalUsers: parseInt(userStats[0].total_users) || 0,
+        activeUsers: parseInt(userStats[0].active_users) || 0,
+        totalServices: parseInt(serviceStats[0].total_services) || 0,
+        activeServices: parseInt(serviceStats[0].active_services) || 0,
+        totalBookings: parseInt(bookingStats[0].total_bookings) || 0,
+        pendingBookings: parseInt(bookingStats[0].pending_bookings) || 0,
+        newUsersThisMonth: parseInt(newUsersThisMonth[0].count) || 0,
+        newServicesThisMonth: parseInt(newServicesThisMonth[0].count) || 0,
+        completedBookingsThisMonth: parseInt(completedBookingsThisMonth[0].count) || 0,
+        monthlyBookings: monthlyBookingsData,
+        recentActivity: recentActivity.slice(0, 8),
+    };
+}
+
 module.exports = {
     getProviderApplications,
     approveProviderApplication,
     rejectProviderApplication,
     getAnalytics,
+    getDashboardStats,
 };

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { SkeletonCard } from '../../components/ui';
 
 import { User } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
 import { colors, semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
@@ -22,56 +23,59 @@ interface DashboardStats {
   activeServices: number;
   totalBookings: number;
   pendingBookings: number;
+  newUsersThisMonth: number;
+  newServicesThisMonth: number;
+  completedBookingsThisMonth: number;
   monthlyBookings?: Array<{ month: string; bookings: number }>;
+  recentActivity?: Array<{
+    type: string;
+    description: string;
+    timestamp: string;
+  }>;
+}
+
+interface DashboardStatsResponse {
+  ok: boolean;
+  data: {
+    stats: DashboardStats;
+  };
+}
+
+function formatTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const date = new Date(timestamp);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, onLogout }) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
 
-  const [stats, setStats] = useState<DashboardStats>({
+  const { data: statsData, isLoading: loading } = useQuery<DashboardStatsResponse>({
+    queryKey: ['admin-dashboard-stats'],
+    queryFn: () => apiClient.get<DashboardStatsResponse>('/api/admin/dashboard-stats'),
+    enabled: !!user,
+  });
+
+  const stats: DashboardStats = statsData?.data?.stats ?? {
     totalUsers: 0,
     activeUsers: 0,
     totalServices: 0,
     activeServices: 0,
     totalBookings: 0,
     pendingBookings: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDashboardStats();
-  }, [user]);
-
-  const loadDashboardStats = async () => {
-    try {
-      setLoading(true);
-      // Load dashboard stats from API
-      const statsResp = await fetch(`${getApiBaseUrl()}/api/dashboard/stats`);
-      if (statsResp.ok) {
-        const statsData = await statsResp.json();
-        if (statsData.ok && statsData.stats) {
-          setStats(statsData.stats);
-        }
-      } else {
-        // Fallback to loading users individually
-        const usersResp = await fetch(`${getApiBaseUrl()}/api/users`);
-        if (usersResp.ok) {
-          const usersData = await usersResp.json();
-          if (usersData.ok && Array.isArray(usersData.rows)) {
-            const totalUsers = usersData.rows.length;
-            const activeUsers = usersData.rows.filter(
-              (u: any) => !u.u_disabled || Number(u.u_disabled) === 0,
-            ).length;
-            setStats((prev) => ({ ...prev, totalUsers, activeUsers }));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
+    newUsersThisMonth: 0,
+    newServicesThisMonth: 0,
+    completedBookingsThisMonth: 0,
   };
 
   const MetricCard = ({
@@ -212,7 +216,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
               </View>
 
               <View style={[styles.cardRightCol, isMobile && styles.cardRightColMobile]}>
-                {/* Activity Summary */}
+                {/* Activity Summary — real "new this month" counts */}
                 <View style={styles.progressCard}>
                   <Text style={styles.cardTitle}>Activity Summary</Text>
                   <View style={styles.activityList}>
@@ -220,27 +224,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                       <View style={[styles.activityDot, { backgroundColor: semantic.primary }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>New users this month</Text>
-                        <Text style={styles.activityValue}>
-                          +{Math.floor(stats.totalUsers * 0.1)}
-                        </Text>
+                        <Text style={styles.activityValue}>+{stats.newUsersThisMonth}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
                       <View style={[styles.activityDot, { backgroundColor: semantic.success }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Services added</Text>
-                        <Text style={styles.activityValue}>
-                          +{Math.floor(stats.totalServices * 0.05)}
-                        </Text>
+                        <Text style={styles.activityValue}>+{stats.newServicesThisMonth}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
                       <View style={[styles.activityDot, { backgroundColor: semantic.warning }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Bookings completed</Text>
-                        <Text style={styles.activityValue}>
-                          {stats.totalBookings - stats.pendingBookings}
-                        </Text>
+                        <Text style={styles.activityValue}>{stats.completedBookingsThisMonth}</Text>
                       </View>
                     </View>
                   </View>
@@ -258,18 +256,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   accessibilityRole="button"
                   accessibilityLabel="Manage users"
                 >
-                  <Feather name="user" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
+                  <Feather name="users" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
                   <Text style={styles.quickActionLabel}>Manage Users</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickActionBtn}
+                  onPress={() => onNavigate?.('services')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Manage services"
+                >
+                  <Feather name="grid" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
+                  <Text style={styles.quickActionLabel}>Manage Services</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickActionBtn}
+                  onPress={() => onNavigate?.('analytics')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View reports"
+                >
+                  <Feather
+                    name="bar-chart-2"
+                    size={isMobile ? 20 : 24}
+                    color={semantic.textPrimary}
+                  />
+                  <Text style={styles.quickActionLabel}>View Reports</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Recent Activity */}
+            {/* Recent Activity — real data from API */}
             <View style={styles.cardWide}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Recent Activity</Text>
                 <TouchableOpacity
                   style={styles.ctaButton}
+                  onPress={() => onNavigate?.('analytics')}
                   accessibilityRole="button"
                   accessibilityLabel="View all recent activity"
                 >
@@ -277,22 +298,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 </TouchableOpacity>
               </View>
               <View style={styles.activityTable}>
-                <View style={styles.activityRow}>
-                  <Text style={styles.activityCell}>New user registered</Text>
-                  <Text style={styles.activityCell}>2 hours ago</Text>
-                </View>
-                <View style={styles.activityRow}>
-                  <Text style={styles.activityCell}>Booking completed</Text>
-                  <Text style={styles.activityCell}>5 hours ago</Text>
-                </View>
-                <View style={styles.activityRow}>
-                  <Text style={styles.activityCell}>Service added</Text>
-                  <Text style={styles.activityCell}>1 day ago</Text>
-                </View>
-                <View style={styles.activityRow}>
-                  <Text style={styles.activityCell}>Payment received</Text>
-                  <Text style={styles.activityCell}>2 days ago</Text>
-                </View>
+                {stats.recentActivity && stats.recentActivity.length > 0 ? (
+                  stats.recentActivity.map((activity, index) => (
+                    <View key={index} style={styles.activityRow}>
+                      <View style={styles.activityRowLeft}>
+                        <Feather
+                          name={
+                            activity.type === 'signup'
+                              ? 'user-plus'
+                              : activity.type === 'booking'
+                                ? 'calendar'
+                                : 'briefcase'
+                          }
+                          size={isMobile ? 14 : 16}
+                          color={semantic.textSecondary}
+                          style={styles.activityRowIcon}
+                        />
+                        <Text style={styles.activityCell}>{activity.description}</Text>
+                      </View>
+                      <Text style={styles.activityCellTime}>
+                        {formatTimeAgo(activity.timestamp)}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.activityRow}>
+                    <Text style={styles.activityCell}>No recent activity</Text>
+                  </View>
+                )}
               </View>
             </View>
           </>
@@ -549,13 +582,29 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     activityRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
       paddingVertical: isMobile ? 10 : 12,
       borderBottomWidth: 1,
       borderBottomColor: semantic.background,
     },
+    activityRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: 8,
+    },
+    activityRowIcon: {
+      marginRight: isMobile ? 8 : 10,
+    },
     activityCell: {
       fontSize: isMobile ? 12 : 13,
       color: semantic.textSecondary,
+      flex: 1,
+    },
+    activityCellTime: {
+      fontSize: isMobile ? 11 : 12,
+      color: semantic.textSecondary,
+      opacity: 0.7,
     },
     cardRightCol: {
       width: isMobile ? '100%' : 200,

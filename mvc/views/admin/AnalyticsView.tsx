@@ -55,7 +55,7 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
         }
       }
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      if (__DEV__) console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
     }

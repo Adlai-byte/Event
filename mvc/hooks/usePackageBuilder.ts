@@ -28,11 +28,14 @@ export function usePackageBuilder({
   onClose,
 }: UsePackageBuilderOptions) {
   const [pkg, setPkg] = useState<ServicePackage>(createEmptyPackage(serviceId));
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
   const [editingCategoryIndex, setEditingCategoryIndex] = useState<number | null>(null);
-  const [editingItemIndex, setEditingItemIndex] = useState<{ catIdx: number; itemIdx: number } | null>(null);
+  const [editingItemIndex, setEditingItemIndex] = useState<{
+    catIdx: number;
+    itemIdx: number;
+  } | null>(null);
 
   // Reset or load package when modal opens
   useEffect(() => {
@@ -63,7 +66,7 @@ export function usePackageBuilder({
     }
 
     // Check if any category has items
-    const hasItems = pkg.categories.some(cat => cat.items.length > 0);
+    const hasItems = pkg.categories.some((cat) => cat.items.length > 0);
     if (!hasItems && pkg.priceType === 'calculated') {
       Alert.alert('Error', 'Please add at least one item to calculate the price');
       return;
@@ -118,7 +121,7 @@ export function usePackageBuilder({
         Alert.alert('Error', data.error || 'Failed to save package');
       }
     } catch (error) {
-      console.error('Save package error:', error);
+      if (__DEV__) console.error('Save package error:', error);
       Alert.alert('Error', 'Failed to save package. Please try again.');
     } finally {
       setSaving(false);
@@ -127,21 +130,19 @@ export function usePackageBuilder({
 
   const addCategory = () => {
     const newCategory = createEmptyCategory();
-    setPkg(prev => ({
+    setPkg((prev) => ({
       ...prev,
       categories: [...prev.categories, newCategory],
     }));
     // Expand the new category
-    setExpandedCategories(prev => new Set([...prev, pkg.categories.length]));
+    setExpandedCategories((prev) => new Set([...prev, pkg.categories.length]));
     setEditingCategoryIndex(pkg.categories.length);
   };
 
   const updateCategory = (index: number, updates: Partial<PackageCategory>) => {
-    setPkg(prev => ({
+    setPkg((prev) => ({
       ...prev,
-      categories: prev.categories.map((cat, i) =>
-        i === index ? { ...cat, ...updates } : cat
-      ),
+      categories: prev.categories.map((cat, i) => (i === index ? { ...cat, ...updates } : cat)),
     }));
   };
 
@@ -155,23 +156,23 @@ export function usePackageBuilder({
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setPkg(prev => ({
+            setPkg((prev) => ({
               ...prev,
               categories: prev.categories.filter((_, i) => i !== index),
             }));
-            setExpandedCategories(prev => {
+            setExpandedCategories((prev) => {
               const next = new Set(prev);
               next.delete(index);
               return next;
             });
           },
         },
-      ]
+      ],
     );
   };
 
   const toggleCategoryExpanded = (index: number) => {
-    setExpandedCategories(prev => {
+    setExpandedCategories((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -184,12 +185,10 @@ export function usePackageBuilder({
 
   const addItem = (categoryIndex: number) => {
     const newItem = createEmptyItem();
-    setPkg(prev => ({
+    setPkg((prev) => ({
       ...prev,
       categories: prev.categories.map((cat, i) =>
-        i === categoryIndex
-          ? { ...cat, items: [...cat.items, newItem] }
-          : cat
+        i === categoryIndex ? { ...cat, items: [...cat.items, newItem] } : cat,
       ),
     }));
     setEditingItemIndex({
@@ -198,39 +197,35 @@ export function usePackageBuilder({
     });
   };
 
-  const updateItem = (
-    categoryIndex: number,
-    itemIndex: number,
-    updates: Partial<PackageItem>
-  ) => {
-    setPkg(prev => ({
+  const updateItem = (categoryIndex: number, itemIndex: number, updates: Partial<PackageItem>) => {
+    setPkg((prev) => ({
       ...prev,
       categories: prev.categories.map((cat, catIdx) =>
         catIdx === categoryIndex
           ? {
               ...cat,
               items: cat.items.map((item, itemIdx) =>
-                itemIdx === itemIndex ? { ...item, ...updates } : item
+                itemIdx === itemIndex ? { ...item, ...updates } : item,
               ),
             }
-          : cat
+          : cat,
       ),
     }));
   };
 
   const deleteItem = (categoryIndex: number, itemIndex: number) => {
-    setPkg(prev => ({
+    setPkg((prev) => ({
       ...prev,
       categories: prev.categories.map((cat, catIdx) =>
         catIdx === categoryIndex
           ? { ...cat, items: cat.items.filter((_, i) => i !== itemIndex) }
-          : cat
+          : cat,
       ),
     }));
   };
 
   const updatePackageField = (updates: Partial<ServicePackage>) => {
-    setPkg(prev => ({ ...prev, ...updates }));
+    setPkg((prev) => ({ ...prev, ...updates }));
   };
 
   const calculatedPrice = calculatePackagePrice(pkg);

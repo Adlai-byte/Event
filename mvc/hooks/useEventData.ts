@@ -20,6 +20,7 @@ export interface EventItem {
   status: EventStatus;
   createdAt: string;
   updatedAt: string;
+  userRole?: 'owner' | 'editor' | 'viewer';
 }
 
 export interface ChecklistItem {
@@ -69,6 +70,35 @@ export interface EventBudget {
   remaining: number;
   percentUsed: number;
   byCategory: Array<{ category: string; amount: number }>;
+}
+
+export interface EventReminder {
+  id: number;
+  eventId: number;
+  type: 'email' | 'push' | 'both';
+  remindAt: string;
+  message: string | null;
+  isSent: boolean;
+  createdAt: string;
+}
+
+export type CollaboratorRole = 'viewer' | 'editor';
+export type CollaboratorStatus = 'pending' | 'accepted' | 'declined';
+
+export interface EventCollaborator {
+  id: number;
+  eventId: number;
+  userId: number;
+  role: CollaboratorRole;
+  status: CollaboratorStatus;
+  invitedBy: number;
+  createdAt: string;
+  userName: string | null;
+  userEmail: string | null;
+}
+
+export interface SharedEventItem extends EventItem {
+  collaboratorRole: CollaboratorRole;
 }
 
 // ──────────────────────────────────────────────
@@ -338,5 +368,164 @@ export function useDeleteTimelineEntryMutation() {
     onSuccess: (_d, variables) => {
       qc.invalidateQueries({ queryKey: ['event-timeline', variables.eventId] });
     },
+  });
+}
+
+// ──────────────────────────────────────────────
+// Clone hook
+// ──────────────────────────────────────────────
+
+export function useCloneEventMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, name }: { eventId: number; name?: string }) =>
+      apiClient.post<{ ok: boolean; data: EventItem }>(`/api/events/${eventId}/clone`, { name }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user-events'] });
+    },
+  });
+}
+
+// ──────────────────────────────────────────────
+// Reminder hooks
+// ──────────────────────────────────────────────
+
+export function useEventReminders(eventId: number | null) {
+  return useQuery({
+    queryKey: ['event-reminders', eventId],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; data: { rows: EventReminder[] } }>(
+        `/api/events/${eventId}/reminders`,
+      );
+      return data?.data?.rows ?? [];
+    },
+    enabled: !!eventId,
+  });
+}
+
+export function useAddReminderMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      ...data
+    }: {
+      eventId: number;
+      remindAt: string;
+      type?: 'email' | 'push' | 'both';
+      message?: string;
+    }) => apiClient.post(`/api/events/${eventId}/reminders`, data),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-reminders', variables.eventId] });
+    },
+  });
+}
+
+export function useUpdateReminderMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      reminderId,
+      ...data
+    }: {
+      eventId: number;
+      reminderId: number;
+      remindAt?: string;
+      type?: 'email' | 'push' | 'both';
+      message?: string;
+    }) => apiClient.put(`/api/events/${eventId}/reminders/${reminderId}`, data),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-reminders', variables.eventId] });
+    },
+  });
+}
+
+export function useDeleteReminderMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, reminderId }: { eventId: number; reminderId: number }) =>
+      apiClient.delete(`/api/events/${eventId}/reminders/${reminderId}`),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-reminders', variables.eventId] });
+    },
+  });
+}
+
+// ──────────────────────────────────────────────
+// Collaborator hooks
+// ──────────────────────────────────────────────
+
+export function useEventCollaborators(eventId: number | null) {
+  return useQuery({
+    queryKey: ['event-collaborators', eventId],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; data: { rows: EventCollaborator[] } }>(
+        `/api/events/${eventId}/collaborators`,
+      );
+      return data?.data?.rows ?? [];
+    },
+    enabled: !!eventId,
+  });
+}
+
+export function useInviteCollaboratorMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      email,
+      role,
+    }: {
+      eventId: number;
+      email: string;
+      role?: CollaboratorRole;
+    }) => apiClient.post(`/api/events/${eventId}/collaborators`, { email, role }),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-collaborators', variables.eventId] });
+    },
+  });
+}
+
+export function useUpdateCollaboratorMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      collabId,
+      status,
+    }: {
+      eventId: number;
+      collabId: number;
+      status: 'accepted' | 'declined';
+    }) => apiClient.put(`/api/events/${eventId}/collaborators/${collabId}`, { status }),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-collaborators', variables.eventId] });
+      qc.invalidateQueries({ queryKey: ['shared-events'] });
+    },
+  });
+}
+
+export function useRemoveCollaboratorMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, collabId }: { eventId: number; collabId: number }) =>
+      apiClient.delete(`/api/events/${eventId}/collaborators/${collabId}`),
+    onSuccess: (_d, variables) => {
+      qc.invalidateQueries({ queryKey: ['event-collaborators', variables.eventId] });
+    },
+  });
+}
+
+export function useSharedEvents(email?: string) {
+  return useQuery({
+    queryKey: ['shared-events', email],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; data: { rows: SharedEventItem[] } }>(
+        '/api/events/shared',
+      );
+      return data?.data?.rows ?? [];
+    },
+    enabled: !!email,
   });
 }

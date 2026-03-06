@@ -172,7 +172,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
         setSelectedConversation(null);
       }
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      if (__DEV__) console.error('Error loading conversations:', error);
     }
     setLoading(false);
   };
@@ -186,7 +186,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      if (__DEV__) console.error('Error loading messages:', error);
     }
   };
 
@@ -201,7 +201,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
         setUnreadCount(data.count || 0);
       }
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      if (__DEV__) console.error('Error loading unread count:', error);
     }
   };
 
@@ -232,7 +232,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
       loadMessages(selectedConversation.id);
     } else {
       // Handle error
-      console.error('Failed to send message:', result.error);
+      if (__DEV__) console.error('Failed to send message:', result.error);
       Alert.alert('Error', result.error || 'Failed to send message');
     }
   };

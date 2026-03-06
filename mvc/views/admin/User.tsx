@@ -83,7 +83,7 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
           setRows(filtered);
         },
         (err) => {
-          console.error('Failed to subscribe to users:', err);
+          if (__DEV__) console.error('Failed to subscribe to users:', err);
         },
       );
       return () => unsubscribe();

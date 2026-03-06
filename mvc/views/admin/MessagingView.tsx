@@ -132,7 +132,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
     if (result.success) {
       setMessageText('');
     } else {
-      console.error('Failed to send message:', result.error);
+      if (__DEV__) console.error('Failed to send message:', result.error);
     }
   };
 

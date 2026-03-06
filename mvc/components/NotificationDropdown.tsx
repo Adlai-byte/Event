@@ -83,7 +83,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       );
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      if (__DEV__) console.error('Error marking notification as read:', error);
     }
   };
 

@@ -58,17 +58,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userEmail = authState.user!.email || '';
           if (userId && userEmail) {
             PushNotificationService.registerForPushNotificationsAsync(userId, userEmail)
-              .then((token) => {
-                if (token) {
-                  console.log('Push notifications registered successfully');
-                }
+              .then((_token) => {
+                // Token registered successfully
               })
               .catch((error) => {
-                console.error('Failed to register push notifications (non-critical):', error);
+                if (__DEV__)
+                  console.error('Failed to register push notifications (non-critical):', error);
               });
           }
         } catch (error) {
-          console.error('Error in push notification registration (non-critical):', error);
+          if (__DEV__)
+            console.error('Error in push notification registration (non-critical):', error);
         }
       }, delayMs);
       return () => clearTimeout(timeout);
@@ -81,13 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (authState.isAuthenticated && authState.user?.role && Platform.OS !== 'web') {
       try {
         const subscription = PushNotificationService.setupNotificationListeners(
-          (notification) => {
-            console.log('Notification received in foreground:', notification);
+          (_notification) => {
+            // Notification received — no-op, handled by notification views
           },
-          (response) => {
-            // Notification tap navigation is handled by individual route files
-            // or a dedicated notification handler — not here
-            console.log('Notification tapped:', response.notification.request.content.data);
+          (_response) => {
+            // Notification tap navigation handled by individual route files
           },
         );
         return () => {
@@ -98,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         };
       } catch (error) {
-        console.error('Failed to setup notification listeners (non-critical):', error);
+        if (__DEV__) console.error('Failed to setup notification listeners (non-critical):', error);
       }
     }
     return undefined;
@@ -165,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const success = await authController.logout();
       return success;
     } catch (error) {
-      console.error('Logout error:', error);
+      if (__DEV__) console.error('Logout error:', error);
       return false;
     }
   }, [authController]);

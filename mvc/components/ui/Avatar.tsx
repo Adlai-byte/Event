@@ -2,8 +2,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors } from '../../theme';
-import { typography } from '../../theme';
-import { borderRadius } from '../../theme';
 
 interface AvatarProps {
   uri?: string | null;
@@ -13,7 +11,12 @@ interface AvatarProps {
 
 export function Avatar({ uri, name, size = 40 }: AvatarProps) {
   const initials = name
-    ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    ? name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
     : '?';
 
   if (uri) {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SkeletonListItem } from '../../components/ui';
-import { CreateEventModal } from '../../components/event';
+import { CreateEventModal, InviteCollaboratorModal } from '../../components/event';
 import {
   useEvent,
   useUpdateEventMutation,
@@ -27,15 +27,24 @@ import {
   useAddTimelineEntryMutation,
   useUpdateTimelineEntryMutation,
   useDeleteTimelineEntryMutation,
+  useCloneEventMutation,
+  useEventReminders,
+  useAddReminderMutation,
+  useDeleteReminderMutation,
+  useEventCollaborators,
+  useRemoveCollaboratorMutation,
   type EventStatus,
   type EventBooking,
   type ChecklistItem,
   type TimelineEntry,
+  type EventReminder,
+  type EventCollaborator,
 } from '../../hooks/useEventData';
 import { apiClient } from '../../services/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { createStyles } from './EventDetailView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { DateTimeInput } from '../../components/ui/DateTimeInput';
 import { colors, semantic } from '../../theme';
 
 type TabKey = 'overview' | 'vendors' | 'timeline' | 'checklist' | 'budget';
@@ -79,13 +88,19 @@ const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
 
 export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userEmail, onBack }) => {
   const { isMobile, screenWidth } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth);
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showTimelineForm, setShowTimelineForm] = useState(false);
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
+  // Reminder form state
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderType, setReminderType] = useState<'push' | 'email' | 'both'>('push');
+  const [reminderMessage, setReminderMessage] = useState('');
 
   // Timeline form state
   const [tlStartTime, setTlStartTime] = useState('');
@@ -101,6 +116,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
   const { data: budget } = useEventBudget(activeTab === 'budget' ? eventId : null);
   const { data: checklist } = useEventChecklist(activeTab === 'checklist' ? eventId : null);
   const { data: timeline } = useEventTimeline(activeTab === 'timeline' ? eventId : null);
+  const { data: reminders } = useEventReminders(activeTab === 'overview' ? eventId : null);
+  const { data: collaborators } = useEventCollaborators(activeTab === 'overview' ? eventId : null);
 
   // Unlinked bookings for link modal
   const { data: allBookings } = useQuery({
@@ -127,6 +144,10 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
   const addTimelineMutation = useAddTimelineEntryMutation();
   const _updateTimelineMutation = useUpdateTimelineEntryMutation();
   const deleteTimelineMutation = useDeleteTimelineEntryMutation();
+  const cloneEventMutation = useCloneEventMutation();
+  const addReminderMutation = useAddReminderMutation();
+  const deleteReminderMutation = useDeleteReminderMutation();
+  const removeCollaboratorMutation = useRemoveCollaboratorMutation();
 
   const handleEditSubmit = useCallback(
     async (data: Record<string, unknown>) => {
@@ -205,6 +226,50 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
     },
     [eventId, deleteTimelineMutation],
   );
+
+  const handleCloneEvent = useCallback(async () => {
+    try {
+      const result = await cloneEventMutation.mutateAsync({ eventId });
+      const cloned = (result as { data?: { id?: number } })?.data;
+      if (cloned?.id) {
+        onBack();
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to clone event.');
+    }
+  }, [eventId, cloneEventMutation, onBack]);
+
+  const handleAddReminder = useCallback(() => {
+    if (!reminderDate.trim()) return;
+    addReminderMutation.mutate({
+      eventId,
+      remindAt: reminderDate.trim(),
+      type: reminderType,
+      message: reminderMessage.trim() || undefined,
+    });
+    setReminderDate('');
+    setReminderMessage('');
+  }, [eventId, reminderDate, reminderType, reminderMessage, addReminderMutation]);
+
+  const handleDeleteReminder = useCallback(
+    (reminderId: number) => {
+      deleteReminderMutation.mutate({ eventId, reminderId });
+    },
+    [eventId, deleteReminderMutation],
+  );
+
+  const handleRemoveCollaborator = useCallback(
+    (collabId: number) => {
+      removeCollaboratorMutation.mutate({ eventId, collabId });
+    },
+    [eventId, removeCollaboratorMutation],
+  );
+
+  // Determine user's role for this event (returned by the API)
+  const userRole = event?.userRole ?? 'viewer';
+
+  const canEdit = userRole === 'owner' || userRole === 'editor';
+  const isOwner = userRole === 'owner';
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -301,29 +366,209 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => setShowEditModal(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Edit event"
-      >
-        <Feather name="edit-2" size={16} color={colors.neutral[0]} />
-        <Text style={styles.editButtonText}>Edit Event</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setShowEditModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit event"
+          >
+            <Feather name="edit-2" size={16} color={colors.neutral[0]} />
+            <Text style={styles.editButtonText}>Edit Event</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.editButton, { backgroundColor: colors.primary[100] }]}
+          onPress={handleCloneEvent}
+          disabled={cloneEventMutation.isPending}
+          accessibilityRole="button"
+          accessibilityLabel="Clone event as template"
+        >
+          <Feather name="copy" size={16} color={colors.primary[600]} />
+          <Text style={[styles.editButtonText, { color: colors.primary[600] }]}>
+            {cloneEventMutation.isPending ? 'Cloning...' : 'Clone'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Reminders Section */}
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.cardTitle}>Reminders</Text>
+        {reminders && reminders.length > 0 ? (
+          reminders.map((r: EventReminder) => (
+            <View key={r.id} style={styles.checklistItem}>
+              <Feather
+                name="bell"
+                size={16}
+                color={r.isSent ? colors.neutral[400] : colors.primary[500]}
+              />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.infoText}>{new Date(r.remindAt).toLocaleString()}</Text>
+                {r.message && <Text style={styles.infoLabel}>{r.message}</Text>}
+              </View>
+              <View style={[styles.categoryTag, { backgroundColor: colors.primary[50] }]}>
+                <Text style={[styles.categoryTagText, { color: colors.primary[600] }]}>
+                  {r.type}
+                </Text>
+              </View>
+              {isOwner && !r.isSent && (
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => handleDeleteReminder(r.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete reminder`}
+                >
+                  <Feather name="trash-2" size={14} color={colors.error[500]} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))
+        ) : (
+          <Text style={styles.infoLabel}>No reminders set</Text>
+        )}
+        {isOwner && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.formLabel}>Date & Time</Text>
+            <DateTimeInput
+              style={styles.formInput}
+              value={reminderDate}
+              onChange={setReminderDate}
+              placeholder="2026-03-10 09:00"
+              placeholderTextColor={semantic.textMuted}
+              accessibilityLabel="Reminder date and time"
+              type="datetime"
+            />
+            <Text style={styles.formLabel}>Type</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              {(['push', 'email', 'both'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[
+                    styles.categoryTag,
+                    reminderType === t && { backgroundColor: colors.primary[500] },
+                  ]}
+                  onPress={() => setReminderType(t)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reminder type ${t}`}
+                >
+                  <Text
+                    style={[
+                      styles.categoryTagText,
+                      reminderType === t && { color: colors.neutral[0] },
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.formLabel}>Message (optional)</Text>
+            <TextInput
+              style={styles.formInput}
+              value={reminderMessage}
+              onChangeText={setReminderMessage}
+              placeholder="Optional reminder message"
+              placeholderTextColor={semantic.textMuted}
+              accessibilityLabel="Reminder message"
+            />
+            <TouchableOpacity
+              style={styles.formButton}
+              onPress={handleAddReminder}
+              accessibilityRole="button"
+              accessibilityLabel="Add reminder"
+            >
+              <Text style={styles.formButtonText}>Add Reminder</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Collaborators Section */}
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 12,
+          }}
+        >
+          <Text style={styles.cardTitle}>Collaborators</Text>
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => setShowInviteModal(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Invite collaborator"
+            >
+              <Feather name="user-plus" size={16} color={colors.primary[500]} />
+              <Text style={styles.linkButtonText}>Invite</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {collaborators && collaborators.length > 0 ? (
+          collaborators.map((c: EventCollaborator) => (
+            <View key={c.id} style={styles.checklistItem}>
+              <Feather name="user" size={16} color={semantic.textSecondary} />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.infoText}>{c.userName || c.userEmail}</Text>
+                {c.userName && <Text style={styles.infoLabel}>{c.userEmail}</Text>}
+              </View>
+              <View
+                style={[
+                  styles.categoryTag,
+                  {
+                    backgroundColor: c.role === 'editor' ? colors.primary[50] : colors.neutral[100],
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.categoryTagText,
+                    { color: c.role === 'editor' ? colors.primary[600] : colors.neutral[600] },
+                  ]}
+                >
+                  {c.role}
+                </Text>
+              </View>
+              {c.status === 'pending' && (
+                <View style={[styles.dueDateBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Text style={[styles.dueDateText, { color: '#D97706' }]}>Pending</Text>
+                </View>
+              )}
+              {isOwner && (
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => handleRemoveCollaborator(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${c.userName || c.userEmail}`}
+                >
+                  <Feather name="x" size={14} color={colors.error[500]} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))
+        ) : (
+          <Text style={styles.infoLabel}>No collaborators yet</Text>
+        )}
+      </View>
     </ScrollView>
   );
 
   const renderVendors = () => (
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => setShowLinkModal(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Link a booking"
-      >
-        <Feather name="plus" size={18} color={colors.primary[500]} />
-        <Text style={styles.linkButtonText}>Link Booking</Text>
-      </TouchableOpacity>
+      {isOwner && (
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => setShowLinkModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Link a booking"
+        >
+          <Feather name="plus" size={18} color={colors.primary[500]} />
+          <Text style={styles.linkButtonText}>Link Booking</Text>
+        </TouchableOpacity>
+      )}
 
       {!bookings || bookings.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -339,14 +584,16 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
               {b.serviceCategory && <Text style={styles.vendorCategory}>{b.serviceCategory}</Text>}
               <Text style={styles.vendorCost}>{formatCurrency(b.totalCost)}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.unlinkButton}
-              onPress={() => handleUnlinkBooking(b.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`Unlink ${b.serviceName || b.eventName}`}
-            >
-              <Feather name="x" size={16} color={colors.error[500]} />
-            </TouchableOpacity>
+            {isOwner && (
+              <TouchableOpacity
+                style={styles.unlinkButton}
+                onPress={() => handleUnlinkBooking(b.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Unlink ${b.serviceName || b.eventName}`}
+              >
+                <Feather name="x" size={16} color={colors.error[500]} />
+              </TouchableOpacity>
+            )}
           </View>
         ))
       )}
@@ -355,19 +602,21 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
 
   const renderTimeline = () => (
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => setShowTimelineForm(!showTimelineForm)}
-        accessibilityRole="button"
-        accessibilityLabel="Add timeline entry"
-      >
-        <Feather
-          name={showTimelineForm ? 'chevron-up' : 'plus'}
-          size={18}
-          color={colors.primary[500]}
-        />
-        <Text style={styles.linkButtonText}>{showTimelineForm ? 'Cancel' : 'Add Entry'}</Text>
-      </TouchableOpacity>
+      {canEdit && (
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => setShowTimelineForm(!showTimelineForm)}
+          accessibilityRole="button"
+          accessibilityLabel="Add timeline entry"
+        >
+          <Feather
+            name={showTimelineForm ? 'chevron-up' : 'plus'}
+            size={18}
+            color={colors.primary[500]}
+          />
+          <Text style={styles.linkButtonText}>{showTimelineForm ? 'Cancel' : 'Add Entry'}</Text>
+        </TouchableOpacity>
+      )}
 
       {showTimelineForm && (
         <View style={styles.card}>
@@ -451,16 +700,18 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
                   Vendor: {entry.bookingName}
                 </Text>
               )}
-              <View style={styles.timelineActions}>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => handleDeleteTimelineEntry(entry.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${entry.title}`}
-                >
-                  <Feather name="trash-2" size={14} color={colors.error[500]} />
-                </TouchableOpacity>
-              </View>
+              {canEdit && (
+                <View style={styles.timelineActions}>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => handleDeleteTimelineEntry(entry.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${entry.title}`}
+                  >
+                    <Feather name="trash-2" size={14} color={colors.error[500]} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         ))
@@ -493,7 +744,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
                 <View key={item.id} style={styles.checklistItem}>
                   <TouchableOpacity
                     style={[styles.checkbox, item.isCompleted && styles.checkboxChecked]}
-                    onPress={() => handleToggleChecklist(item)}
+                    onPress={() => canEdit && handleToggleChecklist(item)}
+                    disabled={!canEdit}
                     accessibilityRole="checkbox"
                     accessibilityLabel={`${item.title} ${item.isCompleted ? 'completed' : 'pending'}`}
                   >
@@ -521,14 +773,16 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
                       </Text>
                     </View>
                   )}
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => handleDeleteChecklistItem(item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete ${item.title}`}
-                  >
-                    <Feather name="trash-2" size={14} color={colors.error[500]} />
-                  </TouchableOpacity>
+                  {canEdit && (
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={() => handleDeleteChecklistItem(item.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${item.title}`}
+                    >
+                      <Feather name="trash-2" size={14} color={colors.error[500]} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })
@@ -538,25 +792,27 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
             </View>
           )}
 
-          <View style={styles.addItemRow}>
-            <TextInput
-              style={styles.addItemInput}
-              value={newChecklistTitle}
-              onChangeText={setNewChecklistTitle}
-              placeholder="Add new item..."
-              placeholderTextColor={semantic.textMuted}
-              accessibilityLabel="New checklist item"
-              onSubmitEditing={handleAddChecklistItem}
-            />
-            <TouchableOpacity
-              style={styles.addItemButton}
-              onPress={handleAddChecklistItem}
-              accessibilityRole="button"
-              accessibilityLabel="Add checklist item"
-            >
-              <Feather name="plus" size={18} color={colors.neutral[0]} />
-            </TouchableOpacity>
-          </View>
+          {canEdit && (
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={styles.addItemInput}
+                value={newChecklistTitle}
+                onChangeText={setNewChecklistTitle}
+                placeholder="Add new item..."
+                placeholderTextColor={semantic.textMuted}
+                accessibilityLabel="New checklist item"
+                onSubmitEditing={handleAddChecklistItem}
+              />
+              <TouchableOpacity
+                style={styles.addItemButton}
+                onPress={handleAddChecklistItem}
+                accessibilityRole="button"
+                accessibilityLabel="Add checklist item"
+              >
+                <Feather name="plus" size={18} color={colors.neutral[0]} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
     );
@@ -692,6 +948,13 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
         onClose={() => setShowEditModal(false)}
       />
 
+      {/* Invite Collaborator Modal */}
+      <InviteCollaboratorModal
+        visible={showInviteModal}
+        eventId={eventId}
+        onClose={() => setShowInviteModal(false)}
+      />
+
       {/* Link Booking Modal */}
       <Modal
         visible={showLinkModal}
@@ -717,16 +980,16 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId, userE
               renderItem={({ item }: { item: UnlinkedBooking }) => (
                 <TouchableOpacity
                   style={styles.linkModalItem}
-                  onPress={() => handleLinkBooking(item.idbooking || item.id)}
+                  onPress={() => handleLinkBooking((item.idbooking || item.id) as number)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Link ${item.b_event_name || item.eventName}`}
+                  accessibilityLabel={`Link ${item.b_event_name || item.eventName || ''}`}
                 >
                   <View>
                     <Text style={styles.linkModalItemName}>
                       {item.b_event_name || item.eventName}
                     </Text>
                     <Text style={styles.linkModalItemDate}>
-                      {formatDate(item.b_event_date || item.eventDate)}
+                      {formatDate((item.b_event_date || item.eventDate) ?? '')}
                     </Text>
                   </View>
                   <Feather name="plus-circle" size={20} color={colors.primary[500]} />

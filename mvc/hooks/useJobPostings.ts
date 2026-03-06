@@ -111,7 +111,7 @@ export function useJobPostings(user?: User) {
       }
     },
     onError: (error: any) => {
-      console.error('Failed to create job posting:', error);
+      if (__DEV__) console.error('Failed to create job posting:', error);
 
       let errorMsg =
         'Failed to create job posting. Please check your internet connection and try again.';
@@ -149,7 +149,7 @@ export function useJobPostings(user?: User) {
       }
     },
     onError: (error) => {
-      console.error('Failed to update job posting:', error);
+      if (__DEV__) console.error('Failed to update job posting:', error);
       Alert.alert('Error', 'Failed to update job posting');
     },
   });
@@ -168,7 +168,7 @@ export function useJobPostings(user?: User) {
       }
     },
     onError: (error) => {
-      console.error('Failed to delete job posting:', error);
+      if (__DEV__) console.error('Failed to delete job posting:', error);
       Alert.alert('Error', 'Failed to delete job posting');
     },
   });
@@ -189,7 +189,7 @@ export function useJobPostings(user?: User) {
       }
     },
     onError: (error) => {
-      console.error('Failed to update status:', error);
+      if (__DEV__) console.error('Failed to update status:', error);
       Alert.alert('Error', 'Failed to update status');
     },
   });

@@ -194,7 +194,7 @@ export const ServiceShowcase: React.FC<ServiceShowcaseProps> = ({
       {/* Entertainment Section */}
       <View style={styles.entertainmentSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Entertainment & News</Text>
+          <Text style={styles.sectionTitle}>Featured Services</Text>
         </View>
         {entertainmentServices.length > 0 ? (
           <View style={styles.articlesGrid}>

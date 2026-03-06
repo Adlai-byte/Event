@@ -37,7 +37,9 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
 
             const sendMessage = (data) => {
               const message = JSON.stringify(data);
-              ${isWeb ? `
+              ${
+                isWeb
+                  ? `
                 // For web, use window.postMessage to communicate with parent
                 if (window.parent && window.parent !== window) {
                   window.parent.postMessage(message, '*');
@@ -45,11 +47,13 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
                   // Fallback for same-origin iframe
                   window.postMessage(message, '*');
                 }
-              ` : `
+              `
+                  : `
                 if (window.ReactNativeWebView) {
                   window.ReactNativeWebView.postMessage(message);
                 }
-              `}
+              `
+              }
             };
 
             const updateLocation = async (lat, lng) => {
@@ -85,7 +89,6 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
                   address = parts.join(', ');
                 }
 
-                console.log('WebView reverse geocoding result:', { lat, lng, address });
 
                 if (address && address.trim()) {
                   sendMessage({
@@ -149,7 +152,7 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
                       });
                     }
                   } catch (retryError) {
-                    console.error('Retry reverse geocoding error:', retryError);
+                    if (__DEV__) console.error('Retry reverse geocoding error:', retryError);
                     sendMessage({
                       type: 'location-selected',
                       lat: lat,
@@ -159,7 +162,7 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
                   }
                 }
               } catch (error) {
-                console.error('WebView reverse geocoding error:', error);
+                if (__DEV__) console.error('WebView reverse geocoding error:', error);
                 // Don't send coordinates - let handleMapMessage handle it
                 sendMessage({
                   type: 'location-selected',
@@ -185,12 +188,16 @@ export function generateMapHTML(initialLat: number, initialLng: number): string 
             // Initial location update
             updateLocation(${initialLat}, ${initialLng});
 
-            ${isWeb ? `
+            ${
+              isWeb
+                ? `
             // Listen for messages from parent (if needed)
             window.addEventListener('message', function(event) {
               // Handle any messages from parent if needed
             });
-            ` : ''}
+            `
+                : ''
+            }
           </script>
         </body>
       </html>

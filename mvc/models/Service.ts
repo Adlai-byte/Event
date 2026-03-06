@@ -27,7 +27,7 @@ export enum ServiceCategory {
   TRANSPORTATION = 'transportation',
   ENTERTAINMENT = 'entertainment',
   PLANNING = 'planning',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum PricingType {
@@ -35,7 +35,7 @@ export enum PricingType {
   HOURLY = 'hourly',
   PER_PERSON = 'per_person',
   PACKAGE = 'package',
-  CUSTOM = 'custom'
+  CUSTOM = 'custom',
 }
 
 export interface ServiceLocation {
@@ -108,7 +108,7 @@ export class ServiceModel {
       type: 'physical',
       city: '',
       state: '',
-      zipCode: ''
+      zipCode: '',
     },
     public availability: ServiceAvailability = {
       monday: [],
@@ -124,30 +124,32 @@ export class ServiceModel {
         freeCancellationHours: 24,
         partialRefundHours: 12,
         noRefundHours: 2,
-        refundPercentage: 50
-      }
+        refundPercentage: 50,
+      },
     },
     public images: string[] = [],
     public rating: number = 0,
     public reviewCount: number = 0,
     public isActive: boolean = true,
     public createdAt: Date = new Date(),
-    public updatedAt: Date = new Date()
+    public updatedAt: Date = new Date(),
   ) {}
 
   // Calculate price based on pricing type and parameters
-  calculatePrice(attendees?: number, duration?: number, date?: Date): number {
+  calculatePrice(attendees?: number, duration?: number, _date?: Date): number {
     let price = this.basePrice;
 
     switch (this.pricingType) {
-      case PricingType.HOURLY:
+      case PricingType.HOURLY: {
         const hours = duration ? duration / 60 : this.duration / 60;
         price = this.basePrice * hours;
         break;
-      case PricingType.PER_PERSON:
+      }
+      case PricingType.PER_PERSON: {
         const people = attendees || 1;
         price = this.basePrice * people;
         break;
+      }
       case PricingType.PACKAGE:
         // Package pricing is fixed
         break;
@@ -163,7 +165,7 @@ export class ServiceModel {
   isAvailableAtTime(date: Date, startTime: string, endTime: string): boolean {
     const dayOfWeek = this.getDayOfWeek(date);
     const daySlots = this.availability[dayOfWeek];
-    
+
     if (!Array.isArray(daySlots) || daySlots.length === 0) return false;
 
     // Check if date is blacked out
@@ -171,10 +173,8 @@ export class ServiceModel {
     if (this.availability.blackoutDates.includes(dateStr)) return false;
 
     // Check if time slot is available
-    return (daySlots as TimeSlot[]).some(slot =>
-      slot.isAvailable &&
-      slot.startTime <= startTime &&
-      slot.endTime >= endTime
+    return (daySlots as TimeSlot[]).some(
+      (slot) => slot.isAvailable && slot.startTime <= startTime && slot.endTime >= endTime,
     );
   }
 
@@ -203,23 +203,7 @@ export class ServiceModel {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

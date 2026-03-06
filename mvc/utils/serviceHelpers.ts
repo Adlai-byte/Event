@@ -20,6 +20,11 @@ export const getCategoryLabel = (category: string): string => {
     venue: 'Venues',
     music: 'Music',
     catering: 'Catering',
+    decoration: 'Decoration',
+    planning: 'Planning',
+    entertainment: 'Entertainment',
+    transport: 'Transport',
+    other: 'Other',
   };
   return labels[category?.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1);
 };

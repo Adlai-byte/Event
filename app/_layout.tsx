@@ -7,6 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../mvc/services/queryClient';
 import { setupReactNativeFocusManager } from '../mvc/services/queryFocusManager';
 import { AuthProvider, useAuth } from '../mvc/contexts/AuthContext';
+import { ToastProvider } from '../mvc/contexts/ToastContext';
 import { useSocket } from '../mvc/hooks/useSocket';
 
 class ErrorBoundary extends React.Component<
@@ -61,9 +62,11 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <SocketManager />
-          <StatusBar style="auto" />
-          <Slot />
+          <ToastProvider>
+            <SocketManager />
+            <StatusBar style="auto" />
+            <Slot />
+          </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

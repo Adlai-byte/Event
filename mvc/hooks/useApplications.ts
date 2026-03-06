@@ -21,16 +21,12 @@ export function useApplications(user?: User, activeTab?: string) {
   const queryClient = useQueryClient();
 
   // --- React Query: load applications ---
-  const {
-    data: applications = [],
-    refetch,
-  } = useQuery<JobApplication[]>({
+  const { data: applications = [], refetch: _refetch } = useQuery<JobApplication[]>({
     queryKey: ['provider-applications', user?.email],
     queryFn: async () => {
-      const data = await apiClient.get<ApplicationsResponse>(
-        '/api/provider/job-applications',
-        { providerEmail: user!.email },
-      );
+      const data = await apiClient.get<ApplicationsResponse>('/api/provider/job-applications', {
+        providerEmail: user!.email,
+      });
       if (!data.ok) {
         throw new Error(data.error || 'Failed to load applications');
       }
@@ -109,7 +105,7 @@ export function useApplications(user?: User, activeTab?: string) {
       }
     },
     onError: (error: Error) => {
-      console.error('Failed to schedule interview:', error);
+      if (__DEV__) console.error('Failed to schedule interview:', error);
       const errorMsg = error.message || 'Failed to schedule interview. Please try again.';
       if (Platform.OS === 'web') {
         setErrorMessage(errorMsg);
@@ -185,7 +181,7 @@ export function useApplications(user?: User, activeTab?: string) {
       }
     },
     onError: (error: Error) => {
-      console.error('Failed to hire applicant:', error);
+      if (__DEV__) console.error('Failed to hire applicant:', error);
       const errorMsg = error.message || 'Failed to hire applicant. Please try again.';
       if (Platform.OS === 'web') {
         setErrorMessage(errorMsg);
@@ -244,7 +240,7 @@ export function useApplications(user?: User, activeTab?: string) {
       setRejectionNote('');
     },
     onError: (error: Error) => {
-      console.error('Failed to reject application:', error);
+      if (__DEV__) console.error('Failed to reject application:', error);
       Alert.alert('Error', error.message || 'Failed to reject application');
     },
   });
@@ -271,7 +267,7 @@ export function useApplications(user?: User, activeTab?: string) {
       const dateStr = String(application.interviewDate).trim();
       const dateParts = dateStr.split('-');
       if (dateParts.length !== 3) {
-        console.warn('Invalid date format:', dateStr);
+        if (__DEV__) console.warn('Invalid date format:', dateStr);
         return false;
       }
 
@@ -284,7 +280,7 @@ export function useApplications(user?: User, activeTab?: string) {
       const timeParts = timeStr.split(':');
 
       if (timeParts.length < 2) {
-        console.warn('Invalid time format:', timeStr);
+        if (__DEV__) console.warn('Invalid time format:', timeStr);
         return false;
       }
 
@@ -299,7 +295,7 @@ export function useApplications(user?: User, activeTab?: string) {
         interviewDay,
         interviewHour,
         interviewMinute,
-        interviewSecond
+        interviewSecond,
       );
 
       // Get current date/time
@@ -310,23 +306,16 @@ export function useApplications(user?: User, activeTab?: string) {
 
       // Debug logging (only on web or when needed)
       if (Platform.OS === 'web' || hasPassed) {
-        console.log('Interview time check:', {
-          interviewDate: application.interviewDate,
-          interviewTime: application.interviewTime,
-          interviewDateTime: interviewDateTime.toLocaleString(),
-          now: now.toLocaleString(),
-          hasPassed: hasPassed,
-          interviewTimestamp: interviewDateTime.getTime(),
-          nowTimestamp: now.getTime()
-        });
+        // intentionally empty — debug logging removed
       }
 
       return hasPassed;
     } catch (error) {
-      console.error('Error checking interview time:', error, {
-        interviewDate: application.interviewDate,
-        interviewTime: application.interviewTime
-      });
+      if (__DEV__)
+        console.error('Error checking interview time:', error, {
+          interviewDate: application.interviewDate,
+          interviewTime: application.interviewTime,
+        });
       return false;
     }
   };
@@ -384,7 +373,7 @@ export function useApplications(user?: User, activeTab?: string) {
         await Linking.openURL(url);
       }
     } catch (error) {
-      console.error('Failed to download resume:', error);
+      if (__DEV__) console.error('Failed to download resume:', error);
       Alert.alert('Error', 'Failed to download resume');
     }
   };

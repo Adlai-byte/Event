@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { Feather } from '@expo/vector-icons';
 import { colors, semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { useToast } from '../../contexts/ToastContext';
 
 interface Notification {
   idnotification: number | string; // Can be number or "system_123" format
@@ -42,101 +44,86 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
   onLogout,
 }) => {
   const { isMobile, screenWidth } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth);
+  const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
+  const { showToast } = useToast();
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    loadNotifications();
-    loadUnreadCount();
-
-    // Real-time polling for notifications (every 2 seconds)
-    const interval = setInterval(() => {
-      loadNotifications();
-      loadUnreadCount();
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [userEmail]);
-
-  const loadNotifications = async () => {
-    try {
+  // Fetch notifications via React Query (socket invalidation replaces polling)
+  const { data: notificationsData, isLoading: loading } = useQuery({
+    queryKey: ['user-notifications', userEmail],
+    queryFn: async () => {
       const resp = await fetch(
         `${getApiBaseUrl()}/api/notifications?email=${encodeURIComponent(userEmail)}`,
       );
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok) {
-          setNotifications(data.notifications || []);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data.ok ? data.notifications || [] : [];
+    },
+    enabled: !!userEmail,
+  });
 
-  const loadUnreadCount = async () => {
-    try {
+  const notifications: Notification[] = notificationsData ?? [];
+
+  // Fetch unread count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['user-notifications-unread', userEmail],
+    queryFn: async () => {
       const resp = await fetch(
         `${getApiBaseUrl()}/api/notifications/unread-count?email=${encodeURIComponent(userEmail)}`,
       );
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok) {
-          setUnreadCount(data.count || 0);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading unread count:', error);
-    }
-  };
+      if (!resp.ok) return 0;
+      const data = await resp.json();
+      return data.ok ? data.count || 0 : 0;
+    },
+    enabled: !!userEmail,
+  });
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadNotifications();
-    loadUnreadCount();
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['user-notifications', userEmail] }),
+      queryClient.invalidateQueries({ queryKey: ['user-notifications-unread', userEmail] }),
+    ]).finally(() => setRefreshing(false));
   };
 
-  const markAsRead = async (notificationId: number | string) => {
-    try {
-      const resp = await fetch(
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number | string) => {
+      await fetch(
         `${getApiBaseUrl()}/api/notifications/${encodeURIComponent(notificationId.toString())}/read?email=${encodeURIComponent(userEmail)}`,
         { method: 'POST' },
       );
-      if (resp.ok) {
-        // Update local state
-        setNotifications((prev) =>
-          prev.map((n) => (n.idnotification === notificationId ? { ...n, n_is_read: 1 } : n)),
-        );
-        loadUnreadCount();
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-notifications', userEmail] });
+      queryClient.invalidateQueries({ queryKey: ['user-notifications-unread', userEmail] });
+    },
+  });
+
+  const markAsRead = (notificationId: number | string) => {
+    markAsReadMutation.mutate(notificationId);
   };
 
-  const markAllAsRead = async () => {
-    try {
-      const resp = await fetch(
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      await fetch(
         `${getApiBaseUrl()}/api/notifications/mark-all-read?email=${encodeURIComponent(userEmail)}`,
         { method: 'POST' },
       );
-      if (resp.ok) {
-        // Update local state
-        setNotifications((prev) => prev.map((n) => ({ ...n, n_is_read: 1 })));
-        setUnreadCount(0);
-        Alert.alert('Success', 'All notifications marked as read');
-      }
-    } catch (error) {
-      console.error('Error marking all as read:', error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-notifications', userEmail] });
+      queryClient.invalidateQueries({ queryKey: ['user-notifications-unread', userEmail] });
+      showToast({ message: 'All notifications marked as read', type: 'success' });
+    },
+    onError: () => {
       Alert.alert('Error', 'Failed to mark all notifications as read');
-    }
+    },
+  });
+
+  const markAllAsRead = () => {
+    markAllAsReadMutation.mutate();
   };
 
   const formatTime = (dateString: string): string => {

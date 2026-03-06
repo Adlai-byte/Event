@@ -19,6 +19,7 @@ const routeTitleMap: Record<string, string> = {
   'payment-setup': 'Payment Setup',
   'personal-info': 'Personal Information',
   notifications: 'Notifications',
+  'shared-events': 'Shared Events',
 };
 
 const routeKeyMap: Record<string, string> = {

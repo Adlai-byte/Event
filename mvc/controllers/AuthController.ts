@@ -6,23 +6,27 @@ import { LoginFormData, RegisterFormData } from '../models/FormData';
 import AuthService from '../services/AuthService';
 
 // Helper function to add timeout to fetch requests
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout: number = 10000): Promise<Response> => {
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit = {},
+  timeout: number = 10000,
+): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(timeoutId);
     return response;
-  } catch (error: any) {
+  } catch (err: any) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout: Server is not responding');
+    if (err.name === 'AbortError') {
+      throw new Error('Request timeout: Server is not responding', { cause: err });
     }
-    throw error;
+    throw err;
   }
 };
 
@@ -39,21 +43,24 @@ export class AuthController {
 
   private async initializeAuth(): Promise<void> {
     this.updateState(this.authState.setLoading(true));
-    
+
     // Listen to authentication state changes
     AuthService.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
-        let baseUser = User.fromFirebaseUser(firebaseUser);
-        
+        const baseUser = User.fromFirebaseUser(firebaseUser);
+
         // Fetch user role and name from database (important for page reloads)
         if (firebaseUser.email) {
           try {
             const q = encodeURIComponent(firebaseUser.email);
-            const resp = await fetchWithTimeout(`${getApiBaseUrl()}/api/users/by-email?email=${q}`, {}, 10000);
+            const resp = await fetchWithTimeout(
+              `${getApiBaseUrl()}/api/users/by-email?email=${q}`,
+              {},
+              10000,
+            );
             if (resp.ok) {
               const data = await resp.json();
               if (data && data.ok && data.exists) {
-                
                 // Check if user is blocked
                 if (data.blocked === true) {
                   // Sign out blocked user
@@ -61,15 +68,9 @@ export class AuthController {
                   this.updateState(this.authState.logout().setError("You've been blocked"));
                   return;
                 }
-                
+
                 // Debug: Log the data structure
-                console.log('📋 User data from API:', {
-                  role: data.role,
-                  profilePicture: data.profilePicture,
-                  firstName: data.firstName,
-                  email: data.email
-                });
-                
+
                 // Create new User object with all properties from database
                 const user = new User(
                   baseUser.uid,
@@ -88,89 +89,125 @@ export class AuthController {
                   data.city || baseUser.city,
                   data.state || baseUser.state,
                   data.zipCode || baseUser.zipCode,
-                  (data.role && typeof data.role === 'string' && ['user', 'admin', 'provider'].includes(data.role)) 
-                    ? data.role 
-                    : (baseUser.role || 'user'),
-                  data.profilePicture || baseUser.profilePicture
+                  data.role &&
+                    typeof data.role === 'string' &&
+                    ['user', 'admin', 'provider'].includes(data.role)
+                    ? data.role
+                    : baseUser.role || 'user',
+                  data.profilePicture || baseUser.profilePicture,
                 );
-                
-                console.log('✅ User object created:', {
-                  uid: user.uid,
-                  email: user.email,
-                  role: user.role,
-                  profilePicture: user.profilePicture
-                });
-                
+
                 this.updateState(this.authState.setUser(user).setLoading(false));
                 return;
               }
             }
-          } catch (error: any) {
-            console.error('Error fetching user data on auth state change:', error);
+          } catch (fetchError: any) {
+            if (__DEV__)
+              console.error('Error fetching user data on auth state change:', fetchError);
             // Get API URL first to check if it's a Cloudflare tunnel
             const apiUrl = getApiBaseUrl();
             const isCloudflareTunnel = apiUrl.includes('trycloudflare.com');
-            
+
             // Log more details about the network error
-            const isTimeout = error?.message?.includes('timeout') || error?.message?.includes('Request timeout');
-            const isDnsError = error?.message?.includes('ERR_NAME_NOT_RESOLVED') || 
-                              error?.message?.includes('Failed to resolve') ||
-                              error?.message?.includes('getaddrinfo ENOTFOUND') ||
-                              (error?.message?.includes('Failed to fetch') && isCloudflareTunnel);
-            const isNetworkError = error?.message?.includes('Network request failed') || 
-                                  error?.message?.includes('Failed to fetch') ||
-                                  error?.message?.includes('ERR_CONNECTION_TIMED_OUT') ||
-                                  isTimeout ||
-                                  isDnsError;
-            
+            const isTimeout =
+              fetchError?.message?.includes('timeout') ||
+              fetchError?.message?.includes('Request timeout');
+            const isDnsError =
+              fetchError?.message?.includes('ERR_NAME_NOT_RESOLVED') ||
+              fetchError?.message?.includes('Failed to resolve') ||
+              fetchError?.message?.includes('getaddrinfo ENOTFOUND') ||
+              (fetchError?.message?.includes('Failed to fetch') && isCloudflareTunnel);
+            const isNetworkError =
+              fetchError?.message?.includes('Network request failed') ||
+              fetchError?.message?.includes('Failed to fetch') ||
+              fetchError?.message?.includes('ERR_CONNECTION_TIMED_OUT') ||
+              isTimeout ||
+              isDnsError;
+
             if (isNetworkError) {
               const isEmulator = Platform.OS === 'android' && apiUrl.includes('10.0.2.2');
-              const isPhysicalDevice = !isEmulator && (Platform.OS === 'android' || Platform.OS === 'ios');
+              const isPhysicalDevice =
+                !isEmulator && (Platform.OS === 'android' || Platform.OS === 'ios');
               const isWeb = Platform.OS === 'web';
-              
-              console.error('🌐 Network Error Details:');
-              console.error('  - API Base URL:', apiUrl);
-              console.error('  - Platform:', Platform.OS);
-              console.error('  - Error:', error.message);
-              
-              if (isDnsError || (isCloudflareTunnel && error?.message?.includes('Failed to fetch'))) {
-                console.error('  - ❌ DNS Resolution Failed: Cannot resolve domain name');
-                console.error('  - ⚠️  Cloudflare Tunnel URL is not resolving');
+
+              if (__DEV__) console.error('🌐 Network Error Details:');
+              if (__DEV__) console.error('  - API Base URL:', apiUrl);
+              if (__DEV__) console.error('  - Platform:', Platform.OS);
+              if (__DEV__) console.error('  - Error:', fetchError.message);
+
+              if (
+                isDnsError ||
+                (isCloudflareTunnel && fetchError?.message?.includes('Failed to fetch'))
+              ) {
+                if (__DEV__)
+                  console.error('  - ❌ DNS Resolution Failed: Cannot resolve domain name');
+                if (__DEV__) console.error('  - ⚠️  Cloudflare Tunnel URL is not resolving');
                 if (isWeb) {
-                  console.error('  - 💡 Solution for Web/Vercel:');
-                  console.error('     1. SSH to your VPS: ssh root@72.62.64.59');
-                  console.error('     2. Check tunnel status: pm2 list | grep cloudflare-tunnel');
-                  console.error('     3. Get new tunnel URL: pm2 logs cloudflare-tunnel --lines 200 --nostream | grep -i "https://.*trycloudflare.com" | tail -1');
-                  console.error('     4. Update Vercel Environment Variable:');
-                  console.error('        - Go to Vercel Dashboard → Project → Settings → Environment Variables');
-                  console.error('        - Update EXPO_PUBLIC_API_BASE_URL with the new tunnel URL');
-                  console.error('        - Redeploy your Vercel deployment');
-                  console.error('  - 📖 See FIX_ERR_NAME_NOT_RESOLVED.md for detailed instructions');
+                  if (__DEV__) console.error('  - 💡 Solution for Web/Vercel:');
+                  if (__DEV__) console.error('     1. SSH to your VPS: ssh root@72.62.64.59');
+                  if (__DEV__)
+                    console.error('     2. Check tunnel status: pm2 list | grep cloudflare-tunnel');
+                  if (__DEV__)
+                    console.error(
+                      '     3. Get new tunnel URL: pm2 logs cloudflare-tunnel --lines 200 --nostream | grep -i "https://.*trycloudflare.com" | tail -1',
+                    );
+                  if (__DEV__) console.error('     4. Update Vercel Environment Variable:');
+                  if (__DEV__)
+                    console.error(
+                      '        - Go to Vercel Dashboard → Project → Settings → Environment Variables',
+                    );
+                  if (__DEV__)
+                    console.error(
+                      '        - Update EXPO_PUBLIC_API_BASE_URL with the new tunnel URL',
+                    );
+                  if (__DEV__) console.error('        - Redeploy your Vercel deployment');
+                  if (__DEV__)
+                    console.error(
+                      '  - 📖 See FIX_ERR_NAME_NOT_RESOLVED.md for detailed instructions',
+                    );
                 } else {
-                  console.error('  - 💡 Solution: The Cloudflare tunnel URL has expired or stopped');
-                  console.error('     Contact your administrator to restart the tunnel and get a new URL');
+                  if (__DEV__)
+                    console.error(
+                      '  - 💡 Solution: The Cloudflare tunnel URL has expired or stopped',
+                    );
+                  if (__DEV__)
+                    console.error(
+                      '     Contact your administrator to restart the tunnel and get a new URL',
+                    );
                 }
               } else if (isTimeout) {
-                console.error('  - ⚠️  Connection Timeout: Server is not responding');
+                if (__DEV__) console.error('  - ⚠️  Connection Timeout: Server is not responding');
               }
-              
+
               if (isEmulator) {
-                console.error('  - ⚠️  Android Emulator Detected');
-                console.error('  - Solution: Make sure your server is running: npm run server');
-                console.error('  - Test server: Open http://localhost:3001/api/health in your browser');
-                console.error('  - If server is running, check Windows Firewall settings');
+                if (__DEV__) console.error('  - ⚠️  Android Emulator Detected');
+                if (__DEV__)
+                  console.error('  - Solution: Make sure your server is running: npm run server');
+                if (__DEV__)
+                  console.error(
+                    '  - Test server: Open http://localhost:3001/api/health in your browser',
+                  );
+                if (__DEV__)
+                  console.error('  - If server is running, check Windows Firewall settings');
               } else if (isPhysicalDevice) {
-                console.error('  - ⚠️  Physical Device Detected');
-                console.error('  - Solution: Set EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP:3001 in .env file');
-                console.error('  - Find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)');
+                if (__DEV__) console.error('  - ⚠️  Physical Device Detected');
+                if (__DEV__)
+                  console.error(
+                    '  - Solution: Set EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP:3001 in .env file',
+                  );
+                if (__DEV__)
+                  console.error(
+                    '  - Find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)',
+                  );
               } else if (!isDnsError && !isCloudflareTunnel) {
-                console.error('  - Solution: Make sure your server is running: npm run server');
+                if (__DEV__)
+                  console.error('  - Solution: Make sure your server is running: npm run server');
               }
             }
             // Continue with default values if fetch fails
           }
         }
-        
+
         this.updateState(this.authState.setUser(baseUser).setLoading(false));
       } else {
         this.updateState(this.authState.logout().setLoading(false));
@@ -187,7 +224,7 @@ export class AuthController {
   public async login(formData: LoginFormData): Promise<{ success: boolean; error?: string }> {
     try {
       this.updateState(this.authState.setLoading(true).clearError());
-      
+
       const errors = formData.getErrors();
       if (Object.keys(errors).length > 0) {
         this.updateState(this.authState.setError('Please fix the form errors'));
@@ -195,7 +232,7 @@ export class AuthController {
       }
 
       const result = await AuthService.login(formData.email, formData.password);
-      
+
       if (result.success && result.user) {
         // Check MySQL blocked status and get user role and name
         const baseUser = User.fromFirebaseUser(result.user);
@@ -204,15 +241,14 @@ export class AuthController {
         let middleName: string | undefined;
         let lastName: string | undefined;
         let profilePicture: string | undefined;
-        
+
         try {
           const q = encodeURIComponent(formData.email);
           const apiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${q}`;
-          console.log('🔍 Fetching user role from:', apiUrl);
-          
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-          
+
           const resp = await fetch(apiUrl, {
             method: 'GET',
             headers: {
@@ -220,13 +256,12 @@ export class AuthController {
             },
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
-          
+
           if (resp.ok) {
             const data = await resp.json();
-            console.log('✅ User data received:', { exists: data.exists, role: data.role, blocked: data.blocked });
-            
+
             if (data && data.ok && data.exists) {
               if (data.blocked === true) {
                 // Sign out and surface error
@@ -237,9 +272,8 @@ export class AuthController {
               // Get user role and name from database
               if (data.role) {
                 userRole = data.role as 'user' | 'admin' | 'provider';
-                console.log('✅ User role set to:', userRole);
               } else {
-                console.warn('⚠️ No role in response, defaulting to user');
+                if (__DEV__) console.warn('⚠️ No role in response, defaulting to user');
               }
               if (data.firstName) {
                 firstName = data.firstName;
@@ -254,30 +288,30 @@ export class AuthController {
                 profilePicture = data.profilePicture;
               }
             } else {
-              console.warn('⚠️ User not found in database or invalid response');
-          }
+              if (__DEV__) console.warn('⚠️ User not found in database or invalid response');
+            }
           } else {
-            console.error('❌ API response not OK:', resp.status, resp.statusText);
+            if (__DEV__) console.error('❌ API response not OK:', resp.status, resp.statusText);
             const errorText = await resp.text();
-            console.error('❌ Error response:', errorText);
+            if (__DEV__) console.error('❌ Error response:', errorText);
           }
         } catch (error: any) {
-          console.error('❌ [CRITICAL] Error fetching user role from API:', error);
-          console.error('❌ [CRITICAL] Error details:', {
-            message: error.message,
-            stack: error.stack,
-            apiUrl: getApiBaseUrl(),
-            platform: Platform.OS,
-            isDev: __DEV__
-          });
-          
+          if (__DEV__) console.error('❌ [CRITICAL] Error fetching user role from API:', error);
+          if (__DEV__)
+            console.error('❌ [CRITICAL] Error details:', {
+              message: error.message,
+              stack: error.stack,
+              apiUrl: getApiBaseUrl(),
+              platform: Platform.OS,
+              isDev: __DEV__,
+            });
+
           // Retry once after 2 seconds
           try {
-            console.log('🔄 Retrying user role fetch...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
             const retryController = new AbortController();
             const retryTimeoutId = setTimeout(() => retryController.abort(), 10000); // 10 second timeout
-            
+
             const retryApiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(formData.email)}`;
             const retryResp = await fetch(retryApiUrl, {
               method: 'GET',
@@ -286,20 +320,21 @@ export class AuthController {
               },
               signal: retryController.signal,
             });
-            
+
             clearTimeout(retryTimeoutId);
-            
+
             if (retryResp.ok) {
               const retryData = await retryResp.json();
               if (retryData && retryData.ok && retryData.exists) {
                 if (retryData.blocked === true) {
                   await AuthService.logout();
-                  this.updateState(this.authState.setError("You've been blocked").setLoading(false));
+                  this.updateState(
+                    this.authState.setError("You've been blocked").setLoading(false),
+                  );
                   return { success: false, error: "You've been blocked" };
                 }
                 if (retryData.role) {
                   userRole = retryData.role as 'user' | 'admin' | 'provider';
-                  console.log('✅ User role set to (retry):', userRole);
                 }
                 if (retryData.firstName) firstName = retryData.firstName;
                 if (retryData.middleName) middleName = retryData.middleName;
@@ -308,26 +343,30 @@ export class AuthController {
               }
             }
           } catch (retryError: any) {
-            console.error('❌ Retry also failed:', retryError);
-            
+            if (__DEV__) console.error('❌ Retry also failed:', retryError);
+
             // Determine error type for better user message
             let errorMessage = error.message || 'Unknown error';
             if (error.name === 'AbortError' || error.message?.includes('timeout')) {
               errorMessage = 'Connection timeout. Please check your internet connection.';
-            } else if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-              errorMessage = 'Cannot reach server. Please check:\n1. Your internet connection\n2. Server is running\n3. Firewall settings';
+            } else if (
+              error.message?.includes('Network request failed') ||
+              error.message?.includes('Failed to fetch')
+            ) {
+              errorMessage =
+                'Cannot reach server. Please check:\n1. Your internet connection\n2. Server is running\n3. Firewall settings';
             }
-            
+
             // In production, if API fails after retry, show alert to user
-          if (!__DEV__) {
-            Alert.alert(
-              'Network Error',
+            if (!__DEV__) {
+              Alert.alert(
+                'Network Error',
                 `Unable to verify user role.\n\nAPI URL: ${getApiBaseUrl()}\n\nError: ${errorMessage}\n\nPlease check your internet connection and try again.`,
-              [{ text: 'OK' }]
-            );
-          }
-          // Don't fail login if API call fails, but log the error
-          // Role will default to 'user' which is handled below
+                [{ text: 'OK' }],
+              );
+            }
+            // Don't fail login if API call fails, but log the error
+            // Role will default to 'user' which is handled below
           }
         }
 
@@ -350,12 +389,9 @@ export class AuthController {
           baseUser.state,
           baseUser.zipCode,
           userRole,
-          profilePicture || baseUser.profilePicture
+          profilePicture || baseUser.profilePicture,
         );
 
-        console.log('👤 User created with role:', userRole, 'Email:', user.email);
-        console.log('👤 Full user object:', { uid: user.uid, email: user.email, role: user.role, profilePicture: user.profilePicture });
-        
         this.updateState(this.authState.setUser(user).setLoading(false));
         return { success: true };
       } else {
@@ -372,7 +408,7 @@ export class AuthController {
   public async register(formData: RegisterFormData): Promise<{ success: boolean; error?: string }> {
     try {
       this.updateState(this.authState.setLoading(true).clearError());
-      
+
       const errors = formData.getErrors();
       if (Object.keys(errors).length > 0) {
         this.updateState(this.authState.setError('Please fix the form errors'));
@@ -387,31 +423,36 @@ export class AuthController {
           const checkData = await checkResp.json();
           if (checkData && checkData.ok && checkData.exists) {
             // Email already exists in database
-            this.updateState(this.authState.setError("This email is already registered. Please use a different email or try logging in instead.").setLoading(false));
-            return { success: false, error: "This email is already registered. Please use a different email or try logging in instead." };
+            this.updateState(
+              this.authState
+                .setError(
+                  'This email is already registered. Please use a different email or try logging in instead.',
+                )
+                .setLoading(false),
+            );
+            return {
+              success: false,
+              error:
+                'This email is already registered. Please use a different email or try logging in instead.',
+            };
           }
         }
       } catch (checkError) {
-        console.error('Error checking email existence:', checkError);
+        if (__DEV__) console.error('Error checking email existence:', checkError);
         // Continue with registration if check fails (don't block registration due to check error)
       }
 
-      const result = await AuthService.register(formData.email, formData.password, formData.getFullName());
-      
+      const result = await AuthService.register(
+        formData.email,
+        formData.password,
+        formData.getFullName(),
+      );
+
       if (result.success && result.user) {
         // Insert into MySQL via local API
         try {
           const apiUrl = `${getApiBaseUrl()}/api/register`;
-          console.log('🔍 [REGISTER] Calling API:', apiUrl);
-          console.log('🔍 [REGISTER] Request body:', {
-            firstName: formData.firstName,
-            middleName: formData.middleName,
-            lastName: formData.lastName,
-            suffix: formData.suffix,
-            email: formData.email,
-            password: '***hidden***',
-          });
-          
+
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -422,64 +463,63 @@ export class AuthController {
               suffix: formData.suffix,
               email: formData.email,
               password: formData.password,
-            })
+            }),
           });
-          
-          console.log('📡 [REGISTER] Response status:', response.status, response.statusText);
-          
+
           let data;
           try {
             const responseText = await response.text();
-            console.log('📡 [REGISTER] Response text:', responseText);
             data = JSON.parse(responseText);
           } catch (parseErr) {
-            console.error('❌ [REGISTER] Failed to parse response:', parseErr);
-            throw new Error(`Server returned invalid response (${response.status}). Please try again.`);
+            if (__DEV__) console.error('❌ [REGISTER] Failed to parse response:', parseErr);
+            throw new Error(
+              `Server returned invalid response (${response.status}). Please try again.`,
+              { cause: parseErr },
+            );
           }
-          
-          console.log('📡 [REGISTER] Response data:', data);
-          
+
           if (!response.ok || !data.ok) {
             // If Firebase user was created but MySQL insert failed, clean up Firebase user
-            const errorMessage = data.error || `Failed to save user to database (${response.status})`;
+            const errorMessage =
+              data.error || `Failed to save user to database (${response.status})`;
             const errorCode = data.errorCode || 'UNKNOWN_ERROR';
-            
-            console.error('❌ [REGISTER] API registration failed:', {
-              status: response.status,
-              error: errorMessage,
-              errorCode: errorCode,
-              details: data.details
-            });
-            
+
+            if (__DEV__)
+              console.error('❌ [REGISTER] API registration failed:', {
+                status: response.status,
+                error: errorMessage,
+                errorCode: errorCode,
+                details: data.details,
+              });
+
             // Clean up Firebase user if MySQL insert failed
             try {
-              console.log('🧹 [REGISTER] Cleaning up Firebase user due to MySQL insert failure');
               await AuthService.logout();
             } catch (logoutErr) {
-              console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
+              if (__DEV__)
+                console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
             }
-            
+
             throw new Error(errorMessage);
           }
-          
-          console.log('✅ [REGISTER] MySQL registration successful, user ID:', data.id);
         } catch (dbErr: any) {
-          console.error('❌ [REGISTER] Database registration error:', dbErr);
-          console.error('❌ [REGISTER] Error details:', {
-            message: dbErr.message,
-            stack: dbErr.stack,
-            apiUrl: getApiBaseUrl()
-          });
-          
+          if (__DEV__) console.error('❌ [REGISTER] Database registration error:', dbErr);
+          if (__DEV__)
+            console.error('❌ [REGISTER] Error details:', {
+              message: dbErr.message,
+              stack: dbErr.stack,
+              apiUrl: getApiBaseUrl(),
+            });
+
           // Clean up Firebase user if MySQL insert failed
           try {
-            console.log('🧹 [REGISTER] Cleaning up Firebase user due to error');
             await AuthService.logout();
           } catch (logoutErr) {
-            console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
+            if (__DEV__) console.error('❌ [REGISTER] Error cleaning up Firebase user:', logoutErr);
           }
-          
-          const errorMessage = dbErr.message || 'Failed to complete registration. Please try again.';
+
+          const errorMessage =
+            dbErr.message || 'Failed to complete registration. Please try again.';
           this.updateState(this.authState.setError(errorMessage).setLoading(false));
           return { success: false, error: errorMessage };
         }
@@ -488,7 +528,9 @@ export class AuthController {
         this.updateState(this.authState.setUser(user).setLoading(false));
         return { success: true };
       } else {
-        this.updateState(this.authState.setError(result.error || 'Registration failed').setLoading(false));
+        this.updateState(
+          this.authState.setError(result.error || 'Registration failed').setLoading(false),
+        );
         return { success: false, error: result.error || 'Registration failed' };
       }
     } catch (error: any) {
@@ -501,101 +543,108 @@ export class AuthController {
   public async loginWithGoogle(): Promise<boolean> {
     try {
       this.updateState(this.authState.setLoading(true).clearError());
-      
+
       const result = await AuthService.loginWithGoogle();
-      
+
       if (result.success && result.user) {
-          // Check if user has password before allowing Google login
-          if (result.user.email) {
-            try {
-              const q = encodeURIComponent(result.user.email);
-              const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
-              if (resp.ok) {
-                const data = await resp.json();
-                if (data && data.ok && data.exists) {
-                  // If user has a password, reject Google login
-                  if (data.hasPassword === true) {
-                    await AuthService.logout();
-                    this.updateState(this.authState.setError("This account is registered with email/password. Please use email and password to login instead.").setLoading(false));
-                    return false;
-                  }
-                  
-                  if (data.blocked === true) {
-                    await AuthService.logout();
-                    this.updateState(this.authState.setError("You've been blocked").setLoading(false));
-                    return false;
-                  }
+        // Check if user has password before allowing Google login
+        if (result.user.email) {
+          try {
+            const q = encodeURIComponent(result.user.email);
+            const resp = await fetch(`${getApiBaseUrl()}/api/users/by-email?email=${q}`);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.ok && data.exists) {
+                // If user has a password, reject Google login
+                if (data.hasPassword === true) {
+                  await AuthService.logout();
+                  this.updateState(
+                    this.authState
+                      .setError(
+                        'This account is registered with email/password. Please use email and password to login instead.',
+                      )
+                      .setLoading(false),
+                  );
+                  return false;
+                }
+
+                if (data.blocked === true) {
+                  await AuthService.logout();
+                  this.updateState(
+                    this.authState.setError("You've been blocked").setLoading(false),
+                  );
+                  return false;
                 }
               }
-            } catch (error) {
-              console.error('Error checking user password:', error);
             }
+          } catch (error) {
+            if (__DEV__) console.error('Error checking user password:', error);
           }
-          
-          const baseUser = User.fromFirebaseUser(result.user);
-          let userRole: 'user' | 'admin' | 'provider' = 'user';
-          let firstName: string | undefined;
-          let middleName: string | undefined;
-          let lastName: string | undefined;
-          let profilePicture: string | undefined;
+        }
+
+        const baseUser = User.fromFirebaseUser(result.user);
+        let userRole: 'user' | 'admin' | 'provider' = 'user';
+        let firstName: string | undefined;
+        let middleName: string | undefined;
+        let lastName: string | undefined;
+        let profilePicture: string | undefined;
         let userExists = false;
-          
+
         // Check if user exists and get user data
-          try {
-            if (result.user.email) {
-              const q = encodeURIComponent(result.user.email);
-              const apiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${q}`;
-              const resp = await fetch(apiUrl, {
-                method: 'GET',
+        try {
+          if (result.user.email) {
+            const q = encodeURIComponent(result.user.email);
+            const apiUrl = `${getApiBaseUrl()}/api/users/by-email?email=${q}`;
+            const resp = await fetch(apiUrl, {
+              method: 'GET',
               headers: { 'Content-Type': 'application/json' },
-              });
-              
-              if (resp.ok) {
-                const data = await resp.json();
-                if (data && data.ok && data.exists) {
+            });
+
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.ok && data.exists) {
                 userExists = true; // User already exists in database
                 if (data.role) userRole = data.role as 'user' | 'admin' | 'provider';
                 if (data.firstName) firstName = data.firstName;
                 if (data.middleName) middleName = data.middleName;
                 if (data.lastName) lastName = data.lastName;
                 if (data.profilePicture) profilePicture = data.profilePicture;
-                  }
+              }
             }
-                }
+          }
         } catch (error: any) {
-          console.error('Error fetching user role:', error);
+          if (__DEV__) console.error('Error fetching user role:', error);
         }
-        
-          const user = new User(
-            baseUser.uid,
-            baseUser.email,
-            baseUser.displayName,
-            baseUser.emailVerified,
-            baseUser.createdAt,
-            baseUser.lastLoginAt,
-            firstName || baseUser.firstName,
-            middleName || baseUser.middleName,
-            lastName || baseUser.lastName,
-            baseUser.suffix,
-            baseUser.phone,
-            baseUser.dateOfBirth,
-            baseUser.address,
-            baseUser.city,
-            baseUser.state,
-            baseUser.zipCode,
-            userRole,
-            profilePicture || baseUser.profilePicture
-          );
+
+        const user = new User(
+          baseUser.uid,
+          baseUser.email,
+          baseUser.displayName,
+          baseUser.emailVerified,
+          baseUser.createdAt,
+          baseUser.lastLoginAt,
+          firstName || baseUser.firstName,
+          middleName || baseUser.middleName,
+          lastName || baseUser.lastName,
+          baseUser.suffix,
+          baseUser.phone,
+          baseUser.dateOfBirth,
+          baseUser.address,
+          baseUser.city,
+          baseUser.state,
+          baseUser.zipCode,
+          userRole,
+          profilePicture || baseUser.profilePicture,
+        );
 
         // Only register if user doesn't exist in database (avoid 409 error)
         if (!userExists && result.user.email) {
           try {
-            console.log('📝 [Google Login] Registering new user in database...');
             const displayName = result.user.displayName || '';
             const parts = displayName.trim().split(/\s+/);
             const firstName = parts[0] || '';
             const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
-            
+
             const registerResponse = await fetch(`${getApiBaseUrl()}/api/register`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -605,37 +654,41 @@ export class AuthController {
                 lastName,
                 suffix: '',
                 email: result.user.email,
-              })
+              }),
             });
-            
+
             if (registerResponse.ok) {
-              console.log('✅ [Google Login] User registered successfully in database');
+              // User registered successfully in database
             } else {
               const errorText = await registerResponse.text();
-              console.error('❌ [Google Login] Registration failed:', registerResponse.status, errorText);
+              if (__DEV__)
+                console.error(
+                  '❌ [Google Login] Registration failed:',
+                  registerResponse.status,
+                  errorText,
+                );
               // Continue anyway - user is authenticated in Firebase
             }
           } catch (e: any) {
-            console.error('❌ [Google Login] Registration error:', e);
+            if (__DEV__) console.error('❌ [Google Login] Registration error:', e);
             // Continue anyway - user is authenticated in Firebase
           }
         } else {
-          console.log('ℹ️ [Google Login] User already exists in database, skipping registration');
+          // User already exists — skip registration
         }
-        
-        console.log('✅ [Google Login] Setting user in auth state...');
-        console.log('👤 [Google Login] User object:', { email: user.email, role: user.role, uid: user.uid });
-          this.updateState(this.authState.setUser(user).setLoading(false));
-        console.log('✅ [Google Login] Auth state updated, isAuthenticated:', this.authState.isAuthenticated);
-          return true;
+
+        this.updateState(this.authState.setUser(user).setLoading(false));
+        return true;
       } else {
         const errorMsg = result.error || 'Google login failed';
         this.updateState(this.authState.setError(errorMsg).setLoading(false));
         return false;
       }
     } catch (error: any) {
-      console.error('Google login exception:', error);
-      this.updateState(this.authState.setError(error.message || 'Google login failed').setLoading(false));
+      if (__DEV__) console.error('Google login exception:', error);
+      this.updateState(
+        this.authState.setError(error.message || 'Google login failed').setLoading(false),
+      );
       return false;
     }
   }
@@ -644,26 +697,32 @@ export class AuthController {
   public async resetPassword(email: string): Promise<boolean> {
     try {
       this.updateState(this.authState.setLoading(true).clearError());
-      
+
       if (!email.trim()) {
-        this.updateState(this.authState.setError('Please enter your email address').setLoading(false));
+        this.updateState(
+          this.authState.setError('Please enter your email address').setLoading(false),
+        );
         return false;
       }
 
       // Stricter email validation: requires proper domain and TLD (at least 2 characters)
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(email.trim())) {
-        this.updateState(this.authState.setError('Please enter a valid email address').setLoading(false));
+        this.updateState(
+          this.authState.setError('Please enter a valid email address').setLoading(false),
+        );
         return false;
       }
 
       const result = await AuthService.resetPassword(email);
-      
+
       if (result.success) {
         this.updateState(this.authState.setLoading(false).clearError());
         return true;
       } else {
-        this.updateState(this.authState.setError(result.error || 'Password reset failed').setLoading(false));
+        this.updateState(
+          this.authState.setError(result.error || 'Password reset failed').setLoading(false),
+        );
         return false;
       }
     } catch (error: any) {
@@ -675,19 +734,14 @@ export class AuthController {
   // Logout method
   public async logout(): Promise<boolean> {
     try {
-      console.log('AuthController: Starting logout...');
-      
-      const result = await AuthService.logout();
-      console.log('AuthController: AuthService result:', result);
-      
+      await AuthService.logout();
+
       // Always reset the state to logged out, regardless of Firebase result
-      console.log('AuthController: Resetting state to logged out...');
       this.updateState(new AuthState(false, null, false, null));
-      console.log('AuthController: State reset to logged out');
-      
+
       return true; // Always return true since we're forcing logout
     } catch (error: any) {
-      console.error('AuthController: Logout error:', error);
+      if (__DEV__) console.error('AuthController: Logout error:', error);
       // Even if there's an error, reset to logged out state
       this.updateState(new AuthState(false, null, false, null));
       return true;
@@ -708,31 +762,35 @@ export class AuthController {
   public async sendEmailVerification(): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await AuthService.sendEmailVerification();
-      
+
       if (result.success) {
         Alert.alert(
           'Verification Email Sent',
-          'Please check your email inbox and click the verification link. After verifying, you may need to refresh or log out and log back in.'
+          'Please check your email inbox and click the verification link. After verifying, you may need to refresh or log out and log back in.',
         );
       }
-      
+
       return result;
     } catch (error: any) {
-      console.error('Send email verification error:', error);
+      if (__DEV__) console.error('Send email verification error:', error);
       return { success: false, error: error.message || 'Failed to send verification email' };
     }
   }
 
   // Check and reload email verification status
-  public async checkEmailVerification(): Promise<{ success: boolean; verified: boolean; error?: string }> {
+  public async checkEmailVerification(): Promise<{
+    success: boolean;
+    verified: boolean;
+    error?: string;
+  }> {
     try {
       const result = await AuthService.reloadUser();
-      
+
       if (result.success) {
         const firebaseUser = AuthService.getCurrentUser();
         if (firebaseUser) {
           const verified = firebaseUser.emailVerified;
-          
+
           // Update the user in state if verification status changed
           if (this.authState.user) {
             const updatedUser = new User(
@@ -753,7 +811,7 @@ export class AuthController {
               this.authState.user.state,
               this.authState.user.zipCode,
               this.authState.user.role,
-              this.authState.user.profilePicture
+              this.authState.user.profilePicture,
             );
             this.updateState(this.authState.setUser(updatedUser));
           }
@@ -761,23 +819,29 @@ export class AuthController {
           return { success: true, verified };
         }
       }
-      
+
       return { success: false, verified: false, error: result.error };
     } catch (error: any) {
-      console.error('Check email verification error:', error);
-      return { success: false, verified: false, error: error.message || 'Failed to check verification status' };
+      if (__DEV__) console.error('Check email verification error:', error);
+      return {
+        success: false,
+        verified: false,
+        error: error.message || 'Failed to check verification status',
+      };
     }
   }
 
   // Update email in Firebase Authentication
-  public async updateUserEmail(newEmail: string): Promise<{ success: boolean; error?: string; message?: string }> {
+  public async updateUserEmail(
+    newEmail: string,
+  ): Promise<{ success: boolean; error?: string; message?: string }> {
     try {
       const result = await AuthService.updateUserEmail(newEmail);
-      
+
       if (result.success) {
         // Reload user to get updated email
         await AuthService.reloadUser();
-        
+
         // Update the user in state with new email
         if (this.authState.user) {
           const firebaseUser = AuthService.getCurrentUser();
@@ -800,16 +864,16 @@ export class AuthController {
               this.authState.user.state,
               this.authState.user.zipCode,
               this.authState.user.role,
-              this.authState.user.profilePicture
+              this.authState.user.profilePicture,
             );
             this.updateState(this.authState.setUser(updatedUser));
           }
         }
       }
-      
+
       return result;
     } catch (error: any) {
-      console.error('Update user email error:', error);
+      if (__DEV__) console.error('Update user email error:', error);
       return { success: false, error: error.message || 'Failed to update email' };
     }
   }

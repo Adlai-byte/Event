@@ -8,9 +8,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, semantic } from '../../theme';
-import { typography } from '../../theme';
-import { spacing, borderRadius } from '../../theme';
+import { colors, semantic, typography, spacing, borderRadius } from '../../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 type ButtonSize = 'sm' | 'md' | 'lg';

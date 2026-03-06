@@ -46,7 +46,7 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
                 animated: true,
               });
             } catch (error) {
-              console.error('Banner scroll error:', error);
+              if (__DEV__) console.error('Banner scroll error:', error);
             }
             return nextIndex;
           });
@@ -83,7 +83,7 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
             const index = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
             setBannerCurrentIndex(index);
           } catch (error) {
-            console.error('Banner scroll end error:', error);
+            if (__DEV__) console.error('Banner scroll end error:', error);
           }
         }}
         style={styles.bannerScrollView}

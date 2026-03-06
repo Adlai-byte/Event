@@ -16,6 +16,7 @@ import { getShadowStyle } from '../../utils/shadowStyles';
 import { AppLayout } from '../../components/layout';
 import { Feather } from '@expo/vector-icons';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { useToast } from '../../contexts/ToastContext';
 
 interface PaymentMethodsViewProps {
   user: User;
@@ -39,6 +40,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
 }) => {
   const { isMobile } = useBreakpoints();
   const styles = createStyles(isMobile);
+  const { showToast } = useToast();
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading payment methods:', error);
+      if (__DEV__) console.error('Error loading payment methods:', error);
       Alert.alert('Error', 'Failed to load payment methods');
     } finally {
       setLoading(false);
@@ -125,7 +127,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
       if (resp.ok) {
         const data = await resp.json();
         if (data.ok) {
-          Alert.alert('Success', 'GCash account linked successfully!');
+          showToast({ message: 'GCash account linked successfully!', type: 'success' });
           setShowAddForm(false);
           setFormData({ account_name: '', account_number: '' });
           loadPaymentMethods();
@@ -137,7 +139,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
         Alert.alert('Error', errorData.error || 'Failed to link GCash account');
       }
     } catch (error) {
-      console.error('Error adding payment method:', error);
+      if (__DEV__) console.error('Error adding payment method:', error);
       Alert.alert('Error', 'An error occurred. Please try again.');
     } finally {
       setSubmitting(false);
@@ -168,7 +170,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
         Alert.alert('Error', errorData.error || 'Failed to set default payment method');
       }
     } catch (error) {
-      console.error('Error setting default:', error);
+      if (__DEV__) console.error('Error setting default:', error);
       Alert.alert('Error', 'An error occurred. Please try again.');
     }
   };
@@ -194,7 +196,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
             if (resp.ok) {
               const data = await resp.json();
               if (data.ok) {
-                Alert.alert('Success', 'Payment method removed successfully');
+                showToast({ message: 'Payment method removed successfully', type: 'success' });
                 loadPaymentMethods();
               } else {
                 Alert.alert('Error', data.error || 'Failed to delete payment method');
@@ -204,7 +206,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
               Alert.alert('Error', errorData.error || 'Failed to delete payment method');
             }
           } catch (error) {
-            console.error('Error deleting payment method:', error);
+            if (__DEV__) console.error('Error deleting payment method:', error);
             Alert.alert('Error', 'An error occurred. Please try again.');
           }
         },

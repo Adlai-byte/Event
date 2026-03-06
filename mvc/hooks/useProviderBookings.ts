@@ -15,7 +15,7 @@ export interface ProviderBooking {
   date: string;
   time: string;
   location: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
   totalCost: number;
   serviceName: string;
   paymentMethod?: string;
@@ -26,7 +26,14 @@ export interface ProviderBooking {
   balanceDueDate?: string | null;
 }
 
-const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const;
+const STATUS_FILTERS = [
+  'all',
+  'pending',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+] as const;
 
 const formatDate = (dateStr: string): string => {
   try {
@@ -57,6 +64,8 @@ export const getStatusColor = (status: string): string => {
       return '#f59e0b';
     case 'confirmed':
       return '#10b981';
+    case 'in_progress':
+      return '#2563EB';
     case 'completed':
       return '#4a55e1';
     case 'cancelled':
@@ -73,9 +82,7 @@ function mapBooking(b: any): ProviderBooking {
 
   // Debug log
   if (b.b_status === 'confirmed') {
-    console.log(
-      `Booking ${b.idbooking}: payment_method=${b.payment_method}, payment_status=${b.payment_status}, hasPendingCash=${hasPendingCash}`,
-    );
+    // intentionally empty — debug log removed
   }
 
   // If status is 'completed' but not paid, change to 'cancelled'
@@ -148,9 +155,6 @@ export function useProviderBookings(user?: User) {
       newStatus: string;
       reason?: string;
     }) => {
-      console.log(
-        `Updating booking ${bookingId} to status: ${newStatus}${reason ? ` with reason: ${reason}` : ''}`,
-      );
       const requestBody: any = { status: newStatus };
       if (reason) {
         requestBody.cancellation_reason = reason;
@@ -172,7 +176,7 @@ export function useProviderBookings(user?: User) {
       );
     },
     onError: (error: Error) => {
-      console.error('Error updating booking status:', error);
+      if (__DEV__) console.error('Error updating booking status:', error);
       Alert.alert('Error', `Failed to update booking status: ${error.message}`);
     },
   });
@@ -194,7 +198,7 @@ export function useProviderBookings(user?: User) {
       Alert.alert('Success', 'Payment marked as paid successfully');
     },
     onError: (error: Error) => {
-      console.error('Error marking payment as paid:', error);
+      if (__DEV__) console.error('Error marking payment as paid:', error);
       Alert.alert('Error', `Failed to mark payment as paid: ${error.message}`);
     },
   });
@@ -258,12 +262,12 @@ export function useProviderBookings(user?: User) {
         } else {
           // For mobile, use Linking
           Linking.openURL(invoiceUrl).catch((err) => {
-            console.error('Error opening invoice URL:', err);
+            if (__DEV__) console.error('Error opening invoice URL:', err);
             Alert.alert('Error', 'Failed to download invoice. Please try again.');
           });
         }
       } catch (error) {
-        console.error('Error downloading invoice:', error);
+        if (__DEV__) console.error('Error downloading invoice:', error);
         Alert.alert(
           'Error',
           `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`,

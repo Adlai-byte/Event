@@ -17,6 +17,7 @@ import { User } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { useToast } from '../../contexts/ToastContext';
 
 interface PaymentSetupViewProps {
   user: User;
@@ -31,6 +32,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
 }) => {
   const { isMobile } = useBreakpoints();
   const styles = createStyles(isMobile);
+  const { showToast } = useToast();
 
   const [paymentLink, setPaymentLink] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -94,7 +96,7 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading payment data:', error);
+      if (__DEV__) console.error('Error loading payment data:', error);
     } finally {
       setLoading(false);
     }
@@ -180,12 +182,12 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
       const data = await resp.json();
 
       if (resp.ok && data.ok) {
-        Alert.alert('Success', 'PayMongo credentials saved successfully!');
+        showToast({ message: 'PayMongo credentials saved successfully!', type: 'success' });
       } else {
         Alert.alert('Error', data.error || 'Failed to save credentials');
       }
     } catch (error) {
-      console.error('Error saving credentials:', error);
+      if (__DEV__) console.error('Error saving credentials:', error);
       Alert.alert('Error', 'Failed to save credentials. Please try again.');
     } finally {
       setSaving(false);
@@ -224,12 +226,12 @@ export const PaymentSetupView: React.FC<PaymentSetupViewProps> = ({
       const data = await resp.json();
 
       if (resp.ok && data.ok) {
-        Alert.alert('Success', 'Payment link saved successfully!');
+        showToast({ message: 'Payment link saved successfully!', type: 'success' });
       } else {
         Alert.alert('Error', data.error || 'Failed to save payment link');
       }
     } catch (error) {
-      console.error('Error saving payment link:', error);
+      if (__DEV__) console.error('Error saving payment link:', error);
       Alert.alert('Error', 'Failed to save payment link. Please try again.');
     } finally {
       setSaving(false);

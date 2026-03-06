@@ -15,7 +15,7 @@ export function shadow(level: ShadowLevel): ViewStyle {
 
   if (Platform.OS === 'web') {
     return {
-      // @ts-ignore - web-only property
+      // @ts-expect-error - web-only property
       boxShadow: `0 ${height}px ${radius * 2}px rgba(0, 0, 0, ${opacity})`,
     };
   }

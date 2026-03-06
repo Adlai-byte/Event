@@ -72,8 +72,6 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
     try {
       setLoading(true);
 
-      console.log('Loading provider profile for email:', providerEmail);
-
       // Load provider information
       const providerResp = await fetch(
         `${getApiBaseUrl()}/api/provider/profile?email=${encodeURIComponent(providerEmail)}`,
@@ -81,7 +79,6 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
       if (providerResp.ok) {
         const providerData = await providerResp.json();
-        console.log('Provider data response:', providerData);
 
         if (providerData.ok && providerData.provider) {
           setProvider(providerData.provider);
@@ -93,26 +90,25 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
 
           if (servicesResp.ok) {
             const servicesData = await servicesResp.json();
-            console.log('Services data response:', servicesData);
             if (servicesData.ok && servicesData.services) {
               setServices(servicesData.services);
-              console.log('Loaded services:', servicesData.services.length);
             } else {
-              console.log('No services in response');
+              // intentionally empty — no services returned
             }
           } else {
             const errorData = await servicesResp.json().catch(() => ({}));
-            console.error('Failed to load services:', servicesResp.status, errorData);
+            if (__DEV__) console.error('Failed to load services:', servicesResp.status, errorData);
           }
         } else {
-          console.error('Provider not found:', providerData.error || 'Unknown error');
+          if (__DEV__) console.error('Provider not found:', providerData.error || 'Unknown error');
         }
       } else {
         const errorData = await providerResp.json().catch(() => ({}));
-        console.error('Failed to load provider profile:', providerResp.status, errorData);
+        if (__DEV__)
+          console.error('Failed to load provider profile:', providerResp.status, errorData);
       }
     } catch (error) {
-      console.error('Error loading provider profile:', error);
+      if (__DEV__) console.error('Error loading provider profile:', error);
     } finally {
       setLoading(false);
     }

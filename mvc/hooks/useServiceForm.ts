@@ -95,7 +95,7 @@ export function useServiceForm(user?: UserModel) {
             },
             (error) => {
               if (error.code !== 1) {
-                console.log('Geolocation error:', error);
+                // intentionally empty — permission denied is expected
               }
             },
           );
@@ -127,11 +127,10 @@ export function useServiceForm(user?: UserModel) {
                     .join(', ');
                   setNewService((prev) => ({ ...prev, address: addressString }));
                 }
-              } catch (geocodeError) {
-                console.log('Reverse geocoding error:', geocodeError);
+              } catch {
+                // intentionally empty
               }
-            } catch (locationError) {
-              console.log('Location error:', locationError);
+            } catch {
               Alert.alert(
                 'Location Error',
                 'Unable to get your current location. Please pin your location manually on the map.',
@@ -147,7 +146,7 @@ export function useServiceForm(user?: UserModel) {
           }
         }
       } catch (error) {
-        console.error('Error getting location:', error);
+        if (__DEV__) console.error('Error getting location:', error);
       }
     };
 
@@ -283,11 +282,11 @@ export function useServiceForm(user?: UserModel) {
                 }
               }
             } catch (retryError) {
-              console.error('Retry reverse geocoding error:', retryError);
+              if (__DEV__) console.error('Retry reverse geocoding error:', retryError);
             }
           }
         } catch (error) {
-          console.error('Reverse geocoding error:', error);
+          if (__DEV__) console.error('Reverse geocoding error:', error);
         }
       };
 
@@ -363,8 +362,8 @@ export function useServiceForm(user?: UserModel) {
                     .filter(Boolean)
                     .join(', ');
                 }
-              } catch (expoError) {
-                console.log('Expo reverse geocoding failed, trying Nominatim:', expoError);
+              } catch {
+                // intentionally empty
               }
             }
 
@@ -377,7 +376,7 @@ export function useServiceForm(user?: UserModel) {
               address = nominatimData.display_name || '';
             }
           } catch (geocodeError) {
-            console.error('Reverse geocoding error:', geocodeError);
+            if (__DEV__) console.error('Reverse geocoding error:', geocodeError);
             if (!address || address.trim() === '') {
               address = `Coordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             }
@@ -393,7 +392,7 @@ export function useServiceForm(user?: UserModel) {
         setMapLocation({ lat, lng });
       }
     } catch (error) {
-      console.error('Error parsing map message:', error);
+      if (__DEV__) console.error('Error parsing map message:', error);
     }
   };
 
@@ -459,7 +458,7 @@ export function useServiceForm(user?: UserModel) {
         }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      if (__DEV__) console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };

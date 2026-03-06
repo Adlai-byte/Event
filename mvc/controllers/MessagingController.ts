@@ -1,5 +1,11 @@
 import { MessagingService } from '../services/MessagingService';
-import { Message, MessageType, Conversation, MessageAttachment, MessageMetadata } from '../models/Message';
+import {
+  Message,
+  MessageType,
+  Conversation,
+  MessageAttachment,
+  MessageMetadata,
+} from '../models/Message';
 
 export class MessagingController {
   private messagingService: MessagingService;
@@ -13,13 +19,13 @@ export class MessagingController {
     conversationId: string,
     senderId: string,
     receiverId: string,
-    content: string
+    content: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       if (!content.trim()) {
         return {
           success: false,
-          error: 'Message content cannot be empty'
+          error: 'Message content cannot be empty',
         };
       }
 
@@ -28,13 +34,13 @@ export class MessagingController {
         senderId,
         receiverId,
         content,
-        MessageType.TEXT
+        MessageType.TEXT,
       );
     } catch (error: any) {
-      console.error('Error in MessagingController.sendTextMessage:', error);
+      if (__DEV__) console.error('Error in MessagingController.sendTextMessage:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send message'
+        error: error.message || 'Failed to send message',
       };
     }
   }
@@ -45,12 +51,12 @@ export class MessagingController {
     senderId: string,
     receiverId: string,
     content: string,
-    attachments: MessageAttachment[]
+    attachments: MessageAttachment[],
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const messageType = attachments.some(att => 
-        att.fileType.startsWith('image/')
-      ) ? MessageType.IMAGE : MessageType.FILE;
+      const messageType = attachments.some((att) => att.fileType.startsWith('image/'))
+        ? MessageType.IMAGE
+        : MessageType.FILE;
 
       return await this.messagingService.sendMessage(
         conversationId,
@@ -58,13 +64,13 @@ export class MessagingController {
         receiverId,
         content,
         messageType,
-        attachments
+        attachments,
       );
     } catch (error: any) {
-      console.error('Error in MessagingController.sendMessageWithAttachments:', error);
+      if (__DEV__) console.error('Error in MessagingController.sendMessageWithAttachments:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send message with attachments'
+        error: error.message || 'Failed to send message with attachments',
       };
     }
   }
@@ -73,60 +79,64 @@ export class MessagingController {
   async createOrGetConversation(
     participant1Id: string,
     participant2Id: string,
-    metadata?: any
+    metadata?: any,
   ): Promise<{ success: boolean; conversationId?: string; error?: string }> {
     try {
       return await this.messagingService.createOrGetConversation(
         participant1Id,
         participant2Id,
-        metadata
+        metadata,
       );
     } catch (error: any) {
-      console.error('Error in MessagingController.createOrGetConversation:', error);
+      if (__DEV__) console.error('Error in MessagingController.createOrGetConversation:', error);
       return {
         success: false,
-        error: error.message || 'Failed to create or get conversation'
+        error: error.message || 'Failed to create or get conversation',
       };
     }
   }
 
   // Get conversation by ID
-  async getConversation(conversationId: string): Promise<{ success: boolean; conversation?: Conversation; error?: string }> {
+  async getConversation(
+    conversationId: string,
+  ): Promise<{ success: boolean; conversation?: Conversation; error?: string }> {
     try {
       const conversation = await this.messagingService.getConversation(conversationId);
       if (conversation) {
         return {
           success: true,
-          conversation
+          conversation,
         };
       } else {
         return {
           success: false,
-          error: 'Conversation not found'
+          error: 'Conversation not found',
         };
       }
     } catch (error: any) {
-      console.error('Error in MessagingController.getConversation:', error);
+      if (__DEV__) console.error('Error in MessagingController.getConversation:', error);
       return {
         success: false,
-        error: error.message || 'Failed to get conversation'
+        error: error.message || 'Failed to get conversation',
       };
     }
   }
 
   // Get user conversations
-  async getUserConversations(userId: string): Promise<{ success: boolean; conversations?: Conversation[]; error?: string }> {
+  async getUserConversations(
+    userId: string,
+  ): Promise<{ success: boolean; conversations?: Conversation[]; error?: string }> {
     try {
       const conversations = await this.messagingService.getUserConversations(userId);
       return {
         success: true,
-        conversations
+        conversations,
       };
     } catch (error: any) {
-      console.error('Error in MessagingController.getUserConversations:', error);
+      if (__DEV__) console.error('Error in MessagingController.getUserConversations:', error);
       return {
         success: false,
-        error: error.message || 'Failed to get user conversations'
+        error: error.message || 'Failed to get user conversations',
       };
     }
   }
@@ -134,22 +144,22 @@ export class MessagingController {
   // Get conversation messages
   async getConversationMessages(
     conversationId: string,
-    limit?: number
+    limit?: number,
   ): Promise<{ success: boolean; messages?: Message[]; error?: string }> {
     try {
       const messages = await this.messagingService.getConversationMessages(
         conversationId,
-        limit || 50
+        limit || 50,
       );
       return {
         success: true,
-        messages
+        messages,
       };
     } catch (error: any) {
-      console.error('Error in MessagingController.getConversationMessages:', error);
+      if (__DEV__) console.error('Error in MessagingController.getConversationMessages:', error);
       return {
         success: false,
-        error: error.message || 'Failed to get conversation messages'
+        error: error.message || 'Failed to get conversation messages',
       };
     }
   }
@@ -157,15 +167,15 @@ export class MessagingController {
   // Mark messages as read
   async markMessagesAsRead(
     conversationId: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       return await this.messagingService.markMessagesAsRead(conversationId, userId);
     } catch (error: any) {
-      console.error('Error in MessagingController.markMessagesAsRead:', error);
+      if (__DEV__) console.error('Error in MessagingController.markMessagesAsRead:', error);
       return {
         success: false,
-        error: error.message || 'Failed to mark messages as read'
+        error: error.message || 'Failed to mark messages as read',
       };
     }
   }
@@ -177,7 +187,7 @@ export class MessagingController {
     receiverId: string,
     bookingId: string,
     messageType: MessageType,
-    content: string
+    content: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       return await this.messagingService.sendBookingMessage(
@@ -186,13 +196,13 @@ export class MessagingController {
         receiverId,
         bookingId,
         messageType,
-        content
+        content,
       );
     } catch (error: any) {
-      console.error('Error in MessagingController.sendBookingMessage:', error);
+      if (__DEV__) console.error('Error in MessagingController.sendBookingMessage:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send booking message'
+        error: error.message || 'Failed to send booking message',
       };
     }
   }
@@ -202,20 +212,20 @@ export class MessagingController {
     conversationId: string,
     receiverId: string,
     content: string,
-    metadata?: MessageMetadata
+    metadata?: MessageMetadata,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       return await this.messagingService.sendSystemMessage(
         conversationId,
         receiverId,
         content,
-        metadata
+        metadata,
       );
     } catch (error: any) {
-      console.error('Error in MessagingController.sendSystemMessage:', error);
+      if (__DEV__) console.error('Error in MessagingController.sendSystemMessage:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send system message'
+        error: error.message || 'Failed to send system message',
       };
     }
   }
@@ -225,10 +235,10 @@ export class MessagingController {
     try {
       return await this.messagingService.deleteMessage(messageId);
     } catch (error: any) {
-      console.error('Error in MessagingController.deleteMessage:', error);
+      if (__DEV__) console.error('Error in MessagingController.deleteMessage:', error);
       return {
         success: false,
-        error: error.message || 'Failed to delete message'
+        error: error.message || 'Failed to delete message',
       };
     }
   }
@@ -236,32 +246,34 @@ export class MessagingController {
   // Archive conversation
   async archiveConversation(
     conversationId: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       return await this.messagingService.archiveConversation(conversationId, userId);
     } catch (error: any) {
-      console.error('Error in MessagingController.archiveConversation:', error);
+      if (__DEV__) console.error('Error in MessagingController.archiveConversation:', error);
       return {
         success: false,
-        error: error.message || 'Failed to archive conversation'
+        error: error.message || 'Failed to archive conversation',
       };
     }
   }
 
   // Get unread message count
-  async getUnreadMessageCount(userId: string): Promise<{ success: boolean; count?: number; error?: string }> {
+  async getUnreadMessageCount(
+    userId: string,
+  ): Promise<{ success: boolean; count?: number; error?: string }> {
     try {
       const count = await this.messagingService.getUnreadMessageCount(userId);
       return {
         success: true,
-        count
+        count,
       };
     } catch (error: any) {
-      console.error('Error in MessagingController.getUnreadMessageCount:', error);
+      if (__DEV__) console.error('Error in MessagingController.getUnreadMessageCount:', error);
       return {
         success: false,
-        error: error.message || 'Failed to get unread message count'
+        error: error.message || 'Failed to get unread message count',
       };
     }
   }
@@ -269,26 +281,26 @@ export class MessagingController {
   // Search messages
   async searchMessages(
     conversationId: string,
-    searchTerm: string
+    searchTerm: string,
   ): Promise<{ success: boolean; messages?: Message[]; error?: string }> {
     try {
       if (!searchTerm.trim()) {
         return {
           success: true,
-          messages: []
+          messages: [],
         };
       }
 
       const messages = await this.messagingService.searchMessages(conversationId, searchTerm);
       return {
         success: true,
-        messages
+        messages,
       };
     } catch (error: any) {
-      console.error('Error in MessagingController.searchMessages:', error);
+      if (__DEV__) console.error('Error in MessagingController.searchMessages:', error);
       return {
         success: false,
-        error: error.message || 'Failed to search messages'
+        error: error.message || 'Failed to search messages',
       };
     }
   }
@@ -296,7 +308,7 @@ export class MessagingController {
   // Real-time message updates
   subscribeToConversationMessages(
     conversationId: string,
-    callback: (messages: Message[]) => void
+    callback: (messages: Message[]) => void,
   ): () => void {
     return this.messagingService.subscribeToConversationMessages(conversationId, callback);
   }
@@ -304,7 +316,7 @@ export class MessagingController {
   // Real-time conversation updates
   subscribeToUserConversations(
     userId: string,
-    callback: (conversations: Conversation[]) => void
+    callback: (conversations: Conversation[]) => void,
   ): () => void {
     return this.messagingService.subscribeToUserConversations(userId, callback);
   }
@@ -314,19 +326,3 @@ export class MessagingController {
     this.messagingService.cleanup();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

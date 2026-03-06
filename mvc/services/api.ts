@@ -30,7 +30,7 @@ function getDevServerHost(): string | null {
     }
     return hostname;
   } catch (error) {
-    console.warn('⚠️  Unable to detect dev server host automatically:', error);
+    if (__DEV__) console.warn('⚠️  Unable to detect dev server host automatically:', error);
     return null;
   }
 }
@@ -62,7 +62,6 @@ export function getApiBaseUrl(): string {
   const envBase = (process as any)?.env?.EXPO_PUBLIC_API_BASE_URL as string | undefined;
   if (envBase && typeof envBase === 'string' && envBase.length > 0) {
     const cleaned = envBase.replace(/\/$/, '');
-    console.log('🌐 Using API base URL from environment:', cleaned);
     cachedBaseUrl = cleaned;
     return cachedBaseUrl ?? '';
   }
@@ -80,34 +79,12 @@ export function getApiBaseUrl(): string {
       // For now, use VPS for production Android builds
       // To test with local server on emulator, set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3001
       const productionUrl = isWeb ? VPS_API_URL : VPS_DIRECT_IP;
-      console.log('🌐 [PRODUCTION ANDROID] Using VPS API base URL:', productionUrl);
-      console.log(
-        '🌐 [PRODUCTION ANDROID] Platform:',
-        Platform.OS,
-        'isWeb:',
-        isWeb,
-        '__DEV__:',
-        __DEV__,
-      );
-      console.log(
-        '🌐 [PRODUCTION ANDROID] Environment variable EXPO_PUBLIC_API_BASE_URL:',
-        envBase || 'NOT SET',
-      );
-      console.log(
-        '🌐 [PRODUCTION ANDROID] To use local server on emulator, set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3001',
-      );
       cachedBaseUrl = productionUrl;
       return cachedBaseUrl ?? '';
     }
 
     // For production APK builds, always use direct VPS IP (not tunnel URL for mobile)
     const productionUrl = isWeb ? VPS_API_URL : VPS_DIRECT_IP;
-    console.log('🌐 [PRODUCTION] Using VPS API base URL:', productionUrl);
-    console.log('🌐 [PRODUCTION] Platform:', Platform.OS, 'isWeb:', isWeb, '__DEV__:', __DEV__);
-    console.log(
-      '🌐 [PRODUCTION] Environment variable EXPO_PUBLIC_API_BASE_URL:',
-      envBase || 'NOT SET',
-    );
     cachedBaseUrl = productionUrl;
     return cachedBaseUrl ?? '';
   }
@@ -117,7 +94,6 @@ export function getApiBaseUrl(): string {
     const devHost = getDevServerHost();
     if (devHost && devHost !== 'localhost' && devHost !== '127.0.0.1') {
       const url = `http://${devHost}:3001`;
-      console.log('🌐 Using API base URL from dev server host:', url);
       cachedBaseUrl = url;
       return cachedBaseUrl ?? '';
     }
@@ -126,7 +102,6 @@ export function getApiBaseUrl(): string {
       // Android emulator maps host machine localhost to 10.0.2.2
       // NOTE: This won't work on physical Android devices with Expo Go!
       const url = 'http://10.0.2.2:3001';
-      console.log('🌐 Using Android emulator API URL:', url);
       cachedBaseUrl = url;
       return cachedBaseUrl ?? '';
     }
@@ -134,13 +109,11 @@ export function getApiBaseUrl(): string {
     // For web development, use localhost if available, otherwise fallback to VPS
     // Check if we can reach localhost first
     const localhostUrl = 'http://localhost:3001';
-    console.log('🌐 Using localhost API URL for development:', localhostUrl);
     cachedBaseUrl = localhostUrl;
     return cachedBaseUrl ?? '';
   }
 
   // Fallback: use VPS URL
-  console.log('🌐 Using VPS API base URL (fallback):', VPS_API_URL);
   cachedBaseUrl = VPS_API_URL;
   return cachedBaseUrl ?? '';
 }
@@ -157,7 +130,7 @@ export async function checkApiConnection(): Promise<boolean> {
     } as any);
     return response.ok;
   } catch (error) {
-    console.error('❌ API connection check failed:', error);
+    if (__DEV__) console.error('❌ API connection check failed:', error);
     return false;
   }
 }

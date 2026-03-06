@@ -1,17 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { SkeletonCard } from '../../components/ui';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
-import { semantic } from '../../theme';
+import { colors, semantic } from '../../theme';
 
 interface AnalyticsViewProps {
   user?: User;
   onNavigate?: (route: string) => void;
   onLogout?: () => void | Promise<void>;
+}
+
+interface RevenueTrendItem {
+  label: string;
+  value: number;
 }
 
 interface AnalyticsData {
@@ -23,13 +29,14 @@ interface AnalyticsData {
   totalReviews: number;
   servicesCount: number;
   activeServices: number;
+  revenueTrend?: RevenueTrendItem[];
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, onLogout }) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
 
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
+  const defaultAnalytics: AnalyticsData = {
     totalRevenue: 0,
     monthlyRevenue: 0,
     totalBookings: 0,
@@ -38,32 +45,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
     totalReviews: 0,
     servicesCount: 0,
     activeServices: 0,
-  });
-  const [loading, setLoading] = useState(true);
+    revenueTrend: [],
+  };
+
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [timeRange]);
-
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-      const resp = await fetch(
-        `${getApiBaseUrl()}/api/provider/analytics?providerId=${user?.uid}&range=${timeRange}`,
+  const { data: analyticsData, isLoading: loading } = useQuery({
+    queryKey: ['provider-analytics', user?.uid, timeRange],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; analytics: AnalyticsData }>(
+        '/api/provider/analytics',
+        { providerId: user?.uid, range: timeRange },
       );
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && data.analytics) {
-          setAnalytics(data.analytics);
-        }
+      if (data.ok && data.analytics) {
+        return data.analytics;
       }
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return defaultAnalytics;
+    },
+    enabled: !!user?.uid,
+  });
+
+  const analytics = analyticsData ?? defaultAnalytics;
 
   const StatCard = ({
     title,
@@ -185,13 +187,51 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onNavigate, 
               />
             </View>
 
-            {/* Performance Chart Placeholder */}
+            {/* Revenue Trend Bar Chart */}
             <View style={styles.chartCard}>
               <Text style={styles.cardTitle}>Revenue Trend</Text>
-              <View style={styles.chartPlaceholder}>
-                <Text style={styles.chartPlaceholderText}>Chart visualization would go here</Text>
-                <Text style={styles.chartPlaceholderSubtext}>Revenue over {timeRange}</Text>
-              </View>
+              {analytics.revenueTrend && analytics.revenueTrend.length > 0 ? (
+                <View style={styles.chartContainer}>
+                  {/* Y-axis max label */}
+                  <Text style={styles.chartAxisLabel}>
+                    ₱ {Math.max(...analytics.revenueTrend.map((d) => d.value)).toLocaleString()}
+                  </Text>
+                  <View style={styles.chartBarsRow}>
+                    {analytics.revenueTrend.map((item, index) => {
+                      const maxVal = Math.max(...analytics.revenueTrend!.map((d) => d.value), 1);
+                      const barHeight = (item.value / maxVal) * (isMobile ? 120 : 160);
+                      return (
+                        <View key={`bar-${index}`} style={styles.chartBarWrapper}>
+                          <Text style={styles.chartBarValue}>
+                            {item.value >= 1000
+                              ? `${(item.value / 1000).toFixed(1)}k`
+                              : item.value.toString()}
+                          </Text>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: Math.max(barHeight, 4),
+                                backgroundColor: colors.primary[500],
+                              },
+                            ]}
+                          />
+                          <Text style={styles.chartBarLabel}>{item.label}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  {/* Baseline */}
+                  <View style={styles.chartBaseline} />
+                  <Text style={styles.chartSubtext}>Revenue over {timeRange}</Text>
+                </View>
+              ) : (
+                <View style={styles.chartPlaceholder}>
+                  <Feather name="bar-chart-2" size={32} color={semantic.textMuted} />
+                  <Text style={styles.chartPlaceholderText}>No revenue data available</Text>
+                  <Text style={styles.chartPlaceholderSubtext}>Revenue over {timeRange}</Text>
+                </View>
+              )}
             </View>
 
             {/* Additional Stats */}
@@ -337,15 +377,66 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       color: semantic.textPrimary,
       marginBottom: isMobile ? 10 : 12,
     },
+    chartContainer: {
+      paddingTop: 8,
+    },
+    chartAxisLabel: {
+      fontSize: 10,
+      color: semantic.textMuted,
+      marginBottom: 4,
+      textAlign: 'right',
+    },
+    chartBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-around',
+      height: isMobile ? 150 : 190,
+      paddingBottom: 24,
+    },
+    chartBarWrapper: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    chartBarValue: {
+      fontSize: isMobile ? 9 : 10,
+      color: semantic.textSecondary,
+      marginBottom: 4,
+      fontWeight: '600',
+    },
+    chartBar: {
+      width: isMobile ? 20 : 28,
+      borderRadius: 4,
+      minHeight: 4,
+    },
+    chartBarLabel: {
+      fontSize: isMobile ? 9 : 10,
+      color: semantic.textSecondary,
+      marginTop: 6,
+      textAlign: 'center',
+    },
+    chartBaseline: {
+      height: 1,
+      backgroundColor: semantic.border,
+      marginTop: -24,
+      marginBottom: 8,
+    },
+    chartSubtext: {
+      fontSize: 12,
+      color: semantic.textMuted,
+      textAlign: 'center',
+      marginTop: 8,
+    },
     chartPlaceholder: {
       height: isMobile ? Math.max(160, screenWidth * 0.45) : 200,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: semantic.background,
       borderRadius: 8,
+      gap: 8,
     },
     chartPlaceholderText: {
-      fontSize: 16,
+      fontSize: 14,
       color: semantic.textSecondary,
       marginBottom: 4,
     },

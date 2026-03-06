@@ -179,4 +179,36 @@ if (process.env.NODE_ENV !== 'test') {
         logger.info('Socket.io attached on same port');
         logger.info(`For Android emulator: http://10.0.2.2:${PORT}`);
     });
+
+    // Event reminder scheduler — check every 60s for due reminders
+    const reminderService = require('./svc/eventReminderService');
+    setInterval(async () => {
+        try {
+            const dueReminders = await reminderService.getDueReminders();
+            if (!dueReminders.length) return;
+            const sentIds = [];
+            for (const r of dueReminders) {
+                try {
+                    const userEmail = r.u_email;
+                    const message = r.er_message || `Reminder: ${r.event_name} is coming up!`;
+                    // Send push notification via socket
+                    io.to(`user:${userEmail}`).emit('new-notification', {
+                        title: 'Event Reminder',
+                        body: message,
+                        type: 'event_reminder',
+                        eventId: r.er_event_id,
+                    });
+                    sentIds.push(r.id);
+                } catch (sendErr) {
+                    logger.error('Failed to send reminder', { id: r.id, error: sendErr.message });
+                }
+            }
+            if (sentIds.length) {
+                await reminderService.markSent(sentIds);
+                logger.info(`Sent ${sentIds.length} event reminder(s)`);
+            }
+        } catch (err) {
+            logger.error('Reminder scheduler error', { error: err.message });
+        }
+    }, 60_000);
 }

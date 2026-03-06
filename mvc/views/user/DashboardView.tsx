@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,7 @@ interface DashboardViewProps {
   onNavigateToEventDetails?: (eventId: string) => void;
   onNavigateToProviderProfile?: (providerEmail: string) => void;
   serviceIdToBook?: string | null;
+  packageIdToBook?: number;
   onBookingModalClosed?: () => void;
   onNavigateToPersonalInfo?: () => void;
 }
@@ -70,20 +71,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToEventDetails,
   onNavigateToProviderProfile,
   serviceIdToBook,
+  packageIdToBook,
   onBookingModalClosed,
   onNavigateToPersonalInfo,
 }) => {
   const { screenWidth, isMobile, isMobileWeb } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
+  const styles = useMemo(
+    () => createStyles(isMobile, screenWidth, isMobileWeb),
+    [isMobile, screenWidth, isMobileWeb],
+  );
 
   const {
     loading,
     featuredServices,
     bannerServices,
-    nearbyServices: _nearbyServices,
-    photographyServices: _photographyServices,
-    venueServices: _venueServices,
-    musicServices: _musicServices,
+    nearbyServices,
+    // photographyServices, venueServices, musicServices also available from hook
     categoryCounts,
     userLocation,
     selectedCategory,
@@ -260,7 +263,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <TouchableOpacity
                   style={styles.modernSearchButton}
                   onPress={() => {
-                    console.log('Search button clicked, query:', searchQuery);
                     handleSearch();
                   }}
                   activeOpacity={0.8}
@@ -567,7 +569,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   contentContainerStyle={styles.categoriesScrollContent}
                   nestedScrollEnabled={true}
                 >
-                  {['photography', 'venue', 'music', 'catering'].map((category) => {
+                  {[
+                    'photography',
+                    'venue',
+                    'music',
+                    'catering',
+                    'decoration',
+                    'planning',
+                    'entertainment',
+                    'transport',
+                    'other',
+                  ].map((category) => {
                     const count = categoryCounts[category] || 0;
                     return (
                       <View key={category}>
@@ -583,6 +595,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   })}
                 </ScrollView>
               </View>
+
+              {/* Nearby Services */}
+              {nearbyServices.length > 0 && (
+                <View style={styles.servicesContainer}>
+                  <Text style={styles.sectionTitle}>Nearby Services</Text>
+                  <View style={styles.servicesGrid}>
+                    {nearbyServices.map((service: ServiceDTO) => (
+                      <ServiceCard
+                        key={service.idservice}
+                        service={service}
+                        onView={(id) => onNavigateToEventDetails?.(id)}
+                        onBook={handleBookNow}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
 
               {/* All Services */}
               {featuredServices.length > 0 && (
@@ -610,6 +639,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             visible={showBookingModal}
             serviceId={selectedService.idservice}
             serviceName={selectedService.s_name}
+            preSelectedPackageId={packageIdToBook}
             onClose={handleCloseBookingModal}
             onConfirm={handleConfirmBooking}
             user={user}

@@ -1,9 +1,7 @@
 // mvc/components/ui/EmptyState.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../theme';
-import { typography } from '../../theme';
-import { spacing } from '../../theme';
+import { colors, typography, spacing } from '../../theme';
 import { Button } from './Button';
 
 interface EmptyStateProps {
@@ -16,12 +14,22 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <View style={styles.container} accessibilityRole="summary" accessibilityLabel={`${title}. ${description || ''}`}>
+    <View
+      style={styles.container}
+      accessibilityRole="summary"
+      accessibilityLabel={`${title}. ${description || ''}`}
+    >
       {icon && <Text style={styles.icon}>{icon}</Text>}
       <Text style={styles.title}>{title}</Text>
       {description && <Text style={styles.description}>{description}</Text>}
       {actionLabel && onAction && (
-        <Button title={actionLabel} onPress={onAction} variant="outline" size="sm" style={styles.button} />
+        <Button
+          title={actionLabel}
+          onPress={onAction}
+          variant="outline"
+          size="sm"
+          style={styles.button}
+        />
       )}
     </View>
   );

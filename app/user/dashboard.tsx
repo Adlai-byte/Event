@@ -1,11 +1,15 @@
 import React from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../mvc/contexts/AuthContext';
 import { DashboardView } from '../../mvc/views/user/DashboardView';
 
 export default function DashboardRoute() {
   const { user, authState, logout } = useAuth();
   const router = useRouter();
+  const { bookServiceId, bookPackageId } = useLocalSearchParams<{
+    bookServiceId?: string;
+    bookPackageId?: string;
+  }>();
 
   return (
     <DashboardView
@@ -25,10 +29,16 @@ export default function DashboardRoute() {
       onNavigateToVenues={() => {}}
       onNavigateToMusic={() => {}}
       onNavigateToEventDetails={(id: string) => router.push(`/user/service/${id}` as any)}
-      onNavigateToProviderProfile={(email: string) => router.push(`/user/provider/${encodeURIComponent(email)}` as any)}
+      onNavigateToProviderProfile={(email: string) =>
+        router.push(`/user/provider/${encodeURIComponent(email)}` as any)
+      }
       onNavigateToPersonalInfo={() => router.push('/user/personal-info')}
-      serviceIdToBook={null}
-      onBookingModalClosed={() => {}}
+      serviceIdToBook={bookServiceId || null}
+      packageIdToBook={bookPackageId ? Number(bookPackageId) : undefined}
+      onBookingModalClosed={() => {
+        // Clear query params after modal closes
+        router.replace('/user/dashboard' as any);
+      }}
     />
   );
 }

@@ -20,6 +20,7 @@ import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
 import { createStyles } from './ProfileView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ProfileViewProps {
   user: User;
@@ -40,6 +41,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const { isMobile, screenWidth, screenHeight } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth, screenHeight);
+  const { showToast } = useToast();
 
   const [showApplyProviderModal, setShowApplyProviderModal] = useState(false);
   const [businessDocument, setBusinessDocument] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error loading provider status:', error);
+        if (__DEV__) console.error('Error loading provider status:', error);
       }
     };
 
@@ -81,21 +83,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }, [user.email]);
 
   const handleLogout = async (): Promise<void> => {
-    console.log('=== LOGOUT BUTTON PRESSED ===');
     try {
-      console.log('Calling onLogout function directly...');
       const success = await onLogout();
-      console.log('=== LOGOUT RESULT ===', success);
 
       if (success) {
-        console.log('Logout successful!');
-        Alert.alert('Success', 'You have been logged out successfully!');
+        showToast({ message: 'You have been logged out successfully!', type: 'success' });
       } else {
-        console.log('Logout failed!');
         Alert.alert('Error', 'Failed to logout. Please try again.');
       }
     } catch (error) {
-      console.error('=== LOGOUT ERROR ===', error);
+      if (__DEV__) console.error('=== LOGOUT ERROR ===', error);
       Alert.alert('Error', 'An error occurred during logout. Please try again.');
     }
   };
@@ -206,7 +203,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      if (__DEV__) console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');
     }
   };
@@ -271,7 +268,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         Alert.alert('Error', data.error || 'Failed to submit application. Please try again.');
       }
     } catch (error) {
-      console.error('Error submitting application:', error);
+      if (__DEV__) console.error('Error submitting application:', error);
       Alert.alert(
         'Error',
         'An error occurred while submitting your application. Please try again.',
@@ -326,7 +323,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <TouchableOpacity
                   style={styles.modernLogoutButton}
                   onPress={() => {
-                    console.log('=== LOGOUT BUTTON TOUCHED ===');
                     handleLogout();
                   }}
                   activeOpacity={0.8}

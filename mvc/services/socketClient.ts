@@ -23,16 +23,12 @@ export function connectSocket(userEmail: string): Socket {
   });
 
   socket.on('connect', () => {
-    console.log('Socket connected:', socket?.id);
     socket?.emit('join', userEmail);
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason);
-  });
+  socket.on('disconnect', (_reason) => {});
 
   socket.on('reconnect', () => {
-    console.log('Socket reconnected, rejoining room');
     socket?.emit('join', userEmail);
   });
 

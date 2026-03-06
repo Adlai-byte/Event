@@ -50,7 +50,7 @@ export function useDashboardData(
             }
           },
           (error) => {
-            if (error.code !== 1) console.log('Geolocation error:', error);
+            if (__DEV__ && error.code !== 1) console.log('Geolocation error:', error);
             if (isMountedRef.current) setUserLocation(defaultLocation);
           },
           { timeout: 10000, enableHighAccuracy: false },
@@ -216,7 +216,7 @@ export function useDashboardData(
         setSelectedCategory(category);
       }
     } catch (error) {
-      console.error('Error loading category services:', error);
+      if (__DEV__) console.error('Error loading category services:', error);
     } finally {
       setLoadingCategory(false);
     }
@@ -250,7 +250,7 @@ export function useDashboardData(
         setShowBookingModal(true);
       }
     } catch (error) {
-      console.error('Error fetching service:', error);
+      if (__DEV__) console.error('Error fetching service:', error);
       Alert.alert('Error', 'Failed to load service details. Please try again.');
     }
   };

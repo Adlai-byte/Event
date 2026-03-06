@@ -29,6 +29,8 @@ export function useSocket(userEmail: string | undefined) {
     const onNewNotification = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['user-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['user-notifications-unread'] });
     };
 
     const onBookingUpdate = () => {

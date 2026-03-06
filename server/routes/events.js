@@ -8,6 +8,8 @@ const eventCtrl = require('../controllers/eventController');
 const checklistCtrl = require('../controllers/eventChecklistController');
 const timelineCtrl = require('../controllers/eventTimelineController');
 const bookingCtrl = require('../controllers/eventBookingController');
+const reminderCtrl = require('../controllers/eventReminderController');
+const collabCtrl = require('../controllers/eventCollaboratorController');
 
 // ============================================
 // EVENT CRUD
@@ -197,6 +199,111 @@ router.delete('/events/:id/timeline/:entryId',
   ],
   validate,
   timelineCtrl.deleteTimelineEntry,
+);
+
+// ============================================
+// CLONE
+// ============================================
+router.post('/events/:id/clone',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('name').optional().isString().trim().isLength({ min: 1, max: 255 }),
+  ],
+  validate,
+  eventCtrl.cloneEvent,
+);
+
+// ============================================
+// REMINDERS
+// ============================================
+router.post('/events/:id/reminders',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('remindAt').isISO8601().withMessage('Valid datetime required'),
+    body('type').optional().isIn(['email', 'push', 'both']),
+    body('message').optional().isString().trim().isLength({ max: 500 }),
+  ],
+  validate,
+  reminderCtrl.addReminder,
+);
+
+router.get('/events/:id/reminders',
+  authMiddleware, requireRole('user'),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validate,
+  reminderCtrl.getReminders,
+);
+
+router.put('/events/:id/reminders/:reminderId',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    param('reminderId').isInt({ min: 1 }).toInt(),
+    body('remindAt').optional().isISO8601(),
+    body('type').optional().isIn(['email', 'push', 'both']),
+    body('message').optional().isString().trim().isLength({ max: 500 }),
+  ],
+  validate,
+  reminderCtrl.updateReminder,
+);
+
+router.delete('/events/:id/reminders/:reminderId',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    param('reminderId').isInt({ min: 1 }).toInt(),
+  ],
+  validate,
+  reminderCtrl.deleteReminder,
+);
+
+// ============================================
+// COLLABORATORS
+// ============================================
+router.get('/events/shared',
+  authMiddleware,
+  collabCtrl.getSharedEvents,
+);
+
+router.post('/events/:id/collaborators',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('email').isEmail().withMessage('Valid email required'),
+    body('role').optional().isIn(['viewer', 'editor']),
+  ],
+  validate,
+  collabCtrl.inviteCollaborator,
+);
+
+router.get('/events/:id/collaborators',
+  authMiddleware,
+  [param('id').isInt({ min: 1 }).toInt()],
+  validate,
+  collabCtrl.getCollaborators,
+);
+
+router.put('/events/:id/collaborators/:collabId',
+  authMiddleware,
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    param('collabId').isInt({ min: 1 }).toInt(),
+    body('status').isIn(['accepted', 'declined']).withMessage('Status must be accepted or declined'),
+  ],
+  validate,
+  collabCtrl.updateCollaborator,
+);
+
+router.delete('/events/:id/collaborators/:collabId',
+  authMiddleware, requireRole('user'),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    param('collabId').isInt({ min: 1 }).toInt(),
+  ],
+  validate,
+  collabCtrl.removeCollaborator,
 );
 
 module.exports = router;

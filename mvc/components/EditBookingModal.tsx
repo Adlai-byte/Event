@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { useBreakpoints } from '../hooks/useBreakpoints';
 import { semantic } from '../theme';
 import { getApiBaseUrl } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 import { BookingWeekCalendar } from './BookingWeekCalendar';
 import { TimePickerModal } from './TimePickerModal';
 
@@ -62,6 +63,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (visible) {
@@ -127,14 +129,14 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       const data = await resp.json();
 
       if (resp.ok && data.ok) {
-        Alert.alert('Success', 'Booking updated successfully');
+        showToast({ message: 'Booking updated successfully', type: 'success' });
         onSuccess();
         onClose();
       } else {
         Alert.alert('Error', data.error || 'Failed to update booking');
       }
     } catch (error) {
-      console.error('Error updating booking:', error);
+      if (__DEV__) console.error('Error updating booking:', error);
       Alert.alert('Error', 'Failed to update booking. Please try again.');
     } finally {
       setSaving(false);

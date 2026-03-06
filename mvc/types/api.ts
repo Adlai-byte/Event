@@ -1,5 +1,5 @@
 /** Standard API response wrapper */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<_T = any> {
   ok: boolean;
   error?: string;
   message?: string;

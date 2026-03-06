@@ -1,9 +1,7 @@
 // mvc/components/ui/Badge.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../theme';
-import { typography } from '../../theme';
-import { spacing, borderRadius } from '../../theme';
+import { colors, typography, spacing, borderRadius } from '../../theme';
 
 type BadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
 
@@ -23,7 +21,11 @@ const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
 export function Badge({ label, variant = 'neutral' }: BadgeProps) {
   const v = variantColors[variant];
   return (
-    <View style={[styles.badge, { backgroundColor: v.bg }]} accessibilityRole="text" accessibilityLabel={label}>
+    <View
+      style={[styles.badge, { backgroundColor: v.bg }]}
+      accessibilityRole="text"
+      accessibilityLabel={label}
+    >
       <Text style={[styles.text, { color: v.text }]}>{label}</Text>
     </View>
   );

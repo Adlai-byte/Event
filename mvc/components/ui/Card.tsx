@@ -1,9 +1,7 @@
 // mvc/components/ui/Card.tsx
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../theme';
-import { spacing, borderRadius } from '../../theme';
-import { shadow } from '../../theme';
+import { colors, spacing, borderRadius, shadow } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
@@ -22,12 +20,7 @@ export function Card({
 }: CardProps) {
   return (
     <View
-      style={[
-        styles.base,
-        shadow(shadowLevel),
-        { padding: spacing[padding] },
-        style,
-      ]}
+      style={[styles.base, shadow(shadowLevel), { padding: spacing[padding] }, style]}
       accessibilityLabel={accessibilityLabel}
     >
       {children}

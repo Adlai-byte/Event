@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SkeletonCard } from '../../components/ui';
 import { Feather } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface ServiceDetailsViewProps {
   serviceId: string;
-  onBookNow?: (serviceId: string) => void;
+  onBookNow?: (serviceId: string, packageId?: number) => void;
   onNavigateToProviderProfile?: (providerEmail: string) => void;
   user?: { firstName?: string; lastName?: string; email?: string; profilePicture?: string };
   onNavigate: (route: string) => void;
@@ -92,7 +92,10 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
   onLogout,
 }) => {
   const { isMobile, screenWidth, screenHeight } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth, screenHeight);
+  const styles = useMemo(
+    () => createStyles(isMobile, screenWidth, screenHeight),
+    [isMobile, screenWidth, screenHeight],
+  );
 
   const {
     service,
@@ -201,7 +204,7 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
               !(service?.provider_email && onNavigateToProviderProfile) &&
                 styles.modernBookButtonFull,
             ]}
-            onPress={() => onBookNow(serviceId)}
+            onPress={() => onBookNow(serviceId, selectedPackage?.id)}
             activeOpacity={0.9}
             accessibilityRole="button"
             accessibilityLabel="Book this service"

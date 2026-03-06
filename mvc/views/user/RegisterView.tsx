@@ -86,7 +86,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     try {
       await onGoogleLogin();
     } catch (error) {
-      console.error('Google login error:', error);
+      if (__DEV__) console.error('Google login error:', error);
     } finally {
       setIsSubmitting(false);
     }

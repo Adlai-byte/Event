@@ -4,8 +4,8 @@ import { Platform } from 'react-native';
 let Audio: any = null;
 try {
   Audio = require('expo-av').Audio;
-} catch (error) {
-  console.log('⚠️ expo-av module not available');
+} catch {
+  // intentionally empty
 }
 
 class NotificationSoundService {
@@ -14,12 +14,11 @@ class NotificationSoundService {
 
   async initialize() {
     if (this.isInitialized) return;
-    
+
     if (!Audio) {
-      console.log('⚠️ Audio module not available');
       return;
     }
-    
+
     try {
       // Request audio permissions
       await Audio.setAudioModeAsync({
@@ -28,7 +27,7 @@ class NotificationSoundService {
       });
       this.isInitialized = true;
     } catch (error) {
-      console.error('⚠️ Failed to initialize notification sound:', error);
+      if (__DEV__) console.error('⚠️ Failed to initialize notification sound:', error);
     }
   }
 
@@ -54,7 +53,7 @@ class NotificationSoundService {
         this.playMobileSound(type);
       }
     } catch (error) {
-      console.error('⚠️ Failed to play notification sound:', error);
+      if (__DEV__) console.error('⚠️ Failed to play notification sound:', error);
     }
   }
 
@@ -84,21 +83,20 @@ class NotificationSoundService {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (error) {
-      console.error('⚠️ Failed to play web sound:', error);
+      if (__DEV__) console.error('⚠️ Failed to play web sound:', error);
     }
   }
 
   private playMobileSound(type: string) {
     // For mobile, use Web Audio API fallback or vibration
-    console.log(`🔔 Playing ${type} notification sound`);
-    
+
     // Try to use Web Audio API as fallback
     try {
       this.playWebSound(type);
-    } catch (error) {
-      console.log('⚠️ Could not play mobile sound:', error);
+    } catch {
+      // intentionally empty
     }
-    
+
     // You can add vibration here using expo-haptics
     // import * as Haptics from 'expo-haptics';
     // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -111,10 +109,9 @@ class NotificationSoundService {
         this.soundObject = null;
       }
     } catch (error) {
-      console.error('⚠️ Failed to cleanup notification sound:', error);
+      if (__DEV__) console.error('⚠️ Failed to cleanup notification sound:', error);
     }
   }
 }
 
 export const notificationSoundService = new NotificationSoundService();
-

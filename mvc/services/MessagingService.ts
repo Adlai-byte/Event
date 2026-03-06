@@ -1,28 +1,27 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
   onSnapshot,
   serverTimestamp,
-  writeBatch
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { 
-  Message, 
-  MessageType, 
-  Conversation, 
-  MessageAttachment, 
+import {
+  Message,
+  MessageType,
+  Conversation,
+  MessageAttachment,
   MessageMetadata,
   MessageModel,
-  ConversationModel 
 } from '../models/Message';
 
 export class MessagingService {
@@ -47,7 +46,7 @@ export class MessagingService {
     messageType: MessageType = MessageType.TEXT,
     attachments?: MessageAttachment[],
     replyToId?: string,
-    metadata?: MessageMetadata
+    metadata?: MessageMetadata,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       // Validate message data
@@ -62,14 +61,14 @@ export class MessagingService {
         false,
         attachments || [],
         replyToId || '',
-        metadata || {}
+        metadata || {},
       );
 
       const validation = message.validate();
       if (!validation.isValid) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: validation.errors.join(', '),
         };
       }
 
@@ -84,7 +83,7 @@ export class MessagingService {
         isRead: false,
         attachments: attachments || [],
         replyToId: replyToId || null,
-        metadata: metadata || {}
+        metadata: metadata || {},
       });
 
       // Update conversation
@@ -92,13 +91,13 @@ export class MessagingService {
 
       return {
         success: true,
-        messageId: messageRef.id
+        messageId: messageRef.id,
       };
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      if (__DEV__) console.error('Error sending message:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send message'
+        error: error.message || 'Failed to send message',
       };
     }
   }
@@ -107,15 +106,18 @@ export class MessagingService {
   async createOrGetConversation(
     participant1Id: string,
     participant2Id: string,
-    metadata?: any
+    metadata?: any,
   ): Promise<{ success: boolean; conversationId?: string; error?: string }> {
     try {
       // Check if conversation already exists
-      const existingConversation = await this.findExistingConversation(participant1Id, participant2Id);
+      const existingConversation = await this.findExistingConversation(
+        participant1Id,
+        participant2Id,
+      );
       if (existingConversation) {
         return {
           success: true,
-          conversationId: existingConversation.id
+          conversationId: existingConversation.id,
         };
       }
 
@@ -127,18 +129,18 @@ export class MessagingService {
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        metadata: metadata || {}
+        metadata: metadata || {},
       });
 
       return {
         success: true,
-        conversationId: conversationRef.id
+        conversationId: conversationRef.id,
       };
     } catch (error: any) {
-      console.error('Error creating conversation:', error);
+      if (__DEV__) console.error('Error creating conversation:', error);
       return {
         success: false,
-        error: error.message || 'Failed to create conversation'
+        error: error.message || 'Failed to create conversation',
       };
     }
   }
@@ -148,7 +150,7 @@ export class MessagingService {
     try {
       const conversationRef = doc(db, 'conversations', conversationId);
       const conversationSnap = await getDoc(conversationRef);
-      
+
       if (conversationSnap.exists()) {
         const data = conversationSnap.data();
         return {
@@ -156,12 +158,12 @@ export class MessagingService {
           ...data,
           lastMessageTime: data.lastMessageTime?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Conversation;
       }
       return null;
     } catch (error: any) {
-      console.error('Error getting conversation:', error);
+      if (__DEV__) console.error('Error getting conversation:', error);
       return null;
     }
   }
@@ -173,7 +175,7 @@ export class MessagingService {
         collection(db, 'conversations'),
         where('participants', 'array-contains', userId),
         where('isActive', '==', true),
-        orderBy('lastMessageTime', 'desc')
+        orderBy('lastMessageTime', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -186,13 +188,13 @@ export class MessagingService {
           ...data,
           lastMessageTime: data.lastMessageTime?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Conversation);
       });
 
       return conversations;
     } catch (error: any) {
-      console.error('Error getting user conversations:', error);
+      if (__DEV__) console.error('Error getting user conversations:', error);
       return [];
     }
   }
@@ -200,14 +202,14 @@ export class MessagingService {
   // Get messages for conversation
   async getConversationMessages(
     conversationId: string,
-    limitCount: number = 50
+    limitCount: number = 50,
   ): Promise<Message[]> {
     try {
       const q = query(
         collection(db, 'messages'),
         where('conversationId', '==', conversationId),
         orderBy('timestamp', 'desc'),
-        limit(limitCount)
+        limit(limitCount),
       );
 
       const querySnapshot = await getDocs(q);
@@ -218,13 +220,13 @@ export class MessagingService {
         messages.push({
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate() || new Date()
+          timestamp: data.timestamp?.toDate() || new Date(),
         } as Message);
       });
 
       return messages.reverse(); // Return in chronological order
     } catch (error: any) {
-      console.error('Error getting conversation messages:', error);
+      if (__DEV__) console.error('Error getting conversation messages:', error);
       return [];
     }
   }
@@ -232,40 +234,40 @@ export class MessagingService {
   // Mark messages as read
   async markMessagesAsRead(
     conversationId: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const batch = writeBatch(db);
-      
+
       // Get unread messages for this conversation and user
       const q = query(
         collection(db, 'messages'),
         where('conversationId', '==', conversationId),
         where('receiverId', '==', userId),
-        where('isRead', '==', false)
+        where('isRead', '==', false),
       );
 
       const querySnapshot = await getDocs(q);
-      
+
       querySnapshot.forEach((doc) => {
         batch.update(doc.ref, { isRead: true });
       });
 
       // Update conversation unread count
       const conversationRef = doc(db, 'conversations', conversationId);
-      batch.update(conversationRef, { 
+      batch.update(conversationRef, {
         unreadCount: 0,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       await batch.commit();
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error marking messages as read:', error);
+      if (__DEV__) console.error('Error marking messages as read:', error);
       return {
         success: false,
-        error: error.message || 'Failed to mark messages as read'
+        error: error.message || 'Failed to mark messages as read',
       };
     }
   }
@@ -277,12 +279,12 @@ export class MessagingService {
     receiverId: string,
     bookingId: string,
     messageType: MessageType,
-    content: string
+    content: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     const metadata: MessageMetadata = {
       bookingId,
       actionRequired: messageType === MessageType.BOOKING_REQUEST,
-      actionType: messageType
+      actionType: messageType,
     };
 
     return this.sendMessage(
@@ -293,7 +295,7 @@ export class MessagingService {
       messageType,
       undefined,
       undefined,
-      metadata
+      metadata,
     );
   }
 
@@ -302,7 +304,7 @@ export class MessagingService {
     conversationId: string,
     receiverId: string,
     content: string,
-    metadata?: MessageMetadata
+    metadata?: MessageMetadata,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     return this.sendMessage(
       conversationId,
@@ -312,19 +314,19 @@ export class MessagingService {
       MessageType.SYSTEM,
       undefined,
       undefined,
-      metadata
+      metadata,
     );
   }
 
   // Real-time message updates
   subscribeToConversationMessages(
     conversationId: string,
-    callback: (messages: Message[]) => void
+    callback: (messages: Message[]) => void,
   ): () => void {
     const q = query(
       collection(db, 'messages'),
       where('conversationId', '==', conversationId),
-      orderBy('timestamp', 'asc')
+      orderBy('timestamp', 'asc'),
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -334,7 +336,7 @@ export class MessagingService {
         messages.push({
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate() || new Date()
+          timestamp: data.timestamp?.toDate() || new Date(),
         } as Message);
       });
       callback(messages);
@@ -347,13 +349,13 @@ export class MessagingService {
   // Real-time conversation updates
   subscribeToUserConversations(
     userId: string,
-    callback: (conversations: Conversation[]) => void
+    callback: (conversations: Conversation[]) => void,
   ): () => void {
     const q = query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
       where('isActive', '==', true),
-      orderBy('lastMessageTime', 'desc')
+      orderBy('lastMessageTime', 'desc'),
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -365,7 +367,7 @@ export class MessagingService {
           ...data,
           lastMessageTime: data.lastMessageTime?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updatedAt: data.updatedAt?.toDate() || new Date(),
         } as Conversation);
       });
       callback(conversations);
@@ -381,10 +383,10 @@ export class MessagingService {
       await deleteDoc(doc(db, 'messages', messageId));
       return { success: true };
     } catch (error: any) {
-      console.error('Error deleting message:', error);
+      if (__DEV__) console.error('Error deleting message:', error);
       return {
         success: false,
-        error: error.message || 'Failed to delete message'
+        error: error.message || 'Failed to delete message',
       };
     }
   }
@@ -392,21 +394,21 @@ export class MessagingService {
   // Archive conversation
   async archiveConversation(
     conversationId: string,
-    userId: string
+    _userId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const conversationRef = doc(db, 'conversations', conversationId);
       await updateDoc(conversationRef, {
         isActive: false,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error archiving conversation:', error);
+      if (__DEV__) console.error('Error archiving conversation:', error);
       return {
         success: false,
-        error: error.message || 'Failed to archive conversation'
+        error: error.message || 'Failed to archive conversation',
       };
     }
   }
@@ -417,27 +419,24 @@ export class MessagingService {
       const q = query(
         collection(db, 'messages'),
         where('receiverId', '==', userId),
-        where('isRead', '==', false)
+        where('isRead', '==', false),
       );
 
       const querySnapshot = await getDocs(q);
       return querySnapshot.size;
     } catch (error: any) {
-      console.error('Error getting unread message count:', error);
+      if (__DEV__) console.error('Error getting unread message count:', error);
       return 0;
     }
   }
 
   // Search messages
-  async searchMessages(
-    conversationId: string,
-    searchTerm: string
-  ): Promise<Message[]> {
+  async searchMessages(conversationId: string, searchTerm: string): Promise<Message[]> {
     try {
       const q = query(
         collection(db, 'messages'),
         where('conversationId', '==', conversationId),
-        orderBy('timestamp', 'desc')
+        orderBy('timestamp', 'desc'),
       );
 
       const querySnapshot = await getDocs(q);
@@ -448,7 +447,7 @@ export class MessagingService {
         const message = {
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate() || new Date()
+          timestamp: data.timestamp?.toDate() || new Date(),
         } as Message;
 
         // Client-side search (Firestore doesn't support full-text search)
@@ -459,7 +458,7 @@ export class MessagingService {
 
       return messages;
     } catch (error: any) {
-      console.error('Error searching messages:', error);
+      if (__DEV__) console.error('Error searching messages:', error);
       return [];
     }
   }
@@ -467,17 +466,17 @@ export class MessagingService {
   // Private helper methods
   private async findExistingConversation(
     participant1Id: string,
-    participant2Id: string
+    participant2Id: string,
   ): Promise<Conversation | null> {
     try {
       const q = query(
         collection(db, 'conversations'),
         where('participants', 'array-contains', participant1Id),
-        where('isActive', '==', true)
+        where('isActive', '==', true),
       );
 
       const querySnapshot = await getDocs(q);
-      
+
       for (const doc of querySnapshot.docs) {
         const data = doc.data();
         if (data.participants.includes(participant2Id)) {
@@ -486,14 +485,14 @@ export class MessagingService {
             ...data,
             lastMessageTime: data.lastMessageTime?.toDate() || new Date(),
             createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date()
+            updatedAt: data.updatedAt?.toDate() || new Date(),
           } as Conversation;
         }
       }
 
       return null;
     } catch (error: any) {
-      console.error('Error finding existing conversation:', error);
+      if (__DEV__) console.error('Error finding existing conversation:', error);
       return null;
     }
   }
@@ -502,29 +501,29 @@ export class MessagingService {
     conversationId: string,
     messageId: string,
     senderId: string,
-    receiverId: string
+    receiverId: string,
   ): Promise<void> {
     try {
       const conversationRef = doc(db, 'conversations', conversationId);
       const messageRef = doc(db, 'messages', messageId);
-      
+
       const batch = writeBatch(db);
-      
+
       // Update conversation with last message info
       batch.update(conversationRef, {
         lastMessage: messageRef,
         lastMessageTime: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       // Increment unread count for receiver
       batch.update(conversationRef, {
-        unreadCount: receiverId // This would need to be handled differently in a real implementation
+        unreadCount: receiverId, // This would need to be handled differently in a real implementation
       });
 
       await batch.commit();
     } catch (error: any) {
-      console.error('Error updating conversation:', error);
+      if (__DEV__) console.error('Error updating conversation:', error);
     }
   }
 
@@ -536,19 +535,3 @@ export class MessagingService {
     this.unsubscribeFunctions.clear();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

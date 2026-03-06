@@ -268,6 +268,10 @@ async function paymongoSuccess(req, res) {
 
   try {
     const result = await bookingService.handlePaymongoSuccess(bookingId, userEmail);
+
+    // Emit socket event so frontend updates in real-time
+    emitBookingUpdate(req, userEmail);
+
     if (!result.found) {
       return res.status(404).send(`
         <html>

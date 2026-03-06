@@ -123,7 +123,7 @@ export const RatingModal: React.FC<RatingModalProps> = ({
         Alert.alert('Error', data.error || 'Failed to submit rating. Please try again.');
       }
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      if (__DEV__) console.error('Error submitting rating:', error);
       Alert.alert('Error', 'Failed to submit rating. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);

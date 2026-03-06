@@ -54,4 +54,13 @@ async function deleteEvent(req, res) {
   }
 }
 
-module.exports = { createEvent, listEvents, getEvent, updateEvent, deleteEvent };
+async function cloneEvent(req, res) {
+  try {
+    const result = await eventService.cloneEvent(Number(req.params.id), req.user.email, req.body.name);
+    return sendSuccess(res, result, 201);
+  } catch (err) {
+    return handleServiceError(res, err, 'Clone event failed');
+  }
+}
+
+module.exports = { createEvent, listEvents, getEvent, updateEvent, deleteEvent, cloneEvent };

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { SkeletonCard } from '../../components/ui';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
 import { colors, semantic } from '../../theme';
 
@@ -47,7 +48,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
 
-  const [stats, setStats] = useState<DashboardStats>({
+  const defaultStats: DashboardStats = {
     totalServices: 0,
     activeServices: 0,
     totalBookings: 0,
@@ -60,79 +61,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     totalProposals: 0,
     activeProposals: 0,
     averageRating: 0,
+  };
+
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['provider-dashboard-stats', user?.email],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; stats: DashboardStats }>(
+        '/api/provider/dashboard/stats',
+        { providerEmail: user?.email },
+      );
+      if (data.ok && data.stats) {
+        return data.stats;
+      }
+      // Fallback: try to load services individually
+      const servicesData = await apiClient.get<{ ok: boolean; rows: any[] }>('/api/services', {
+        providerEmail: user?.email,
+      });
+      if (servicesData.ok && Array.isArray(servicesData.rows)) {
+        const totalServices = servicesData.rows.length;
+        const activeServices = servicesData.rows.filter((s: any) => s.s_is_active).length;
+        return { ...defaultStats, totalServices, activeServices };
+      }
+      return defaultStats;
+    },
+    enabled: !!user?.email,
   });
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<Activity[]>([]);
 
-  useEffect(() => {
-    if (user?.email) {
-      loadDashboardStats();
-      loadRecentActivity();
-    }
-  }, [user]);
-
-  const loadDashboardStats = async () => {
-    if (!user?.email) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      // Load provider dashboard stats from API using email
-      const providerEmail = encodeURIComponent(user.email);
-      const statsResp = await fetch(
-        `${getApiBaseUrl()}/api/provider/dashboard/stats?providerEmail=${providerEmail}`,
+  const { data: activitiesData } = useQuery({
+    queryKey: ['provider-activity', user?.email],
+    queryFn: async () => {
+      const data = await apiClient.get<{ ok: boolean; activities: Activity[] }>(
+        '/api/provider/activity',
+        { providerEmail: user?.email, limit: 4 },
       );
-
-      if (statsResp.ok) {
-        const statsData = await statsResp.json();
-        if (statsData.ok && statsData.stats) {
-          setStats(statsData.stats);
-        } else {
-          console.error('Failed to load stats:', statsData);
-        }
-      } else {
-        console.error('Failed to fetch stats:', statsResp.status, statsResp.statusText);
-        // Fallback: try to load services individually
-        const servicesResp = await fetch(
-          `${getApiBaseUrl()}/api/services?providerEmail=${providerEmail}`,
-        );
-        if (servicesResp.ok) {
-          const servicesData = await servicesResp.json();
-          if (servicesData.ok && Array.isArray(servicesData.rows)) {
-            const totalServices = servicesData.rows.length;
-            const activeServices = servicesData.rows.filter((s: any) => s.s_is_active).length;
-            setStats((prev) => ({ ...prev, totalServices, activeServices }));
-          }
-        }
+      if (data.ok && Array.isArray(data.activities)) {
+        return data.activities;
       }
-    } catch (error) {
-      console.error('Error loading dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return [] as Activity[];
+    },
+    enabled: !!user?.email,
+  });
 
-  const loadRecentActivity = async () => {
-    if (!user?.email) return;
-
-    try {
-      const providerEmail = encodeURIComponent(user.email);
-      const resp = await fetch(
-        `${getApiBaseUrl()}/api/provider/activity?providerEmail=${providerEmail}&limit=4`,
-      );
-
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.activities)) {
-          setActivities(data.activities);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading recent activity:', error);
-    }
-  };
+  const stats = statsData ?? defaultStats;
+  const loading = statsLoading;
+  const activities = activitiesData ?? [];
 
   const formatTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);

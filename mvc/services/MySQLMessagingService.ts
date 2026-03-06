@@ -18,13 +18,17 @@ export class MySQLMessagingService {
 
   async getUserConversations(userEmail: string): Promise<Conversation[]> {
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/user/conversations?email=${encodeURIComponent(userEmail)}`);
+      const resp = await fetch(
+        `${getApiBaseUrl()}/api/user/conversations?email=${encodeURIComponent(userEmail)}`,
+      );
       const data = await resp.json();
 
       if (data.ok && data.conversations) {
         return data.conversations.map((conv: any) => ({
           id: conv.idconversation.toString(),
-          participants: conv.participant_ids ? conv.participant_ids.split(',').map((id: string) => id.trim()) : [],
+          participants: conv.participant_ids
+            ? conv.participant_ids.split(',').map((id: string) => id.trim())
+            : [],
           lastMessage: conv.last_message || '',
           lastMessageTime: conv.last_message_time ? new Date(conv.last_message_time) : new Date(),
           unreadCount: conv.unread_count || 0,
@@ -36,16 +40,18 @@ export class MySQLMessagingService {
             serviceId: conv.c_service_id ? conv.c_service_id.toString() : undefined,
             subject: conv.c_subject,
           },
-          otherParticipant: conv.other_participant ? {
-            id: conv.other_participant.cp_user_id.toString(),
-            email: conv.other_participant.u_email,
-            name: conv.other_participant.name,
-          } : null,
+          otherParticipant: conv.other_participant
+            ? {
+                id: conv.other_participant.cp_user_id.toString(),
+                email: conv.other_participant.u_email,
+                name: conv.other_participant.name,
+              }
+            : null,
         }));
       }
       return [];
     } catch (error) {
-      console.error('Error getting user conversations:', error);
+      if (__DEV__) console.error('Error getting user conversations:', error);
       return [];
     }
   }
@@ -74,7 +80,7 @@ export class MySQLMessagingService {
       }
       return [];
     } catch (error) {
-      console.error('Error getting conversation messages:', error);
+      if (__DEV__) console.error('Error getting conversation messages:', error);
       return [];
     }
   }
@@ -82,7 +88,7 @@ export class MySQLMessagingService {
   async sendMessage(
     conversationId: string,
     userEmail: string,
-    content: string
+    content: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/conversations/${conversationId}/messages`, {
@@ -98,12 +104,15 @@ export class MySQLMessagingService {
       }
       return { success: false, error: data.error || 'Failed to send message' };
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      if (__DEV__) console.error('Error sending message:', error);
       return { success: false, error: error.message || 'Failed to send message' };
     }
   }
 
-  async markMessagesAsRead(conversationId: string, userEmail: string): Promise<{ success: boolean; error?: string }> {
+  async markMessagesAsRead(
+    conversationId: string,
+    userEmail: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const resp = await fetch(`${getApiBaseUrl()}/api/conversations/${conversationId}/read`, {
         method: 'POST',
@@ -114,7 +123,7 @@ export class MySQLMessagingService {
       const data = await resp.json();
       return { success: data.ok || false, error: data.error };
     } catch (error: any) {
-      console.error('Error marking messages as read:', error);
+      if (__DEV__) console.error('Error marking messages as read:', error);
       return { success: false, error: error.message };
     }
   }
@@ -123,7 +132,7 @@ export class MySQLMessagingService {
     conversationId: string,
     userEmail: string,
     callback: (messages: Message[]) => void,
-    interval: number = 2000
+    interval: number = 2000,
   ): () => void {
     this.unsubscribeKey(conversationId);
 
@@ -161,7 +170,7 @@ export class MySQLMessagingService {
   subscribeToUserConversations(
     userEmail: string,
     callback: (conversations: Conversation[]) => void,
-    interval: number = 3000
+    interval: number = 3000,
   ): () => void {
     const key = `conversations_${userEmail}`;
     this.unsubscribeKey(key);

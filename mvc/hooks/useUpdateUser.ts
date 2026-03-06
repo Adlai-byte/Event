@@ -17,23 +17,32 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
+    mutationFn: async (
+      updatedUser: any,
+    ): Promise<boolean | { success: boolean; error?: string }> => {
       if (!authState.user?.email) {
         if (Platform.OS === 'web') return { success: false, error: 'User email not found' };
         Alert.alert('Error', 'User email not found');
         return false;
       }
 
-      const emailChanged = updatedUser.email && updatedUser.email.trim() !== authState.user.email.trim();
+      const emailChanged =
+        updatedUser.email && updatedUser.email.trim() !== authState.user.email.trim();
 
       // If email is being changed, update in Firebase first
       if (emailChanged) {
         const result = await updateUserEmail(updatedUser.email.trim());
         if (!result.success) {
           if (Platform.OS === 'web') {
-            return { success: false, error: result.error || 'Failed to update email in Firebase. Please try again.' };
+            return {
+              success: false,
+              error: result.error || 'Failed to update email in Firebase. Please try again.',
+            };
           }
-          Alert.alert('Error', result.error || 'Failed to update email in Firebase. Please try again.');
+          Alert.alert(
+            'Error',
+            result.error || 'Failed to update email in Firebase. Please try again.',
+          );
           return false;
         }
         if (result.message?.includes('verification email')) {
@@ -46,7 +55,8 @@ export function useUpdateUser() {
       // Fetch user ID from email
       const emailQuery = emailChanged ? updatedUser.email.trim() : authState.user.email;
       const userData = await apiClient.get('/api/users/by-email', { email: emailQuery });
-      if (!userData.ok || !userData.exists || !userData.id) throw new Error('User not found in database');
+      if (!userData.ok || !userData.exists || !userData.id)
+        throw new Error('User not found in database');
 
       // Update user in database
       const updateData = await apiClient.put(`/api/users/${userData.id}`, {
@@ -99,9 +109,9 @@ export function useUpdateUser() {
             updatedUser.state || refreshData.state,
             updatedUser.zipCode || refreshData.zipCode,
             refreshData.role || authState.user!.role,
-            profilePic
+            profilePic,
           );
-          setAuthState(prev => prev.setUser(updatedObj));
+          setAuthState((prev) => prev.setUser(updatedObj));
         }
       } catch {
         // Refresh failed, but update succeeded — don't throw
@@ -114,17 +124,20 @@ export function useUpdateUser() {
     },
   });
 
-  const saveUser = useCallback(async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
-    try {
-      return await updateMutation.mutateAsync(updatedUser);
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      const msg = error.message || 'Failed to update personal information';
-      if (Platform.OS === 'web') return { success: false, error: msg };
-      Alert.alert('Error', msg);
-      return false;
-    }
-  }, [updateMutation]);
+  const saveUser = useCallback(
+    async (updatedUser: any): Promise<boolean | { success: boolean; error?: string }> => {
+      try {
+        return await updateMutation.mutateAsync(updatedUser);
+      } catch (error: any) {
+        if (__DEV__) console.error('Error updating user:', error);
+        const msg = error.message || 'Failed to update personal information';
+        if (Platform.OS === 'web') return { success: false, error: msg };
+        Alert.alert('Error', msg);
+        return false;
+      }
+    },
+    [updateMutation],
+  );
 
   return { saveUser };
 }

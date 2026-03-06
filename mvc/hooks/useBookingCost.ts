@@ -21,7 +21,8 @@ export function useBookingCost(
   visible: boolean,
   selectedSlots: TimeSlot[],
   selectedDays: string[],
-  preSelectedPackage?: ServicePackage | null
+  preSelectedPackage?: ServicePackage | null,
+  preSelectedPackageId?: number | null,
 ) {
   const [serviceDetails, setServiceDetails] = useState<ServiceDetails | null>(null);
   const [bookingMode, setBookingMode] = useState<'hourly' | 'perday'>('hourly');
@@ -67,7 +68,7 @@ export function useBookingCost(
         }
       }
     } catch (error) {
-      console.error('Error loading service details:', error);
+      if (__DEV__) console.error('Error loading service details:', error);
     }
   }, [serviceId]);
 
@@ -120,7 +121,7 @@ export function useBookingCost(
         }
       }
     } catch (error) {
-      console.error('Error loading packages:', error);
+      if (__DEV__) console.error('Error loading packages:', error);
     } finally {
       setLoadingPackages(false);
     }
@@ -128,10 +129,8 @@ export function useBookingCost(
 
   // Toggle item removal in a package
   const toggleItemRemoved = useCallback((itemId: number) => {
-    setRemovedItems(prev =>
-      prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
+    setRemovedItems((prev) =>
+      prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId],
     );
   }, []);
 
@@ -221,30 +220,33 @@ export function useBookingCost(
   }, []);
 
   // Calculate estimated cost
-  const calculateEstimatedCost = useCallback((slots: TimeSlot[], days?: string[]) => {
-    if (!serviceDetails) {
-      setEstimatedCost(0);
-      return;
-    }
+  const calculateEstimatedCost = useCallback(
+    (slots: TimeSlot[], days?: string[]) => {
+      if (!serviceDetails) {
+        setEstimatedCost(0);
+        return;
+      }
 
-    const { basePrice, hourlyPrice, perDayPrice, category } = serviceDetails;
-    let calculatedCost = 0;
+      const { basePrice, hourlyPrice, perDayPrice, category } = serviceDetails;
+      let calculatedCost = 0;
 
-    if (category.toLowerCase() === 'catering') {
-      const numAttendees = parseInt(attendees) || 1;
-      calculatedCost = basePrice * numAttendees;
-    } else if (bookingMode === 'perday' && days && days.length > 0) {
-      const pricePerDay = perDayPrice || basePrice;
-      calculatedCost = pricePerDay * days.length;
-    } else if (bookingMode === 'hourly' && slots.length > 0) {
-      const pricePerHour = hourlyPrice || basePrice;
-      const selectedDurationMinutes = calculateTotalDuration(slots);
-      const hours = selectedDurationMinutes / 60;
-      calculatedCost = pricePerHour * hours;
-    }
+      if (category.toLowerCase() === 'catering') {
+        const numAttendees = parseInt(attendees) || 1;
+        calculatedCost = basePrice * numAttendees;
+      } else if (bookingMode === 'perday' && days && days.length > 0) {
+        const pricePerDay = perDayPrice || basePrice;
+        calculatedCost = pricePerDay * days.length;
+      } else if (bookingMode === 'hourly' && slots.length > 0) {
+        const pricePerHour = hourlyPrice || basePrice;
+        const selectedDurationMinutes = calculateTotalDuration(slots);
+        const hours = selectedDurationMinutes / 60;
+        calculatedCost = pricePerHour * hours;
+      }
 
-    setEstimatedCost(calculatedCost);
-  }, [serviceDetails, attendees, bookingMode, calculateTotalDuration]);
+      setEstimatedCost(calculatedCost);
+    },
+    [serviceDetails, attendees, bookingMode, calculateTotalDuration],
+  );
 
   // Recalculate cost when dependencies change
   useEffect(() => {
@@ -261,13 +263,19 @@ export function useBookingCost(
     }
   }, [selectedSlots, selectedDays, serviceDetails, attendees, bookingMode]);
 
-  // Set pre-selected package when provided
+  // Set pre-selected package when provided (by object or by ID)
   useEffect(() => {
     if (visible && preSelectedPackage) {
       setSelectedPackage(preSelectedPackage);
       setPackagePaxCount(preSelectedPackage.minPax || 1);
+    } else if (visible && preSelectedPackageId && packages.length > 0) {
+      const pkg = packages.find((p) => p.id === preSelectedPackageId);
+      if (pkg) {
+        setSelectedPackage(pkg);
+        setPackagePaxCount(pkg.minPax || 1);
+      }
     }
-  }, [visible, preSelectedPackage]);
+  }, [visible, preSelectedPackage, preSelectedPackageId, packages]);
 
   return {
     serviceDetails,

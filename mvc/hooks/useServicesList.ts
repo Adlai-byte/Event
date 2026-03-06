@@ -153,7 +153,7 @@ export function useServicesList(user?: UserModel) {
             pkgsByService[service.id] = data.packages.map(mapToPackage);
           }
         } catch (err) {
-          console.error(`Error loading packages for service ${service.id}:`, err);
+          if (__DEV__) console.error(`Error loading packages for service ${service.id}:`, err);
         }
       }
       return pkgsByService;

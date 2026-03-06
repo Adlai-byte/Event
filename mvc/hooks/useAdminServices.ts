@@ -71,7 +71,7 @@ async function fetchAdminServices(): Promise<Service[]> {
       status: s.s_is_active ? 'active' : 'inactive',
       rating: parseFloat(s.s_rating) || 0,
       bookings: s.s_review_count || 0,
-      description: s.s_description || ''
+      description: s.s_description || '',
     }));
   }
   return [];
@@ -81,10 +81,7 @@ export function useAdminServices() {
   const queryClient = useQueryClient();
 
   // --- TanStack Query: load services ---
-  const {
-    data: services = [],
-    isLoading: loading,
-  } = useQuery<Service[]>({
+  const { data: services = [], isLoading: loading } = useQuery<Service[]>({
     queryKey: ['admin-services'],
     queryFn: fetchAdminServices,
   });
@@ -112,38 +109,43 @@ export function useAdminServices() {
         (position) => {
           const { latitude, longitude } = position.coords;
           setMapLocation({ lat: latitude, lng: longitude });
-          setNewService(prev => ({
+          setNewService((prev) => ({
             ...prev,
             latitude: latitude.toString(),
-            longitude: longitude.toString()
+            longitude: longitude.toString(),
           }));
         },
         (error) => {
           // Only log non-permission errors (permission denied is expected user behavior)
           if (error.code !== 1) {
-            console.log('Geolocation error:', error);
+            // intentionally empty — permission denied is expected
           }
           setMapLocation(DEFAULT_LOCATION);
-          setNewService(prev => ({
+          setNewService((prev) => ({
             ...prev,
             latitude: DEFAULT_LOCATION.lat.toString(),
-            longitude: DEFAULT_LOCATION.lng.toString()
+            longitude: DEFAULT_LOCATION.lng.toString(),
           }));
-        }
+        },
       );
     } else {
       setMapLocation(DEFAULT_LOCATION);
-      setNewService(prev => ({
+      setNewService((prev) => ({
         ...prev,
         latitude: DEFAULT_LOCATION.lat.toString(),
-        longitude: DEFAULT_LOCATION.lng.toString()
+        longitude: DEFAULT_LOCATION.lng.toString(),
       }));
     }
   }, []);
 
   // Initialize map for web platform
   useEffect(() => {
-    if (Platform.OS !== 'web' || !mapLocation || typeof window === 'undefined' || mapInitializedRef.current) {
+    if (
+      Platform.OS !== 'web' ||
+      !mapLocation ||
+      typeof window === 'undefined' ||
+      mapInitializedRef.current
+    ) {
       return;
     }
 
@@ -188,7 +190,7 @@ export function useAdminServices() {
       const map = L.map(mapElement, {
         zoomControl: true,
         doubleClickZoom: true,
-        scrollWheelZoom: true
+        scrollWheelZoom: true,
       }).setView([lat, lng], 13);
 
       mapInstanceRef.current = map;
@@ -196,41 +198,43 @@ export function useAdminServices() {
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '\u00a9 OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 19,
       }).addTo(map);
 
       const marker = L.marker([lat, lng], {
-        draggable: true
+        draggable: true,
       }).addTo(map);
 
       const updateLocation = async (lat: number, lng: number) => {
         try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+          );
           const data = await response.json();
           const address = data.display_name || '';
 
-          setNewService(prev => ({
+          setNewService((prev) => ({
             ...prev,
             latitude: lat.toString(),
             longitude: lng.toString(),
-            address: address
+            address: address,
           }));
-        } catch (error) {
-          setNewService(prev => ({
+        } catch {
+          setNewService((prev) => ({
             ...prev,
             latitude: lat.toString(),
             longitude: lng.toString(),
-            address: ''
+            address: '',
           }));
         }
       };
 
-      marker.on('dragend', function(e: any) {
+      marker.on('dragend', function (_e: any) {
         const position = marker.getLatLng();
         updateLocation(position.lat, position.lng);
       });
 
-      map.on('click', function(e: any) {
+      map.on('click', function (e: any) {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
         marker.setLatLng([lat, lng]);
@@ -246,7 +250,9 @@ export function useAdminServices() {
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.remove();
-        } catch (e) {}
+        } catch {
+          /* intentionally empty */
+        }
         mapInstanceRef.current = null;
         mapInitializedRef.current = false;
       }
@@ -265,11 +271,11 @@ export function useAdminServices() {
     onSuccess: (_data, service) => {
       // Optimistically update the cache so the UI flips immediately
       queryClient.setQueryData<Service[]>(['admin-services'], (old) =>
-        (old ?? []).map(s =>
+        (old ?? []).map((s) =>
           s.id === service.id
-            ? { ...s, status: s.status === 'active' ? 'inactive' as const : 'active' as const }
-            : s
-        )
+            ? { ...s, status: s.status === 'active' ? ('inactive' as const) : ('active' as const) }
+            : s,
+        ),
       );
     },
     onError: () => {
@@ -292,7 +298,9 @@ export function useAdminServices() {
         if (mapInstanceRef.current) {
           try {
             mapInstanceRef.current.remove();
-          } catch (e) {}
+          } catch {
+            /* intentionally empty */
+          }
           mapInstanceRef.current = null;
         }
 
@@ -313,9 +321,12 @@ export function useAdminServices() {
 
   // --- Handlers ---
 
-  const handleToggleServiceStatus = useCallback(async (service: Service) => {
-    toggleStatusMutation.mutate(service);
-  }, [toggleStatusMutation]);
+  const handleToggleServiceStatus = useCallback(
+    async (service: Service) => {
+      toggleStatusMutation.mutate(service);
+    },
+    [toggleStatusMutation],
+  );
 
   const handleAddService = useCallback(async () => {
     if (submitting) {
@@ -330,8 +341,16 @@ export function useAdminServices() {
       return;
     }
 
-    if (!newService.providerEmail || !newService.name || !newService.category || !newService.price) {
-      Alert.alert('Error', 'Please fill in all required fields (Provider Email, Service Name, Category, and Price)');
+    if (
+      !newService.providerEmail ||
+      !newService.name ||
+      !newService.category ||
+      !newService.price
+    ) {
+      Alert.alert(
+        'Error',
+        'Please fill in all required fields (Provider Email, Service Name, Category, and Price)',
+      );
       return;
     }
 
@@ -371,7 +390,7 @@ export function useAdminServices() {
       longitude: parseFloat(newService.longitude),
       address: newService.address || null,
       city: city,
-      state: state
+      state: state,
     };
 
     addServiceMutation.mutate(requestBody);
@@ -381,16 +400,16 @@ export function useAdminServices() {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'location-selected') {
-        setNewService(prev => ({
+        setNewService((prev) => ({
           ...prev,
           latitude: data.lat.toString(),
           longitude: data.lng.toString(),
-          address: data.address || ''
+          address: data.address || '',
         }));
         setMapLocation({ lat: data.lat, lng: data.lng });
       }
     } catch (error) {
-      console.error('Error parsing map message:', error);
+      if (__DEV__) console.error('Error parsing map message:', error);
     }
   }, []);
 
@@ -427,17 +446,21 @@ export function useAdminServices() {
 
             const sendMessage = (data) => {
               const message = JSON.stringify(data);
-              ${isWeb ? `
+              ${
+                isWeb
+                  ? `
                 if (window.parent && window.parent !== window) {
                   window.parent.postMessage(message, '*');
                 } else {
                   window.postMessage(message, '*');
                 }
-              ` : `
+              `
+                  : `
                 if (window.ReactNativeWebView) {
                   window.ReactNativeWebView.postMessage(message);
                 }
-              `}
+              `
+              }
             };
 
             const updateLocation = async (lat, lng) => {
@@ -482,21 +505,25 @@ export function useAdminServices() {
   }, [mapLocation]);
 
   const handleEmailChange = useCallback((text: string) => {
-    setNewService(prev => ({ ...prev, providerEmail: text }));
+    setNewService((prev) => ({ ...prev, providerEmail: text }));
     // Real-time email validation
     const error = validateEmail(text);
     setEmailError(error);
   }, []);
 
-  const updateNewServiceField = useCallback(<K extends keyof NewServiceForm>(field: K, value: NewServiceForm[K]) => {
-    setNewService(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const updateNewServiceField = useCallback(
+    <K extends keyof NewServiceForm>(field: K, value: NewServiceForm[K]) => {
+      setNewService((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   // Derived data
-  const filteredServices = services.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         s.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredServices = services.filter((s) => {
+    const matchesSearch =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = filterCategory === 'all' || s.category === filterCategory;
     return matchesSearch && matchesCategory;
   });

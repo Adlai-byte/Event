@@ -95,7 +95,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
         }
       }
     } catch (error) {
-      console.error('Error loading proposals:', error);
+      if (__DEV__) console.error('Error loading proposals:', error);
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
         }
       }
     } catch (error) {
-      console.error('Error loading hiring requests:', error);
+      if (__DEV__) console.error('Error loading hiring requests:', error);
     }
   };
 

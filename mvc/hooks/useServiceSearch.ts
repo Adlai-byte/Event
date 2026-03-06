@@ -144,7 +144,7 @@ export function useServiceSearch(
             providerServices = providerServicesArrays.flat();
           }
         } catch (err) {
-          console.error('Provider search error:', err);
+          if (__DEV__) console.error('Provider search error:', err);
         }
       }
 
@@ -176,7 +176,7 @@ export function useServiceSearch(
         setProviderResults([]);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      if (__DEV__) console.error('Search error:', error);
       setSearchResults([]);
       setProviderResults([]);
     } finally {

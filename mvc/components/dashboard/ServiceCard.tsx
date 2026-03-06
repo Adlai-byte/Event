@@ -12,7 +12,7 @@ interface ServiceCardProps {
   onBook: (service: Service) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBook }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = React.memo(({ service, onView, onBook }) => {
   const { isMobile, screenWidth, isMobileWeb } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth, isMobileWeb);
 
@@ -160,4 +160,4 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onView, onBoo
       </View>
     </View>
   );
-};
+});

@@ -50,7 +50,10 @@ export const BookingView: React.FC<BookingViewProps> = ({
   refreshKey,
 }) => {
   const { isMobile, screenWidth, screenHeight } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth, screenHeight);
+  const styles = useMemo(
+    () => createStyles(isMobile, screenWidth, screenHeight),
+    [isMobile, screenWidth, screenHeight],
+  );
 
   const { bookings, loading, serviceRatings, loadBookings, loadServiceRatings } = useBookingData({
     userEmail,
@@ -181,7 +184,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
           Alert.alert('Error', data.error || 'Failed to start conversation');
         }
       } catch (error) {
-        console.error('Error creating conversation:', error);
+        if (__DEV__) console.error('Error creating conversation:', error);
         Alert.alert('Error', 'Failed to start conversation. Please try again.');
       }
     },

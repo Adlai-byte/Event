@@ -7,6 +7,7 @@ import { getApiBaseUrl } from '../../services/api';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { AppLayout } from '../../components/layout';
 import { PersonalInfoForm, PersonalInfoFormData } from '../../components/profile/PersonalInfoForm';
+import { useToast } from '../../contexts/ToastContext';
 import { createStyles } from './PersonalInfoView.styles';
 
 interface PersonalInfoViewProps {
@@ -28,6 +29,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
   onSendVerificationEmail,
   onCheckVerification,
 }) => {
+  const { showToast } = useToast();
   const [sendingVerification, setSendingVerification] = useState(false);
   const [checkingVerification, setCheckingVerification] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -129,7 +131,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
             setShowSuccessTooltip(false);
           }, 3000);
         } else {
-          Alert.alert('Success', 'Personal information updated successfully!');
+          showToast({ message: 'Personal information updated successfully!', type: 'success' });
         }
       } else {
         // Set error message for tooltip
@@ -184,7 +186,7 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
         setErrorMessage(null);
         setShowErrorTooltip(false);
       } else {
-        Alert.alert('Success', 'Personal information updated successfully!');
+        showToast({ message: 'Personal information updated successfully!', type: 'success' });
       }
     }
   };
@@ -280,12 +282,12 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
               'Warning',
               'Image processing failed. Please try selecting the image again.',
             );
-            console.warn('Base64 data not available for image:', asset.uri);
+            if (__DEV__) console.warn('Base64 data not available for image:', asset.uri);
           }
         }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      if (__DEV__) console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -303,9 +305,6 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
       const cleanPath = profilePicture.startsWith('/') ? profilePicture : `/${profilePicture}`;
       const cleanApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
       const imageUrl = `${cleanApiUrl}${cleanPath}`;
-      console.log('Profile picture URL:', imageUrl);
-      console.log('Profile picture path:', profilePicture);
-      console.log('API base URL:', apiUrl);
       return imageUrl;
     }
     // If it's already a full URL or local file URI, return as is
@@ -389,14 +388,12 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                         style={styles.avatarImage as any}
                         resizeMode="cover"
                         onError={(error) => {
-                          console.error('Image load error:', error.nativeEvent.error);
-                          console.error('Failed to load image from:', getImageUri());
+                          if (__DEV__) console.error('Image load error:', error.nativeEvent.error);
+                          if (__DEV__) console.error('Failed to load image from:', getImageUri());
                           // Fallback to initials if image fails to load
                           setProfilePicture(null);
                         }}
-                        onLoad={() => {
-                          console.log('Image loaded successfully:', getImageUri());
-                        }}
+                        onLoad={() => {}}
                       />
                     ) : (
                       <Text style={styles.avatarText}>{user.getInitials()}</Text>
@@ -550,7 +547,10 @@ export const PersonalInfoView: React.FC<PersonalInfoViewProps> = ({
                               const result = await onCheckVerification();
                               if (result.success) {
                                 if (result.verified) {
-                                  Alert.alert('Success', 'Your email has been verified!');
+                                  showToast({
+                                    message: 'Your email has been verified!',
+                                    type: 'success',
+                                  });
                                 } else {
                                   Alert.alert(
                                     'Not Verified',

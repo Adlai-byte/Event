@@ -26,9 +26,11 @@ export default function BookingsRoute() {
       user={user || undefined}
       onNavigate={handleNavigate}
       onLogout={logoutVoid}
-      onNavigateToBookingDetails={(bookingId: string) => {}}
-      onNavigateToMessages={(conversationId: string) => router.push(`/user/messages?conversationId=${conversationId}` as any)}
-      onNavigateToEditEvent={(eventId: string) => {}}
+      onNavigateToBookingDetails={(_bookingId: string) => {}}
+      onNavigateToMessages={(conversationId: string) =>
+        router.push(`/user/messages?conversationId=${conversationId}` as any)
+      }
+      onNavigateToEditEvent={(_eventId: string) => {}}
     />
   );
 }

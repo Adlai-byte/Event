@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { DateTimeInput } from '../ui/DateTimeInput';
 import { colors, semantic } from '../../theme';
 import { getShadowStyle } from '../../utils/shadowStyles';
 import type { EventItem } from '../../hooks/useEventData';
@@ -127,24 +128,26 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             <View style={styles.row}>
               <View style={styles.halfField}>
                 <Text style={styles.label}>Start Date *</Text>
-                <TextInput
+                <DateTimeInput
                   style={styles.input}
                   value={date}
-                  onChangeText={setDate}
+                  onChange={setDate}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={semantic.textMuted}
                   accessibilityLabel="Event start date"
+                  type="date"
                 />
               </View>
               <View style={styles.halfField}>
                 <Text style={styles.label}>End Date</Text>
-                <TextInput
+                <DateTimeInput
                   style={styles.input}
                   value={endDate}
-                  onChangeText={setEndDate}
+                  onChange={setEndDate}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={semantic.textMuted}
                   accessibilityLabel="Event end date"
+                  type="date"
                 />
               </View>
             </View>

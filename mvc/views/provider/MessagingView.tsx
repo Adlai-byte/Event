@@ -104,7 +104,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
       const convs = await messagingService.getUserConversations(userEmail);
       setConversations(convs);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      if (__DEV__) console.error('Error loading conversations:', error);
     }
     setLoading(false);
   };
@@ -117,7 +117,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      if (__DEV__) console.error('Error loading messages:', error);
     }
   };
 
@@ -132,7 +132,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
         setUnreadCount(data.count || 0);
       }
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      if (__DEV__) console.error('Error loading unread count:', error);
     }
   };
 
@@ -153,7 +153,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
       // Reload messages to show the new one
       loadMessages(selectedConversation.id);
     } else {
-      console.error('Failed to send message:', result.error);
+      if (__DEV__) console.error('Failed to send message:', result.error);
       Alert.alert('Error', result.error || 'Failed to send message');
     }
   };

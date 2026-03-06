@@ -17,8 +17,14 @@ export default function ServiceDetailsRoute() {
         else router.push(`/user/${route}` as any);
       }}
       onLogout={logoutVoid}
-      onNavigateToProviderProfile={(email: string) => router.push(`/user/provider/${encodeURIComponent(email)}` as any)}
-      onBookNow={(serviceId: string) => router.push(`/user/dashboard?bookServiceId=${serviceId}` as any)}
+      onNavigateToProviderProfile={(email: string) =>
+        router.push(`/user/provider/${encodeURIComponent(email)}` as any)
+      }
+      onBookNow={(serviceId: string, packageId?: number) =>
+        router.push(
+          `/user/dashboard?bookServiceId=${serviceId}${packageId ? `&bookPackageId=${packageId}` : ''}` as any,
+        )
+      }
     />
   );
 }

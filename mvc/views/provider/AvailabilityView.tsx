@@ -154,7 +154,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
           }
         }
       } catch (err) {
-        console.error('Failed to load services:', err);
+        if (__DEV__) console.error('Failed to load services:', err);
       } finally {
         if (!cancelled) setServicesLoading(false);
       }

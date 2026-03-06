@@ -86,9 +86,23 @@ async function getAnalytics(req, res) {
     }
 }
 
+/**
+ * GET /dashboard-stats
+ */
+async function getDashboardStats(req, res) {
+    try {
+        const stats = await adminService.getDashboardStats();
+        return sendSuccess(res, { stats });
+    } catch (err) {
+        console.error('Get admin dashboard stats failed:', err.code, err.message);
+        return sendError(res, 'SERVER_ERROR', 'Database error', 500);
+    }
+}
+
 module.exports = {
     getProviderApplications,
     approveProviderApplication,
     rejectProviderApplication,
     getAnalytics,
+    getDashboardStats,
 };

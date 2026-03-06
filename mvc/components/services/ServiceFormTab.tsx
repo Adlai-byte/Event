@@ -78,15 +78,6 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
       newService.image.startsWith('https://') ||
       newService.image.startsWith('/uploads/'));
 
-  console.log('Image preview check:', {
-    hasImage: !!newService.image,
-    imageLength: newService.image?.length || 0,
-    isDataURI: newService.image?.startsWith('data:image') || false,
-    isURL:
-      newService.image?.startsWith('http') || newService.image?.startsWith('/uploads/') || false,
-    willShow: hasValidImage,
-  });
-
   return (
     <View style={styles.addForm}>
       {activeTab === 'edit' && <Text style={styles.formTitle}>Edit Service</Text>}
@@ -125,19 +116,10 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
             source={{ uri: newService.image! }}
             style={styles.imagePreview}
             onError={(e) => {
-              console.error('Image display error in edit form');
-              console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
-              console.log('Image URI length:', newService.image?.length);
-              console.log('Image URI start:', newService.image?.substring(0, 50));
-              console.log(
-                'Image URI end:',
-                newService.image?.substring(newService.image!.length - 20),
-              );
+              if (__DEV__) console.error('Image display error in edit form');
+              if (__DEV__) console.error('Error details:', e.nativeEvent?.error || 'Unknown error');
             }}
-            onLoad={() => {
-              console.log('Image loaded successfully in edit form');
-              console.log('Image size:', newService.image?.length);
-            }}
+            onLoad={() => {}}
           />
           <TouchableOpacity style={styles.removeImageButton} onPress={onRemoveImage}>
             <Text style={styles.removeImageText}>Remove Photo</Text>
@@ -178,14 +160,10 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
                 originWhitelist={['*']}
                 onError={(syntheticEvent) => {
                   const { nativeEvent } = syntheticEvent;
-                  console.error('WebView error: ', nativeEvent);
+                  if (__DEV__) console.error('WebView error: ', nativeEvent);
                 }}
-                onLoadEnd={() => {
-                  console.log('Map WebView loaded successfully');
-                }}
-                onLoadStart={() => {
-                  console.log('Map WebView loading started');
-                }}
+                onLoadEnd={() => {}}
+                onLoadStart={() => {}}
                 renderLoading={() => (
                   <View style={styles.mapLoadingContainer}>
                     <ActivityIndicator size="large" color="#4a55e1" />

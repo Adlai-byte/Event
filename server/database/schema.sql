@@ -593,8 +593,36 @@ CREATE TABLE IF NOT EXISTS `event_timeline` (
     FOREIGN KEY (`et_booking_id`) REFERENCES `booking`(`idbooking`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- EVENT REMINDER TABLE (Phase 3.5)
+CREATE TABLE IF NOT EXISTS `event_reminder` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `er_event_id` INT(11) NOT NULL,
+    `er_type` ENUM('email','push','both') NOT NULL DEFAULT 'push',
+    `er_remind_at` DATETIME NOT NULL,
+    `er_message` VARCHAR(500) DEFAULT NULL,
+    `er_is_sent` TINYINT(1) NOT NULL DEFAULT 0,
+    `er_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_event` (`er_event_id`),
+    INDEX `idx_remind` (`er_remind_at`, `er_is_sent`),
+    FOREIGN KEY (`er_event_id`) REFERENCES `event`(`idevent`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
-
+-- EVENT COLLABORATOR TABLE (Phase 3.5)
+CREATE TABLE IF NOT EXISTS `event_collaborator` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `ecol_event_id` INT(11) NOT NULL,
+    `ecol_user_id` INT(11) NOT NULL,
+    `ecol_role` ENUM('viewer','editor') NOT NULL DEFAULT 'viewer',
+    `ecol_invited_by` INT(11) NOT NULL,
+    `ecol_status` ENUM('pending','accepted','declined') NOT NULL DEFAULT 'pending',
+    `ecol_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_event_user` (`ecol_event_id`, `ecol_user_id`),
+    INDEX `idx_user` (`ecol_user_id`),
+    FOREIGN KEY (`ecol_event_id`) REFERENCES `event`(`idevent`) ON DELETE CASCADE,
+    FOREIGN KEY (`ecol_user_id`) REFERENCES `user`(`iduser`) ON DELETE CASCADE,
+    FOREIGN KEY (`ecol_invited_by`) REFERENCES `user`(`iduser`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

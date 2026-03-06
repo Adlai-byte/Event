@@ -69,12 +69,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       } else {
         // For mobile, use Linking
         Linking.openURL(invoiceUrl).catch((err) => {
-          console.error('Error opening invoice URL:', err);
+          if (__DEV__) console.error('Error opening invoice URL:', err);
           Alert.alert('Error', 'Failed to download invoice. Please try again.');
         });
       }
     } catch (error) {
-      console.error('Error downloading invoice:', error);
+      if (__DEV__) console.error('Error downloading invoice:', error);
       Alert.alert(
         'Error',
         `Failed to download invoice: ${error instanceof Error ? error.message : 'Unknown error'}`,
