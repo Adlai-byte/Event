@@ -31,6 +31,7 @@ function mapUserRow(row) {
         blocked: Number(row.u_disabled) === 1,
         role: row.u_role || 'user',
         profilePicture: row.u_profile_image || null,
+        dateOfBirth: row.u_date_of_birth || null,
     };
 }
 
@@ -86,7 +87,7 @@ async function getUserByEmail(email) {
     const query =
         "SELECT iduser, u_email, u_fname, u_mname, u_lname, u_suffix, u_password, " +
         "IFNULL(u_disabled, 0) AS u_disabled, IFNULL(u_role, 'user') AS u_role, " +
-        "u_phone, u_address, u_city, u_state, u_zip_code, u_profile_image " +
+        "u_phone, u_address, u_city, u_state, u_zip_code, u_profile_image, u_date_of_birth " +
         "FROM `user` WHERE u_email = ? LIMIT 1";
 
     const [rows] = await pool.query(query, [email]);

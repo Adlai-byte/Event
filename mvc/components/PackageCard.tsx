@@ -8,15 +8,15 @@ import {
   calculateCategorySubtotal,
   formatPeso,
 } from '../models/Package';
-import { colors, semantic } from '../theme';
 import { useBreakpoints } from '../hooks/useBreakpoints';
+import { colors, semantic } from '../theme';
 
 interface PackageCardProps {
   pkg: ServicePackage;
   isSelected?: boolean;
   onSelect?: (pkg: ServicePackage) => void;
   showSelectButton?: boolean;
-  paxCount?: number;
+  guestCount?: number;
 }
 
 export const PackageCard: React.FC<PackageCardProps> = ({
@@ -24,13 +24,13 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   isSelected = false,
   onSelect,
   showSelectButton = true,
-  paxCount = 1,
+  guestCount = 1,
 }) => {
   const { isMobile, screenWidth } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth);
   const [expanded, setExpanded] = useState(false);
 
-  const price = calculatePackagePrice(pkg, paxCount);
+  const price = calculatePackagePrice(pkg, guestCount);
   const priceLabel =
     pkg.priceType === 'per_person' ? `${formatPeso(pkg.basePrice || 0)}/person` : formatPeso(price);
 
@@ -97,6 +97,16 @@ export const PackageCard: React.FC<PackageCardProps> = ({
             {pkg.priceType === 'per_person' ? 'Per Person' : 'Package Price'}
           </Text>
           <Text style={styles.priceValue}>{priceLabel}</Text>
+          <View style={styles.billingTypeBadge}>
+            <Feather
+              name={pkg.billingType === 'daily' ? 'calendar' : 'clock'}
+              size={10}
+              color="#64748B"
+            />
+            <Text style={styles.billingTypeText}>
+              {pkg.billingType === 'daily' ? 'Daily' : 'Hourly'}
+            </Text>
+          </View>
           {pkg.discountPercent > 0 && (
             <Text style={styles.discountBadge}>{pkg.discountPercent}% off</Text>
           )}
@@ -105,16 +115,16 @@ export const PackageCard: React.FC<PackageCardProps> = ({
 
       {/* Meta info */}
       <View style={styles.metaRow}>
-        {pkg.minPax && (
+        {pkg.minGuests && (
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Min</Text>
-            <Text style={styles.metaValue}>{pkg.minPax} pax</Text>
+            <Text style={styles.metaValue}>{pkg.minGuests} guests</Text>
           </View>
         )}
-        {pkg.maxPax && (
+        {pkg.maxGuests && (
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Max</Text>
-            <Text style={styles.metaValue}>{pkg.maxPax} pax</Text>
+            <Text style={styles.metaValue}>{pkg.maxGuests} guests</Text>
           </View>
         )}
         <View style={styles.metaItem}>
@@ -164,10 +174,10 @@ export const PackageCard: React.FC<PackageCardProps> = ({
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>{formatPeso(price)}</Text>
             </View>
-            {pkg.priceType === 'per_person' && paxCount > 1 && (
+            {pkg.priceType === 'per_person' && guestCount > 1 && (
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>For {paxCount} persons</Text>
-                <Text style={styles.summaryValue}>{formatPeso(price * paxCount)}</Text>
+                <Text style={styles.summaryLabel}>For {guestCount} guests</Text>
+                <Text style={styles.summaryValue}>{formatPeso(price * guestCount)}</Text>
               </View>
             )}
           </View>
@@ -194,25 +204,16 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
   return StyleSheet.create({
     card: {
       backgroundColor: semantic.surface,
-      borderRadius: 12,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: semantic.border,
       marginBottom: 12,
       overflow: 'hidden',
-      ...(Platform.OS === 'web'
-        ? { boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }
-        : {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }),
     },
     cardSelected: {
       borderColor: semantic.primary,
       borderWidth: 2,
-      ...(Platform.OS === 'web' ? { boxShadow: '0 0 0 3px rgba(74, 85, 225, 0.1)' } : {}),
+      ...(Platform.OS === 'web' ? { boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)' } : {}),
     },
     cardHeader: {
       flexDirection: 'row',
@@ -257,13 +258,29 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
     priceValue: {
       fontSize: isMobile ? 16 : 18,
       fontWeight: '700',
-      color: colors.success[600],
+      color: colors.success[500],
     },
     discountBadge: {
       fontSize: 11,
-      color: colors.error[600],
+      color: colors.error[500],
       fontWeight: '500',
       marginTop: 2,
+    },
+    billingTypeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginTop: 4,
+      backgroundColor: colors.neutral[100],
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      alignSelf: 'flex-end',
+    },
+    billingTypeText: {
+      fontSize: 10,
+      color: semantic.textSecondary,
+      fontWeight: '500',
     },
     metaRow: {
       flexDirection: 'row',
@@ -299,7 +316,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
       alignItems: 'center',
       paddingBottom: 8,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.background,
+      borderBottomColor: colors.neutral[100],
       marginBottom: 8,
     },
     categoryName: {
@@ -310,7 +327,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
     categorySubtotal: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.success[600],
+      color: colors.success[500],
     },
     itemsList: {
       paddingLeft: 8,
@@ -345,10 +362,12 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
       fontWeight: '500',
     },
     priceSummary: {
-      backgroundColor: '#F9FAFB',
-      borderRadius: 8,
+      backgroundColor: '#F8FAFC',
+      borderRadius: 10,
       padding: 12,
       marginTop: 8,
+      borderWidth: 1,
+      borderColor: semantic.border,
     },
     summaryRow: {
       flexDirection: 'row',
@@ -364,7 +383,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
       color: semantic.textPrimary,
     },
     discountValue: {
-      color: colors.error[600],
+      color: colors.error[500],
     },
     totalRow: {
       borderTopWidth: 1,
@@ -380,17 +399,17 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
     totalValue: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.success[600],
+      color: colors.success[500],
     },
     selectButton: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       paddingVertical: 12,
       alignItems: 'center',
       borderTopWidth: 1,
       borderTopColor: semantic.border,
     },
     selectButtonSelected: {
-      backgroundColor: semantic.primary,
+      backgroundColor: semantic.textPrimary,
     },
     selectButtonText: {
       fontSize: 14,

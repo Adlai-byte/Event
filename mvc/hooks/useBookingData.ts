@@ -144,8 +144,9 @@ export function useBookingData({ userEmail, refreshKey }: UseBookingDataOptions)
     queryKey: ['user-bookings', userEmail, refreshKey],
     queryFn: async () => {
       const data = await apiClient.get('/api/user/bookings', { email: userEmail! });
-      if (data.ok && Array.isArray(data.rows)) {
-        return data.rows.map(mapBooking);
+      const rows = data.data?.rows ?? data.rows;
+      if (data.ok && Array.isArray(rows)) {
+        return rows.map(mapBooking);
       }
       return [];
     },

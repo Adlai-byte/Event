@@ -102,9 +102,9 @@ async function globalSetup(config: FullConfig): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: TEST_USERS.provider.email,
-      name: 'E2E Test Photography',
+      name: 'E2E Photography Service',
       category: 'photography',
-      description: 'Professional photography service for E2E testing',
+      description: 'Professional photography for events',
       price: 5000,
       city: 'Mati',
       state: 'Davao Oriental',
@@ -125,6 +125,23 @@ async function globalSetup(config: FullConfig): Promise<void> {
       }),
     });
   }
+
+  // Step 6: Seed a test event for the customer
+  console.log('[global-setup] Seeding test event...');
+  const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  await fetch(`${API_BASE}/api/test/seed-event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: TEST_USERS.customer.email,
+      name: 'E2E Test Wedding',
+      date: futureDate,
+      budget: 50000,
+      location: 'Mati, Davao Oriental',
+      guestCount: 100,
+      description: 'Test event for E2E testing',
+    }),
+  });
 
   console.log('[global-setup] Setup complete.');
 }

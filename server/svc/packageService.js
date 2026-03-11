@@ -214,7 +214,7 @@ async function insertCategoriesAndItems(connection, packageId, categories) {
 async function createPackage(serviceId, data) {
     const {
         name, description, minPax, maxPax, basePrice,
-        priceType, discountPercent, isActive, displayOrder, categories
+        priceType, discountPercent, isActive, displayOrder, billingType, categories
     } = data;
 
     const connection = await getPool().getConnection();
@@ -224,8 +224,8 @@ async function createPackage(serviceId, data) {
         const [pkgResult] = await connection.query(`
             INSERT INTO service_package
             (sp_service_id, sp_name, sp_description, sp_min_pax, sp_max_pax,
-             sp_base_price, sp_price_type, sp_discount_percent, sp_is_active, sp_display_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             sp_base_price, sp_price_type, sp_discount_percent, sp_is_active, sp_display_order, sp_billing_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             serviceId,
             name.trim(),
@@ -236,7 +236,8 @@ async function createPackage(serviceId, data) {
             priceType || 'calculated',
             discountPercent || 0,
             isActive !== false ? 1 : 0,
-            displayOrder || 0
+            displayOrder || 0,
+            billingType || 'hourly'
         ]);
 
         const packageId = pkgResult.insertId;
@@ -262,7 +263,7 @@ async function createPackage(serviceId, data) {
 async function updatePackage(packageId, data) {
     const {
         name, description, minPax, maxPax, basePrice,
-        priceType, discountPercent, isActive, displayOrder, categories
+        priceType, discountPercent, isActive, displayOrder, billingType, categories
     } = data;
 
     const connection = await getPool().getConnection();
@@ -318,6 +319,10 @@ async function updatePackage(packageId, data) {
         if (displayOrder !== undefined) {
             updateFields.push('sp_display_order = ?');
             updateValues.push(displayOrder || 0);
+        }
+        if (billingType !== undefined) {
+            updateFields.push('sp_billing_type = ?');
+            updateValues.push(billingType);
         }
 
         if (updateFields.length > 0) {

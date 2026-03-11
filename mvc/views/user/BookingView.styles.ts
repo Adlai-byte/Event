@@ -1,12 +1,10 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, semantic } from '../../theme';
-import { getShadowStyle } from '../../utils/shadowStyles';
 
 export const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
+      backgroundColor: '#F8FAFC',
       ...(Platform.OS === 'web'
         ? {
             justifyContent: 'center',
@@ -25,22 +23,22 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
     },
     loadingText: {
       marginTop: 16,
       fontSize: 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
     },
     filterContainer: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       paddingVertical: Platform.OS === 'web' ? 16 : 12,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
@@ -52,34 +50,34 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
       paddingVertical: Platform.OS === 'web' ? 10 : 8,
       borderRadius: Platform.OS === 'web' ? 12 : 20,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       marginRight: Platform.OS === 'web' ? 12 : 8,
-      borderWidth: 2,
-      borderColor: semantic.border,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
             transition: 'all 0.2s ease',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
     filterButtonActive: {
-      backgroundColor: semantic.primary,
-      borderColor: semantic.primary,
+      backgroundColor: '#0F172A',
+      borderColor: '#0F172A',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
     filterButtonText: {
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     filterButtonTextActive: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontWeight: '700',
     },
     content: {
@@ -99,36 +97,36 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     sectionTitle: {
       fontSize: Platform.OS === 'web' ? 24 : 22,
       fontWeight: '800',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 20 : 16,
       marginTop: Platform.OS === 'web' ? 16 : 12,
       paddingBottom: Platform.OS === 'web' ? 12 : 10,
-      borderBottomWidth: 3,
-      borderBottomColor: semantic.primary,
+      borderBottomWidth: 0,
+      borderBottomColor: 'transparent',
       alignSelf: 'flex-start',
       paddingRight: Platform.OS === 'web' ? 24 : 20,
       letterSpacing: -0.4,
     },
     bookingCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: Platform.OS === 'web' ? 14 : 12,
-      padding: Platform.OS === 'web' ? 20 : 16,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      padding: isMobile ? 14 : 18,
       marginBottom: Platform.OS === 'web' ? 20 : 16,
       flexDirection: 'row',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
             cursor: 'pointer',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     bookingImageContainer: {
@@ -142,14 +140,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     placeholderImage: {
       width: 80,
       height: 80,
-      backgroundColor: semantic.border,
+      backgroundColor: '#F1F5F9',
       borderRadius: 8,
       justifyContent: 'center',
       alignItems: 'center',
     },
     placeholderText: {
       fontSize: 24,
-      color: '#95A5A6',
+      color: '#94A3B8',
       fontWeight: 'bold',
     },
     bookingContent: {
@@ -164,7 +162,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     bookingTitle: {
       fontSize: Platform.OS === 'web' ? 18 : 16,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
       letterSpacing: -0.2,
     },
@@ -174,47 +172,47 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       alignItems: 'center',
     },
     paidBadge: {
-      backgroundColor: semantic.success,
+      backgroundColor: '#DCFCE7',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 4,
     },
     paidBadgeText: {
       fontSize: 10,
-      color: semantic.surface,
+      color: '#065F46',
       fontWeight: 'bold',
     },
     cancelledBadge: {
-      backgroundColor: semantic.error,
+      backgroundColor: '#FEE2E2',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 4,
     },
     cancelledBadgeText: {
       fontSize: 10,
-      color: semantic.surface,
+      color: '#991B1B',
       fontWeight: 'bold',
     },
     statusBadge: {
-      backgroundColor: '#27AE60',
+      backgroundColor: '#DCFCE7',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 4,
     },
     statusText: {
       fontSize: 12,
-      color: semantic.surface,
+      color: '#065F46',
       fontWeight: 'bold',
     },
     bookingDateTime: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 8,
       fontWeight: '500',
     },
     bookingDescription: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       lineHeight: 20,
       marginBottom: 12,
     },
@@ -225,25 +223,35 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       gap: 8,
     },
     payButton: {
-      backgroundColor: semantic.success,
+      backgroundColor: '#065F46',
       paddingHorizontal: 20,
       paddingVertical: 8,
       borderRadius: 6,
-      ...getShadowStyle(0.2, 2, 1),
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
+          }
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
+          }),
     },
     payButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 12,
       fontWeight: 'bold',
     },
     viewDetailsButton: {
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
       paddingVertical: Platform.OS === 'web' ? 10 : 8,
       borderRadius: Platform.OS === 'web' ? 10 : 6,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
             cursor: 'pointer',
           }
@@ -253,7 +261,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
     },
     viewDetailsButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 13 : 12,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -273,13 +281,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     emptyStateText: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 12 : 8,
       textAlign: 'center',
     },
     emptyStateSubtext: {
       fontSize: Platform.OS === 'web' ? 15 : 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       textAlign: 'center',
       lineHeight: Platform.OS === 'web' ? 22 : 20,
       maxWidth: Platform.OS === 'web' ? 400 : '100%',
@@ -287,7 +295,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     // Modal Styles
     modalContainer: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? 'rgba(0, 0, 0, 0.5)' : semantic.background,
+      backgroundColor: Platform.OS === 'web' ? 'rgba(0, 0, 0, 0.5)' : '#F8FAFC',
       ...(Platform.OS === 'web'
         ? {
             justifyContent: 'center',
@@ -299,7 +307,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       width: '90%',
       maxWidth: 800,
       maxHeight: screenHeight * 0.9,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
@@ -314,12 +322,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       justifyContent: 'space-between',
       paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
       paddingVertical: Platform.OS === 'web' ? 20 : 16,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
@@ -328,7 +336,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     },
     closeButtonText: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: 'bold',
       ...(Platform.OS === 'web'
         ? {
@@ -339,7 +347,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     modalTitle: {
       fontSize: Platform.OS === 'web' ? 22 : 18,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       letterSpacing: -0.3,
     },
     modalContent: {
@@ -351,7 +359,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     },
     eventImageContainer: {
       height: Platform.OS === 'web' ? 280 : 200,
-      backgroundColor: semantic.border,
+      backgroundColor: '#F1F5F9',
       justifyContent: 'center',
       alignItems: 'center',
       overflow: 'hidden',
@@ -366,30 +374,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     eventTitle: {
       fontSize: Platform.OS === 'web' ? 28 : 24,
       fontWeight: '800',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 12 : 8,
       letterSpacing: -0.5,
     },
     eventDateTime: {
       fontSize: Platform.OS === 'web' ? 16 : 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: Platform.OS === 'web' ? 6 : 4,
       fontWeight: '500',
     },
     eventLocation: {
       fontSize: Platform.OS === 'web' ? 16 : 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: Platform.OS === 'web' ? 6 : 4,
       fontWeight: '500',
     },
     eventAttendees: {
       fontSize: 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 16,
     },
     eventDescription: {
       fontSize: Platform.OS === 'web' ? 16 : 16,
-      color: colors.neutral[600],
+      color: '#475569',
       lineHeight: Platform.OS === 'web' ? 26 : 24,
       marginBottom: Platform.OS === 'web' ? 28 : 24,
       fontWeight: '400',
@@ -400,20 +408,20 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     servicesTitle: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 16 : 12,
       letterSpacing: -0.3,
     },
     serviceDetailCard: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderRadius: Platform.OS === 'web' ? 12 : 8,
       padding: Platform.OS === 'web' ? 20 : 16,
       marginBottom: Platform.OS === 'web' ? 16 : 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
@@ -426,42 +434,42 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     serviceDetailName: {
       fontSize: 16,
       fontWeight: 'bold',
-      color: '#2C3E50',
+      color: '#0F172A',
       flex: 1,
     },
     ratingBadge: {
-      backgroundColor: '#FBBF24',
+      backgroundColor: '#FEF3C7',
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 12,
       marginLeft: 8,
     },
     ratingBadgeText: {
-      color: semantic.surface,
+      color: '#92400E',
       fontSize: 12,
       fontWeight: '700',
     },
     ratingCommentBox: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 8,
       padding: 12,
       marginTop: 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     ratingCommentLabel: {
       fontSize: 12,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 6,
     },
     ratingCommentText: {
       fontSize: 14,
-      color: '#374151',
+      color: '#334155',
       lineHeight: 20,
     },
     rateButton: {
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: 8,
@@ -472,26 +480,26 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       gap: 8,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(108, 99, 255, 0.3)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     rateButtonIcon: {
       fontSize: 16,
     },
     rateButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '600',
     },
     ratedBadge: {
-      backgroundColor: semantic.success,
+      backgroundColor: '#DCFCE7',
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 8,
@@ -500,13 +508,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       justifyContent: 'center',
     },
     ratedBadgeText: {
-      color: semantic.surface,
+      color: '#065F46',
       fontSize: 14,
       fontWeight: '600',
     },
     serviceDetailDescription: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       lineHeight: 20,
       marginBottom: 12,
     },
@@ -518,12 +526,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     },
     serviceDetailLabel: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
     },
     serviceDetailValue: {
       fontSize: 14,
-      color: '#2C3E50',
+      color: '#0F172A',
       fontWeight: '600',
     },
     suppliersSection: {
@@ -532,7 +540,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     suppliersTitle: {
       fontSize: 18,
       fontWeight: 'bold',
-      color: '#2C3E50',
+      color: '#0F172A',
       marginBottom: 12,
     },
     supplierItem: {
@@ -543,7 +551,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     supplierImage: {
       width: 40,
       height: 40,
-      backgroundColor: semantic.border,
+      backgroundColor: '#F1F5F9',
       borderRadius: 20,
       justifyContent: 'center',
       alignItems: 'center',
@@ -551,7 +559,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     },
     supplierName: {
       fontSize: 16,
-      color: '#2C3E50',
+      color: '#0F172A',
       flex: 1,
     },
     costSection: {
@@ -560,14 +568,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       alignItems: 'center',
       paddingVertical: 12,
       paddingHorizontal: 16,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderRadius: 8,
       marginBottom: 24,
     },
     costLabel: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#2C3E50',
+      color: '#0F172A',
     },
     costValueContainer: {
       flexDirection: 'row',
@@ -577,22 +585,22 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     costValue: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: semantic.success,
+      color: '#065F46',
     },
     modalActions: {
       flexDirection: 'row',
       paddingHorizontal: Platform.OS === 'web' ? 24 : isMobile ? 12 : 16,
       paddingTop: Platform.OS === 'web' ? 20 : isMobile ? 12 : 16,
       paddingBottom: Platform.OS === 'web' ? 24 : 100,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderTopWidth: 1,
-      borderTopColor: semantic.border,
+      borderTopColor: '#E2E8F0',
       flexWrap: 'wrap',
       justifyContent: Platform.OS === 'web' ? 'flex-end' : 'space-between',
       gap: Platform.OS === 'web' ? 12 : isMobile ? 8 : 10,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {}),
     },
@@ -606,7 +614,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       fontSize: isMobile ? 16 : 18,
     },
     payButtonModal: {
-      backgroundColor: semantic.success,
+      backgroundColor: '#065F46',
       paddingVertical: isMobile ? 14 : 16,
       paddingHorizontal: isMobile ? 16 : 20,
       borderRadius: isMobile ? 12 : 14,
@@ -617,26 +625,26 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25), 0 2px 6px rgba(16, 185, 129, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }
         : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: isMobile ? 4 : 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: isMobile ? 8 : 10,
-            elevation: isMobile ? 6 : 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     payButtonModalText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: 0.3,
     },
     editButton: {
       flex: isMobile ? undefined : 1,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: isMobile ? 14 : 16,
       paddingHorizontal: isMobile ? 16 : 20,
       borderRadius: isMobile ? 12 : 14,
@@ -646,15 +654,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 6px 20px rgba(99, 102, 241, 0.25), 0 2px 6px rgba(99, 102, 241, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: isMobile ? 4 : 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: isMobile ? 8 : 10,
-            elevation: isMobile ? 6 : 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     editButtonWithPay: {
@@ -668,13 +676,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
     },
     editButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: 0.3,
     },
     messageButton: {
-      backgroundColor: colors.success[600],
+      backgroundColor: '#059669',
       paddingVertical: isMobile ? 14 : 16,
       paddingHorizontal: isMobile ? 16 : 20,
       borderRadius: isMobile ? 12 : 14,
@@ -685,19 +693,19 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 6px 20px rgba(5, 150, 105, 0.25), 0 2px 6px rgba(5, 150, 105, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }
         : {
-            shadowColor: colors.success[600],
-            shadowOffset: { width: 0, height: isMobile ? 4 : 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: isMobile ? 8 : 10,
-            elevation: isMobile ? 6 : 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     messageButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -706,7 +714,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       marginTop: 0,
     },
     invoiceButton: {
-      backgroundColor: semantic.warning,
+      backgroundColor: '#D97706',
       paddingVertical: isMobile ? 14 : 16,
       paddingHorizontal: isMobile ? 16 : 20,
       borderRadius: isMobile ? 12 : 14,
@@ -717,29 +725,29 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 6px 20px rgba(245, 158, 11, 0.25), 0 2px 6px rgba(245, 158, 11, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }
         : {
-            shadowColor: semantic.warning,
-            shadowOffset: { width: 0, height: isMobile ? 4 : 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: isMobile ? 8 : 10,
-            elevation: isMobile ? 6 : 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     invoiceButtonWithPay: {
       marginTop: 0,
     },
     invoiceButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: 0.3,
     },
     cancelButton: {
       flex: isMobile ? undefined : 1,
-      backgroundColor: colors.error[600],
+      backgroundColor: '#DC2626',
       paddingVertical: isMobile ? 14 : 16,
       paddingHorizontal: isMobile ? 16 : 20,
       borderRadius: isMobile ? 12 : 14,
@@ -749,19 +757,19 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       minWidth: isMobile ? undefined : 140,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 6px 20px rgba(220, 38, 38, 0.25), 0 2px 6px rgba(220, 38, 38, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }
         : {
-            shadowColor: colors.error[600],
-            shadowOffset: { width: 0, height: isMobile ? 4 : 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: isMobile ? 8 : 10,
-            elevation: isMobile ? 6 : 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     cancelButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -774,7 +782,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       padding: Platform.OS === 'web' ? 20 : 16,
     },
     cancelModalContent: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 12,
       width: Platform.OS === 'web' ? '90%' : '100%',
       maxWidth: 600,
@@ -796,20 +804,20 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       alignItems: 'center',
       padding: Platform.OS === 'web' ? 24 : 20,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
-      backgroundColor: semantic.surface,
+      borderBottomColor: '#E2E8F0',
+      backgroundColor: '#FFFFFF',
     },
     cancelModalTitle: {
       fontSize: Platform.OS === 'web' ? 22 : 20,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     cancelModalCloseButton: {
       padding: 4,
     },
     cancelModalCloseIcon: {
       fontSize: Platform.OS === 'web' ? 24 : 20,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: 'bold',
     },
     cancelModalBody: {
@@ -817,24 +825,24 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
     },
     cancelModalMessage: {
       fontSize: Platform.OS === 'web' ? 16 : 15,
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 16 : 12,
       lineHeight: Platform.OS === 'web' ? 24 : 22,
       fontWeight: '600',
     },
     cancelModalSubMessage: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: Platform.OS === 'web' ? 12 : 10,
     },
     cancelReasonInput: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       padding: Platform.OS === 'web' ? 16 : 14,
       fontSize: Platform.OS === 'web' ? 15 : 14,
-      color: semantic.textPrimary,
+      color: '#0F172A',
       minHeight: Platform.OS === 'web' ? 120 : 100,
       textAlignVertical: 'top',
       ...(Platform.OS === 'web'
@@ -850,7 +858,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       padding: Platform.OS === 'web' ? 24 : 20,
       paddingTop: Platform.OS === 'web' ? 0 : 0,
       borderTopWidth: 1,
-      borderTopColor: semantic.border,
+      borderTopColor: '#E2E8F0',
     },
     cancelModalButton: {
       paddingVertical: Platform.OS === 'web' ? 12 : 10,
@@ -860,33 +868,33 @@ export const createStyles = (isMobile: boolean, screenWidth: number, screenHeigh
       alignItems: 'center',
     },
     cancelModalBackButton: {
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#FFFFFF',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     cancelModalBackButtonText: {
-      color: semantic.textSecondary,
+      color: '#334155',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '600',
     },
     cancelModalConfirmButton: {
-      backgroundColor: semantic.error,
+      backgroundColor: '#DC2626',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
             cursor: 'pointer',
           }
         : {
-            shadowColor: semantic.error,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     cancelModalConfirmButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '700',
     },

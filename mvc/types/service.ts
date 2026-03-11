@@ -27,6 +27,9 @@ export interface ServiceDTO {
   s_cancellation_policy_id?: number | null;
   policy_name?: string | null;
   policy_rules?: Array<{ days_before: number; refund_percent: number }> | null;
+  package_count?: number;
+  min_package_price?: number | null;
+  max_package_price?: number | null;
 }
 
 /** Minimal service fields used in listings and cards */

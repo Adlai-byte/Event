@@ -75,20 +75,22 @@ export const ServiceInfoSection: React.FC<ServiceInfoSectionProps> = ({
         </View>
       </View>
 
-      {/* Price Section - Prominent */}
-      <View style={styles.priceCard}>
-        <Text style={styles.priceLabel}>Starting at</Text>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceValue}>{formatPrice(service.s_base_price)}</Text>
-          {service.s_pricing_type && (
-            <View style={styles.pricingTypeBadge}>
-              <Text style={styles.pricingTypeText}>
-                {getPricingTypeLabel(service.s_pricing_type)}
-              </Text>
-            </View>
-          )}
+      {/* Price Section - Only show when no packages */}
+      {packages.length === 0 && (
+        <View style={styles.priceCard}>
+          <Text style={styles.priceLabel}>Starting at</Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceValue}>{formatPrice(service.s_base_price)}</Text>
+            {service.s_pricing_type && (
+              <View style={styles.pricingTypeBadge}>
+                <Text style={styles.pricingTypeText}>
+                  {getPricingTypeLabel(service.s_pricing_type)}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Deposit & Cancellation Policy */}
       <DepositPolicySection service={service} styles={styles} />

@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ProviderService } from '../../hooks/useServicesList';
+import { ServicePackage, calculatePackagePrice } from '../../models/Package';
 import { createStyles } from '../../views/provider/ServicesView.styles';
 
 interface ServiceListTabProps {
   services: ProviderService[];
   filteredServices: ProviderService[];
+  packages: Record<string, ServicePackage[]>;
   searchQuery: string;
   onSearchChange: (text: string) => void;
   filterCategory: string;
@@ -23,6 +25,7 @@ interface ServiceListTabProps {
 
 export const ServiceListTab: React.FC<ServiceListTabProps> = ({
   filteredServices,
+  packages,
   searchQuery,
   onSearchChange,
   filterCategory,
@@ -37,6 +40,20 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
   screenWidth,
 }) => {
   const styles = createStyles(isMobile, screenWidth);
+
+  const getPriceDisplay = (service: ProviderService): string => {
+    const pkgs = packages[service.id];
+    if (pkgs && pkgs.length > 0) {
+      const prices = pkgs.map((p) =>
+        p.priceType === 'calculated' ? calculatePackagePrice(p) : (p.basePrice || 0)
+      );
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (min === max) return `₱${min.toLocaleString()}`;
+      return `₱${min.toLocaleString()} - ₱${max.toLocaleString()}`;
+    }
+    return `₱${service.price.toLocaleString()}`;
+  };
 
   const renderServiceRow = (service: ProviderService, i: number) => (
     <View key={service.id} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
@@ -71,7 +88,7 @@ export const ServiceListTab: React.FC<ServiceListTabProps> = ({
       </View>
       <View style={styles.tableColPrice}>
         <Text style={[styles.tableCell, { fontWeight: '600' }]}>
-          ₱{service.price.toLocaleString()}
+          {getPriceDisplay(service)}
         </Text>
       </View>
       <View style={styles.tableColRating}>

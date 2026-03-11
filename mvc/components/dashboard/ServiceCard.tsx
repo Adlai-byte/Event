@@ -4,15 +4,14 @@ import { Feather } from '@expo/vector-icons';
 import { createStyles } from '../../views/user/DashboardView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { ServiceDTO as Service } from '../../types/service';
-import { getCategoryIcon, getCategoryLabel, formatPrice } from '../../utils/serviceHelpers';
+import { getCategoryIcon, getCategoryLabel, formatPriceDisplay } from '../../utils/serviceHelpers';
 
 interface ServiceCardProps {
   service: Service;
   onView: (serviceId: string) => void;
-  onBook: (service: Service) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = React.memo(({ service, onView, onBook }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = React.memo(({ service, onView }) => {
   const { isMobile, screenWidth, isMobileWeb } = useBreakpoints();
   const styles = createStyles(isMobile, screenWidth, isMobileWeb);
 
@@ -135,27 +134,31 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(({ service, on
 
           {/* Price */}
           <View style={styles.modernPriceContainer}>
-            <Text style={styles.modernPriceLabel}>Starting at</Text>
-            <Text style={styles.modernPrice}>{formatPrice(service.s_base_price)}</Text>
+            {(() => {
+              const { label, price } = formatPriceDisplay(
+                service.s_base_price,
+                service.min_package_price,
+                service.max_package_price,
+              );
+              return (
+                <>
+                  <Text style={styles.modernPriceLabel}>{label}</Text>
+                  <Text style={styles.modernPrice}>{price}</Text>
+                </>
+              );
+            })()}
           </View>
         </View>
       </TouchableOpacity>
 
-      {/* Action Buttons */}
+      {/* Action Button */}
       <View style={styles.modernServiceActions}>
         <TouchableOpacity
-          style={styles.modernViewButton}
+          style={[styles.modernViewButton, { flex: 1 }]}
           onPress={() => onView(service.idservice.toString())}
           activeOpacity={0.8}
         >
-          <Text style={styles.modernViewButtonText}>View</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.modernBookButton}
-          onPress={() => onBook(service)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.modernBookButtonText}>Book Now</Text>
+          <Text style={styles.modernViewButtonText}>View Services</Text>
         </TouchableOpacity>
       </View>
     </View>

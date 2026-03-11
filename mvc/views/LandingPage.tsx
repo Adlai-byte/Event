@@ -68,7 +68,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [_searchLoading, setSearchLoading] = useState(false);
-  const [featuredService, setFeaturedService] = useState<Service | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -131,21 +130,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         : service.primary_image
       : null,
   });
-
-  // Load featured service (highest rated)
-  const loadFeaturedService = async () => {
-    try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/services?highRated=true&limit=1`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && data.rows && data.rows.length > 0) {
-          setFeaturedService(mapImageUrl(data.rows[0]));
-        }
-      }
-    } catch (error) {
-      if (__DEV__) console.error('Error loading featured service:', error);
-    }
-  };
 
   // Load trending services
   const loadTrendingServices = async () => {
@@ -223,7 +207,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        loadFeaturedService(),
         loadTrendingServices(),
         loadEntertainmentServices(),
         loadCategoryServices(),
@@ -374,19 +357,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {/* Background Design Elements */}
-      <View style={styles.backgroundContainer}>
-        <View style={styles.backgroundGradient} />
-        <View style={styles.backgroundCircle1} />
-        <View style={styles.backgroundCircle2} />
-        <View style={styles.backgroundCircle3} />
-        <View style={styles.backgroundCircle4} />
-        <View style={styles.backgroundCircle5} />
-        <View style={styles.backgroundPattern} />
-        <View style={styles.backgroundAccent1} />
-        <View style={styles.backgroundAccent2} />
-      </View>
-
       {/* Mobile slide-out menu (rendered outside ScrollView) */}
       {menuOpen && (
         <MobileMenu
@@ -413,6 +383,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           onNavClick={handleNavClick}
           onMenuOpen={() => setMenuOpen(true)}
           onLoginPress={onLogin}
+          onRegisterPress={onRegister}
         />
 
         {/* Main Content */}
@@ -421,7 +392,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <View ref={homeRef} onLayout={(e) => handleSectionLayout('home', e)}>
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4a55e1" />
+                <ActivityIndicator size="large" color="#64748B" />
                 <Text style={styles.loadingText}>Loading amazing services...</Text>
               </View>
             ) : (
@@ -429,10 +400,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {/* Hero Section */}
                 <HeroSection
                   styles={styles}
-                  featuredService={featuredService}
-                  trendingServices={trendingServices}
-                  onServiceClick={handleServiceClick}
                   onRegister={onRegister}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onSearchSubmit={handleSearch}
                 />
 
                 {/* Service Showcase (recommended, sidebar, entertainment) */}

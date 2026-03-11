@@ -40,6 +40,11 @@ const ALL_TABLES = [
  * in reverse-FK order as a safety measure.
  */
 async function truncateAll() {
+  const [dbRow] = await getPool().query('SELECT DATABASE()');
+  console.log('--- DIAGNOSTIC: JEST IS USING DB:', dbRow[0]['DATABASE()']);
+  const [colRow] = await getPool().query('SHOW COLUMNS FROM booking');
+  console.log('--- DIAGNOSTIC: BOOKING HAS DEPOSIT:', colRow.map(c=>c.Field).includes('b_deposit_paid'));
+
   await getPool().query('SET FOREIGN_KEY_CHECKS = 0');
   for (const table of ALL_TABLES) {
     try {
@@ -105,6 +110,13 @@ async function seedCoreUsers() {
   await getPool().query(
     `INSERT INTO booking_service (bs_booking_id, bs_service_id, bs_quantity, bs_unit_price, bs_total_price) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)`,
     [bookingId, svc1Id, 1, 5000, 5000, bookingId, svc2Id, 1, 3000, 3000],
+  );
+
+  // Availability setup for 2026-07-20 (Monday, Day 1)
+  await getPool().query(
+    `INSERT INTO service_availability (sa_service_id, sa_day_of_week, sa_start_time, sa_end_time, sa_is_available)
+     VALUES (?, ?, ?, ?, ?)`,
+    [svc1Id, 1, '09:00:00', '17:00:00', 1]
   );
 
   return { adminId, providerId, clientId, svc1Id, svc2Id, bookingId };

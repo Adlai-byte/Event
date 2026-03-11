@@ -720,15 +720,89 @@ function parsePaymentStatus(status) {
 }
 
 /**
- * Verify webhook signature (for future webhook implementation)
- * @param {string} signature - Webhook signature from PayMongo
- * @param {string} payload - Raw request body
+ * Create a refund for a completed payment via PayMongo
+ * @param {Object} params - Refund parameters
+ * @param {string} params.paymentId - PayMongo payment ID to refund
+ * @param {number} params.amount - Refund amount (will be converted to cents)
+ * @param {string} params.reason - Reason for refund
+ * @param {string} params.notes - Additional notes
+ * @returns {Promise<Object>} Refund object
+ */
+async function createRefund(params) {
+    if (!PAYMONGO_CONFIG.secretKey) {
+        throw new Error('PayMongo credentials not configured');
+    }
+
+    const { paymentId, amount, reason = 'requested_by_customer', notes = '' } = params;
+    const amountInCents = Math.round(amount * 100);
+
+    const apiUrl = `${PAYMONGO_URLS[PAYMONGO_CONFIG.mode]}/refunds`;
+
+    const requestBody = {
+        data: {
+            attributes: {
+                amount: amountInCents,
+                payment_id: paymentId,
+                reason: reason,
+                notes: notes,
+            }
+        }
+    };
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${Buffer.from(PAYMONGO_CONFIG.secretKey + ':').toString('base64')}`,
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = data.errors?.[0]?.detail || data.errors?.[0]?.title || 'Failed to create refund';
+            throw new Error(errorMessage);
+        }
+
+        return {
+            refundId: data.data.id,
+            amount: data.data.attributes.amount,
+            currency: data.data.attributes.currency,
+            status: data.data.attributes.status,
+        };
+    } catch (error) {
+        console.error('PayMongo create refund error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generate an HMAC token for securing payment callback URLs.
+ * Prevents unauthorized users from faking payment success/failure.
+ * @param {string|number} bookingId
+ * @param {string} userEmail
+ * @returns {string} hex HMAC token
+ */
+function generatePaymentToken(bookingId, userEmail) {
+    const crypto = require('crypto');
+    const secret = process.env.PAYMENT_CALLBACK_SECRET || PAYMONGO_CONFIG.secretKey || 'e-vent-payment-secret';
+    return crypto.createHmac('sha256', secret).update(`${bookingId}:${userEmail}`).digest('hex');
+}
+
+/**
+ * Verify an HMAC token from a payment callback URL.
+ * @param {string|number} bookingId
+ * @param {string} userEmail
+ * @param {string} token - The token from the callback URL
  * @returns {boolean} True if valid
  */
-function verifyWebhook(signature, payload) {
-    // PayMongo webhook verification would go here
-    // For now, we'll use payment intent status polling
-    return true;
+function verifyPaymentToken(bookingId, userEmail, token) {
+    if (!token) return false;
+    const expected = generatePaymentToken(bookingId, userEmail);
+    const crypto = require('crypto');
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(token));
 }
 
 module.exports = {
@@ -741,7 +815,9 @@ module.exports = {
     attachPaymentMethod,
     getPaymentIntent,
     parsePaymentStatus,
-    verifyWebhook,
+    createRefund,
+    generatePaymentToken,
+    verifyPaymentToken,
     PAYMONGO_CONFIG,
 };
 

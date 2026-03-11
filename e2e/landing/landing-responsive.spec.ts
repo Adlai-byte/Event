@@ -26,9 +26,9 @@ test.describe('Landing Page — responsive layout', () => {
       });
     });
 
-    test('login page shows split layout with welcome panel', async ({ page }) => {
+    test('login page shows card with branding', async ({ page }) => {
       await goToLogin(page);
-      await expect(page.getByText('Welcome to E-VENT')).toBeVisible();
+      await expect(page.getByText('Welcome Back')).toBeVisible();
     });
   });
 

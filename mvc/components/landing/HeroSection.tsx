@@ -1,74 +1,52 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-
-interface Service {
-  idservice: number;
-  s_name: string;
-  s_description: string;
-  s_category: string;
-  s_base_price: number | null;
-  s_rating: number | null;
-  s_review_count: number | null;
-  primary_image?: string | null;
-  provider_name?: string;
-}
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 export interface HeroSectionProps {
   styles: any;
-  featuredService: Service | null;
-  trendingServices: Service[];
-  onServiceClick: (serviceId: number) => void;
   onRegister: () => void;
+  searchQuery?: string;
+  onSearchChange?: (text: string) => void;
+  onSearchSubmit?: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   styles,
-  featuredService,
-  trendingServices,
-  onServiceClick,
   onRegister,
+  searchQuery = '',
+  onSearchChange,
+  onSearchSubmit,
 }) => {
   return (
     <View style={styles.heroSection}>
       <View style={styles.heroContent}>
         <View style={styles.heroTextContainer}>
-          <Text style={styles.heroBadge}>Bestseller 2024</Text>
-          <Text style={styles.heroTitle}>
-            {featuredService?.s_name || "Stylish Event Services for Your Special Occasions"}
-          </Text>
+          <Text style={styles.heroTitle}>Find Perfect Event Services</Text>
           <Text style={styles.heroDescription}>
-            {featuredService?.s_description || "Your one-stop platform for booking venues, catering, photography, and more for your special occasions."}
+            Your one-stop platform for booking venues, catering, photography, and more for your
+            special occasions.
           </Text>
+
+          {/* Prominent search bar */}
+          <View style={styles.heroSearchBar}>
+            <Feather name="search" size={20} color="#94A3B8" style={{ marginRight: 12 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search venues, photographers, catering..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              onSubmitEditing={onSearchSubmit}
+              returnKeyType="search"
+            />
+          </View>
+
           <TouchableOpacity
-            style={styles.heroCTA}
-            onPress={() => featuredService ? onServiceClick(featuredService.idservice) : onRegister()}
+            style={[styles.heroCTA, { marginTop: 24 }]}
+            onPress={onRegister}
           >
-            <Text style={styles.heroCTAText}>See More</Text>
+            <Text style={styles.heroCTAText}>Get Started</Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.heroImages}>
-          {featuredService?.primary_image ? (
-            <Image
-              source={{ uri: featuredService.primary_image }}
-              style={styles.heroImage1 as any}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.heroImage1, styles.heroImagePlaceholder]}>
-              <Text style={styles.heroImageText}>Featured Service</Text>
-            </View>
-          )}
-          {trendingServices.length > 0 && trendingServices[0]?.primary_image ? (
-            <Image
-              source={{ uri: trendingServices[0].primary_image }}
-              style={styles.heroImage2 as any}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.heroImage2, styles.heroImagePlaceholder]}>
-              <Text style={styles.heroImageText}>Service</Text>
-            </View>
-          )}
         </View>
       </View>
     </View>

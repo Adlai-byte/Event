@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import UserService, { AdminUserRow } from '../../services/UserService';
 import { AppLayout } from '../../components/layout';
 import { colors, semantic } from '../../theme';
@@ -57,21 +57,19 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
     let cancelled = false;
     (async () => {
       try {
-        const resp = await fetch(`${getApiBaseUrl()}/api/users`);
-        if (resp.ok) {
-          const data = await resp.json();
-          if (!cancelled && data && data.ok && Array.isArray(data.rows)) {
-            const mapped: AdminUserRow[] = data.rows
-              .filter((r: any) => r.u_email !== 'admin@gmail.com')
-              .map((r: any) => ({
-                name: [r.u_fname, r.u_lname].filter(Boolean).join(' ').trim(),
-                email: r.u_email,
-                role: r.u_role ? r.u_role.charAt(0).toUpperCase() + r.u_role.slice(1) : 'User',
-                status: r.u_disabled && Number(r.u_disabled) === 1 ? 'Blocked' : 'Active',
-              }));
-            setRows(mapped);
-            return;
-          }
+        const data = await apiClient.get<any>('/api/users');
+        const rows = data?.data?.rows ?? data?.rows;
+        if (!cancelled && data && data.ok && Array.isArray(rows)) {
+          const mapped: AdminUserRow[] = rows
+            .filter((r: any) => r.u_email !== 'admin@gmail.com')
+            .map((r: any) => ({
+              name: [r.u_fname, r.u_lname].filter(Boolean).join(' ').trim(),
+              email: r.u_email,
+              role: r.u_role ? r.u_role.charAt(0).toUpperCase() + r.u_role.slice(1) : 'User',
+              status: r.u_disabled && Number(r.u_disabled) === 1 ? 'Blocked' : 'Active',
+            }));
+          setRows(mapped);
+          return;
         }
       } catch {
         /* ignored */
@@ -129,17 +127,12 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
   const handleEditUser = async (userEmail: string) => {
     try {
       // Fetch user details by email
-      const resp = await fetch(
-        `${getApiBaseUrl()}/api/users/by-email?email=${encodeURIComponent(userEmail)}`,
-      );
-      if (!resp.ok) throw new Error('Failed to fetch user details');
-      const data = await resp.json();
+      const data = await apiClient.get<any>('/api/users/by-email', { email: userEmail });
       if (!data.ok || !data.exists) throw new Error('User not found');
 
       // Also get the user ID from the full list
-      const listResp = await fetch(`${getApiBaseUrl()}/api/users`);
-      const listData = await listResp.json();
-      if (!listResp.ok || !listData.ok) throw new Error('Failed to fetch user list');
+      const listData = await apiClient.get<any>('/api/users');
+      if (!listData.ok) throw new Error('Failed to fetch user list');
       const match = listData.rows.find((x: any) => x.u_email === userEmail);
       if (!match) throw new Error('User ID not found');
 
@@ -172,20 +165,15 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       return;
     }
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/users/${editingUserId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: editFirstName,
-          middleName: editMiddleName,
-          lastName: editLastName,
-          suffix: editSuffix,
-          email: editEmail,
-          password: editPassword || undefined,
-        }),
+      const data = await apiClient.put<any>(`/api/users/${editingUserId}`, {
+        firstName: editFirstName,
+        middleName: editMiddleName,
+        lastName: editLastName,
+        suffix: editSuffix,
+        email: editEmail,
+        password: editPassword || undefined,
       });
-      const data = await resp.json();
-      if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to update user');
+      if (!data.ok) throw new Error(data.error || 'Failed to update user');
 
       // Reset edit form
       setEditingUserId(null);
@@ -198,9 +186,8 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
       setEditConfirmPassword('');
 
       // Refresh user list
-      const r = await fetch(`${getApiBaseUrl()}/api/users`);
-      const j = await r.json();
-      if (r.ok && j.ok) {
+      const j = await apiClient.get<any>('/api/users');
+      if (j.ok) {
         const mapped = j.rows
           .filter((x: any) => x.u_email !== 'admin@gmail.com')
           .map((x: any) => ({
@@ -523,20 +510,15 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         return;
                       }
                       try {
-                        const resp = await fetch(`${getApiBaseUrl()}/api/users`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            firstName,
-                            middleName,
-                            lastName,
-                            suffix,
-                            email,
-                            password: password || undefined,
-                          }),
+                        const data = await apiClient.post<any>('/api/users', {
+                          firstName,
+                          middleName,
+                          lastName,
+                          suffix,
+                          email,
+                          password: password || undefined,
                         });
-                        const data = await resp.json();
-                        if (!resp.ok || !data.ok)
+                        if (!data.ok)
                           throw new Error(data.error || 'Failed to add user');
                         setFirstName('');
                         setMiddleName('');
@@ -545,9 +527,8 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                         setEmail('');
                         setPassword('');
                         setConfirmPassword('');
-                        const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                        const j = await r.json();
-                        if (r.ok && j.ok) {
+                        const j = await apiClient.get<any>('/api/users');
+                        if (j.ok) {
                           const mapped = j.rows
                             .filter((x: any) => x.u_email !== 'admin@gmail.com')
                             .map((x: any) => ({
@@ -670,25 +651,18 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                             }
                             onPress={async () => {
                               try {
-                                const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                                const j = await r.json();
-                                if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
+                                const j = await apiClient.get<any>('/api/users');
+                                if (!j.ok) throw new Error('Failed to refresh list');
                                 const match = j.rows.find((x: any) => x.u_email === u.email);
                                 if (!match) throw new Error('User not found');
-                                const resp = await fetch(
-                                  `${getApiBaseUrl()}/api/users/${match.iduser}/block`,
-                                  {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ blocked: u.status === 'Active' }),
-                                  },
+                                const data = await apiClient.post<any>(
+                                  `/api/users/${match.iduser}/block`,
+                                  { blocked: u.status === 'Active' },
                                 );
-                                const data = await resp.json();
-                                if (!resp.ok || !data.ok)
+                                if (!data.ok)
                                   throw new Error(data.error || 'Failed to update');
-                                const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
-                                const j2 = await r2.json();
-                                if (r2.ok && j2.ok) {
+                                const j2 = await apiClient.get<any>('/api/users');
+                                if (j2.ok) {
                                   const mapped2 = j2.rows
                                     .filter((x: any) => x.u_email !== 'admin@gmail.com')
                                     .map((x: any) => ({
@@ -776,25 +750,18 @@ export const User: React.FC<AdminUserProps> = ({ user, onNavigate, onLogout }) =
                           }
                           onPress={async () => {
                             try {
-                              const r = await fetch(`${getApiBaseUrl()}/api/users`);
-                              const j = await r.json();
-                              if (!r.ok || !j.ok) throw new Error('Failed to refresh list');
+                              const j = await apiClient.get<any>('/api/users');
+                              if (!j.ok) throw new Error('Failed to refresh list');
                               const match = j.rows.find((x: any) => x.u_email === u.email);
                               if (!match) throw new Error('User not found');
-                              const resp = await fetch(
-                                `${getApiBaseUrl()}/api/users/${match.iduser}/block`,
-                                {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ blocked: u.status === 'Active' }),
-                                },
+                              const data = await apiClient.post<any>(
+                                `/api/users/${match.iduser}/block`,
+                                { blocked: u.status === 'Active' },
                               );
-                              const data = await resp.json();
-                              if (!resp.ok || !data.ok)
+                              if (!data.ok)
                                 throw new Error(data.error || 'Failed to update');
-                              const r2 = await fetch(`${getApiBaseUrl()}/api/users`);
-                              const j2 = await r2.json();
-                              if (r2.ok && j2.ok) {
+                              const j2 = await apiClient.get<any>('/api/users');
+                              if (j2.ok) {
                                 const mapped2 = j2.rows
                                   .filter((x: any) => x.u_email !== 'admin@gmail.com')
                                   .map((x: any) => ({

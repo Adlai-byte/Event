@@ -12,7 +12,6 @@ import {
 } from '../../hooks/useEventData';
 import { createStyles } from './EventsView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
-import { colors, semantic } from '../../theme';
 import { AppLayout } from '../../components/layout';
 
 interface EventsViewProps {
@@ -33,11 +32,11 @@ const STATUS_FILTERS: Array<{ key: string; label: string }> = [
 ];
 
 const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
-  planning: { bg: colors.primary[50], text: colors.primary[500] },
-  upcoming: { bg: '#FEF3C7', text: '#D97706' },
-  in_progress: { bg: '#DBEAFE', text: '#1D4ED8' },
-  completed: { bg: colors.success[50], text: colors.success[600] },
-  cancelled: { bg: colors.error[50], text: colors.error[600] },
+  planning: { bg: '#EFF6FF', text: '#1E40AF' },
+  upcoming: { bg: '#FEF3C7', text: '#92400E' },
+  in_progress: { bg: '#DBEAFE', text: '#1E40AF' },
+  completed: { bg: '#DCFCE7', text: '#065F46' },
+  cancelled: { bg: '#FEE2E2', text: '#991B1B' },
 };
 
 export const EventsView: React.FC<EventsViewProps> = ({
@@ -121,7 +120,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </View>
 
         <View style={styles.cardRow}>
-          <Feather name="calendar" size={14} color={semantic.textSecondary} />
+          <Feather name="calendar" size={14} color="#64748B" />
           <Text style={styles.cardValue}>
             {formatDate(item.date)}
             {item.endDate ? ` - ${formatDate(item.endDate)}` : ''}
@@ -130,7 +129,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
         {item.location && (
           <View style={styles.cardRow}>
-            <Feather name="map-pin" size={14} color={semantic.textSecondary} />
+            <Feather name="map-pin" size={14} color="#64748B" />
             <Text style={styles.cardValue} numberOfLines={1}>
               {item.location}
             </Text>
@@ -139,14 +138,14 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
         {item.guestCount !== null && item.guestCount !== undefined && item.guestCount > 0 && (
           <View style={styles.cardRow}>
-            <Feather name="users" size={14} color={semantic.textSecondary} />
+            <Feather name="users" size={14} color="#64748B" />
             <Text style={styles.cardValue}>{item.guestCount} guests</Text>
           </View>
         )}
 
         {item.budget > 0 && (
           <View style={styles.cardRow}>
-            <Feather name="credit-card" size={14} color={semantic.textSecondary} />
+            <Feather name="credit-card" size={14} color="#64748B" />
             <Text style={styles.cardValue}>
               {'\u20B1'}
               {item.budget.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
@@ -164,7 +163,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
             accessibilityRole="button"
             accessibilityLabel={`Delete ${item.name}`}
           >
-            <Feather name="trash-2" size={16} color={colors.error[500]} />
+            <Feather name="trash-2" size={16} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -221,7 +220,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
           </View>
         ) : filteredEvents.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Feather name="layers" size={48} color={colors.neutral[300]} />
+            <Feather name="layers" size={48} color="#94A3B8" />
             <Text style={styles.emptyText}>No Events Found</Text>
             <Text style={styles.emptySubtext}>
               {activeFilter === 'all'
@@ -246,7 +245,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Create new event"
         >
-          <Feather name="plus" size={20} color={colors.neutral[0]} />
+          <Feather name="plus" size={20} color="#FFFFFF" />
           <Text style={styles.fabButtonText}>New Event</Text>
         </TouchableOpacity>
 

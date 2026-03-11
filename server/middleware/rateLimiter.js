@@ -68,7 +68,7 @@ const authLimiter = rateLimiter(10, 15 * 60 * 1000, 'auth');       // 10 per 15 
 const registerLimiter = rateLimiter(5, 60 * 60 * 1000, 'register'); // 5 per hour
 const paymentLimiter = rateLimiter(10, 60 * 60 * 1000, 'payment');  // 10 per hour
 const searchLimiter = rateLimiter(60, 60 * 1000, 'search');         // 60 per minute
-const apiLimiter = rateLimiter(200, 60 * 1000, 'api');              // 200 per minute (global)
+const apiLimiter = rateLimiter(1000, 60 * 1000, 'api');             // 1000 per minute (global)
 
 // Export for testing
 function _resetStore() {

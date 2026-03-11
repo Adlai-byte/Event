@@ -27,10 +27,11 @@ export interface ServicePackage {
   serviceId: number;
   name: string;
   description?: string;
-  minPax?: number;
-  maxPax?: number;
+  minGuests?: number;
+  maxGuests?: number;
   basePrice?: number;
   priceType: 'fixed' | 'calculated' | 'per_person';
+  billingType?: 'hourly' | 'daily';
   discountPercent: number;
   calculatedPrice?: number;
   isActive: boolean;
@@ -45,7 +46,7 @@ export interface BookingPackage {
   id?: number;
   bookingId: number;
   packageId: number;
-  paxCount: number;
+  guestCount: number;
   unitPrice: number;
   totalPrice: number;
   removedItems?: number[];  // Array of item IDs removed by user
@@ -56,7 +57,7 @@ export interface BookingPackage {
 // Helper function to calculate package price
 export function calculatePackagePrice(
   pkg: ServicePackage,
-  paxCount: number = 1,
+  guestCount: number = 1,
   removedItemIds: number[] = []
 ): number {
   if (pkg.priceType === 'fixed' && pkg.basePrice) {
@@ -64,7 +65,7 @@ export function calculatePackagePrice(
   }
 
   if (pkg.priceType === 'per_person' && pkg.basePrice) {
-    return pkg.basePrice * paxCount;
+    return pkg.basePrice * guestCount;
   }
 
   // Calculate from items (calculated type)
@@ -113,10 +114,11 @@ export function createEmptyPackage(serviceId: number): ServicePackage {
     serviceId,
     name: '',
     description: '',
-    minPax: 1,
-    maxPax: undefined,
+    minGuests: 1,
+    maxGuests: undefined,
     basePrice: undefined,
     priceType: 'calculated',
+    billingType: 'hourly',
     discountPercent: 0,
     isActive: true,
     displayOrder: 0,

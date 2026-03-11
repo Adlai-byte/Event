@@ -46,7 +46,7 @@ async function createPackage(req, res) {
 
     const {
         name, description, minPax, maxPax, basePrice,
-        priceType, discountPercent, isActive, displayOrder, categories
+        priceType, discountPercent, isActive, displayOrder, billingType, categories
     } = req.body || {};
 
     if (!name || !name.trim()) {
@@ -56,7 +56,7 @@ async function createPackage(req, res) {
     try {
         const packageId = await packageService.createPackage(serviceId, {
             name, description, minPax, maxPax, basePrice,
-            priceType, discountPercent, isActive, displayOrder, categories
+            priceType, discountPercent, isActive, displayOrder, billingType, categories
         });
         return sendSuccess(res, { id: packageId, message: 'Package created successfully' });
     } catch (err) {
@@ -73,13 +73,13 @@ async function updatePackage(req, res) {
 
     const {
         name, description, minPax, maxPax, basePrice,
-        priceType, discountPercent, isActive, displayOrder, categories
+        priceType, discountPercent, isActive, displayOrder, billingType, categories
     } = req.body || {};
 
     try {
         const found = await packageService.updatePackage(packageId, {
             name, description, minPax, maxPax, basePrice,
-            priceType, discountPercent, isActive, displayOrder, categories
+            priceType, discountPercent, isActive, displayOrder, billingType, categories
         });
         if (!found) {
             return sendError(res, 'NOT_FOUND', 'Package not found', 404);

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Modal, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
-import { semantic, spacing } from '../../theme';
+import { spacing } from '../../theme';
 import { apiClient } from '../../services/apiClient';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   desktopContainer: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: semantic.background,
+    backgroundColor: '#F8FAFC',
   },
   desktopContent: {
     flex: 1,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   mobileContainer: {
     flex: 1,
-    backgroundColor: semantic.background,
+    backgroundColor: '#F8FAFC',
   },
   mobileContent: {
     flex: 1,

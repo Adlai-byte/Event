@@ -302,7 +302,28 @@ async function listServices(query, pagination) {
                ${hasPerDayPrice ? 'COALESCE(s.s_per_day_price, s.s_base_price)' : 's.s_base_price'} as s_per_day_price,
                u.u_fname, u.u_lname, u.u_email as provider_email,
                CONCAT(u.u_fname, ' ', u.u_lname) as provider_name,
-               si.si_image_url as primary_image`;
+               si.si_image_url as primary_image,
+               (SELECT COUNT(*) FROM service_package sp WHERE sp.sp_service_id = s.idservice AND sp.sp_is_active = 1) as package_count,
+               (SELECT MIN(
+                 CASE
+                   WHEN sp2.sp_price_type IN ('fixed', 'per_person') THEN COALESCE(sp2.sp_base_price, 0)
+                   ELSE COALESCE(
+                     (SELECT SUM(pi.pi_quantity * pi.pi_unit_price) FROM package_item pi
+                      JOIN package_category pc ON pi.pi_category_id = pc.idcategory
+                      WHERE pc.pc_package_id = sp2.idpackage), 0
+                   ) * (1 - COALESCE(sp2.sp_discount_percent, 0) / 100)
+                 END
+               ) FROM service_package sp2 WHERE sp2.sp_service_id = s.idservice AND sp2.sp_is_active = 1) as min_package_price,
+               (SELECT MAX(
+                 CASE
+                   WHEN sp3.sp_price_type IN ('fixed', 'per_person') THEN COALESCE(sp3.sp_base_price, 0)
+                   ELSE COALESCE(
+                     (SELECT SUM(pi2.pi_quantity * pi2.pi_unit_price) FROM package_item pi2
+                      JOIN package_category pc2 ON pi2.pi_category_id = pc2.idcategory
+                      WHERE pc2.pc_package_id = sp3.idpackage), 0
+                   ) * (1 - COALESCE(sp3.sp_discount_percent, 0) / 100)
+                 END
+               ) FROM service_package sp3 WHERE sp3.sp_service_id = s.idservice AND sp3.sp_is_active = 1) as max_package_price`;
     const paginationParams = [...params, pagination.limit, pagination.offset];
     const [rows] = await pool.query(
         `${selectClause}${fromClause}${where}${orderBy} LIMIT ? OFFSET ?`,

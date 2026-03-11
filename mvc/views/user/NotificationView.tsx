@@ -14,7 +14,6 @@ import { SkeletonListItem } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { Feather } from '@expo/vector-icons';
-import { colors, semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -151,15 +150,15 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
       case 'provider_application_rejected':
         return {
           icon: 'x-circle' as const,
-          iconBg: colors.error[50],
-          iconColor: colors.error[600],
+          iconBg: '#FEE2E2',
+          iconColor: '#DC2626',
           borderColor: '#FECACA',
         };
       case 'provider_application_approved':
         return {
           icon: 'check-circle' as const,
-          iconBg: colors.success[50],
-          iconColor: colors.success[600],
+          iconBg: '#DCFCE7',
+          iconColor: '#059669',
           borderColor: '#A7F3D0',
         };
       case 'booking_confirmed':
@@ -172,15 +171,15 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
       case 'booking_cancelled':
         return {
           icon: 'slash' as const,
-          iconBg: colors.error[50],
-          iconColor: colors.error[600],
+          iconBg: '#FEE2E2',
+          iconColor: '#DC2626',
           borderColor: '#FECACA',
         };
       default:
         return {
           icon: 'bell' as const,
           iconBg: '#EFF6FF',
-          iconColor: semantic.primary,
+          iconColor: '#2563EB',
           borderColor: '#DBEAFE',
         };
     }
@@ -321,8 +320,8 @@ export const NotificationView: React.FC<NotificationViewProps> = ({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[semantic.primary]}
-              tintColor={semantic.primary}
+              colors={['#2563EB']}
+              tintColor={'#2563EB'}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -354,7 +353,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#F5F7FA',
+      backgroundColor: '#F8FAFC',
     },
     markAllReadBar: {
       flexDirection: 'row',
@@ -362,9 +361,9 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       justifyContent: 'space-between',
       paddingHorizontal: isMobile ? 16 : 24,
       paddingVertical: 12,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
     },
     unreadCountContainer: {
       flexDirection: 'row',
@@ -373,11 +372,11 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     unreadLabel: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
     },
     headerBadge: {
-      backgroundColor: semantic.error,
+      backgroundColor: '#EF4444',
       borderRadius: 12,
       paddingHorizontal: 8,
       paddingVertical: 2,
@@ -389,24 +388,24 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     headerBadgeText: {
       fontSize: 12,
       fontWeight: '700',
-      color: semantic.surface,
+      color: '#FFFFFF',
     },
     markAllReadButton: {
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       ...(Platform.OS === 'web' && {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         ':hover': {
-          backgroundColor: semantic.border,
+          backgroundColor: '#E2E8F0',
         },
       }),
     },
     markAllReadText: {
       fontSize: isMobile ? 13 : 14,
-      color: semantic.primary,
+      color: '#2563EB',
       fontWeight: '600',
     },
     contentWrapper: {
@@ -431,15 +430,15 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
     },
     notificationItem: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       padding: isMobile ? 16 : 20,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             ':hover': {
@@ -450,7 +449,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
+            shadowOpacity: 0.03,
             shadowRadius: 3,
             elevation: 2,
           }),
@@ -458,7 +457,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     unreadNotification: {
       backgroundColor: '#F0F9FF',
       borderLeftWidth: 4,
-      borderLeftColor: semantic.primary,
+      borderLeftColor: '#2563EB',
       borderColor: '#BFDBFE',
     },
     notificationContent: {
@@ -489,7 +488,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     notificationTitle: {
       fontSize: isMobile ? 16 : 18,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
       letterSpacing: -0.3,
     },
@@ -504,7 +503,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#2563EB',
     },
     notificationMessage: {
       fontSize: isMobile ? 14 : 15,
@@ -513,7 +512,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginBottom: 8,
     },
     unreadMessage: {
-      color: semantic.textPrimary,
+      color: '#0F172A',
       fontWeight: '500',
     },
     reasonContainer: {
@@ -522,12 +521,12 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       padding: 12,
       marginBottom: 8,
       borderLeftWidth: 3,
-      borderLeftColor: semantic.border,
+      borderLeftColor: '#E2E8F0',
     },
     reasonLabel: {
       fontSize: isMobile ? 12 : 13,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 4,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
@@ -540,7 +539,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     reapplyText: {
       fontSize: isMobile ? 13 : 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontStyle: 'italic',
       marginBottom: 8,
       lineHeight: isMobile ? 18 : 20,
@@ -562,7 +561,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 24,
@@ -573,13 +572,13 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     emptyTitle: {
       fontSize: isMobile ? 24 : 28,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 12,
       letterSpacing: -0.5,
     },
     emptyText: {
       fontSize: isMobile ? 15 : 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       textAlign: 'center',
       lineHeight: isMobile ? 22 : 24,
     },

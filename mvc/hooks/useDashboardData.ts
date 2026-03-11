@@ -4,7 +4,6 @@ import * as Location from 'expo-location';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../models/User';
 import { apiClient } from '../services/apiClient';
-import { getApiBaseUrl } from '../services/api';
 import { ServiceDTO as Service } from '../types/service';
 import { mapImageUrl } from '../utils/serviceHelpers';
 
@@ -94,7 +93,7 @@ export function useDashboardData(
     queryKey: ['featured-services'],
     queryFn: async () => {
       const data = await apiClient.get('/api/services', { limit: 50 });
-      const mapped = (data.rows || []).map(mapImageUrl);
+      const mapped = (data.data || data.rows || []).map(mapImageUrl);
       return mapped.sort((a: Service, b: Service) => {
         const ratingA = parseFloat(a.s_rating?.toString() || '0');
         const ratingB = parseFloat(b.s_rating?.toString() || '0');
@@ -118,7 +117,7 @@ export function useDashboardData(
         params.longitude = userLocation.longitude;
       }
       const data = await apiClient.get('/api/services', params);
-      return (data.rows || []).map(mapImageUrl);
+      return (data.data || data.rows || []).map(mapImageUrl);
     },
     enabled: !!userLocation,
   });
@@ -132,9 +131,9 @@ export function useDashboardData(
         apiClient.get('/api/services', { category: 'music', limit: 3 }),
       ]);
       return {
-        photography: (photoData.rows || []).map(mapImageUrl),
-        venue: (venueData.rows || []).map(mapImageUrl),
-        music: (musicData.rows || []).map(mapImageUrl),
+        photography: (photoData.data || photoData.rows || []).map(mapImageUrl),
+        venue: (venueData.data || venueData.rows || []).map(mapImageUrl),
+        music: (musicData.data || musicData.rows || []).map(mapImageUrl),
       };
     },
   });
@@ -142,13 +141,13 @@ export function useDashboardData(
   const categoryCountsQuery = useQuery({
     queryKey: ['category-counts'],
     queryFn: async () => {
-      const categories = ['photography', 'venue', 'music', 'catering'];
+      const categories = ['photography', 'venue', 'music', 'catering', 'decoration', 'planning', 'entertainment', 'transportation', 'other'];
       const responses = await Promise.all(
         categories.map((cat) => apiClient.get('/api/services', { category: cat })),
       );
       const counts: Record<string, number> = {};
       categories.forEach((cat, i) => {
-        counts[cat] = (responses[i].rows || []).length;
+        counts[cat] = (responses[i].data || responses[i].rows || []).length;
       });
       return counts;
     },
@@ -196,25 +195,13 @@ export function useDashboardData(
   // --- Category browsing ---
   const loadCategoryServices = async (
     category: string,
-    useFilters: boolean = false,
-    buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string,
+    _useFilters: boolean = false,
   ) => {
     setLoadingCategory(true);
     try {
-      let url: string;
-      if (useFilters && buildFilterQuery) {
-        url = buildFilterQuery(`${getApiBaseUrl()}/api/services`, { category });
-      } else {
-        const params = new URLSearchParams();
-        params.append('category', category);
-        url = `${getApiBaseUrl()}/api/services?${params.toString()}`;
-      }
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const data = await resp.json();
-        setCategoryServices((data.rows || []).map(mapImageUrl));
-        setSelectedCategory(category);
-      }
+      const data = await apiClient.get<any>('/api/services', { category });
+      setCategoryServices((data.data || data.rows || []).map(mapImageUrl));
+      setSelectedCategory(category);
     } catch (error) {
       if (__DEV__) console.error('Error loading category services:', error);
     } finally {
@@ -244,8 +231,9 @@ export function useDashboardData(
   const fetchServiceById = async (serviceId: string) => {
     try {
       const data = await apiClient.get(`/api/services/${serviceId}`);
-      if (data.service) {
-        const service = mapImageUrl(data.service);
+      const serviceData = data.data?.service || data.service;
+      if (serviceData) {
+        const service = mapImageUrl(serviceData);
         setSelectedService(service);
         setShowBookingModal(true);
       }

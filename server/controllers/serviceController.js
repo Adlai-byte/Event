@@ -121,7 +121,7 @@ async function createService(req, res) {
     }
 
     // Validate category
-    const validCategories = ['venue', 'catering', 'photography', 'music'];
+    const validCategories = ['venue', 'catering', 'photography', 'videography', 'music', 'decoration', 'transportation', 'entertainment', 'planning', 'other'];
     if (!validCategories.includes(category.toLowerCase())) {
         return sendError(res, 'VALIDATION_ERROR', 'Invalid category');
     }
@@ -228,7 +228,7 @@ async function updateService(req, res) {
     }
 
     // Validate category
-    const validCategories = ['venue', 'catering', 'photography', 'music'];
+    const validCategories = ['venue', 'catering', 'photography', 'videography', 'music', 'decoration', 'transportation', 'entertainment', 'planning', 'other'];
     if (!validCategories.includes(category.toLowerCase())) {
         return sendError(res, 'VALIDATION_ERROR', 'Invalid category');
     }

@@ -36,6 +36,24 @@ export const formatPrice = (price: number | string | null | undefined): string =
   return `₱${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+/** Format a price range display from package prices, falling back to base price */
+export const formatPriceDisplay = (
+  basePrice: number | string | null | undefined,
+  minPackagePrice?: number | null,
+  maxPackagePrice?: number | null,
+): { label: string; price: string } => {
+  if (minPackagePrice !== null && minPackagePrice !== undefined && maxPackagePrice !== null && maxPackagePrice !== undefined && minPackagePrice > 0) {
+    if (minPackagePrice === maxPackagePrice) {
+      return { label: 'Package price', price: formatPrice(minPackagePrice) };
+    }
+    return {
+      label: 'Packages from',
+      price: `${formatPrice(minPackagePrice)} - ${formatPrice(maxPackagePrice)}`,
+    };
+  }
+  return { label: 'Starting at', price: formatPrice(basePrice) };
+};
+
 /** Resolve a potentially relative image path to a full URL */
 export const mapImageUrl = <T extends { primary_image?: string | null }>(item: T): T => ({
   ...item,

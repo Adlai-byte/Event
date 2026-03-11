@@ -23,7 +23,7 @@ export interface BookingConfirmationModalProps {
   visible: boolean;
   confirmBookingData: ConfirmBookingData | null;
   selectedPackage: ServicePackage | null;
-  packagePaxCount: number;
+  packageGuestCount: number;
   removedItems: number[];
   getPackagePrice: () => number;
   onCancel: () => void;
@@ -34,7 +34,7 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
   visible,
   confirmBookingData,
   selectedPackage,
-  packagePaxCount,
+  packageGuestCount,
   removedItems,
   getPackagePrice,
   onCancel,
@@ -106,7 +106,7 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
                       <View style={styles.confirmDetailContent}>
                         <Text style={styles.confirmDetailLabel}>Attendees</Text>
                         <Text style={styles.confirmDetailValue}>
-                          {confirmBookingData?.attendees || 0} pax
+                          {confirmBookingData?.attendees || 0} guests
                         </Text>
                       </View>
                     </View>
@@ -167,7 +167,7 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
                   <Text style={styles.confirmPackageName}>{selectedPackage.name}</Text>
                   <View style={styles.confirmPackageDetails}>
                     <Text style={styles.confirmPackageDetailText}>
-                      {packagePaxCount} pax x{' '}
+                      {packageGuestCount} guests x{' '}
                       {formatPeso(
                         selectedPackage.priceType === 'calculated'
                           ? calculatePackagePrice(selectedPackage, 1, removedItems)

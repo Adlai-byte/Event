@@ -35,7 +35,7 @@ interface BookingModalProps {
     notes?: string,
     packageData?: {
       packageId: number;
-      paxCount: number;
+      guestCount: number;
       removedItems: number[];
       totalPrice: number;
     },
@@ -102,7 +102,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setAttendees,
     selectedPackage,
     removedItems,
-    packagePaxCount,
+    packageGuestCount,
     resetCostState,
     loadServiceDetails,
     loadPackages,
@@ -296,7 +296,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       selectedPackage && selectedPackage.id
         ? {
             packageId: selectedPackage.id,
-            paxCount: packagePaxCount,
+            guestCount: packageGuestCount,
             removedItems: removedItems,
             totalPrice: getPackagePrice(),
           }
@@ -613,7 +613,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         {serviceDetails?.category.toLowerCase() === 'catering' && (
           <View style={styles.attendeesContainer}>
-            <Text style={styles.attendeesLabel}>Per Pax *</Text>
+            <Text style={styles.attendeesLabel}>Guests *</Text>
             <View style={styles.attendeesInputContainer}>
               <TextInput
                 style={styles.attendeesInput}
@@ -628,12 +628,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   }
                 }}
                 keyboardType="numeric"
-                placeholder="Enter number of pax"
+                placeholder="Enter number of guests"
                 placeholderTextColor="#999"
                 accessibilityLabel="Number of attendees"
               />
             </View>
-            <Text style={styles.attendeesHint}>Cost will be calculated per pax</Text>
+            <Text style={styles.attendeesHint}>Cost will be calculated per guest</Text>
           </View>
         )}
 
@@ -671,7 +671,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Attendees:</Text>
                   <Text style={styles.summaryValue}>
-                    {attendees} {parseInt(attendees) === 1 ? 'pax' : 'pax'}
+                    {attendees} {parseInt(attendees) === 1 ? 'guest' : 'guests'}
                   </Text>
                 </View>
               )}
@@ -809,7 +809,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           visible={showConfirmModal}
           confirmBookingData={confirmBookingData}
           selectedPackage={selectedPackage}
-          packagePaxCount={packagePaxCount}
+          packageGuestCount={packageGuestCount}
           removedItems={removedItems}
           getPackagePrice={getPackagePrice}
           onCancel={() => setShowConfirmModal(false)}

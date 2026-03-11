@@ -64,7 +64,7 @@ export const LANDING_CATEGORY_LABELS = [
 export const LANDING_CONTENT = {
   topBarText: 'Plan your perfect event with E-VENT',
   logo: 'E-VENT',
-  searchPlaceholder: 'Search events, services...',
+  searchPlaceholder: 'Search venues, photographers, catering...',
   aboutTitle: 'About E-VENT',
   contactTitle: 'Contact Us',
   contactEmail: 'support@e-vent.com',

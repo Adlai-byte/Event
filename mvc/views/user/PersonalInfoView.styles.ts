@@ -1,5 +1,4 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, semantic } from '../../theme';
 
 export const createStyles = (isMobile: boolean, screenWidth: number) => {
   const isExtraSmall = screenWidth < 360;
@@ -18,7 +17,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {}),
     },
     successTooltipContent: {
-      backgroundColor: semantic.success,
+      backgroundColor: '#22C55E',
       borderRadius: 12,
       padding: 16,
       flexDirection: 'row',
@@ -34,21 +33,21 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 10,
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            elevation: 6,
           }),
     },
     successTooltipIcon: {
       fontSize: 20,
       marginRight: 12,
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontWeight: 'bold',
     },
     successTooltipText: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.surface,
+      color: '#FFFFFF',
       flex: 1,
       textAlign: 'center',
     },
@@ -64,7 +63,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     successTooltipCloseText: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: semantic.surface,
+      color: '#FFFFFF',
       lineHeight: 20,
     },
     errorTooltip: {
@@ -81,7 +80,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {}),
     },
     errorTooltipContent: {
-      backgroundColor: semantic.error,
+      backgroundColor: '#EF4444',
       borderRadius: 12,
       padding: 16,
       flexDirection: 'row',
@@ -97,9 +96,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 10,
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            elevation: 6,
           }),
     },
     errorTooltipIcon: {
@@ -109,7 +108,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     errorTooltipText: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.surface,
+      color: '#FFFFFF',
       flex: 1,
       textAlign: 'center',
     },
@@ -125,12 +124,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     errorTooltipCloseText: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: semantic.surface,
+      color: '#FFFFFF',
       lineHeight: 20,
     },
     container: {
       flex: 1,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       position: 'relative',
     },
     editButtonContainer: {
@@ -143,7 +142,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {}),
     },
     editButton: {
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 8,
@@ -154,7 +153,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         : {}),
     },
     editButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '600',
     },
@@ -178,14 +177,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
             paddingBottom: 20,
             width: '100%',
             maxWidth: isMobile ? ('100%' as any) : 800,
-            backgroundColor: semantic.surface,
-            borderRadius: 12,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 16,
             marginHorizontal: 'auto',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 3,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             marginTop: 20,
             marginBottom: 20,
           }
@@ -196,7 +193,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       marginBottom: 30,
       paddingVertical: 20,
       paddingHorizontal: 20,
-      backgroundColor: colors.error[50],
+      backgroundColor: '#F8FAFC',
       borderRadius: 12,
       marginHorizontal: -20,
       marginTop: -10,
@@ -205,7 +202,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       width: isMobile ? 80 : 100,
       height: isMobile ? 80 : 100,
       borderRadius: isMobile ? 40 : 50,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 16,
@@ -213,7 +210,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     avatarText: {
       fontSize: isMobile ? 32 : 40,
       fontWeight: 'bold',
-      color: semantic.surface,
+      color: '#FFFFFF',
     },
     avatarImage: {
       width: isMobile ? 80 : 100,
@@ -221,15 +218,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       borderRadius: isMobile ? 40 : 50,
     },
     changePhotoButton: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#FFFFFF',
       paddingHorizontal: 20,
       paddingVertical: 10,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: semantic.primary,
+      borderColor: '#E2E8F0',
     },
     changePhotoText: {
-      color: semantic.primary,
+      color: '#0F172A',
       fontSize: 14,
       fontWeight: '600',
     },
@@ -238,47 +235,48 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       padding: isMobile ? 16 : 20,
       marginBottom: 20,
       borderWidth: 1,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 3,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     sectionTitle: {
       fontSize: isMobile ? 16 : 18,
       fontWeight: 'bold',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 20,
     },
     fieldContainer: {
       marginBottom: 16,
       padding: 12,
-      borderRadius: 8,
-      backgroundColor: semantic.surface,
+      borderRadius: 10,
+      backgroundColor: '#FFFFFF',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     fieldLabel: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 8,
     },
     fieldInput: {
-      backgroundColor: semantic.background,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 10,
       paddingHorizontal: 16,
       paddingVertical: 12,
       fontSize: 16,
-      color: semantic.textPrimary,
+      color: '#0F172A',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     emailFieldHeader: {
       flexDirection: 'row',
@@ -287,25 +285,25 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       marginBottom: 8,
     },
     readOnlyBadge: {
-      backgroundColor: colors.warning[50],
+      backgroundColor: '#FFFBEB',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: colors.warning[100],
+      borderColor: '#FEF3C7',
     },
     readOnlyBadgeText: {
       fontSize: 11,
       fontWeight: '600',
-      color: colors.warning[600],
+      color: '#D97706',
     },
     emailInputContainer: {
       position: 'relative',
     },
     emailInputDisabled: {
-      backgroundColor: semantic.background,
-      color: semantic.textSecondary,
-      borderColor: semantic.border,
+      backgroundColor: '#F8FAFC',
+      color: '#64748B',
+      borderColor: '#E2E8F0',
       opacity: 0.7,
     },
     emailInfoIcon: {
@@ -319,7 +317,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     },
     emailHelperText: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 6,
       fontStyle: 'italic',
     },
@@ -328,9 +326,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       marginBottom: 20,
       padding: isMobile ? 16 : 20,
       borderRadius: 12,
-      backgroundColor: colors.error[50],
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: colors.error[50],
+      borderColor: '#E2E8F0',
     },
     accountHeader: {
       flexDirection: 'row',
@@ -342,7 +340,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F1F5F9',
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -353,26 +351,26 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     accountTitle: {
       fontSize: 20,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       letterSpacing: -0.5,
     },
     accountCard: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       padding: 20,
       marginTop: 12,
       borderWidth: 1,
-      borderColor: colors.error[50],
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.08,
-            shadowRadius: 12,
-            elevation: 4,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     accountInfoItem: {
@@ -381,7 +379,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       alignItems: 'center',
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.background,
+      borderBottomColor: '#F8FAFC',
     },
     accountInfoLeft: {
       flexDirection: 'row',
@@ -392,7 +390,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F1F5F9',
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -404,7 +402,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     accountInfoLabel: {
       fontSize: 15,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
     },
     accountInfoRight: {
@@ -413,7 +411,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     accountInfoValue: {
       fontSize: 15,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     statusBadge: {
       paddingHorizontal: 12,
@@ -436,7 +434,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: 14,
       paddingHorizontal: 20,
       borderRadius: 12,
@@ -444,20 +442,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         ? {
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            ':hover': {
-              backgroundColor: colors.primary[700],
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
-            },
           }
         : {}),
       ...(Platform.OS !== 'web'
         ? {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }
         : {}),
     },
@@ -466,11 +459,6 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       ...(Platform.OS === 'web'
         ? ({
             cursor: 'not-allowed' as any,
-            ':hover': {
-              backgroundColor: semantic.primary,
-              transform: 'none',
-              boxShadow: 'none',
-            },
           } as any)
         : {}),
     },
@@ -479,7 +467,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       marginRight: 8,
     },
     modernVerifyButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '600',
       letterSpacing: 0.2,
@@ -488,7 +476,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: semantic.success,
+      backgroundColor: '#22C55E',
       paddingVertical: 14,
       paddingHorizontal: 20,
       borderRadius: 12,
@@ -496,20 +484,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
         ? {
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            ':hover': {
-              backgroundColor: colors.success[600],
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-            },
           }
         : {}),
       ...(Platform.OS !== 'web'
         ? {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }
         : {}),
     },
@@ -518,11 +501,6 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       ...(Platform.OS === 'web'
         ? ({
             cursor: 'not-allowed' as any,
-            ':hover': {
-              backgroundColor: semantic.success,
-              transform: 'none',
-              boxShadow: 'none',
-            },
           } as any)
         : {}),
     },
@@ -531,7 +509,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       marginRight: 8,
     },
     modernCheckButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '600',
       letterSpacing: 0.2,
@@ -543,30 +521,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
     },
     cancelButton: {
       flex: 1,
-      backgroundColor: semantic.background,
+      backgroundColor: '#FFFFFF',
       paddingVertical: 16,
       borderRadius: 12,
       alignItems: 'center',
       marginRight: 10,
       marginBottom: isExtraSmall ? 10 : 0,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     cancelButtonText: {
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontSize: 16,
       fontWeight: '600',
     },
     saveButton: {
       flex: 1,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: 16,
       borderRadius: 12,
       alignItems: 'center',
       marginLeft: 10,
     },
     saveButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '600',
     },
@@ -577,28 +555,28 @@ export const createStyles = (isMobile: boolean, screenWidth: number) => {
       ...(Platform.OS === 'web'
         ? {
             marginBottom: 0,
-            boxShadow: '0 2px 8px rgba(108, 99, 255, 0.15)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             marginBottom: 20,
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     bottomColoredContent: {
-      backgroundColor: colors.primary[50],
+      backgroundColor: '#EFF6FF',
       paddingVertical: 16,
       paddingHorizontal: 20,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: colors.primary[100],
+      borderColor: '#DBEAFE',
     },
     bottomColoredText: {
       fontSize: 14,
-      color: semantic.primary,
+      color: '#2563EB',
       textAlign: 'center',
       fontWeight: '500',
       lineHeight: 20,

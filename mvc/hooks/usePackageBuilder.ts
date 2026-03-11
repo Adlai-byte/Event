@@ -10,7 +10,7 @@ import {
   calculatePackagePrice,
   calculateCategorySubtotal,
 } from '../models/Package';
-import { getApiBaseUrl } from '../services/api';
+import { apiClient } from '../services/apiClient';
 
 interface UsePackageBuilderOptions {
   visible: boolean;
@@ -74,55 +74,52 @@ export function usePackageBuilder({
 
     setSaving(true);
     try {
-      const baseUrl = getApiBaseUrl();
       const isEditing = pkg.id !== undefined;
 
-      const url = isEditing
-        ? `${baseUrl}/api/packages/${pkg.id}`
-        : `${baseUrl}/api/services/${serviceId}/packages`;
+      const path = isEditing
+        ? `/api/packages/${pkg.id}`
+        : `/api/services/${serviceId}/packages`;
 
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: pkg.name.trim(),
-          description: pkg.description?.trim() || null,
-          minPax: pkg.minPax || 1,
-          maxPax: pkg.maxPax || null,
-          basePrice: pkg.basePrice || null,
-          priceType: pkg.priceType,
-          discountPercent: pkg.discountPercent || 0,
-          isActive: pkg.isActive,
-          displayOrder: pkg.displayOrder || 0,
-          categories: pkg.categories.map((cat, catIdx) => ({
-            name: cat.name.trim(),
-            description: cat.description?.trim() || null,
-            displayOrder: catIdx,
-            items: cat.items.map((item, itemIdx) => ({
-              name: item.name.trim(),
-              description: item.description?.trim() || null,
-              quantity: item.quantity || 1,
-              unit: item.unit || 'pc',
-              unitPrice: item.unitPrice || 0,
-              isOptional: item.isOptional || false,
-              displayOrder: itemIdx,
-            })),
+      const payload = {
+        name: pkg.name.trim(),
+        description: pkg.description?.trim() || null,
+        minPax: pkg.minGuests || 1,
+        maxPax: pkg.maxGuests || null,
+        basePrice: pkg.basePrice || null,
+        priceType: pkg.priceType,
+        billingType: pkg.billingType || 'hourly',
+        discountPercent: pkg.discountPercent || 0,
+        isActive: pkg.isActive,
+        displayOrder: pkg.displayOrder || 0,
+        categories: pkg.categories.map((cat, catIdx) => ({
+          name: cat.name.trim(),
+          description: cat.description?.trim() || null,
+          displayOrder: catIdx,
+          items: cat.items.map((item, itemIdx) => ({
+            name: item.name.trim(),
+            description: item.description?.trim() || null,
+            quantity: item.quantity || 1,
+            unit: item.unit || 'pc',
+            unitPrice: item.unitPrice || 0,
+            isOptional: item.isOptional || false,
+            displayOrder: itemIdx,
           })),
-        }),
-      });
+        })),
+      };
 
-      const data = await response.json();
+      const data = isEditing
+        ? await apiClient.put(path, payload)
+        : await apiClient.post(path, payload);
+
       if (data.ok) {
         onSave(pkg);
         onClose();
       } else {
         Alert.alert('Error', data.error || 'Failed to save package');
       }
-    } catch (error) {
+    } catch (error: any) {
       if (__DEV__) console.error('Save package error:', error);
-      Alert.alert('Error', 'Failed to save package. Please try again.');
+      Alert.alert('Error', error?.message || 'Failed to save package. Please try again.');
     } finally {
       setSaving(false);
     }

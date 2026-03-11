@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { User as UserModel } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { colors, semantic } from '../../theme';
@@ -49,11 +49,10 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
   const loadBookings = async () => {
     try {
       setLoading(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/bookings`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.rows)) {
-          const mapped: Booking[] = data.rows.map((b: any) => ({
+      const data = await apiClient.get<{ ok: boolean; data?: { rows: any[] }; rows?: any[] }>('/api/bookings');
+      const rows = data.data?.rows ?? data.rows;
+      if (data.ok && Array.isArray(rows)) {
+          const mapped: Booking[] = rows.map((b: any) => ({
             id: b.idbooking.toString(),
             eventName: b.b_event_name,
             clientName: b.client_name || 'Unknown Client',
@@ -65,7 +64,6 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
             services: Array.isArray(b.services) ? b.services : [],
           }));
           setBookings(mapped);
-        }
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading bookings:', error);
@@ -267,25 +265,14 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                             text: 'Confirm',
                             onPress: async () => {
                               try {
-                                const resp = await fetch(
-                                  `${getApiBaseUrl()}/api/bookings/${booking.id}/status`,
-                                  {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ status: 'confirmed' }),
-                                  },
+                                await apiClient.post(`/api/bookings/${booking.id}/status`, { status: 'confirmed' });
+                                setBookings((prev) =>
+                                  prev.map((b) =>
+                                    b.id === booking.id
+                                      ? { ...b, status: 'confirmed' as const }
+                                      : b,
+                                  ),
                                 );
-                                if (resp.ok) {
-                                  setBookings((prev) =>
-                                    prev.map((b) =>
-                                      b.id === booking.id
-                                        ? { ...b, status: 'confirmed' as const }
-                                        : b,
-                                    ),
-                                  );
-                                } else {
-                                  Alert.alert('Error', 'Failed to update booking status');
-                                }
                               } catch {
                                 Alert.alert('Error', 'Failed to update booking status');
                               }
@@ -314,25 +301,14 @@ export const BookingsView: React.FC<AdminBookingsProps> = ({ user, onNavigate, o
                             style: 'destructive',
                             onPress: async () => {
                               try {
-                                const resp = await fetch(
-                                  `${getApiBaseUrl()}/api/bookings/${booking.id}/status`,
-                                  {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ status: 'cancelled' }),
-                                  },
+                                await apiClient.post(`/api/bookings/${booking.id}/status`, { status: 'cancelled' });
+                                setBookings((prev) =>
+                                  prev.map((b) =>
+                                    b.id === booking.id
+                                      ? { ...b, status: 'cancelled' as const }
+                                      : b,
+                                  ),
                                 );
-                                if (resp.ok) {
-                                  setBookings((prev) =>
-                                    prev.map((b) =>
-                                      b.id === booking.id
-                                        ? { ...b, status: 'cancelled' as const }
-                                        : b,
-                                    ),
-                                  );
-                                } else {
-                                  Alert.alert('Error', 'Failed to update booking status');
-                                }
                               } catch {
                                 Alert.alert('Error', 'Failed to update booking status');
                               }

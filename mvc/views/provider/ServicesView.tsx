@@ -60,14 +60,11 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
     submitting,
     editingServiceId,
     setEditingServiceId,
-    mapLocation,
     successMessage,
     setSuccessMessage,
     errorMessage,
     setErrorMessage,
-    mapWebViewRef,
     resetForm,
-    handleMapMessage,
     handleImagePick,
     handleRemoveImage,
     handleSetPrimaryImage,
@@ -222,6 +219,7 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
             <ServiceListTab
               services={services}
               filteredServices={filteredServices}
+              packages={packages}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               filterCategory={filterCategory}
@@ -246,9 +244,6 @@ export const ServicesView: React.FC<ProviderServicesProps> = ({ user, onNavigate
               submitting={submitting}
               errorMessage={errorMessage}
               onDismissError={() => setErrorMessage('')}
-              mapLocation={mapLocation}
-              mapWebViewRef={mapWebViewRef}
-              onMapMessage={handleMapMessage}
               onImagePick={handleImagePick}
               onRemoveImage={handleRemoveImage}
               onSetPrimaryImage={handleSetPrimaryImage}

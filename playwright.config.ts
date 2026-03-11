@@ -35,6 +35,7 @@ export default defineConfig({
       name: 'tablet-chrome',
       use: {
         ...devices['iPad (gen 7)'],
+        browserName: 'chromium',
         viewport: { width: 768, height: 1024 },
       },
     },

@@ -127,8 +127,8 @@ router.post('/seed-service', async (req, res) => {
     const userId = users[0].iduser;
 
     const [result] = await pool.execute(
-      `INSERT INTO service (s_user_id, s_name, s_category, s_description, s_price, s_status, s_city, s_state)
-       VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
+      `INSERT INTO service (s_provider_id, s_name, s_category, s_description, s_base_price, s_status, s_is_active, s_city, s_state)
+       VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`,
       [userId, name, category, description || '', price || 0, city || 'Mati', state || 'Davao Oriental']
     );
 
@@ -163,12 +163,46 @@ router.post('/seed-booking', async (req, res) => {
     const bookingDate = eventDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const [result] = await pool.execute(
-      `INSERT INTO booking (b_user_id, b_service_id, b_status, b_event_date, b_created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [userId, serviceId, bookingStatus, bookingDate]
+      `INSERT INTO booking (b_client_id, b_status, b_event_date, b_event_name, b_start_time, b_end_time, b_location, b_created_at)
+       VALUES (?, ?, ?, ?, '09:00:00', '17:00:00', 'Mati, Davao Oriental', NOW())`,
+      [userId, bookingStatus, bookingDate, 'E2E Photography Service']
     );
 
     return res.json({ ok: true, bookingId: result.insertId });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/test/seed-event
+ * Create a test event for a user.
+ * Body: { email: string, name: string, date: string, budget?: number, location?: string, guestCount?: number, description?: string }
+ */
+router.post('/seed-event', async (req, res) => {
+  try {
+    const { email, name, date, budget, location, guestCount, description } = req.body;
+    if (!email || !name || !date) {
+      return res.status(400).json({ ok: false, error: 'email, name, and date are required' });
+    }
+
+    const pool = getPool();
+
+    // Find the user ID
+    const [users] = await pool.execute('SELECT iduser FROM user WHERE u_email = ?', [email]);
+    if (users.length === 0) {
+      return res.status(404).json({ ok: false, error: 'User not found' });
+    }
+
+    const userId = users[0].iduser;
+
+    const [result] = await pool.execute(
+      `INSERT INTO event (e_user_id, e_name, e_date, e_budget, e_location, e_guest_count, e_description, e_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'planning')`,
+      [userId, name, date, budget || 0, location || 'Mati, Davao Oriental', guestCount || 50, description || '']
+    );
+
+    return res.json({ ok: true, eventId: result.insertId });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });
   }
@@ -196,19 +230,13 @@ router.delete('/cleanup', async (req, res) => {
 
       // Delete bookings by test users
       await pool.execute(
-        `DELETE FROM booking WHERE b_user_id IN (${placeholders})`,
-        userIds
-      );
-
-      // Delete bookings for services owned by test users
-      await pool.execute(
-        `DELETE FROM booking WHERE b_service_id IN (SELECT idservice FROM service WHERE s_user_id IN (${placeholders}))`,
+        `DELETE FROM booking WHERE b_client_id IN (${placeholders})`,
         userIds
       );
 
       // Delete services owned by test users
       await pool.execute(
-        `DELETE FROM service WHERE s_user_id IN (${placeholders})`,
+        `DELETE FROM service WHERE s_provider_id IN (${placeholders})`,
         userIds
       );
 

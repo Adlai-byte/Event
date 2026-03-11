@@ -78,7 +78,8 @@ test.describe('Customer Dashboard (C1)', () => {
     ).first();
 
     await expect(searchInput).toBeVisible({ timeout: 10_000 });
-    await searchInput.fill('photography');
+    await searchInput.pressSequentially('photography', { delay: 50 });
+    await page.waitForTimeout(500);
     await expect(searchInput).toHaveValue('photography');
   });
 

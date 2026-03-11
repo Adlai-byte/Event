@@ -500,7 +500,7 @@ async function getDashboardStats() {
     const [recentBookings] = await pool.query(`
         SELECT b.b_status, b.b_created_at, u.u_fname, u.u_lname
         FROM booking b
-        LEFT JOIN user u ON b.b_user_id = u.iduser
+        LEFT JOIN user u ON b.b_client_id = u.iduser
         ORDER BY b.b_created_at DESC
         LIMIT 3
     `);

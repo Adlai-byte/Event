@@ -13,7 +13,7 @@ import { SkeletonCard } from '../../components/ui';
 import { getApiBaseUrl } from '../../services/api';
 import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
-import { semantic } from '../../theme';
+
 
 interface ProviderProfileViewProps {
   providerEmail: string;
@@ -240,19 +240,19 @@ export const ProviderProfileView: React.FC<ProviderProfileViewProps> = ({
             <Text style={styles.sectionTitle}>Contact Information</Text>
             {provider.u_email && (
               <View style={styles.infoRow}>
-                <Feather name="mail" size={18} color={semantic.textSecondary} />
+                <Feather name="mail" size={18} color="#64748B" />
                 <Text style={styles.infoText}>{provider.u_email}</Text>
               </View>
             )}
             {provider.u_phone && (
               <View style={styles.infoRow}>
-                <Feather name="phone" size={18} color={semantic.textSecondary} />
+                <Feather name="phone" size={18} color="#64748B" />
                 <Text style={styles.infoText}>{provider.u_phone}</Text>
               </View>
             )}
             {(provider.u_address || provider.u_city) && (
               <View style={styles.infoRow}>
-                <Feather name="map-pin" size={18} color={semantic.textSecondary} />
+                <Feather name="map-pin" size={18} color="#64748B" />
                 <Text style={styles.infoText}>
                   {[provider.u_address, provider.u_city, provider.u_state]
                     .filter(Boolean)
@@ -370,7 +370,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       width: isMobile ? 100 : 120,
       height: isMobile ? 100 : 120,
       borderRadius: isMobile ? 50 : 60,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#2563EB',
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 16,
@@ -559,7 +559,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     servicePrice: {
       fontSize: isMobile ? 18 : 20,
       fontWeight: '700',
-      color: semantic.primary,
+      color: '#2563EB',
     },
     emptyContainer: {
       flex: 1,

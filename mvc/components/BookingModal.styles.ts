@@ -5,50 +5,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     modalOverlay: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? semantic.background : semantic.surface,
-      position: 'relative',
+      backgroundColor: semantic.background,
     },
-    backgroundContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 0,
-      overflow: 'hidden',
-    },
-    decorativeCircle1: {
-      position: 'absolute',
-      width: 300,
-      height: 300,
-      borderRadius: 150,
-      backgroundColor: 'rgba(79, 70, 229, 0.08)',
-      top: -100,
-      right: -100,
-      ...(Platform.OS === 'web'
-        ? {
-            filter: 'blur(60px)',
-          }
-        : {}),
-    },
-    decorativeCircle2: {
-      position: 'absolute',
-      width: 250,
-      height: 250,
-      borderRadius: 125,
-      backgroundColor: 'rgba(66, 133, 244, 0.06)',
-      bottom: -50,
-      left: -50,
-      ...(Platform.OS === 'web'
-        ? {
-            filter: 'blur(50px)',
-          }
-        : {}),
-    },
+    backgroundContainer: { display: 'none' },
+    decorativeCircle1: { display: 'none' },
+    decorativeCircle2: { display: 'none' },
     modalContent: {
       flex: 1,
-      backgroundColor: 'transparent',
-      zIndex: 1,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -57,47 +20,32 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       paddingHorizontal: isMobile ? 16 : 20,
       paddingVertical: isMobile ? 12 : 16,
       paddingTop: Platform.OS === 'ios' ? (isMobile ? 44 : 50) : isMobile ? 12 : 20,
-      backgroundColor: semantic.primary,
-      borderBottomWidth: 0,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 12px rgba(79, 70, 229, 0.2)',
-          }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 6,
-          }),
+      backgroundColor: semantic.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border,
     },
     headerContent: {
       flex: 1,
       marginRight: 10,
     },
     modalTitle: {
-      fontSize: isMobile ? 20 : 22,
-      fontWeight: '800',
-      color: semantic.surface,
+      fontSize: isMobile ? 18 : 20,
+      fontWeight: '700',
+      color: semantic.textPrimary,
       marginBottom: 2,
       letterSpacing: -0.3,
-      ...(Platform.OS === 'web'
-        ? {
-            textShadow: '0 1px 4px rgba(0, 0, 0, 0.15)',
-          }
-        : {}),
     },
     modalSubtitle: {
       fontSize: isMobile ? 11 : 12,
       fontWeight: '500',
-      color: 'rgba(255, 255, 255, 0.9)',
+      color: semantic.textSecondary,
       marginTop: 0,
     },
     closeButton: {
       width: isMobile ? 32 : 36,
       height: isMobile ? 32 : 36,
       borderRadius: isMobile ? 16 : 18,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: colors.neutral[100],
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
@@ -193,10 +141,10 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       opacity: 0.3,
     },
     dayCellAvailable: {
-      backgroundColor: '#f0f2f5',
+      backgroundColor: colors.neutral[100],
     },
     dayCellNoSlots: {
-      backgroundColor: '#f44336',
+      backgroundColor: semantic.error,
       opacity: 0.8,
     },
     dayCellSelected: {
@@ -207,7 +155,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       color: semantic.textPrimary,
     },
     dayTextOtherMonth: {
-      color: '#999',
+      color: semantic.textMuted,
     },
     dayTextAvailable: {
       color: semantic.primary,
@@ -224,7 +172,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     selectedDateContainer: {
       marginTop: 10,
       padding: 12,
-      backgroundColor: '#E8F0FE',
+      backgroundColor: colors.primary[50],
       borderRadius: 8,
     },
     selectedDateText: {
@@ -241,7 +189,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       paddingVertical: 12,
       paddingHorizontal: 20,
       borderRadius: 8,
-      backgroundColor: '#f0f2f5',
+      backgroundColor: colors.neutral[100],
       marginBottom: 10,
       marginRight: 10,
       minWidth: 120,
@@ -250,9 +198,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       backgroundColor: semantic.primary,
     },
     timeSlotBooked: {
-      backgroundColor: '#f44336',
+      backgroundColor: semantic.error,
       borderWidth: 1,
-      borderColor: '#d32f2f',
+      borderColor: colors.error[700],
       opacity: 1,
     },
     timeSlotText: {
@@ -416,9 +364,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     attendeesInputContainer: {
       borderWidth: 2,
-      borderColor: '#D1D5DB',
+      borderColor: colors.neutral[300],
       borderRadius: 8,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: colors.neutral[50],
       ...(Platform.OS === 'web'
         ? {
             transition: 'border-color 0.2s ease',
@@ -441,10 +389,10 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     timeSlotDisabled: {
       opacity: 0.5,
-      backgroundColor: '#f0f2f5',
+      backgroundColor: colors.neutral[100],
     },
     timeSlotTextDisabled: {
-      color: '#A4B0BE',
+      color: colors.neutral[400],
     },
     modalFooter: {
       paddingHorizontal: isMobile ? 16 : 20,
@@ -466,30 +414,19 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
           }),
     },
     confirmButton: {
-      backgroundColor: semantic.primary,
-      paddingVertical: isMobile ? 14 : 16,
-      borderRadius: 12,
+      backgroundColor: semantic.textPrimary,
+      paddingVertical: 14,
+      borderRadius: 10,
       alignItems: 'center',
-      minHeight: isMobile ? 48 : 52,
       justifyContent: 'center',
       flexDirection: 'row',
       gap: 8,
       ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 4px 16px rgba(79, 70, 229, 0.3), 0 2px 4px rgba(79, 70, 229, 0.2)',
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-          }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 6,
-          }),
+        ? { cursor: 'pointer', transition: 'background-color 0.15s ease' }
+        : {}),
     },
     confirmButtonDisabled: {
-      backgroundColor: '#D1D5DB',
+      backgroundColor: colors.neutral[300],
       opacity: 0.6,
       ...(Platform.OS === 'web'
         ? {
@@ -513,7 +450,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       letterSpacing: 0.3,
     },
     confirmButtonTextDisabled: {
-      color: '#9CA3AF',
+      color: colors.neutral[400],
     },
     footerInfo: {
       marginTop: 8,
@@ -528,14 +465,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginHorizontal: isMobile ? 12 : 16,
       marginTop: 12,
       padding: isMobile ? 14 : 16,
-      backgroundColor: '#EFF6FF',
+      backgroundColor: colors.primary[50],
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#BFDBFE',
+      borderColor: colors.primary[200],
     },
     perDayInfoText: {
       fontSize: isMobile ? 13 : 14,
-      color: '#1E40AF',
+      color: colors.primary[800],
       fontWeight: '600',
       lineHeight: isMobile ? 18 : 20,
       textAlign: 'center',
@@ -562,14 +499,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 20 },
-            shadowOpacity: 0.4,
-            shadowRadius: 30,
-            elevation: 15,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.08,
+            shadowRadius: 24,
+            elevation: 8,
           }),
     },
     confirmModalHeader: {
@@ -590,14 +527,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginBottom: Platform.OS === 'web' ? 20 : 16,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.2)',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.08)',
           }
         : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.35,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            elevation: 3,
           }),
     },
     confirmIcon: {
@@ -635,7 +572,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       width: Platform.OS === 'web' ? 48 : 44,
       height: Platform.OS === 'web' ? 48 : 44,
       borderRadius: Platform.OS === 'web' ? 24 : 22,
-      backgroundColor: '#F0F9FF',
+      backgroundColor: colors.primary[50],
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: Platform.OS === 'web' ? 18 : 16,
@@ -661,7 +598,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       lineHeight: Platform.OS === 'web' ? 26 : 24,
     },
     confirmCostCard: {
-      backgroundColor: '#F0FDF4',
+      backgroundColor: colors.success[50],
       borderRadius: Platform.OS === 'web' ? 20 : 16,
       padding: Platform.OS === 'web' ? 24 : 20,
       marginTop: Platform.OS === 'web' ? 12 : 8,
@@ -670,14 +607,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       borderColor: semantic.success,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
           }
         : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
-            elevation: 5,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
           }),
     },
     confirmCostLabel: {
@@ -701,7 +638,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       padding: Platform.OS === 'web' ? 18 : 14,
       marginTop: Platform.OS === 'web' ? 10 : 6,
       borderWidth: 1,
-      borderColor: '#FCD34D',
+      borderColor: colors.warning[300],
     },
     confirmWarningIcon: {
       fontSize: Platform.OS === 'web' ? 22 : 20,
@@ -709,7 +646,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     confirmWarningText: {
       fontSize: Platform.OS === 'web' ? 15 : 14,
-      color: '#92400E',
+      color: colors.warning[800],
       fontWeight: '700',
       flex: 1,
       letterSpacing: 0.2,
@@ -721,7 +658,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       borderTopWidth: 1,
       borderTopColor: semantic.border,
       gap: Platform.OS === 'web' ? 14 : 12,
-      backgroundColor: '#FAFAFA',
+      backgroundColor: colors.neutral[50],
     },
     confirmCancelButton: {
       flex: 1,
@@ -742,7 +679,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     confirmCancelButtonText: {
       fontSize: Platform.OS === 'web' ? 17 : 16,
       fontWeight: '700',
-      color: '#374151',
+      color: colors.neutral[700],
       letterSpacing: 0.3,
     },
     confirmConfirmButton: {
@@ -759,11 +696,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
             cursor: 'pointer',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            elevation: 2,
           }),
     },
     confirmConfirmButtonText: {
@@ -793,14 +730,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       padding: Platform.OS === 'web' ? 32 : 24,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.3,
-            shadowRadius: 24,
-            elevation: 10,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            elevation: 6,
           }),
     },
     profileModalIconContainer: {
@@ -817,11 +754,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
             boxShadow: '0 4px 16px rgba(254, 243, 199, 0.4)',
           }
         : {
-            shadowColor: colors.warning[50],
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 6,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            elevation: 2,
           }),
     },
     profileModalIcon: {
@@ -849,7 +786,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     profileModalFieldItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: '#FEF2F2',
+      backgroundColor: colors.error[50],
       padding: Platform.OS === 'web' ? 16 : 14,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       borderLeftWidth: 4,
@@ -863,18 +800,18 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     profileModalFieldText: {
       flex: 1,
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: '#991B1B',
+      color: colors.error[800],
       fontWeight: '600',
       lineHeight: Platform.OS === 'web' ? 20 : 18,
     },
     profileModalNoteContainer: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: '#EFF6FF',
+      backgroundColor: colors.primary[50],
       padding: Platform.OS === 'web' ? 16 : 14,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       borderLeftWidth: 4,
-      borderLeftColor: '#3B82F6',
+      borderLeftColor: colors.primary[500],
       gap: Platform.OS === 'web' ? 12 : 10,
       marginBottom: Platform.OS === 'web' ? 24 : 20,
     },
@@ -885,7 +822,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     profileModalNoteText: {
       flex: 1,
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: '#1E40AF',
+      color: colors.primary[800],
       fontWeight: '500',
       lineHeight: Platform.OS === 'web' ? 20 : 18,
     },
@@ -930,11 +867,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
             cursor: 'pointer',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            elevation: 2,
           }),
     },
     profileModalConfirmText: {
@@ -966,14 +903,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       backgroundColor: semantic.primary,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(74, 85, 225, 0.3)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     bookingModeText: {
@@ -987,12 +924,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     // Package styles for confirmation modal
     confirmPackageCard: {
-      backgroundColor: '#F0FDF4',
+      backgroundColor: colors.success[50],
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: '#BBF7D0',
+      borderColor: colors.success[200],
     },
     confirmPackageHeader: {
       flexDirection: 'row',
@@ -1005,14 +942,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     confirmPackageLabel: {
       fontSize: 12,
-      color: '#15803D',
+      color: colors.success[700],
       fontWeight: '600',
       textTransform: 'uppercase',
     },
     confirmPackageName: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#166534',
+      color: colors.success[800],
       marginBottom: 8,
     },
     confirmPackageDetails: {
@@ -1020,7 +957,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     confirmPackageDetailText: {
       fontSize: 13,
-      color: '#166534',
+      color: colors.success[800],
     },
     confirmPackageRemovedText: {
       fontSize: 12,
@@ -1030,7 +967,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     confirmPackagePrice: {
       fontSize: 18,
       fontWeight: '700',
-      color: '#15803D',
+      color: colors.success[700],
       textAlign: 'right',
     },
   });

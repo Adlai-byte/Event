@@ -1,22 +1,20 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, semantic } from '../../theme';
-import { getShadowStyle } from '../../utils/shadowStyles';
 
 export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHeight: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
+      backgroundColor: '#F8FAFC',
       ...(Platform.OS === 'web'
         ? { justifyContent: 'center', alignItems: 'center', paddingTop: 30, paddingBottom: 20 }
         : { paddingTop: 20 }),
     },
     filterContainer: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       paddingVertical: Platform.OS === 'web' ? 16 : 12,
-      ...(Platform.OS === 'web' ? { boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' } : {}),
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)' } : {}),
     },
     filterScrollContent: {
       paddingHorizontal: Platform.OS === 'web' ? 32 : 16,
@@ -26,23 +24,23 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
       paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
       paddingVertical: Platform.OS === 'web' ? 10 : 8,
       borderRadius: Platform.OS === 'web' ? 12 : 20,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       marginRight: Platform.OS === 'web' ? 12 : 8,
       borderWidth: 2,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
     },
     filterButtonActive: {
-      backgroundColor: colors.primary[500],
-      borderColor: colors.primary[500],
+      backgroundColor: '#0F172A',
+      borderColor: '#0F172A',
     },
     filterButtonText: {
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     filterButtonActiveText: {
-      color: colors.neutral[0],
+      color: '#FFFFFF',
     },
     listContent: {
       padding: isMobile ? 16 : 24,
@@ -52,13 +50,18 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
         : {}),
     },
     eventCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 16 : 20,
       marginBottom: 14,
       borderWidth: 1,
-      borderColor: semantic.border,
-      ...getShadowStyle(0.06, 4, 2),
+      borderColor: '#E2E8F0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.03,
+      shadowRadius: 3,
+      elevation: 1,
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)' } : {}),
     },
     cardHeader: {
       flexDirection: 'row',
@@ -69,7 +72,7 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
     cardTitle: {
       fontSize: isMobile ? 17 : 18,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
       marginRight: 12,
     },
@@ -91,16 +94,16 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
     },
     cardLabel: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     cardValue: {
       fontSize: 14,
       fontWeight: '500',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     budgetBar: {
       height: 6,
-      backgroundColor: colors.neutral[200],
+      backgroundColor: '#E2E8F0',
       borderRadius: 3,
       marginTop: 10,
       overflow: 'hidden',
@@ -118,24 +121,28 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
     deleteButton: {
       padding: 8,
       borderRadius: 8,
-      backgroundColor: colors.error[50],
+      backgroundColor: '#FEE2E2',
     },
     fabButton: {
       position: 'absolute',
       bottom: isMobile ? 80 : 24,
       right: 24,
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#0F172A',
       borderRadius: 16,
       paddingHorizontal: 20,
       paddingVertical: 14,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      ...getShadowStyle(0.2, 8, 4),
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      elevation: 2,
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
     },
     fabButtonText: {
-      color: colors.neutral[0],
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '600',
     },
@@ -149,12 +156,12 @@ export const createStyles = (isMobile: boolean, _screenWidth: number, _screenHei
     emptyText: {
       fontSize: 18,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginTop: 16,
     },
     emptySubtext: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 8,
       textAlign: 'center',
     },

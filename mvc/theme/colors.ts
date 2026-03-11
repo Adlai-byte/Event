@@ -19,15 +19,19 @@ export const colors = {
   success: {
     50: '#D1FAE5',
     100: '#A7F3D0',
+    200: '#6EE7B7',
     500: '#10b981', // Main success green
     600: '#059669',
     700: '#047857',
+    800: '#065F46',
   },
   warning: {
     50: '#FEF3C7',
     100: '#FDE68A',
+    300: '#FCD34D',
     500: '#f59e0b', // Main warning amber
     600: '#D97706',
+    800: '#92400E',
   },
   error: {
     50: '#FEE2E2',
@@ -35,6 +39,7 @@ export const colors = {
     500: '#ef4444', // Main error red
     600: '#DC2626',
     700: '#B91C1C',
+    800: '#991B1B',
   },
 
   // Neutrals (text, backgrounds, borders)

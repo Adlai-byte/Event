@@ -15,6 +15,8 @@ export interface Service {
   rating: number;
   bookings: number;
   description: string;
+  minPackagePrice?: number | null;
+  maxPackagePrice?: number | null;
 }
 
 export interface NewServiceForm {
@@ -72,6 +74,8 @@ async function fetchAdminServices(): Promise<Service[]> {
       rating: parseFloat(s.s_rating) || 0,
       bookings: s.s_review_count || 0,
       description: s.s_description || '',
+      minPackagePrice: s.min_package_price !== null && s.min_package_price !== undefined ? parseFloat(s.min_package_price) : null,
+      maxPackagePrice: s.max_package_price !== null && s.max_package_price !== undefined ? parseFloat(s.max_package_price) : null,
     }));
   }
   return [];

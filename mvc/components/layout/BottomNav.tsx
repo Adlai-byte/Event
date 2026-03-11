@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, semantic, typography, spacing, shadow } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface BottomNavItem {
@@ -23,7 +22,7 @@ export function BottomNav({ items, activeRoute, unreadMessages = 0, onNavigate }
   const styles = useMemo(() => createStyles(screenWidth), [screenWidth]);
 
   return (
-    <View style={[styles.container, shadow('md')]}>
+    <View style={styles.container}>
       {items.map((item) => {
         const isActive = activeRoute === item.key;
         const showBadge = item.key === 'messages' && unreadMessages > 0;
@@ -41,7 +40,7 @@ export function BottomNav({ items, activeRoute, unreadMessages = 0, onNavigate }
               <Feather
                 name={item.icon}
                 size={20}
-                color={isActive ? semantic.primary : colors.neutral[400]}
+                color={isActive ? '#2563EB' : '#94A3B8'}
               />
               {showBadge && (
                 <View style={styles.badge}>
@@ -62,36 +61,36 @@ const createStyles = (screenWidth: number) => {
   return StyleSheet.create({
     container: {
       flexDirection: 'row',
-      backgroundColor: colors.neutral[0],
+      backgroundColor: '#FFFFFF',
       borderTopWidth: 1,
-      borderTopColor: colors.neutral[200],
-      paddingBottom: spacing.xs,
-      paddingTop: spacing.sm,
+      borderTopColor: '#E2E8F0',
+      paddingBottom: 4,
+      paddingTop: 6,
     },
     tab: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: spacing.xs,
+      paddingVertical: 4,
     },
     iconContainer: {
       position: 'relative',
       marginBottom: 2,
     },
     label: {
-      ...typography.caption,
       fontSize: isExtraSmall ? 9 : 10,
-      color: colors.neutral[500],
+      color: '#94A3B8',
+      fontWeight: '500',
     },
     labelActive: {
-      color: semantic.primary,
+      color: '#2563EB',
       fontWeight: '600',
     },
     badge: {
       position: 'absolute',
       top: -4,
       right: -8,
-      backgroundColor: colors.error[500],
+      backgroundColor: '#EF4444',
       borderRadius: 8,
       minWidth: isExtraSmall ? 14 : 16,
       height: isExtraSmall ? 14 : 16,
@@ -102,7 +101,7 @@ const createStyles = (screenWidth: number) => {
     badgeText: {
       fontSize: isExtraSmall ? 7 : 9,
       fontWeight: '700',
-      color: colors.neutral[0],
+      color: '#FFFFFF',
     },
   });
 };

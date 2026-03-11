@@ -120,9 +120,9 @@ test.describe('Login Form — validation & UI', () => {
     expect(hasErrorText || hasErrorContainer || signInReappeared).toBeTruthy();
   });
 
-  test('desktop: split layout with welcome panel', async ({ page }) => {
+  test('desktop: login card with branding', async ({ page }) => {
     test.skip(page.viewportSize()!.width < 1024, 'Desktop only');
-    await expect(page.getByText('Welcome to E-VENT')).toBeVisible();
-    await expect(page.getByText('Sign in to access your account')).toBeVisible();
+    await expect(page.getByText('E-VENT')).toBeVisible();
+    await expect(page.getByText('Welcome Back')).toBeVisible();
   });
 });

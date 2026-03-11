@@ -1,165 +1,68 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, semantic } from '../../theme';
 
 export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? semantic.background : '#f0f2f5',
-      position: 'relative',
-    },
-    // Background Decorative Elements
-    backgroundContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 0,
-      overflow: 'hidden',
-    },
-    backgroundGradient: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: Platform.OS === 'web' ? semantic.background : '#f0f2f5',
-    },
-    backgroundCircle1: {
-      position: 'absolute',
-      width: Platform.OS === 'web' ? 600 : 400,
-      height: Platform.OS === 'web' ? 600 : 400,
-      borderRadius: Platform.OS === 'web' ? 300 : 200,
-      backgroundColor: 'rgba(37, 99, 235, 0.08)',
-      top: Platform.OS === 'web' ? -200 : -150,
-      right: Platform.OS === 'web' ? -200 : -150,
-      ...(Platform.OS === 'web'
-        ? {
-            filter: 'blur(80px)',
-          }
-        : {}),
-    },
-    backgroundCircle2: {
-      position: 'absolute',
-      width: Platform.OS === 'web' ? 500 : 350,
-      height: Platform.OS === 'web' ? 500 : 350,
-      borderRadius: Platform.OS === 'web' ? 250 : 175,
-      backgroundColor: 'rgba(37, 99, 235, 0.06)',
-      bottom: Platform.OS === 'web' ? -150 : -100,
-      left: Platform.OS === 'web' ? -150 : -100,
-      ...(Platform.OS === 'web'
-        ? {
-            filter: 'blur(70px)',
-          }
-        : {}),
-    },
-    backgroundCircle3: {
-      position: 'absolute',
-      width: Platform.OS === 'web' ? 400 : 300,
-      height: Platform.OS === 'web' ? 400 : 300,
-      borderRadius: Platform.OS === 'web' ? 200 : 150,
-      backgroundColor: 'rgba(59, 130, 246, 0.05)',
-      top: Platform.OS === 'web' ? '40%' : '35%',
-      right: Platform.OS === 'web' ? '10%' : '5%',
-      ...(Platform.OS === 'web'
-        ? {
-            filter: 'blur(60px)',
-          }
-        : {}),
+      backgroundColor: '#F8FAFC',
     },
     scrollView: {
       flex: 1,
-      zIndex: 1,
     },
     scrollContent: {
-      paddingTop: Platform.OS === 'web' ? 24 : 20,
       paddingBottom: Platform.OS === 'web' ? 48 : 80,
       flexGrow: 1,
-      backgroundColor: 'transparent',
       width: '100%',
     },
-    // Modern Hero Section - Improved Contrast & UX with Background Pattern
     heroSection: {
-      backgroundColor: semantic.primary,
-      paddingTop: Platform.OS === 'web' ? 60 : 40,
-      paddingBottom: Platform.OS === 'web' ? 70 : 50,
-      paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
-      marginBottom: Platform.OS === 'web' ? 40 : 30,
-      position: 'relative',
-      overflow: 'hidden',
-      ...(Platform.OS === 'web'
-        ? {
-            backgroundImage: `
-        linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%)
-      `,
-          }
-        : {
-            backgroundColor: semantic.primary,
-          }),
+      backgroundColor: '#FFFFFF',
+      paddingTop: isMobile ? 24 : 32,
+      paddingBottom: isMobile ? 24 : 32,
+      paddingHorizontal: isMobile ? 16 : 24,
+      marginBottom: isMobile ? 16 : 24,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E2E8F0',
     },
     heroContent: {
       width: '100%',
-      position: 'relative',
-      zIndex: 1,
     },
     heroTitle: {
-      fontSize: Platform.OS === 'web' ? (isMobileWeb ? 28 : 42) : 28,
-      fontWeight: '800',
-      color: semantic.surface, // High contrast: 12.6:1 ratio on #4f46e5
-      marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 8 : 12) : 8,
-      lineHeight: Platform.OS === 'web' ? (isMobileWeb ? 36 : 52) : 36,
-      ...(Platform.OS === 'web'
-        ? {
-            letterSpacing: -0.5,
-            textShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-          }
-        : {
-            textShadowColor: 'rgba(0, 0, 0, 0.2)',
-            textShadowOffset: { width: 0, height: 2 },
-            textShadowRadius: 4,
-          }),
+      fontSize: isMobile ? 24 : 28,
+      fontWeight: '700',
+      color: '#0F172A',
+      marginBottom: 8,
+      letterSpacing: 0,
     },
     heroSubtitle: {
-      fontSize: Platform.OS === 'web' ? (isMobileWeb ? 16 : 20) : 16,
-      color: semantic.surface, // Changed to pure white for maximum contrast (was #f8fafc)
-      marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 20 : 32) : 24,
-      fontWeight: '600',
-      lineHeight: Platform.OS === 'web' ? (isMobileWeb ? 24 : 28) : 24,
-      ...(Platform.OS === 'web'
-        ? {
-            textShadow: '0 1px 4px rgba(0, 0, 0, 0.15)',
-          }
-        : {
-            textShadowColor: 'rgba(0, 0, 0, 0.15)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
-          }),
+      fontSize: isMobile ? 15 : 16,
+      color: '#64748B',
+      marginBottom: 20,
+      lineHeight: isMobile ? 22 : 24,
     },
     modernSearchContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: semantic.surface,
-      borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 12 : 16) : 14,
-      paddingHorizontal: Platform.OS === 'web' ? (isMobileWeb ? 12 : 20) : 16,
-      paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 2 : 4) : 4,
-      borderWidth: Platform.OS === 'web' ? (isMobileWeb ? 1 : 2) : 2,
-      borderColor: semantic.border,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 2,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
             boxShadow: isMobileWeb
-              ? '0 2px 8px rgba(0, 0, 0, 0.1)'
-              : '0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s ease',
+              ? '0px 1px 3px rgba(0, 0, 0, 0.04)'
+              : '0px 1px 3px rgba(0, 0, 0, 0.04)',
+            transition: 'box-shadow 0.15s ease',
             position: 'relative' as any,
             zIndex: 1,
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.15,
-            shadowRadius: 20,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     searchIconContainer: {
@@ -175,35 +78,19 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       minWidth: 0, // Allow text input to shrink on mobile
     },
     modernSearchButton: {
-      backgroundColor: semantic.primary, // Darker for better contrast
-      paddingHorizontal: Platform.OS === 'web' ? (isMobileWeb ? 16 : 24) : 20,
-      paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
-      borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
-      marginLeft: Platform.OS === 'web' ? (isMobileWeb ? 6 : 0) : 0,
+      backgroundColor: '#0F172A',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 10,
+      marginLeft: 4,
       ...(Platform.OS === 'web'
-        ? {
-            transition: 'all 0.2s ease',
-            cursor: 'pointer',
-            boxShadow: isMobileWeb
-              ? `0 2px 6px rgba(37, 99, 235, 0.3)`
-              : `0 4px 12px rgba(37, 99, 235, 0.4)`,
-            userSelect: 'none' as any,
-            WebkitUserSelect: 'none' as any,
-            zIndex: 10,
-            position: 'relative' as any,
-          }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
-          }),
+        ? { cursor: 'pointer', transition: 'background-color 0.15s ease' }
+        : {}),
     },
     modernSearchButtonText: {
-      color: semantic.surface, // High contrast: 12.6:1 on #4f46e5
-      fontSize: Platform.OS === 'web' ? (isMobileWeb ? 13 : 15) : 14,
-      fontWeight: '700',
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '600',
     },
     searchContainer: {
       flexDirection: 'row',
@@ -211,7 +98,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       marginHorizontal: Platform.OS === 'web' ? 40 : 20,
       marginTop: Platform.OS === 'web' ? 20 : 10,
       marginBottom: Platform.OS === 'web' ? 30 : 20,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 25,
       paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
       paddingVertical: Platform.OS === 'web' ? 16 : 12,
@@ -219,7 +106,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
         ? {
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
             borderWidth: 1,
-            borderColor: semantic.border,
+            borderColor: '#E2E8F0',
           }
         : {
             ...((Platform.OS as string) !== 'web' && {
@@ -241,7 +128,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     searchIcon: {
       fontSize: 20,
-      color: semantic.primary,
+      color: '#2563EB',
     },
     welcomeContainer: {
       paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
@@ -251,7 +138,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     welcomeTitle: {
       fontSize: Platform.OS === 'web' ? 32 : 24,
       fontWeight: 'bold',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 8 : 5,
       ...(Platform.OS === 'web'
         ? {
@@ -261,7 +148,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     welcomeSubtitle: {
       fontSize: Platform.OS === 'web' ? 18 : 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       ...(Platform.OS === 'web'
         ? {
             letterSpacing: 0.2,
@@ -274,7 +161,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     loadingText: {
       marginTop: 10,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     quickActionsContainer: {
       paddingHorizontal: 20,
@@ -282,25 +169,22 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     sectionTitle: {
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 24 : 28) : 26,
-      fontWeight: Platform.OS === 'web' ? '800' : '900',
-      color: '#0f172a', // Higher contrast: 15.8:1 on light background (was #1e293b - 12.6:1)
+      fontWeight: Platform.OS === 'web' ? '600' : '700',
+      color: '#0f172a',
       marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 20 : 24) : 22,
       marginTop: Platform.OS === 'web' ? 0 : 8,
       paddingBottom: Platform.OS === 'web' ? (isMobileWeb ? 14 : 16) : 14,
-      borderBottomWidth: Platform.OS === 'web' ? (isMobileWeb ? 2 : 3) : 4,
-      borderBottomColor: semantic.primary,
+      borderBottomWidth: 0,
+      borderBottomColor: 'transparent',
       alignSelf: 'flex-start',
       paddingRight: Platform.OS === 'web' ? (isMobileWeb ? 20 : 24) : 24,
       paddingLeft: Platform.OS === 'web' ? 0 : 4,
       ...(Platform.OS === 'web'
         ? {
-            letterSpacing: -0.5,
+            letterSpacing: 0,
           }
         : {
-            letterSpacing: -0.4,
-            textShadowColor: 'rgba(0, 0, 0, 0.1)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
+            letterSpacing: 0,
           }),
     },
     quickActionsGrid: {
@@ -310,7 +194,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     quickActionButton: {
       width: (screenWidth - 60) / 2,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 12,
       padding: 20,
       alignItems: 'center',
@@ -324,13 +208,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     quickActionText: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     badge: {
       position: 'absolute',
       top: 8,
       right: 8,
-      backgroundColor: semantic.error,
+      backgroundColor: '#EF4444',
       borderRadius: 10,
       minWidth: 20,
       height: 20,
@@ -339,7 +223,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       alignItems: 'center',
     },
     badgeText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: 12,
       fontWeight: 'bold',
     },
@@ -349,21 +233,21 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingHorizontal: Platform.OS === 'web' ? 24 : 24,
       paddingVertical: Platform.OS === 'web' ? 32 : 28,
       paddingTop: Platform.OS === 'web' ? 32 : 28,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 20 : 18,
       marginHorizontal: Platform.OS === 'web' ? 24 : 16,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.1,
-            shadowRadius: 10,
-            elevation: 4,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
             borderWidth: 1,
-            borderColor: semantic.border,
+            borderColor: '#E2E8F0',
           }),
     },
     categoriesScrollView: {
@@ -386,25 +270,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     bannerTitle: {
       fontSize: Platform.OS === 'web' ? 26 : 24,
-      fontWeight: Platform.OS === 'web' ? '800' : '900',
-      color: semantic.textPrimary,
+      fontWeight: '600',
+      color: '#0F172A',
       paddingBottom: Platform.OS === 'web' ? 12 : 12,
-      borderBottomWidth: Platform.OS === 'web' ? 3 : 4,
-      borderBottomColor: semantic.primary,
       alignSelf: 'flex-start',
       paddingRight: Platform.OS === 'web' ? 24 : 24,
       paddingLeft: Platform.OS === 'web' ? 0 : 4,
-      letterSpacing: Platform.OS === 'web' ? -0.5 : -0.4,
-      ...(Platform.OS !== 'web'
-        ? {
-            textShadowColor: 'rgba(0, 0, 0, 0.1)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
-          }
-        : {}),
     },
     bannerScrollView: {
-      borderRadius: Platform.OS === 'web' ? 20 : 16,
+      borderRadius: 16,
       overflow: 'hidden',
     },
     bannerScrollContent: {
@@ -416,20 +290,20 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     bannerCard: {
       width: '100%',
-      height: Platform.OS === 'web' ? 400 : 320,
-      borderRadius: Platform.OS === 'web' ? 20 : 16,
+      height: Platform.OS === 'web' ? (isMobileWeb ? 240 : 280) : 220,
+      borderRadius: 16,
       overflow: 'hidden',
       position: 'relative',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
           }),
     },
     bannerImage: {
@@ -440,7 +314,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     bannerImagePlaceholder: {
       width: '100%',
       height: '100%',
-      backgroundColor: semantic.primary,
+      backgroundColor: '#F1F5F9',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -452,140 +326,112 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       bottom: 0,
       left: 0,
       right: 0,
-      height: '60%',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      height: '65%',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     bannerContent: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      padding: Platform.OS === 'web' ? 24 : 20,
+      padding: Platform.OS === 'web' ? 20 : 16,
       zIndex: 2,
     },
     bannerBadgesRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Platform.OS === 'web' ? 8 : 6,
-      marginBottom: Platform.OS === 'web' ? 12 : 10,
+      gap: Platform.OS === 'web' ? 6 : 4,
+      marginBottom: Platform.OS === 'web' ? 6 : 4,
       flexWrap: 'wrap',
     },
     bannerBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: '#FFD700',
-      paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
-      paddingVertical: Platform.OS === 'web' ? 6 : 5,
-      borderRadius: Platform.OS === 'web' ? 20 : 16,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 8px rgba(255, 215, 0, 0.4)',
-          }
-        : {
-            shadowColor: '#FFD700',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 3,
-          }),
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      paddingHorizontal: Platform.OS === 'web' ? 10 : 8,
+      paddingVertical: Platform.OS === 'web' ? 4 : 3,
+      borderRadius: 12,
     },
     bannerBadgeText: {
-      color: semantic.textPrimary,
-      fontSize: Platform.OS === 'web' ? 12 : 11,
-      fontWeight: '700',
-      letterSpacing: 0.5,
+      color: '#0F172A',
+      fontSize: Platform.OS === 'web' ? 11 : 10,
+      fontWeight: '600',
     },
     bannerServiceName: {
-      fontSize: Platform.OS === 'web' ? 28 : 24,
-      fontWeight: '800',
-      color: semantic.surface,
-      marginBottom: Platform.OS === 'web' ? 8 : 6,
-      textShadowColor: 'rgba(0, 0, 0, 0.5)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+      fontSize: Platform.OS === 'web' ? (isMobileWeb ? 18 : 20) : 18,
+      fontWeight: '600',
+      color: '#FFFFFF',
+      marginBottom: Platform.OS === 'web' ? 4 : 4,
     },
     bannerProviderName: {
-      fontSize: Platform.OS === 'web' ? 16 : 14,
-      fontWeight: '600',
-      color: semantic.border,
-      marginBottom: Platform.OS === 'web' ? 12 : 10,
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontWeight: '500',
+      color: '#E2E8F0',
+      marginBottom: Platform.OS === 'web' ? 6 : 4,
     },
     bannerRating: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: Platform.OS === 'web' ? 12 : 10,
-      gap: 8,
+      marginBottom: Platform.OS === 'web' ? 6 : 4,
+      gap: 6,
     },
     bannerRatingText: {
-      fontSize: Platform.OS === 'web' ? 16 : 14,
-      fontWeight: '700',
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontWeight: '600',
       color: '#FFD700',
-      textShadowColor: 'rgba(0, 0, 0, 0.5)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
     },
     bannerReviewCount: {
-      fontSize: Platform.OS === 'web' ? 14 : 12,
-      color: semantic.border,
+      fontSize: Platform.OS === 'web' ? 12 : 11,
+      color: '#E2E8F0',
     },
     bannerPrice: {
-      fontSize: Platform.OS === 'web' ? 24 : 20,
-      fontWeight: '800',
-      color: semantic.surface,
-      marginBottom: Platform.OS === 'web' ? 16 : 14,
-      textShadowColor: 'rgba(0, 0, 0, 0.5)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+      fontSize: Platform.OS === 'web' ? 18 : 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+      marginBottom: Platform.OS === 'web' ? 10 : 8,
     },
     bannerActions: {
       flexDirection: 'row',
-      gap: Platform.OS === 'web' ? 12 : 10,
+      gap: Platform.OS === 'web' ? 10 : 8,
     },
     bannerViewButton: {
       flex: 1,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      paddingVertical: Platform.OS === 'web' ? 12 : 10,
-      paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
-      borderRadius: Platform.OS === 'web' ? 12 : 10,
-      borderWidth: 2,
-      borderColor: semantic.surface,
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      paddingVertical: Platform.OS === 'web' ? 8 : 8,
+      paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
+      borderRadius: Platform.OS === 'web' ? 10 : 8,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.6)',
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.3s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     bannerViewButtonText: {
-      color: semantic.surface,
-      fontSize: Platform.OS === 'web' ? 14 : 13,
-      fontWeight: '700',
+      color: '#FFFFFF',
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontWeight: '600',
     },
     bannerBookButton: {
       flex: 1,
-      backgroundColor: semantic.primary,
-      paddingVertical: Platform.OS === 'web' ? 12 : 10,
-      paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
-      borderRadius: Platform.OS === 'web' ? 12 : 10,
+      backgroundColor: '#FFFFFF',
+      paddingVertical: Platform.OS === 'web' ? 8 : 8,
+      paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
+      borderRadius: Platform.OS === 'web' ? 10 : 8,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: `0 4px 12px rgba(37, 99, 235, 0.4)`,
-            transition: 'all 0.3s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 5,
-          }),
+        : {}),
     },
     bannerBookButtonText: {
-      color: semantic.surface,
-      fontSize: Platform.OS === 'web' ? 14 : 13,
-      fontWeight: '700',
+      color: '#0F172A',
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      fontWeight: '600',
     },
     bannerPagination: {
       flexDirection: 'row',
@@ -595,29 +441,24 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       gap: 8,
     },
     bannerDot: {
-      width: Platform.OS === 'web' ? 10 : 8,
-      height: Platform.OS === 'web' ? 10 : 8,
-      borderRadius: Platform.OS === 'web' ? 5 : 4,
-      backgroundColor: colors.neutral[300],
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#CBD5E1',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.3s ease',
+            transition: 'box-shadow 0.15s ease',
           }
         : {}),
     },
     bannerDotActive: {
-      width: Platform.OS === 'web' ? 24 : 20,
-      backgroundColor: semantic.primary,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.4)',
-          }
-        : {}),
+      width: 20,
+      backgroundColor: '#0F172A',
     },
     // Modern Category Cards (matching service card style)
     modernCategoryCard: {
       width: Platform.OS === 'web' ? 320 : 280,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 14,
       overflow: 'hidden',
       marginRight: Platform.OS === 'web' ? 20 : 16,
@@ -625,8 +466,8 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
         ? {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
             borderWidth: 1,
-            borderColor: colors.neutral[100],
-            transition: 'all 0.3s ease',
+            borderColor: '#F1F5F9',
+            transition: 'box-shadow 0.15s ease',
           }
         : {
             shadowColor: '#000',
@@ -640,7 +481,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       width: '100%',
       height: Platform.OS === 'web' ? 180 : 160,
       position: 'relative',
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
     },
     modernCategoryImage: {
       width: '100%',
@@ -651,7 +492,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       height: '100%',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
     },
     categoryEmoji: {
       fontSize: Platform.OS === 'web' ? 64 : 56,
@@ -660,24 +501,24 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       position: 'absolute',
       top: 12,
       right: 12,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       borderRadius: 20,
       paddingHorizontal: 12,
       paddingVertical: 6,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: `0 4px 12px rgba(37, 99, 235, 0.4)`,
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     categoryCountBadgeText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 12 : 11,
       fontWeight: '700',
     },
@@ -693,10 +534,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernCategoryTitle: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
-      fontWeight: '800',
-      color: '#0f172a',
+      fontWeight: '600',
+      color: '#0F172A',
       flex: 1,
-      letterSpacing: -0.5,
       lineHeight: Platform.OS === 'web' ? 26 : 24,
     },
     modernCategoryMeta: {
@@ -704,7 +544,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernCategoryCountText: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: colors.neutral[600],
+      color: '#475569',
       fontWeight: '600',
     },
     modernCategoryActions: {
@@ -714,32 +554,25 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernCategoryViewButton: {
       flex: 1,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: Platform.OS === 'web' ? 14 : 12,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: `0 4px 12px rgba(37, 99, 235, 0.4)`,
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
-          }),
+        : {}),
     },
     modernCategoryViewButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '700',
     },
     categoryCard: {
       width: Platform.OS === 'web' ? 140 : 120,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 12,
       padding: Platform.OS === 'web' ? 20 : 15,
       alignItems: 'center',
@@ -749,7 +582,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
             borderWidth: 1,
             borderColor: '#F1F3F5',
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {
@@ -769,13 +602,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     categoryLabel: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       textAlign: 'center',
       marginBottom: 4,
     },
     categoryCount: {
       fontSize: 11,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     servicesContainer: {
       marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 32 : 48) : 40,
@@ -783,29 +616,27 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingHorizontal: Platform.OS === 'web' ? (isMobileWeb ? 16 : 24) : 24,
       paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 20 : 32) : 28,
       paddingTop: Platform.OS === 'web' ? (isMobileWeb ? 20 : 32) : 28,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 16 : 20) : 18,
       marginHorizontal: Platform.OS === 'web' ? (isMobileWeb ? 16 : 24) : 16,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: isMobileWeb
-              ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)'
-              : '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.1,
-            shadowRadius: 10,
-            elevation: 4,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
             borderWidth: 1,
-            borderColor: semantic.border,
+            borderColor: '#E2E8F0',
           }),
     },
     seeAllText: {
       fontSize: 14,
-      color: semantic.primary,
+      color: '#2563EB',
       fontWeight: '600',
     },
     servicesScrollView: {
@@ -816,7 +647,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     // Modern Service Cards
     modernServiceCard: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 16 : 20) : 18,
       marginRight: Platform.OS === 'web' ? 0 : 0,
       marginBottom: Platform.OS === 'web' ? 0 : 16,
@@ -824,26 +655,24 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: isMobileWeb
-              ? '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)'
-              : '0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
             borderWidth: 1,
-            borderColor: colors.neutral[100],
-            transition: 'all 0.3s ease',
+            borderColor: '#E2E8F0',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.1,
-            shadowRadius: 16,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     modernServiceImageContainer: {
       width: '100%',
       height: Platform.OS === 'web' ? (isMobileWeb ? 180 : 200) : 220,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       justifyContent: 'center',
       alignItems: 'center',
       overflow: 'hidden',
@@ -858,30 +687,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       height: '100%',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
     },
     featuredBadge: {
       position: 'absolute',
       top: 12,
       right: 12,
-      backgroundColor: semantic.success,
+      backgroundColor: '#10B981',
       borderRadius: 20,
       paddingHorizontal: 12,
       paddingVertical: 6,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
+            elevation: 1,
           }),
     },
     featuredBadgeText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 12 : 11,
       fontWeight: '700',
     },
@@ -897,15 +726,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernServiceTitle: {
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 18 : 20) : 18,
-      fontWeight: '800',
-      color: '#0f172a', // Higher contrast: 15.8:1 on white (was #1e293b - 12.6:1)
+      fontWeight: '600',
+      color: '#0F172A',
       flex: 1,
-      letterSpacing: -0.5,
       lineHeight: Platform.OS === 'web' ? (isMobileWeb ? 24 : 26) : 24,
     },
     modernServiceProvider: {
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 13 : 14) : 13,
-      color: colors.neutral[600], // Better contrast: 7.4:1 on white (was #64748b - 5.2:1)
+      color: '#475569', // Better contrast: 7.4:1 on white (was #64748b - 5.2:1)
       marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
       fontWeight: '600', // Increased for better readability
     },
@@ -918,22 +746,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     modernRatingContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: semantic.warningLight,
+      backgroundColor: '#F8FAFC',
       paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
       paddingVertical: Platform.OS === 'web' ? 6 : 5,
       borderRadius: Platform.OS === 'web' ? 20 : 18,
       alignSelf: 'flex-start',
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-          }
-        : {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }),
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     modernRatingStar: {
       fontSize: Platform.OS === 'web' ? 16 : 14,
@@ -951,7 +770,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       fontWeight: '600',
     },
     newBadge: {
-      backgroundColor: semantic.warningLight,
+      backgroundColor: '#FEF3C7',
       color: '#92400e',
       fontSize: Platform.OS === 'web' ? 12 : 11,
       fontWeight: '700',
@@ -971,14 +790,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernLocationText: {
       fontSize: Platform.OS === 'web' ? 13 : 12,
-      color: colors.neutral[600], // Better contrast: 7.4:1 (was #64748b - 5.2:1)
+      color: '#475569', // Better contrast: 7.4:1 (was #64748b - 5.2:1)
       fontWeight: '600', // Increased for readability
       flex: 1,
       flexWrap: 'wrap',
     },
     modernDistanceText: {
       fontSize: Platform.OS === 'web' ? 13 : 12,
-      color: colors.success[600], // Darker green for better contrast: 4.8:1 (was #10b981 - 3.1:1)
+      color: '#64748B', // Darker green for better contrast: 4.8:1 (was #10b981 - 3.1:1)
       fontWeight: '700',
       marginLeft: 4,
     },
@@ -988,19 +807,18 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       marginBottom: Platform.OS === 'web' ? (isMobileWeb ? 14 : 16) : 14,
       paddingTop: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
       borderTopWidth: 1,
-      borderTopColor: colors.neutral[100],
+      borderTopColor: '#F1F5F9',
     },
     modernPriceLabel: {
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 11 : 12) : 11,
-      color: colors.neutral[600], // Better contrast: 7.4:1 (was #64748b - 5.2:1)
+      color: '#475569', // Better contrast: 7.4:1 (was #64748b - 5.2:1)
       fontWeight: '600', // Increased for readability
       marginRight: 6,
     },
     modernPrice: {
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 22 : 24) : 22,
-      fontWeight: '800',
-      color: semantic.primary, // Darker blue for better contrast: 7.1:1 on white (was #4a55e1 - 6.2:1)
-      letterSpacing: -0.5,
+      fontWeight: '700',
+      color: '#0F172A',
     },
     modernServiceActions: {
       flexDirection: 'row',
@@ -1010,79 +828,63 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     modernViewButton: {
       flex: 1,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 12 : 14) : 12,
       borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     modernViewButtonText: {
-      color: colors.neutral[700], // Better contrast: 9.5:1 on light gray (was #475569)
+      color: '#334155', // Better contrast: 9.5:1 on light gray (was #475569)
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 14 : 15) : 14,
       fontWeight: '700',
     },
     modernBookButton: {
       flex: 1,
-      backgroundColor: semantic.primary, // Darker for better contrast
+      backgroundColor: '#0F172A',
       paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 12 : 14) : 12,
       borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: isMobileWeb
-              ? `0 2px 6px rgba(37, 99, 235, 0.3)`
-              : `0 4px 12px rgba(37, 99, 235, 0.4)`,
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
-          }),
+        : {}),
     },
     modernBookButtonText: {
-      color: semantic.surface, // High contrast: 12.6:1 on #4f46e5
+      color: '#FFFFFF', // High contrast: 12.6:1 on #4f46e5
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 14 : 15) : 14,
       fontWeight: '700',
     },
     modernProfileButton: {
       flex: 1,
-      backgroundColor: semantic.success,
+      backgroundColor: '#10B981',
       paddingVertical: Platform.OS === 'web' ? 14 : 12,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       alignItems: 'center',
       marginHorizontal: Platform.OS === 'web' ? 6 : 5,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
-        : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
-          }),
+        : {}),
     },
     modernProfileButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '700',
     },
     serviceCard: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       padding: 0,
       marginRight: 15,
@@ -1090,14 +892,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.08,
-            shadowRadius: 12,
-            elevation: 6,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     serviceCardGrid: {
@@ -1107,7 +909,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     serviceImageContainer: {
       width: '100%',
       height: 160,
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#F1F5F9',
       justifyContent: 'center',
       alignItems: 'center',
       overflow: 'hidden',
@@ -1133,13 +935,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     serviceTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: '#1a1a1a',
+      color: '#0F172A',
       flex: 1,
       letterSpacing: -0.3,
     },
     serviceProvider: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 8,
       fontWeight: '500',
     },
@@ -1147,40 +949,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 8,
-      backgroundColor: semantic.warningLight,
+      backgroundColor: '#F8FAFC',
       paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
       paddingVertical: Platform.OS === 'web' ? 6 : 5,
       borderRadius: Platform.OS === 'web' ? 20 : 18,
       alignSelf: 'flex-start',
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-          }
-        : {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }),
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     ratingText: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: '#78350F',
+      color: '#0F172A',
       marginRight: 4,
       fontWeight: '700',
     },
     reviewCount: {
       fontSize: Platform.OS === 'web' ? 13 : 12,
-      color: '#78350F',
+      color: '#64748B',
       fontWeight: '600',
     },
     servicePrice: {
       fontSize: 20,
       fontWeight: '700',
-      color: '#4285F4',
+      color: '#0F172A',
       marginBottom: 6,
-      letterSpacing: -0.5,
     },
     locationContainer: {
       flexDirection: 'row',
@@ -1189,13 +981,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     serviceLocation: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
       flexWrap: 'wrap',
     },
     distanceText: {
       fontSize: 13,
-      color: semantic.success,
+      color: '#64748B',
       fontWeight: '600',
     },
     serviceActions: {
@@ -1206,63 +998,41 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     viewDetailsButton: {
       flex: 1,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       paddingVertical: isMobile ? 16 : 14,
       paddingHorizontal: isMobile ? 12 : 16,
       borderRadius: isMobile ? 10 : 12,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: isMobile ? 1.5 : 1.5,
-      borderColor: '#4285F4',
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
       minHeight: isMobile ? 48 : undefined,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 2px 4px rgba(66, 133, 244, 0.1)',
-          }
-        : {
-            shadowColor: '#4285F4',
-            shadowOffset: { width: 0, height: isMobile ? 2 : 2 },
-            shadowOpacity: isMobile ? 0.15 : 0.1,
-            shadowRadius: isMobile ? 6 : 4,
-            elevation: isMobile ? 3 : 2,
-          }),
     },
     viewDetailsButtonText: {
-      color: '#4285F4',
+      color: '#334155',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: isMobile ? 0.3 : 0.2,
     },
     bookNowButton: {
       flex: 1,
-      backgroundColor: '#4285F4',
+      backgroundColor: '#0F172A',
       paddingVertical: isMobile ? 16 : 14,
       paddingHorizontal: isMobile ? 12 : 16,
       borderRadius: isMobile ? 10 : 12,
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: isMobile ? 48 : undefined,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 4px 12px rgba(66, 133, 244, 0.3), 0 2px 4px rgba(66, 133, 244, 0.2)',
-          }
-        : {
-            shadowColor: '#4285F4',
-            shadowOffset: { width: 0, height: isMobile ? 4 : 4 },
-            shadowOpacity: isMobile ? 0.35 : 0.3,
-            shadowRadius: isMobile ? 10 : 8,
-            elevation: isMobile ? 5 : 4,
-          }),
     },
     bookNowButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: isMobile ? 0.3 : 0.2,
     },
     profileButtonAction: {
       flex: 1,
-      backgroundColor: semantic.success,
+      backgroundColor: '#10B981',
       paddingVertical: isMobile ? 16 : 14,
       paddingHorizontal: isMobile ? 12 : 16,
       borderRadius: isMobile ? 10 : 12,
@@ -1270,20 +1040,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       justifyContent: 'center',
       minHeight: isMobile ? 48 : undefined,
       marginHorizontal: isMobile ? 4 : 5,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(16, 185, 129, 0.2)',
-          }
-        : {
-            shadowColor: semantic.success,
-            shadowOffset: { width: 0, height: isMobile ? 4 : 4 },
-            shadowOpacity: isMobile ? 0.35 : 0.3,
-            shadowRadius: isMobile ? 10 : 8,
-            elevation: isMobile ? 5 : 4,
-          }),
     },
     profileButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: isMobile ? 14 : 15,
       fontWeight: '700',
       letterSpacing: isMobile ? 0.3 : 0.2,
@@ -1294,14 +1053,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       justifyContent: 'space-between',
       paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
       paddingVertical: Platform.OS === 'web' ? 20 : 15,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
     },
     searchResultsTitle: {
       fontSize: Platform.OS === 'web' ? 24 : 20,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       flex: 1,
       textAlign: 'center',
     },
@@ -1311,31 +1070,23 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       justifyContent: 'space-between',
       paddingHorizontal: Platform.OS === 'web' ? 20 : 24,
       paddingVertical: Platform.OS === 'web' ? 15 : 18,
-      backgroundColor: semantic.surface,
-      borderBottomWidth: Platform.OS === 'web' ? 1 : 3,
-      borderBottomColor: Platform.OS === 'web' ? semantic.border : semantic.primary,
+      backgroundColor: '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: '#E2E8F0',
     },
     categoryFilterTitle: {
       fontSize: Platform.OS === 'web' ? 20 : 24,
-      fontWeight: Platform.OS === 'web' ? 'bold' : '900',
-      color: semantic.textPrimary,
+      fontWeight: '600',
+      color: '#0F172A',
       flex: 1,
       textAlign: 'center',
-      ...(Platform.OS !== 'web'
-        ? {
-            letterSpacing: -0.3,
-            textShadowColor: 'rgba(0, 0, 0, 0.1)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
-          }
-        : {}),
     },
     backButton: {
       padding: 8,
     },
     backButtonText: {
       fontSize: 16,
-      color: semantic.primary,
+      color: '#64748B',
       fontWeight: '600',
     },
     placeholder: {
@@ -1388,7 +1139,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     emptyStateText: {
       fontSize: 18,
       fontWeight: 'bold',
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 8,
     },
     emptyStateSubtext: {
@@ -1404,63 +1155,53 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingTop: Platform.OS === 'web' ? 32 : 24,
       paddingBottom: Platform.OS === 'web' ? 24 : 20,
       marginBottom: Platform.OS === 'web' ? 32 : 24,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 20 : 16,
       marginHorizontal: Platform.OS === 'web' ? 24 : 16,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     sectionTitleSecondary: {
       fontSize: Platform.OS === 'web' ? 26 : 24,
-      fontWeight: Platform.OS === 'web' ? '800' : '900',
-      color: semantic.textPrimary,
+      fontWeight: '600',
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 24 : 22,
       marginTop: Platform.OS === 'web' ? 0 : 8,
       paddingBottom: Platform.OS === 'web' ? 16 : 14,
-      borderBottomWidth: Platform.OS === 'web' ? 3 : 4,
-      borderBottomColor: semantic.primary,
       alignSelf: 'flex-start',
       paddingRight: Platform.OS === 'web' ? 24 : 24,
       paddingLeft: Platform.OS === 'web' ? 0 : 4,
-      letterSpacing: Platform.OS === 'web' ? -0.5 : -0.4,
-      ...(Platform.OS !== 'web'
-        ? {
-            textShadowColor: 'rgba(0, 0, 0, 0.1)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
-          }
-        : {}),
     },
     providersContainer: {
       gap: 12,
     },
     providerCard: {
       flexDirection: 'row',
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 14,
       padding: Platform.OS === 'web' ? 20 : 16,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     providerImageContainer: {
@@ -1477,14 +1218,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     providerImagePlaceholder: {
       width: '100%',
       height: '100%',
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       justifyContent: 'center',
       alignItems: 'center',
     },
     providerImagePlaceholderText: {
       fontSize: Platform.OS === 'web' ? 24 : 22,
       fontWeight: '700',
-      color: semantic.surface,
+      color: '#FFFFFF',
     },
     providerInfo: {
       flex: 1,
@@ -1492,12 +1233,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     providerName: {
       fontSize: Platform.OS === 'web' ? 18 : 16,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 4,
     },
     providerServicesCount: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: 4,
     },
     providerRating: {
@@ -1508,22 +1249,22 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     providerRatingText: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
       fontWeight: '600',
-      color: semantic.warning,
+      color: '#F59E0B',
     },
     providerReviewCount: {
       fontSize: Platform.OS === 'web' ? 13 : 12,
-      color: semantic.textMuted,
+      color: '#94A3B8',
     },
     providerArrow: {
       marginLeft: 12,
     },
     providerArrowText: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
-      color: semantic.textMuted,
+      color: '#94A3B8',
     },
     // Filter Styles
     filterButton: {
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
       paddingHorizontal: Platform.OS === 'web' ? (isMobileWeb ? 10 : 16) : 14,
       paddingVertical: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
       borderRadius: Platform.OS === 'web' ? (isMobileWeb ? 10 : 12) : 10,
@@ -1531,21 +1272,21 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       position: 'relative',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     filterButtonActive: {
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
     },
     filterButtonText: {
-      color: colors.neutral[600],
+      color: '#475569',
       fontSize: Platform.OS === 'web' ? (isMobileWeb ? 12 : 14) : 13,
       fontWeight: '600',
     },
     filterButtonTextActive: {
-      color: semantic.surface,
+      color: '#FFFFFF',
     },
     filterBadge: {
       position: 'absolute',
@@ -1554,31 +1295,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: semantic.success,
+      backgroundColor: '#10B981',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.4)',
           }
         : {}),
     },
     filterPanel: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 16 : 14,
       marginTop: Platform.OS === 'web' ? 16 : 12,
       marginHorizontal: Platform.OS === 'web' ? 0 : 0,
       maxHeight: Platform.OS === 'web' ? 800 : 750,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
             borderWidth: 1,
-            borderColor: semantic.border,
+            borderColor: '#E2E8F0',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
           }),
     },
     filterPanelHeader: {
@@ -1587,7 +1327,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       alignItems: 'center',
       padding: Platform.OS === 'web' ? 20 : 16,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
     },
     filterPanelTitle: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
@@ -1596,7 +1336,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     filterCloseButton: {
       fontSize: Platform.OS === 'web' ? 24 : 20,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: 'bold',
       padding: 4,
     },
@@ -1613,7 +1353,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     filterLabel: {
       fontSize: Platform.OS === 'web' ? 16 : 15,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 12 : 10,
     },
     priceRangeContainer: {
@@ -1626,14 +1366,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     priceLabel: {
       fontSize: Platform.OS === 'web' ? 13 : 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: Platform.OS === 'web' ? 6 : 5,
       fontWeight: '500',
     },
     priceInput: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: Platform.OS === 'web' ? 10 : 8,
       paddingHorizontal: Platform.OS === 'web' ? 14 : 12,
       paddingVertical: Platform.OS === 'web' ? 12 : 10,
@@ -1647,13 +1387,13 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     priceSeparator: {
       fontSize: Platform.OS === 'web' ? 18 : 16,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '600',
     },
     filterInput: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: Platform.OS === 'web' ? 10 : 8,
       paddingHorizontal: Platform.OS === 'web' ? 14 : 12,
       paddingVertical: Platform.OS === 'web' ? 12 : 10,
@@ -1668,14 +1408,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     radiusLabel: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
       flex: 1,
     },
     radiusInput: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: Platform.OS === 'web' ? 10 : 8,
       paddingHorizontal: Platform.OS === 'web' ? 14 : 12,
       paddingVertical: Platform.OS === 'web' ? 10 : 8,
@@ -1692,84 +1432,77 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingHorizontal: Platform.OS === 'web' ? 16 : 14,
       paddingVertical: Platform.OS === 'web' ? 10 : 8,
       borderRadius: Platform.OS === 'web' ? 10 : 8,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     categoryFilterButtonActive: {
-      backgroundColor: semantic.primary,
-      borderColor: semantic.primary,
+      backgroundColor: '#0F172A',
+      borderColor: '#0F172A',
     },
     categoryFilterButtonText: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     categoryFilterButtonTextActive: {
-      color: semantic.surface,
+      color: '#FFFFFF',
     },
     filterActions: {
       flexDirection: 'row',
       padding: Platform.OS === 'web' ? 20 : 16,
       borderTopWidth: 1,
-      borderTopColor: semantic.border,
+      borderTopColor: '#E2E8F0',
       gap: Platform.OS === 'web' ? 12 : 10,
     },
     clearFiltersButton: {
       flex: 1,
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
       paddingVertical: Platform.OS === 'web' ? 14 : 12,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     clearFiltersButtonText: {
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '600',
     },
     applyFiltersButton: {
       flex: 1,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#0F172A',
       paddingVertical: Platform.OS === 'web' ? 14 : 12,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: `0 4px 12px rgba(37, 99, 235, 0.4)`,
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
             cursor: 'pointer',
           }
-        : {
-            shadowColor: semantic.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4,
-          }),
+        : {}),
     },
     applyFiltersButtonText: {
-      color: semantic.surface,
+      color: '#FFFFFF',
       fontSize: Platform.OS === 'web' ? 15 : 14,
       fontWeight: '700',
     },
     // Provider Group Styles
     providerGroup: {
       marginBottom: Platform.OS === 'web' ? 32 : 24,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: Platform.OS === 'web' ? 20 : 16,
       padding: Platform.OS === 'web' ? 24 : 20,
       marginHorizontal: Platform.OS === 'web' ? 24 : 16,
@@ -1780,9 +1513,9 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 3,
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }),
     },
     providerGroupHeader: {
@@ -1792,11 +1525,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingBottom: Platform.OS === 'web' ? 16 : 12,
       marginBottom: Platform.OS === 'web' ? 20 : 16,
       borderBottomWidth: 2,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       ...(Platform.OS === 'web'
         ? {
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'box-shadow 0.15s ease',
           }
         : {}),
     },
@@ -1805,18 +1538,18 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     providerGroupTitle: {
       fontSize: Platform.OS === 'web' ? 22 : 20,
-      fontWeight: '800',
-      color: semantic.textPrimary,
+      fontWeight: '600',
+      color: '#0F172A',
       marginBottom: Platform.OS === 'web' ? 4 : 2,
     },
     providerGroupCount: {
       fontSize: Platform.OS === 'web' ? 14 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: '500',
     },
     providerGroupArrow: {
       fontSize: Platform.OS === 'web' ? 20 : 18,
-      color: semantic.primary,
+      color: '#64748B',
       fontWeight: '700',
       marginLeft: Platform.OS === 'web' ? 16 : 12,
     },
@@ -1824,23 +1557,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     categoryTag: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.primary[100],
+      backgroundColor: '#F1F5F9',
       paddingHorizontal: Platform.OS === 'web' ? 10 : 8,
       paddingVertical: Platform.OS === 'web' ? 4 : 3,
       borderRadius: Platform.OS === 'web' ? 12 : 10,
       gap: Platform.OS === 'web' ? 4 : 3,
       flexShrink: 0,
-      ...(Platform.OS === 'web'
-        ? {
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          }
-        : {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 1,
-          }),
     },
     categoryTagIcon: {
       fontSize: Platform.OS === 'web' ? 12 : 11,
@@ -1848,7 +1570,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     categoryTagText: {
       fontSize: Platform.OS === 'web' ? 11 : 10,
       fontWeight: '600',
-      color: semantic.primary,
+      color: '#64748B',
       textTransform: 'capitalize',
     },
     bannerCategoryTag: {
@@ -1857,15 +1579,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       borderColor: 'rgba(255, 255, 255, 0.5)',
     },
     bannerCategoryTagText: {
-      color: semantic.surface,
-      textShadowColor: 'rgba(0, 0, 0, 0.3)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
+      color: '#FFFFFF',
     },
     ratingDropdownButton: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 10,
@@ -1879,11 +1598,11 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       flex: 1,
     },
     ratingDropdownPlaceholder: {
-      color: semantic.textMuted,
+      color: '#94A3B8',
     },
     ratingDropdownArrow: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginLeft: 8,
     },
     ratingModalOverlay: {
@@ -1893,21 +1612,21 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       alignItems: 'center',
     },
     ratingModalContent: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       width: '85%',
       maxWidth: 400,
       maxHeight: '70%',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
           }
         : {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
           }),
     },
     ratingModalHeader: {
@@ -1917,7 +1636,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
     },
     ratingModalTitle: {
       fontSize: 18,
@@ -1929,7 +1648,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
     },
     ratingModalCloseText: {
       fontSize: 20,
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontWeight: 'bold',
     },
     ratingModalBody: {
@@ -1942,7 +1661,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.neutral[100],
+      borderBottomColor: '#F1F5F9',
     },
     ratingModalItemSelected: {
       backgroundColor: '#f0f4ff',
@@ -1952,12 +1671,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number, isMobileWeb
       color: '#0f172a',
     },
     ratingModalItemTextSelected: {
-      color: semantic.primary,
+      color: '#2563EB',
       fontWeight: '600',
     },
     ratingModalCheckmark: {
       fontSize: 18,
-      color: semantic.primary,
+      color: '#2563EB',
       fontWeight: 'bold',
     },
   });

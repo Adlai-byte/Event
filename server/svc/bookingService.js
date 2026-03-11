@@ -4,7 +4,7 @@
 // No knowledge of req/res/Express.
 
 const { getPool } = require('../db');
-const { createPaymentLink, createCheckoutSession } = require('../services/paymongo');
+const { createPaymentLink, createCheckoutSession, createRefund, generatePaymentToken, verifyPaymentToken } = require('../services/paymongo');
 const { generateInvoicePDF } = require('../services/invoice');
 const availabilityService = require('./availabilityService');
 
@@ -306,11 +306,39 @@ async function createBooking({ clientEmail, serviceId, eventName, eventDate, sta
     }
   }
 
-  // Transaction: create booking + link service
+  // Transaction: lock service row, re-check overlap, then create booking.
+  // The FOR UPDATE lock prevents two concurrent bookings from both passing the overlap check.
   const connection = await pool.getConnection();
   let bookingId;
   try {
     await connection.beginTransaction();
+
+    // Lock the service row to serialize concurrent booking attempts
+    await connection.query('SELECT idservice FROM service WHERE idservice = ? FOR UPDATE', [serviceId]);
+
+    // Re-check overlap inside the transaction (authoritative check under lock)
+    const [txOverlap] = await connection.query(
+      `SELECT b.idbooking
+       FROM booking b
+       INNER JOIN booking_service bs ON b.idbooking = bs.bs_booking_id
+       WHERE bs.bs_service_id = ?
+       AND b.b_event_date IN (?)
+       AND b.b_status IN ('pending', 'confirmed')
+       AND (
+           (b.b_start_time < ? AND b.b_end_time > ?) OR
+           (b.b_start_time < ? AND b.b_end_time > ?) OR
+           (b.b_start_time >= ? AND b.b_end_time <= ?) OR
+           (b.b_start_time = '00:00:00' AND b.b_end_time = '23:59:59' AND ? = '00:00:00' AND ? = '23:59:59')
+       )
+       LIMIT 1`,
+      [serviceId, checkDates, endTime, startTime, startTime, endTime, startTime, endTime, startTime, endTime]
+    );
+    if (txOverlap.length > 0) {
+      await connection.rollback();
+      const err = new Error('This time slot was just booked by another user. Please select a different time.');
+      err.statusCode = 409; err.code = 'CONFLICT'; throw err;
+    }
+
     const [result] = await connection.query(
       `INSERT INTO booking
        (b_client_id, b_event_name, b_event_date, b_start_time, b_end_time, b_location, b_total_cost, b_attendees, b_notes, b_status)
@@ -335,21 +363,23 @@ async function createBooking({ clientEmail, serviceId, eventName, eventDate, sta
   // ── Payment schedule creation ──────────────────────────────────
   // After booking insert, look up the service's deposit config
   const [serviceConfig] = await pool.query(
-    `SELECT s_deposit_percent, s_cancellation_policy_id FROM service WHERE idservice = ?`,
+    `SELECT s_deposit_percent, s_cancellation_policy_id, s_lead_time_days FROM service WHERE idservice = ?`,
     [serviceId]
   );
 
   const depositPercent = serviceConfig[0]?.s_deposit_percent ?? 100;
   const cancellationPolicyId = serviceConfig[0]?.s_cancellation_policy_id;
+  // Use service lead time for balance due days, default to 3
+  const balanceDueDaysBefore = serviceConfig[0]?.s_lead_time_days || 3;
 
   if (depositPercent < 100 && depositPercent > 0) {
     // Split payment
     const depositAmount = Math.round(calculatedCost * (depositPercent / 100) * 100) / 100;
     const balanceAmount = Math.round((calculatedCost - depositAmount) * 100) / 100;
 
-    // Balance due 3 days before event
+    // Balance due N days before event (configurable per service)
     const eventDateObj = new Date(eventDate + 'T00:00:00');
-    eventDateObj.setDate(eventDateObj.getDate() - 3);
+    eventDateObj.setDate(eventDateObj.getDate() - balanceDueDaysBefore);
     const balanceDueDate = eventDateObj.toISOString().split('T')[0];
 
     // Create payment schedule entries
@@ -431,6 +461,28 @@ async function createBooking({ clientEmail, serviceId, eventName, eventDate, sta
     } catch (notifErr) {
       console.error('Failed to create notification for provider (non-critical):', notifErr);
     }
+  }
+
+  // Create confirmation notification for client
+  try {
+    await pool.query(ENSURE_NOTIFICATION_TABLE_SQL);
+    const formattedDate = new Date(eventDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const formattedStartTime = new Date(`2000-01-01T${startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const clientNotifTitle = 'Booking Submitted';
+    const clientNotifMessage = `Your booking for "${serviceName}" on ${formattedDate} at ${formattedStartTime} has been submitted.\n\nEvent: ${eventName}\nLocation: ${location}\nTotal: ₱${calculatedCost.toFixed(2)}\n\nThe provider will confirm your booking shortly.`;
+    await pool.query(
+      'INSERT INTO `notification` (n_user_id, n_title, n_message, n_type, n_is_read) VALUES (?, ?, ?, ?, ?)',
+      [clientId, clientNotifTitle, clientNotifMessage, 'booking_submitted', 0]
+    );
+    if (global.sendPushNotification && clientEmail) {
+      global.sendPushNotification(
+        clientEmail, clientNotifTitle,
+        `Your booking for "${serviceName}" on ${formattedDate} has been submitted.`,
+        { type: 'booking_submitted', bookingId: bookingId.toString(), serviceId: serviceId.toString() }
+      ).catch(err => console.error('Failed to send push to client (non-critical):', err));
+    }
+  } catch (notifErr) {
+    console.error('Failed to create client booking notification (non-critical):', notifErr);
   }
 
   return { id: bookingId, message: 'Booking created successfully' };
@@ -547,6 +599,7 @@ async function updateBookingStatus(id, { status, userEmail, cancellation_reason 
 
   // If completing, verify payment
   let finalStatus = status;
+  let autoCancelled = false;
   if (status === 'completed') {
     const [paymentRows] = await pool.query(
       'SELECT p_status FROM payment WHERE p_booking_id = ? AND p_status = ? LIMIT 1',
@@ -559,7 +612,9 @@ async function updateBookingStatus(id, { status, userEmail, cancellation_reason 
       );
       if (bookingCheck.length > 0 && bookingCheck[0].is_paid !== 1) {
         finalStatus = 'cancelled';
-        console.log(`Booking ${id} is completed but not paid, changing status to cancelled`);
+        autoCancelled = true;
+        cancellation_reason = 'Booking auto-cancelled: cannot mark as completed because payment has not been received.';
+        console.warn(`Booking ${id} cannot be completed — payment not received. Auto-cancelling.`);
       }
     }
   }
@@ -813,8 +868,9 @@ async function createPaymongoPayment(bookingId, userEmail) {
 
   const amount = parseFloat(booking.b_total_cost);
   const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
-  const successUrl = `${apiBaseUrl}/api/payments/paymongo/success?bookingId=${bookingId}&userEmail=${encodeURIComponent(userEmail)}`;
-  const failedUrl = `${apiBaseUrl}/api/payments/paymongo/failed?bookingId=${bookingId}&userEmail=${encodeURIComponent(userEmail)}`;
+  const paymentToken = generatePaymentToken(bookingId, userEmail);
+  const successUrl = `${apiBaseUrl}/api/payments/paymongo/success?bookingId=${bookingId}&userEmail=${encodeURIComponent(userEmail)}&token=${paymentToken}`;
+  const failedUrl = `${apiBaseUrl}/api/payments/paymongo/failed?bookingId=${bookingId}&userEmail=${encodeURIComponent(userEmail)}&token=${paymentToken}`;
 
   const transactionId = `EVT-${bookingId}-${Date.now()}`;
   const connection = await pool.getConnection();
@@ -1069,7 +1125,14 @@ async function processCashPayment(bookingId, userEmail) {
   return { message: 'Cash payment recorded successfully', paymentId };
 }
 
-async function handlePaymongoSuccess(bookingId, userEmail) {
+async function handlePaymongoSuccess(bookingId, userEmail, token) {
+  // Verify HMAC token to prevent forged callbacks
+  if (!token || !verifyPaymentToken(bookingId, userEmail, token)) {
+    console.error(`Invalid or missing payment callback token for booking ${bookingId}`);
+    const err = new Error('Invalid payment verification token');
+    err.statusCode = 403; err.code = 'FORBIDDEN'; throw err;
+  }
+
   const pool = getPool();
   const userId = await getUserIdByEmail(userEmail);
   if (!userId) return { found: false };
@@ -1115,10 +1178,16 @@ async function handlePaymongoSuccess(bookingId, userEmail) {
   return { found: true };
 }
 
-async function handlePaymongoFailed(bookingId, userEmail) {
-  const pool = getPool();
+async function handlePaymongoFailed(bookingId, userEmail, token) {
   if (!bookingId || !userEmail) return;
 
+  // Verify HMAC token to prevent forged callbacks
+  if (!token || !verifyPaymentToken(bookingId, userEmail, token)) {
+    console.error(`Invalid or missing payment failure callback token for booking ${bookingId}`);
+    return;
+  }
+
+  const pool = getPool();
   const userId = await getUserIdByEmail(userEmail);
   if (!userId) return;
 
@@ -1830,8 +1899,9 @@ async function cancelBookingWithRefund(bookingId, userEmail, reason) {
     [bookingId]
   );
 
-  // If refund amount > 0, create a refund payment record
+  // If refund amount > 0, create a refund payment record and attempt PayMongo refund
   let refundPaymentId = null;
+  let refundStatus = 'pending';
   if (refundEstimate.refundAmount > 0) {
     const [result] = await pool.query(
       `INSERT INTO payment (p_booking_id, p_user_id, p_amount, p_type, p_currency, p_status, p_payment_method)
@@ -1839,6 +1909,41 @@ async function cancelBookingWithRefund(bookingId, userEmail, reason) {
       [bookingId, userId, refundEstimate.refundAmount]
     );
     refundPaymentId = result.insertId;
+
+    // Attempt to process refund via PayMongo if the original payment was through PayMongo
+    const [originalPayments] = await pool.query(
+      `SELECT p_transaction_id, p_payment_method FROM payment
+       WHERE p_booking_id = ? AND p_status = 'completed' AND p_type IN ('deposit', 'balance', 'full')
+       AND p_transaction_id IS NOT NULL AND p_transaction_id != ''
+       ORDER BY p_paid_at DESC LIMIT 1`,
+      [bookingId]
+    );
+
+    if (originalPayments.length > 0 && originalPayments[0].p_transaction_id) {
+      try {
+        const refundResult = await createRefund({
+          paymentId: originalPayments[0].p_transaction_id,
+          amount: refundEstimate.refundAmount,
+          reason: 'requested_by_customer',
+          notes: reason || `Cancellation of booking #${bookingId}`,
+        });
+        // Update refund record with PayMongo transaction ID and completed status
+        await pool.query(
+          `UPDATE payment SET p_status = 'completed', p_transaction_id = ?, p_paid_at = NOW() WHERE idpayment = ?`,
+          [refundResult.refundId, refundPaymentId]
+        );
+        refundStatus = 'completed';
+        console.log(`PayMongo refund processed for booking ${bookingId}: ${refundResult.refundId}`);
+      } catch (refundErr) {
+        // Refund API failed — mark as pending for manual processing
+        console.error(`PayMongo refund failed for booking ${bookingId} (will need manual processing):`, refundErr.message);
+        refundStatus = 'pending';
+      }
+    } else {
+      // Original payment was cash — refund must be handled manually
+      refundStatus = 'pending';
+      console.log(`Booking ${bookingId} was paid by cash — refund of ₱${refundEstimate.refundAmount.toFixed(2)} requires manual processing`);
+    }
   }
 
   return {
@@ -1849,8 +1954,11 @@ async function cancelBookingWithRefund(bookingId, userEmail, reason) {
     refundAmount: refundEstimate.refundAmount,
     refundPercent: refundEstimate.refundPercent,
     refundPaymentId,
+    refundStatus,
     message: refundEstimate.refundAmount > 0
-      ? `Booking cancelled. Refund of ₱${refundEstimate.refundAmount.toFixed(2)} (${refundEstimate.refundPercent}%) will be processed.`
+      ? (refundStatus === 'completed'
+        ? `Booking cancelled. Refund of ₱${refundEstimate.refundAmount.toFixed(2)} (${refundEstimate.refundPercent}%) has been processed to your payment method.`
+        : `Booking cancelled. Refund of ₱${refundEstimate.refundAmount.toFixed(2)} (${refundEstimate.refundPercent}%) is pending and will be processed shortly.`)
       : 'Booking cancelled. No refund applicable.',
   };
 }

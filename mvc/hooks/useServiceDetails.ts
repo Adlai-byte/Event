@@ -24,21 +24,25 @@ export interface UseServiceDetailsResult {
 
 interface ServiceResponse {
   ok: boolean;
+  data?: { service?: ServiceDTO };
   service?: ServiceDTO;
 }
 
 interface ImagesResponse {
   ok: boolean;
+  data?: { images?: Array<{ si_image_url?: string }> };
   images?: Array<{ si_image_url?: string }>;
 }
 
 interface ReviewsResponse {
   ok: boolean;
+  data?: { reviews?: any[] };
   reviews?: any[];
 }
 
 interface PackagesResponse {
   ok: boolean;
+  data?: { packages?: any[] };
   packages?: any[];
 }
 
@@ -51,11 +55,12 @@ async function fetchServiceWithImages(
     `/api/services/${serviceId}`,
   );
 
-  if (!data.ok || !data.service) {
+  const serviceObj = data.data?.service || data.service;
+  if (!data.ok || !serviceObj) {
     throw new Error('Service not found');
   }
 
-  const service = data.service;
+  const service = serviceObj;
 
   // Load service images
   let images: string[] = [];
@@ -63,9 +68,10 @@ async function fetchServiceWithImages(
     const imagesData = await apiClient.get<ImagesResponse>(
       `/api/services/${serviceId}/images`,
     );
-    if (imagesData.ok && imagesData.images) {
+    const imagesArr = imagesData.data?.images || imagesData.images;
+    if (imagesData.ok && imagesArr) {
       const baseUrl = getApiBaseUrl();
-      images = imagesData.images
+      images = imagesArr
         .map((img) => {
           if (img.si_image_url) {
             if (img.si_image_url.startsWith('/uploads/')) {
@@ -90,8 +96,9 @@ async function fetchReviews(serviceId: string): Promise<any[]> {
   const data = await apiClient.get<ReviewsResponse>(
     `/api/services/${serviceIdNum}/reviews`,
   );
-  if (data.ok && Array.isArray(data.reviews)) {
-    return data.reviews;
+  const reviewsArr = data.data?.reviews || data.reviews;
+  if (data.ok && Array.isArray(reviewsArr)) {
+    return reviewsArr;
   }
   return [];
 }
@@ -101,8 +108,9 @@ async function fetchPackages(serviceId: string): Promise<ServicePackage[]> {
     `/api/services/${serviceId}/packages`,
   );
 
-  if (data.ok && Array.isArray(data.packages)) {
-    return data.packages
+  const packagesArr = data.data?.packages || data.packages;
+  if (data.ok && Array.isArray(packagesArr)) {
+    return packagesArr
       .filter((p: any) => p.sp_is_active)
       .map(
         (p: any): ServicePackage => ({
@@ -110,12 +118,13 @@ async function fetchPackages(serviceId: string): Promise<ServicePackage[]> {
           serviceId: p.sp_service_id,
           name: p.sp_name,
           description: p.sp_description,
-          minPax: p.sp_min_pax,
-          maxPax: p.sp_max_pax,
+          minGuests: p.sp_min_pax,
+          maxGuests: p.sp_max_pax,
           basePrice: p.sp_base_price
             ? parseFloat(p.sp_base_price)
             : undefined,
           priceType: p.sp_price_type,
+          billingType: p.sp_billing_type || 'hourly',
           discountPercent: parseFloat(p.sp_discount_percent) || 0,
           calculatedPrice: p.calculated_price,
           isActive: !!p.sp_is_active,

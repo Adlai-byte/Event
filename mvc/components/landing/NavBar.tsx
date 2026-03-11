@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 type NavItem = 'home' | 'services' | 'events' | 'about' | 'contact';
@@ -14,6 +14,7 @@ export interface NavBarProps {
   onNavClick: (nav: NavItem) => void;
   onMenuOpen: () => void;
   onLoginPress: () => void;
+  onRegisterPress?: () => void;
 }
 
 export interface MobileMenuProps {
@@ -25,10 +26,6 @@ export interface MobileMenuProps {
 
 const NAV_ITEMS: readonly NavItem[] = ['home', 'services', 'events', 'about', 'contact'] as const;
 
-/**
- * Mobile slide-out menu overlay.
- * Rendered outside the ScrollView at the wrapper level.
- */
 export const MobileMenu: React.FC<MobileMenuProps> = ({
   styles,
   activeNav,
@@ -61,88 +58,74 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   );
 };
 
-/**
- * Top bar + sticky header with search bar, logo, and navigation links.
- * Rendered inside the ScrollView.
- */
 export const NavBar: React.FC<NavBarProps> = ({
   styles,
   screenWidth,
   activeNav,
-  searchQuery,
-  onSearchChange,
-  onSearchSubmit,
+  searchQuery: _searchQuery,
+  onSearchChange: _onSearchChange,
+  onSearchSubmit: _onSearchSubmit,
   onNavClick,
   onMenuOpen,
   onLoginPress,
+  onRegisterPress,
 }) => {
+  const showFullNav = screenWidth >= 900;
+
   return (
-    <>
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>Plan your perfect event with E-VENT</Text>
-        <View style={styles.topBarRight}>
-          <TouchableOpacity onPress={onLoginPress} style={styles.topBarLink}>
-            <Text style={styles.topBarLinkText}>Account</Text>
-          </TouchableOpacity>
+    <View style={styles.header}>
+      <View style={styles.headerContent}>
+        {/* Logo — left */}
+        <View style={styles.logoSection}>
+          <View style={styles.logoDot} />
+          <Text style={styles.logo}>E-VENT</Text>
         </View>
-      </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          {/* Search Bar on Left */}
-          <View style={styles.searchBarContainer}>
-            <TouchableOpacity onPress={onSearchSubmit} style={styles.searchIconButton}>
-              <Feather name="search" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search events, services..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={onSearchChange}
-              onSubmitEditing={onSearchSubmit}
-              returnKeyType="search"
-            />
-          </View>
-
-          {/* Logo in Center */}
-          <View style={styles.logoSection}>
-            <Text style={styles.logo}>E-VENT</Text>
-          </View>
-
-          {/* Navigation on Right - hamburger on narrow widths */}
-          {screenWidth < 900 ? (
-            <TouchableOpacity
-              style={styles.hamburgerButton}
-              onPress={onMenuOpen}
-              accessibilityRole="button"
-              accessibilityLabel="Open menu"
-            >
-              <View style={styles.hamburgerLine} />
-              <View style={styles.hamburgerLine} />
-              <View style={styles.hamburgerLine} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.headerNav}>
-              {NAV_ITEMS.map((nav) => (
-                <TouchableOpacity
-                  key={nav}
-                  style={[styles.headerNavItem, activeNav === nav && styles.headerNavItemActive]}
-                  onPress={() => onNavClick(nav)}
+        {/* Nav links — center (desktop only) */}
+        {showFullNav && (
+          <View style={styles.headerNav}>
+            {NAV_ITEMS.map((nav) => (
+              <TouchableOpacity
+                key={nav}
+                style={[styles.headerNavItem, activeNav === nav && styles.headerNavItemActive]}
+                onPress={() => onNavClick(nav)}
+              >
+                <Text
+                  style={[styles.headerNavText, activeNav === nav && styles.headerNavTextActive]}
                 >
-                  <Text
-                    style={[styles.headerNavText, activeNav === nav && styles.headerNavTextActive]}
-                  >
-                    {nav.charAt(0).toUpperCase() + nav.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+                  {nav.charAt(0).toUpperCase() + nav.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Actions — right */}
+        {showFullNav ? (
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.loginOutlineButton} onPress={onLoginPress}>
+              <Text style={styles.loginOutlineText}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.getStartedButton}
+              onPress={onRegisterPress || onLoginPress}
+            >
+              <Text style={styles.getStartedText}>Get Started</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.hamburgerButton}
+            onPress={onMenuOpen}
+            accessibilityRole="button"
+            accessibilityLabel="Open menu"
+          >
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+          </TouchableOpacity>
+        )}
       </View>
-    </>
+    </View>
   );
 };

@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { getApiBaseUrl } from './api';
+import { apiClient } from './apiClient';
 
 // Lazy import Device to avoid issues if module is not available
 let Device: any = null;
@@ -255,49 +256,16 @@ export class PushNotificationService {
     try {
       const platform =
         Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
-      const apiUrl = `${getApiBaseUrl()}/api/notifications/register-token`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          userEmail,
-          pushToken,
-          platform,
-          ...(subscriptionData && Platform.OS === 'web' ? { subscriptionData } : {}),
-        }),
+      await apiClient.post('/api/notifications/register-token', {
+        userId,
+        userEmail,
+        pushToken,
+        platform,
+        ...(subscriptionData && Platform.OS === 'web' ? { subscriptionData } : {}),
       });
-
-      if (response.ok) {
-        const _data = await response.json();
-      } else {
-        const errorText = await response.text();
-        if (__DEV__) console.error('❌ Failed to register push token');
-        if (__DEV__) console.error('📡 Response status:', response.status);
-        if (__DEV__) console.error('📡 Response status text:', response.statusText);
-        if (__DEV__) console.error('📋 Error response:', errorText);
-
-        try {
-          const error = JSON.parse(errorText);
-          if (__DEV__) console.error('📋 Error details:', JSON.stringify(error, null, 2));
-        } catch {
-          if (__DEV__) console.error('📋 Error response (not JSON):', errorText);
-        }
-      }
     } catch (error: any) {
-      if (__DEV__) console.error('❌ Error registering push token with backend:');
-      if (__DEV__) console.error('   Error type:', error?.constructor?.name);
-      if (__DEV__) console.error('   Error message:', error?.message);
-      if (__DEV__) console.error('   Error stack:', error?.stack);
-
-      // Check if it's a network error
-      if (error?.message?.includes('Network') || error?.message?.includes('fetch')) {
-        if (__DEV__) console.error('⚠️ Network error - check if backend server is running');
-        if (__DEV__) console.error('   API Base URL:', getApiBaseUrl());
-      }
+      if (__DEV__) console.error('Failed to register push token:', error?.message);
     }
   }
 

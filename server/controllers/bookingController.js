@@ -119,7 +119,7 @@ async function updateBooking(req, res) {
 async function updateBookingStatus(req, res) {
   const id = Number(req.params.id);
   const { status, userEmail, cancellation_reason } = req.body || {};
-  const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+  const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
   if (!Number.isFinite(id) || !validStatuses.includes(status)) {
     return sendError(res, 'VALIDATION_ERROR', 'Invalid parameters', 400);
   }
@@ -253,7 +253,7 @@ async function processCashPayment(req, res) {
 }
 
 async function paymongoSuccess(req, res) {
-  const { bookingId, userEmail } = req.query || {};
+  const { bookingId, userEmail, token } = req.query || {};
 
   if (!bookingId || !userEmail) {
     return res.status(400).send(`
@@ -267,7 +267,7 @@ async function paymongoSuccess(req, res) {
   }
 
   try {
-    const result = await bookingService.handlePaymongoSuccess(bookingId, userEmail);
+    const result = await bookingService.handlePaymongoSuccess(bookingId, userEmail, token);
 
     // Emit socket event so frontend updates in real-time
     emitBookingUpdate(req, userEmail);
@@ -368,10 +368,10 @@ async function paymongoSuccess(req, res) {
 }
 
 async function paymongoFailed(req, res) {
-  const { bookingId, userEmail } = req.query || {};
+  const { bookingId, userEmail, token } = req.query || {};
 
   try {
-    await bookingService.handlePaymongoFailed(bookingId, userEmail);
+    await bookingService.handlePaymongoFailed(bookingId, userEmail, token);
   } catch (err) {
     console.error('Payment failed handler error:', err);
   }

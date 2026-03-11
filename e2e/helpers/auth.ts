@@ -38,6 +38,11 @@ export async function loginAs(page: Page, role: Role): Promise<void> {
     await page.goto(dashboardPath);
     await page.waitForLoadState('networkidle');
   }
+
+  // Final settle: ensure no more pending navigations before returning
+  // This prevents "page.goto interrupted by another navigation" in subsequent goto() calls
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(500);
 }
 
 /**

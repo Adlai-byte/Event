@@ -7,6 +7,7 @@ import { AppLayout } from '../../components/layout';
 import { useAdminServices, Service } from '../../hooks/useAdminServices';
 import { createStyles } from './ServicesView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { formatPriceDisplay } from '../../utils/serviceHelpers';
 
 interface AdminServicesProps {
   user?: UserModel;
@@ -151,10 +152,25 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                     <View style={styles.serviceMeta}>
                       <Text style={styles.serviceCategory}>{service.category}</Text>
                       <Text style={styles.servicePrice}>
-                        {'\u20B1'} {service.price.toLocaleString()}
-                        {service.pricingType === 'per_person' && (
-                          <Text style={styles.perPersonLabel}> /person</Text>
-                        )}
+                        {(() => {
+                          const { label, price } = formatPriceDisplay(
+                            service.price,
+                            service.minPackagePrice,
+                            service.maxPackagePrice,
+                          );
+                          return (
+                            <>
+                              {label !== 'Starting at' && (
+                                <Text style={styles.perPersonLabel}>{label}: </Text>
+                              )}
+                              {price}
+                              {service.pricingType === 'per_person' &&
+                                !service.minPackagePrice && (
+                                  <Text style={styles.perPersonLabel}> /person</Text>
+                                )}
+                            </>
+                          );
+                        })()}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <Feather name="star" size={14} color="#f59e0b" />
@@ -336,7 +352,7 @@ export const ServicesView: React.FC<AdminServicesProps> = ({ user, onNavigate, o
                       newService.pricingType === 'per_person' && styles.pricingTypeTextSelected,
                     ]}
                   >
-                    Per Person (Per Pax)
+                    Per Person (Per Guest)
                   </Text>
                 </TouchableOpacity>
               </View>

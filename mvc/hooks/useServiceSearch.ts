@@ -11,7 +11,6 @@ export function useServiceSearch(
   loadCategoryServices: (
     category: string,
     useFilters?: boolean,
-    buildFilterQuery?: (baseUrl: string, additionalParams?: { [key: string]: string }) => string,
   ) => Promise<void>,
   loadDashboardData: () => Promise<void>,
   setSelectedCategory?: (category: string | null) => void,
@@ -131,7 +130,7 @@ export function useServiceSearch(
                   '/api/services',
                   buildProviderServicesParams(email),
                 );
-                const activeServices = (data.rows || []).filter((s: any) => {
+                const activeServices = (data.data || data.rows || []).filter((s: any) => {
                   return s.s_is_active === 1 || s.s_is_active === '1' || s.s_is_active === true;
                 });
                 return activeServices;
@@ -154,7 +153,7 @@ export function useServiceSearch(
 
       if (servicesResp.ok) {
         const data = await servicesResp.json();
-        const serviceResults = (data.rows || []).map(mapImageUrl);
+        const serviceResults = (data.data || data.rows || []).map(mapImageUrl);
         const allProviderServices = providerServices.map(mapImageUrl);
 
         // Merge and deduplicate

@@ -14,7 +14,7 @@ import { User } from '../../models/User';
 import { AuthState } from '../../models/AuthState';
 import { BookingModal } from '../../components/BookingModal';
 import { AppLayout } from '../../components/layout';
-import { getCategoryIcon, getCategoryLabel, formatPrice } from '../../utils/serviceHelpers';
+import { getCategoryIcon, getCategoryLabel, formatPriceDisplay } from '../../utils/serviceHelpers';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useServiceSearch } from '../../hooks/useServiceSearch';
@@ -98,7 +98,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     loadDashboardData,
     loadCategoryServices,
     clearCategoryFilter,
-    handleBookNow,
+    handleBookNow: _handleBookNow,
     handleCloseBookingModal,
     handleConfirmBooking,
     getCategoryImage,
@@ -168,14 +168,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       onLogout={onLogout}
     >
       <View style={styles.container}>
-        {/* Background Decorative Elements */}
-        <View style={styles.backgroundContainer}>
-          <View style={styles.backgroundGradient} />
-          <View style={styles.backgroundCircle1} />
-          <View style={styles.backgroundCircle2} />
-          <View style={styles.backgroundCircle3} />
-        </View>
-
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -339,7 +331,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 await loadDashboardData();
               }}
               onNavigateToProviderProfile={(email) => onNavigateToProviderProfile?.(email)}
-              onBookNow={handleBookNow}
               onViewService={(id) => onNavigateToEventDetails?.(id)}
             />
           ) : selectedCategory ? (
@@ -366,7 +357,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {loadingCategory ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#4a55e1" />
+                  <ActivityIndicator size="large" color="#64748B" />
                   <Text style={styles.loadingText}>Loading services...</Text>
                 </View>
               ) : categoryServices.length > 0 ? (
@@ -440,7 +431,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                       ) : null;
                                     })()}
                                     <Text style={styles.servicePrice}>
-                                      {formatPrice(serviceItem.s_base_price)}
+                                      {formatPriceDisplay(
+                                        serviceItem.s_base_price,
+                                        serviceItem.min_package_price,
+                                        serviceItem.max_package_price,
+                                      ).price}
                                     </Text>
                                     {(serviceItem.s_city ||
                                       serviceItem.s_state ||
@@ -504,20 +499,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 </TouchableOpacity>
                                 <View style={styles.serviceActions}>
                                   <TouchableOpacity
-                                    style={styles.viewDetailsButton}
+                                    style={[styles.viewDetailsButton, { flex: 1 }]}
                                     onPress={() =>
                                       onNavigateToEventDetails?.(serviceItem.idservice.toString())
                                     }
                                     activeOpacity={0.8}
                                   >
-                                    <Text style={styles.viewDetailsButtonText}>View Details</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    style={styles.bookNowButton}
-                                    onPress={() => handleBookNow(serviceItem)}
-                                    activeOpacity={0.8}
-                                  >
-                                    <Text style={styles.bookNowButtonText}>Book Now</Text>
+                                    <Text style={styles.viewDetailsButtonText}>View Services</Text>
                                   </TouchableOpacity>
                                 </View>
                               </View>
@@ -556,7 +544,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 services={bannerServices}
                 screenWidth={screenWidth}
                 onViewService={(id) => onNavigateToEventDetails?.(id)}
-                onBookService={handleBookNow}
               />
 
               {/* Categories */}
@@ -606,7 +593,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         key={service.idservice}
                         service={service}
                         onView={(id) => onNavigateToEventDetails?.(id)}
-                        onBook={handleBookNow}
                       />
                     ))}
                   </View>
@@ -623,7 +609,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         key={service.idservice}
                         service={service}
                         onView={(id) => onNavigateToEventDetails?.(id)}
-                        onBook={handleBookNow}
                       />
                     ))}
                   </View>

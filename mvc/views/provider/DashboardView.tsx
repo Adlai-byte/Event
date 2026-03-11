@@ -69,16 +69,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         '/api/provider/dashboard/stats',
         { providerEmail: user?.email },
       );
-      if (data.ok && data.stats) {
-        return data.stats;
+      const stats = data.stats;
+      if (data.ok && stats) {
+        return stats;
       }
       // Fallback: try to load services individually
       const servicesData = await apiClient.get<{ ok: boolean; rows: any[] }>('/api/services', {
         providerEmail: user?.email,
       });
-      if (servicesData.ok && Array.isArray(servicesData.rows)) {
-        const totalServices = servicesData.rows.length;
-        const activeServices = servicesData.rows.filter((s: any) => s.s_is_active).length;
+      const svcRows = servicesData.rows;
+      if (servicesData.ok && Array.isArray(svcRows)) {
+        const totalServices = svcRows.length;
+        const activeServices = svcRows.filter((s: any) => s.s_is_active).length;
         return { ...defaultStats, totalServices, activeServices };
       }
       return defaultStats;
@@ -93,8 +95,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         '/api/provider/activity',
         { providerEmail: user?.email, limit: 4 },
       );
-      if (data.ok && Array.isArray(data.activities)) {
-        return data.activities;
+      const activities = data.activities;
+      if (data.ok && Array.isArray(activities)) {
+        return activities;
       }
       return [] as Activity[];
     },

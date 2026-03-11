@@ -45,7 +45,6 @@ import { useQuery } from '@tanstack/react-query';
 import { createStyles } from './EventDetailView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { DateTimeInput } from '../../components/ui/DateTimeInput';
-import { colors, semantic } from '../../theme';
 import { AppLayout } from '../../components/layout';
 
 type TabKey = 'overview' | 'vendors' | 'timeline' | 'checklist' | 'budget';
@@ -80,11 +79,11 @@ const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
 ];
 
 const STATUS_COLORS: Record<EventStatus, { bg: string; text: string }> = {
-  planning: { bg: colors.primary[50], text: colors.primary[500] },
+  planning: { bg: '#EFF6FF', text: '#2563EB' },
   upcoming: { bg: '#FEF3C7', text: '#D97706' },
   in_progress: { bg: '#DBEAFE', text: '#1D4ED8' },
-  completed: { bg: colors.success[50], text: colors.success[600] },
-  cancelled: { bg: colors.error[50], text: colors.error[600] },
+  completed: { bg: '#DCFCE7', text: '#059669' },
+  cancelled: { bg: '#FEE2E2', text: '#DC2626' },
 };
 
 export const EventDetailView: React.FC<EventDetailViewProps> = ({
@@ -298,7 +297,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Back to events"
         >
-          <Feather name="arrow-left" size={20} color={colors.primary[500]} />
+          <Feather name="arrow-left" size={20} color={'#2563EB'} />
           <Text style={styles.backText}>Events</Text>
         </TouchableOpacity>
         <View style={styles.loadingContainer}>
@@ -326,7 +325,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         <Text style={styles.eventName}>{event.name}</Text>
 
         <View style={styles.infoRow}>
-          <Feather name="calendar" size={16} color={semantic.textSecondary} />
+          <Feather name="calendar" size={16} color={'#64748B'} />
           <Text style={styles.infoText}>
             {formatDate(event.date)}
             {event.endDate ? ` - ${formatDate(event.endDate)}` : ''}
@@ -335,21 +334,21 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
         {event.location && (
           <View style={styles.infoRow}>
-            <Feather name="map-pin" size={16} color={semantic.textSecondary} />
+            <Feather name="map-pin" size={16} color={'#64748B'} />
             <Text style={styles.infoText}>{event.location}</Text>
           </View>
         )}
 
         {event.guestCount !== null && event.guestCount !== undefined && event.guestCount > 0 && (
           <View style={styles.infoRow}>
-            <Feather name="users" size={16} color={semantic.textSecondary} />
+            <Feather name="users" size={16} color={'#64748B'} />
             <Text style={styles.infoText}>{event.guestCount} guests</Text>
           </View>
         )}
 
         {event.budget > 0 && (
           <View style={styles.infoRow}>
-            <Feather name="credit-card" size={16} color={semantic.textSecondary} />
+            <Feather name="credit-card" size={16} color={'#64748B'} />
             <Text style={styles.infoText}>{formatCurrency(event.budget)} budget</Text>
           </View>
         )}
@@ -382,19 +381,19 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Edit event"
           >
-            <Feather name="edit-2" size={16} color={colors.neutral[0]} />
+            <Feather name="edit-2" size={16} color={'#FFFFFF'} />
             <Text style={styles.editButtonText}>Edit Event</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={[styles.editButton, { backgroundColor: colors.primary[100] }]}
+          style={[styles.editButton, { backgroundColor: '#DBEAFE' }]}
           onPress={handleCloneEvent}
           disabled={cloneEventMutation.isPending}
           accessibilityRole="button"
           accessibilityLabel="Clone event as template"
         >
-          <Feather name="copy" size={16} color={colors.primary[600]} />
-          <Text style={[styles.editButtonText, { color: colors.primary[600] }]}>
+          <Feather name="copy" size={16} color={'#1D4ED8'} />
+          <Text style={[styles.editButtonText, { color: '#1D4ED8' }]}>
             {cloneEventMutation.isPending ? 'Cloning...' : 'Clone'}
           </Text>
         </TouchableOpacity>
@@ -409,14 +408,14 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               <Feather
                 name="bell"
                 size={16}
-                color={r.isSent ? colors.neutral[400] : colors.primary[500]}
+                color={r.isSent ? '#94A3B8' : '#2563EB'}
               />
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.infoText}>{new Date(r.remindAt).toLocaleString()}</Text>
                 {r.message && <Text style={styles.infoLabel}>{r.message}</Text>}
               </View>
-              <View style={[styles.categoryTag, { backgroundColor: colors.primary[50] }]}>
-                <Text style={[styles.categoryTagText, { color: colors.primary[600] }]}>
+              <View style={[styles.categoryTag, { backgroundColor: '#EFF6FF' }]}>
+                <Text style={[styles.categoryTagText, { color: '#1D4ED8' }]}>
                   {r.type}
                 </Text>
               </View>
@@ -427,7 +426,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel={`Delete reminder`}
                 >
-                  <Feather name="trash-2" size={14} color={colors.error[500]} />
+                  <Feather name="trash-2" size={14} color={'#EF4444'} />
                 </TouchableOpacity>
               )}
             </View>
@@ -443,7 +442,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               value={reminderDate}
               onChange={setReminderDate}
               placeholder="2026-03-10 09:00"
-              placeholderTextColor={semantic.textMuted}
+              placeholderTextColor={'#94A3B8'}
               accessibilityLabel="Reminder date and time"
               type="datetime"
             />
@@ -454,7 +453,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   key={t}
                   style={[
                     styles.categoryTag,
-                    reminderType === t && { backgroundColor: colors.primary[500] },
+                    reminderType === t && { backgroundColor: '#2563EB' },
                   ]}
                   onPress={() => setReminderType(t)}
                   accessibilityRole="button"
@@ -463,7 +462,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   <Text
                     style={[
                       styles.categoryTagText,
-                      reminderType === t && { color: colors.neutral[0] },
+                      reminderType === t && { color: '#FFFFFF' },
                     ]}
                   >
                     {t}
@@ -477,7 +476,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               value={reminderMessage}
               onChangeText={setReminderMessage}
               placeholder="Optional reminder message"
-              placeholderTextColor={semantic.textMuted}
+              placeholderTextColor={'#94A3B8'}
               accessibilityLabel="Reminder message"
             />
             <TouchableOpacity
@@ -510,7 +509,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Invite collaborator"
             >
-              <Feather name="user-plus" size={16} color={colors.primary[500]} />
+              <Feather name="user-plus" size={16} color={'#2563EB'} />
               <Text style={styles.linkButtonText}>Invite</Text>
             </TouchableOpacity>
           )}
@@ -518,7 +517,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         {collaborators && collaborators.length > 0 ? (
           collaborators.map((c: EventCollaborator) => (
             <View key={c.id} style={styles.checklistItem}>
-              <Feather name="user" size={16} color={semantic.textSecondary} />
+              <Feather name="user" size={16} color={'#64748B'} />
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.infoText}>{c.userName || c.userEmail}</Text>
                 {c.userName && <Text style={styles.infoLabel}>{c.userEmail}</Text>}
@@ -527,14 +526,14 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 style={[
                   styles.categoryTag,
                   {
-                    backgroundColor: c.role === 'editor' ? colors.primary[50] : colors.neutral[100],
+                    backgroundColor: c.role === 'editor' ? '#EFF6FF' : '#F1F5F9',
                   },
                 ]}
               >
                 <Text
                   style={[
                     styles.categoryTagText,
-                    { color: c.role === 'editor' ? colors.primary[600] : colors.neutral[600] },
+                    { color: c.role === 'editor' ? '#1D4ED8' : '#475569' },
                   ]}
                 >
                   {c.role}
@@ -552,7 +551,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${c.userName || c.userEmail}`}
                 >
-                  <Feather name="x" size={14} color={colors.error[500]} />
+                  <Feather name="x" size={14} color={'#EF4444'} />
                 </TouchableOpacity>
               )}
             </View>
@@ -573,14 +572,14 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Link a booking"
         >
-          <Feather name="plus" size={18} color={colors.primary[500]} />
+          <Feather name="plus" size={18} color={'#2563EB'} />
           <Text style={styles.linkButtonText}>Link Booking</Text>
         </TouchableOpacity>
       )}
 
       {!bookings || bookings.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <Feather name="users" size={40} color={colors.neutral[300]} />
+          <Feather name="users" size={40} color={'#CBD5E1'} />
           <Text style={styles.infoLabel}>No vendors linked yet</Text>
         </View>
       ) : (
@@ -599,7 +598,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={`Unlink ${b.serviceName || b.eventName}`}
               >
-                <Feather name="x" size={16} color={colors.error[500]} />
+                <Feather name="x" size={16} color={'#EF4444'} />
               </TouchableOpacity>
             )}
           </View>
@@ -620,7 +619,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           <Feather
             name={showTimelineForm ? 'chevron-up' : 'plus'}
             size={18}
-            color={colors.primary[500]}
+            color={'#2563EB'}
           />
           <Text style={styles.linkButtonText}>{showTimelineForm ? 'Cancel' : 'Add Entry'}</Text>
         </TouchableOpacity>
@@ -636,7 +635,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 value={tlStartTime}
                 onChangeText={setTlStartTime}
                 placeholder="HH:MM"
-                placeholderTextColor={semantic.textMuted}
+                placeholderTextColor={'#94A3B8'}
                 accessibilityLabel="Start time"
               />
             </View>
@@ -647,7 +646,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 value={tlEndTime}
                 onChangeText={setTlEndTime}
                 placeholder="HH:MM"
-                placeholderTextColor={semantic.textMuted}
+                placeholderTextColor={'#94A3B8'}
                 accessibilityLabel="End time"
               />
             </View>
@@ -658,7 +657,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             value={tlTitle}
             onChangeText={setTlTitle}
             placeholder="e.g. Ceremony begins"
-            placeholderTextColor={semantic.textMuted}
+            placeholderTextColor={'#94A3B8'}
             accessibilityLabel="Timeline entry title"
           />
           <Text style={styles.formLabel}>Description</Text>
@@ -667,7 +666,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             value={tlDescription}
             onChangeText={setTlDescription}
             placeholder="Optional description"
-            placeholderTextColor={semantic.textMuted}
+            placeholderTextColor={'#94A3B8'}
             multiline
             accessibilityLabel="Timeline entry description"
           />
@@ -684,7 +683,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
       {!timeline || timeline.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <Feather name="clock" size={40} color={colors.neutral[300]} />
+          <Feather name="clock" size={40} color={'#CBD5E1'} />
           <Text style={styles.infoLabel}>No timeline entries yet</Text>
         </View>
       ) : (
@@ -704,7 +703,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               <Text style={styles.timelineTitle}>{entry.title}</Text>
               {entry.description && <Text style={styles.timelineDesc}>{entry.description}</Text>}
               {entry.bookingName && (
-                <Text style={[styles.timelineDesc, { color: colors.primary[500] }]}>
+                <Text style={[styles.timelineDesc, { color: '#2563EB' }]}>
                   Vendor: {entry.bookingName}
                 </Text>
               )}
@@ -716,7 +715,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel={`Delete ${entry.title}`}
                   >
-                    <Feather name="trash-2" size={14} color={colors.error[500]} />
+                    <Feather name="trash-2" size={14} color={'#EF4444'} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -758,7 +757,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                     accessibilityLabel={`${item.title} ${item.isCompleted ? 'completed' : 'pending'}`}
                   >
                     {item.isCompleted && (
-                      <Feather name="check" size={14} color={colors.neutral[0]} />
+                      <Feather name="check" size={14} color={'#FFFFFF'} />
                     )}
                   </TouchableOpacity>
                   <Text
@@ -788,7 +787,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                       accessibilityRole="button"
                       accessibilityLabel={`Delete ${item.title}`}
                     >
-                      <Feather name="trash-2" size={14} color={colors.error[500]} />
+                      <Feather name="trash-2" size={14} color={'#EF4444'} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -807,7 +806,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 value={newChecklistTitle}
                 onChangeText={setNewChecklistTitle}
                 placeholder="Add new item..."
-                placeholderTextColor={semantic.textMuted}
+                placeholderTextColor={'#94A3B8'}
                 accessibilityLabel="New checklist item"
                 onSubmitEditing={handleAddChecklistItem}
               />
@@ -817,7 +816,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Add checklist item"
               >
-                <Feather name="plus" size={18} color={colors.neutral[0]} />
+                <Feather name="plus" size={18} color={'#FFFFFF'} />
               </TouchableOpacity>
             </View>
           )}
@@ -830,10 +829,10 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
     const percentUsed = budget?.percentUsed || 0;
     const barColor =
       percentUsed > 90
-        ? colors.error[500]
+        ? '#EF4444'
         : percentUsed > 75
-          ? colors.warning[500]
-          : colors.success[500];
+          ? '#F59E0B'
+          : '#22C55E';
     const totalBudget = budget?.totalBudget || 0;
 
     return (
@@ -860,7 +859,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             <Text
               style={[
                 styles.budgetRemaining,
-                { color: (budget?.remaining || 0) >= 0 ? colors.success[600] : colors.error[600] },
+                { color: (budget?.remaining || 0) >= 0 ? '#059669' : '#DC2626' },
               ]}
             >
               {formatCurrency(budget?.remaining || 0)}
@@ -930,7 +929,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Back to events"
         >
-          <Feather name="arrow-left" size={20} color={colors.primary[500]} />
+          <Feather name="arrow-left" size={20} color={'#2563EB'} />
           <Text style={styles.backText}>Events</Text>
         </TouchableOpacity>
 
@@ -987,7 +986,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                 >
-                  <Feather name="x" size={24} color={semantic.textSecondary} />
+                  <Feather name="x" size={24} color={'#64748B'} />
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1008,12 +1007,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                         {formatDate((item.b_event_date || item.eventDate) ?? '')}
                       </Text>
                     </View>
-                    <Feather name="plus-circle" size={20} color={colors.primary[500]} />
+                    <Feather name="plus-circle" size={20} color={'#2563EB'} />
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
                   <View style={styles.linkModalEmpty}>
-                    <Feather name="inbox" size={32} color={colors.neutral[300]} />
+                    <Feather name="inbox" size={32} color={'#CBD5E1'} />
                     <Text style={styles.linkModalEmptyText}>No unlinked bookings available</Text>
                   </View>
                 }

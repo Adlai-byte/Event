@@ -18,8 +18,8 @@ import { getApiBaseUrl } from '../../services/api';
 import { Message, MessageType, Conversation } from '../../models/Message';
 import { AppLayout } from '../../components/layout';
 import { Feather } from '@expo/vector-icons';
-import { semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
+import { colors, semantic } from '../../theme';
 
 interface MessagingViewProps {
   userId: string;
@@ -478,7 +478,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
 
                 {conversations.length === 0 && (
                   <View style={styles.emptyState}>
-                    <Feather name="message-circle" size={48} color="#94A3B8" />
+                    <Feather name="message-circle" size={48} color={semantic.textMuted} />
                     <Text style={styles.emptyStateText}>No conversations yet</Text>
                     <Text style={styles.emptyStateSubtext}>
                       Start a conversation by booking a service
@@ -557,7 +557,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
                   <Feather
                     name="message-circle"
                     size={64}
-                    color="#94A3B8"
+                    color={semantic.textMuted}
                     style={{ opacity: 0.5, marginBottom: 16 }}
                   />
                   <Text style={styles.emptyChatText}>Select a conversation to start messaging</Text>
@@ -576,7 +576,7 @@ export const MessagingView: React.FC<MessagingViewProps> = ({
 
                   {conversations.length === 0 && (
                     <View style={styles.emptyState}>
-                      <Feather name="message-circle" size={48} color="#94A3B8" />
+                      <Feather name="message-circle" size={48} color={semantic.textMuted} />
                       <Text style={styles.emptyStateText}>No conversations yet</Text>
                       <Text style={styles.emptyStateSubtext}>
                         Start a conversation by booking a service
@@ -675,7 +675,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
+      backgroundColor: semantic.background,
       paddingTop: Platform.OS === 'web' ? 20 : 10,
       paddingBottom: Platform.OS === 'web' ? 20 : 10,
       ...(Platform.OS === 'web'
@@ -692,10 +692,12 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       height: Platform.OS === 'web' ? screenHeight * 0.85 : '100%',
       backgroundColor: semantic.surface,
       borderRadius: Platform.OS === 'web' ? 16 : 0,
+      borderWidth: 1,
+      borderColor: semantic.border,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
           }
         : {}),
     },
@@ -736,13 +738,13 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
         : {}),
     },
     unreadConversation: {
-      backgroundColor: '#F0F8FF',
+      backgroundColor: colors.primary[50],
     },
     conversationAvatar: {
       width: 50,
       height: 50,
       borderRadius: 25,
-      backgroundColor: semantic.primary,
+      backgroundColor: semantic.textPrimary,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -768,7 +770,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
     },
     conversationTime: {
       fontSize: 12,
-      color: '#A4B0BE',
+      color: semantic.textMuted,
     },
     conversationPreview: {
       fontSize: 14,
@@ -782,7 +784,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       position: 'absolute',
       right: 16,
       top: 16,
-      backgroundColor: '#F44336',
+      backgroundColor: '#DC2626',
       borderRadius: 10,
       paddingHorizontal: 6,
       paddingVertical: 2,
@@ -822,7 +824,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#F9FAFB',
+      backgroundColor: semantic.background,
     },
     emptyChatIcon: {
       fontSize: 64,
@@ -837,7 +839,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
     chatContainer: {
       flex: Platform.OS === 'web' ? 0.6 : 1,
       flexDirection: 'column',
-      backgroundColor: '#F9FAFB',
+      backgroundColor: semantic.background,
     },
     chatHeader: {
       flexDirection: 'row',
@@ -850,7 +852,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       borderBottomColor: semantic.border,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
           }
         : {}),
     },
@@ -888,25 +890,27 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       maxWidth: Platform.OS === 'web' ? '60%' : screenWidth * 0.75,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      borderRadius: 18,
+      borderRadius: 16,
     },
     ownMessageBubble: {
-      backgroundColor: semantic.primary,
+      backgroundColor: semantic.textPrimary,
       borderBottomRightRadius: 4,
     },
     otherMessageBubble: {
       backgroundColor: semantic.surface,
       borderBottomLeftRadius: 4,
+      borderWidth: 1,
+      borderColor: semantic.border,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
           }
         : {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
+            shadowOpacity: 0.03,
             shadowRadius: 2,
-            elevation: 2,
+            elevation: 1,
           }),
     },
     messageTypeIcon: {
@@ -928,11 +932,11 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
       marginTop: 4,
     },
     ownMessageTime: {
-      color: '#A4B0BE',
+      color: semantic.textMuted,
       textAlign: 'right',
     },
     otherMessageTime: {
-      color: '#A4B0BE',
+      color: semantic.textMuted,
       textAlign: 'left',
     },
     systemMessage: {
@@ -949,7 +953,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
     },
     systemMessageTime: {
       fontSize: 10,
-      color: '#A4B0BE',
+      color: semantic.textMuted,
       marginTop: 2,
     },
     attachmentsContainer: {
@@ -983,7 +987,7 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
     messageInput: {
       flex: 1,
       backgroundColor: semantic.background,
-      borderRadius: 24,
+      borderRadius: 16,
       paddingHorizontal: 18,
       paddingVertical: (Platform.OS as string) === 'web' ? 14 : 12,
       fontSize: (Platform.OS as string) === 'web' ? 15 : 16,
@@ -1000,21 +1004,21 @@ const createStyles = (isMobile: boolean, screenWidth: number, screenHeight: numb
         : {}),
     },
     sendButton: {
-      backgroundColor: semantic.primary,
+      backgroundColor: semantic.textPrimary,
       paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
       paddingVertical: Platform.OS === 'web' ? 14 : 12,
-      borderRadius: 24,
+      borderRadius: 16,
       minWidth: Platform.OS === 'web' ? 80 : undefined,
       ...(Platform.OS === 'web'
         ? {
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
             transition: 'all 0.2s ease',
             cursor: 'pointer',
           }
         : {}),
     },
     sendButtonDisabled: {
-      backgroundColor: '#A4B0BE',
+      backgroundColor: semantic.textMuted,
     },
     sendButtonText: {
       color: semantic.surface,

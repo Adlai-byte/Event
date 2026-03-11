@@ -1,7 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { createStyles } from '../../views/user/DashboardView.styles';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { ServiceDTO as Service } from '../../types/service';
 import { getCategoryIcon, getCategoryLabel, formatPrice } from '../../utils/serviceHelpers';
@@ -11,85 +18,32 @@ interface BannerSliderProps {
   services: Service[];
   screenWidth: number;
   onViewService: (serviceId: string) => void;
-  onBookService: (service: Service) => void;
 }
 
 export const BannerSlider: React.FC<BannerSliderProps> = ({
   services,
-  screenWidth,
+  screenWidth: _screenWidth,
   onViewService,
-  onBookService,
 }) => {
   const { isMobile, isMobileWeb } = useBreakpoints();
-  const styles = createStyles(isMobile, screenWidth, isMobileWeb);
-  const [bannerCurrentIndex, setBannerCurrentIndex] = useState(0);
-  const bannerScrollRef = useRef<ScrollView>(null);
-
-  // Auto-scroll banner
-  useEffect(() => {
-    if (!services || services.length <= 1) return;
-
-    let interval: NodeJS.Timeout | null = null;
-
-    // Wait a bit for the ref to be ready
-    const timeout = setTimeout(() => {
-      if (!bannerScrollRef.current) return;
-
-      interval = setInterval(() => {
-        if (bannerScrollRef.current && services.length > 1) {
-          setBannerCurrentIndex((prevIndex) => {
-            const nextIndex = (prevIndex + 1) % services.length;
-            try {
-              const slideWidth = Platform.OS === 'web' ? screenWidth - 48 : screenWidth - 32;
-              bannerScrollRef.current?.scrollTo({
-                x: nextIndex * slideWidth,
-                animated: true,
-              });
-            } catch (error) {
-              if (__DEV__) console.error('Banner scroll error:', error);
-            }
-            return nextIndex;
-          });
-        }
-      }, 5000); // Change slide every 5 seconds
-    }, 500);
-
-    return () => {
-      clearTimeout(timeout);
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [services.length]);
 
   if (!services || services.length === 0) return null;
 
+  const isDesktop = Platform.OS === 'web' && !isMobileWeb;
+  const cardWidth = isDesktop ? 320 : isMobileWeb ? 280 : 260;
+
   return (
-    <View style={styles.bannerContainer}>
-      <View style={styles.bannerHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Feather name="star" size={16} color="#2563EB" />
-          <Text style={styles.bannerTitle}>Best Services of the Day</Text>
-        </View>
+    <View style={s.container}>
+      <View style={s.header}>
+        <Text style={s.title}>Top Rated</Text>
+        <Text style={s.subtitle}>{services.length} services</Text>
       </View>
       <ScrollView
-        ref={bannerScrollRef}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(event) => {
-          try {
-            const slideWidth = Platform.OS === 'web' ? screenWidth - 48 : screenWidth - 32;
-            const index = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
-            setBannerCurrentIndex(index);
-          } catch (error) {
-            if (__DEV__) console.error('Banner scroll end error:', error);
-          }
-        }}
-        style={styles.bannerScrollView}
-        contentContainerStyle={styles.bannerScrollContent}
+        contentContainerStyle={s.scrollContent}
       >
-        {services.map((service, _index) => {
+        {services.map((service) => {
           const rating =
             typeof service.s_rating === 'string'
               ? parseFloat(service.s_rating)
@@ -109,94 +63,200 @@ export const BannerSlider: React.FC<BannerSliderProps> = ({
           return (
             <TouchableOpacity
               key={service.idservice}
-              style={styles.bannerSlide}
+              style={[s.card, { width: cardWidth }]}
               onPress={() => onViewService(service.idservice.toString())}
-              activeOpacity={0.9}
+              activeOpacity={0.7}
             >
-              <View style={styles.bannerCard}>
+              {/* Image */}
+              <View style={s.imageContainer}>
                 {imageUrl ? (
-                  <Image source={{ uri: imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+                  <Image source={{ uri: imageUrl }} style={s.image} resizeMode="cover" />
                 ) : (
-                  <View style={styles.bannerImagePlaceholder}>
+                  <View style={s.imagePlaceholder}>
                     <Feather
                       name={getCategoryIcon(service.s_category) as any}
-                      size={48}
-                      color="#64748B"
+                      size={24}
+                      color="#94A3B8"
                     />
                   </View>
                 )}
-                <View style={styles.bannerOverlay} />
-                <View style={styles.bannerContent}>
-                  <View style={styles.bannerBadgesRow}>
-                    <View style={styles.bannerBadge}>
-                      <Text style={styles.bannerBadgeText}>Top Rated</Text>
-                    </View>
-                    <View style={[styles.categoryTag, styles.bannerCategoryTag]}>
-                      <Feather
-                        name={getCategoryIcon(service.s_category) as any}
-                        size={12}
-                        color="#64748B"
-                      />
-                      <Text style={[styles.categoryTagText, styles.bannerCategoryTagText]}>
-                        {getCategoryLabel(service.s_category)}
-                      </Text>
-                    </View>
+              </View>
+
+              {/* Info */}
+              <View style={s.info}>
+                <View style={s.categoryRow}>
+                  <Feather
+                    name={getCategoryIcon(service.s_category) as any}
+                    size={11}
+                    color="#64748B"
+                  />
+                  <Text style={s.categoryText}>{getCategoryLabel(service.s_category)}</Text>
+                </View>
+
+                <Text style={s.serviceName} numberOfLines={1}>
+                  {service.s_name}
+                </Text>
+
+                <Text style={s.providerName} numberOfLines={1}>
+                  {service.provider_name}
+                </Text>
+
+                {rating > 0 && (
+                  <View style={s.ratingRow}>
+                    <Feather name="star" size={12} color="#F59E0B" />
+                    <Text style={s.ratingText}>{rating.toFixed(1)}</Text>
+                    {reviewCount > 0 && (
+                      <Text style={s.reviewCount}>({reviewCount})</Text>
+                    )}
                   </View>
-                  <Text style={styles.bannerServiceName} numberOfLines={2}>
-                    {service.s_name}
-                  </Text>
-                  <Text style={styles.bannerProviderName} numberOfLines={1}>
-                    {service.provider_name}
-                  </Text>
-                  {rating > 0 && (
-                    <View style={styles.bannerRating}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Feather name="star" size={14} color="#f59e0b" />
-                        <Text style={styles.bannerRatingText}>{rating.toFixed(1)}</Text>
-                      </View>
-                      {reviewCount > 0 && (
-                        <Text style={styles.bannerReviewCount}>
-                          ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                  <Text style={styles.bannerPrice}>
-                    Starting at {formatPrice(service.s_base_price)}
-                  </Text>
-                  <View style={styles.bannerActions}>
-                    <TouchableOpacity
-                      style={styles.bannerViewButton}
-                      onPress={() => onViewService(service.idservice.toString())}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.bannerViewButtonText}>View Details</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.bannerBookButton}
-                      onPress={() => onBookService(service)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.bannerBookButtonText}>Book Now</Text>
-                    </TouchableOpacity>
-                  </View>
+                )}
+
+                <View style={s.bottomRow}>
+                  <Text style={s.price}>{formatPrice(service.s_base_price)}</Text>
+                  <TouchableOpacity
+                    style={s.bookButton}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      onViewService(service.idservice.toString());
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.bookButtonText}>View</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
-      {/* Pagination Indicators */}
-      {services.length > 1 && (
-        <View style={styles.bannerPagination}>
-          {services.map((_, index) => (
-            <View
-              key={index}
-              style={[styles.bannerDot, index === bannerCurrentIndex && styles.bannerDotActive]}
-            />
-          ))}
-        </View>
-      )}
     </View>
   );
 };
+
+const s = StyleSheet.create({
+  container: {
+    marginBottom: Platform.OS === 'web' ? 24 : 20,
+    marginTop: Platform.OS === 'web' ? 16 : 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  scrollContent: {
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
+          cursor: 'pointer' as any,
+        }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.03,
+          shadowRadius: 4,
+          elevation: 1,
+        }),
+  },
+  imageContainer: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#F1F5F9',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  info: {
+    padding: 12,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  categoryText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  providerName: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  reviewCount: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  bookButton: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});

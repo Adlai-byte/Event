@@ -34,10 +34,11 @@ export const REGISTER = {
 } as const;
 
 export const LANDING = {
-  accountLink: 'text=Account',
+  loginButton: 'text=Login',
+  getStartedButton: 'text=Get Started',
   logo: 'text=E-VENT',
-  searchInput: 'input[placeholder="Search events, services..."]',
-  hamburgerButton: '[class*="hamburger"]',
+  searchInput: 'input[placeholder="Search venues, photographers, catering..."]',
+  hamburgerButton: '[aria-label="Open menu"]',
   getStartedCta: '[aria-label="Get started with registration"]',
   loginCta: '[aria-label="Login to your account"]',
 } as const;

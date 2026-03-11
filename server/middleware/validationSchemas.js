@@ -73,11 +73,11 @@ const createBookingValidation = [
     .isISO8601()
     .withMessage('eventDate must be a valid date (YYYY-MM-DD)'),
   body('startTime')
-    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-    .withMessage('startTime must be HH:MM format (24-hour)'),
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/)
+    .withMessage('startTime must be HH:MM or HH:MM:SS format (24-hour)'),
   body('endTime')
-    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
-    .withMessage('endTime must be HH:MM format (24-hour)'),
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/)
+    .withMessage('endTime must be HH:MM or HH:MM:SS format (24-hour)'),
   safeString('location', { max: 500 }),
   body('attendees')
     .optional({ values: 'falsy' })
@@ -117,7 +117,7 @@ const paymentMethodValidation = [
 const serviceValidation = [
   safeString('name', { max: 200 }),
   body('category')
-    .isIn(['venue', 'catering', 'photography', 'videography', 'music', 'decor', 'planning', 'entertainment', 'other'])
+    .isIn(['venue', 'catering', 'photography', 'videography', 'music', 'decoration', 'transportation', 'entertainment', 'planning', 'other'])
     .withMessage('Invalid service category'),
   body('basePrice')
     .isFloat({ min: 0, max: 999999.99 })

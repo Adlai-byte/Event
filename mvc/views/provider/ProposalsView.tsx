@@ -12,7 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { SkeletonCard } from '../../components/ui';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { User } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
 import { semantic } from '../../theme';
 
@@ -76,23 +76,21 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
   const loadProposals = async () => {
     try {
       setLoading(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/provider/proposals?providerId=${user?.uid}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.rows)) {
-          const mapped: Proposal[] = data.rows.map((p: any) => ({
-            id: p.idproposal.toString(),
-            hiringRequestId: p.p_hiring_request_id.toString(),
-            title: p.p_title,
-            description: p.p_description,
-            proposedBudget: parseFloat(p.p_proposed_budget) || 0,
-            status: p.p_status,
-            submittedAt: p.p_submitted_at,
-            clientName: p.client_name || 'Unknown Client',
-            hiringRequestTitle: p.hiring_request_title || 'Hiring Request',
-          }));
-          setProposals(mapped);
-        }
+      const data = await apiClient.get<any>('/api/provider/proposals', { providerId: user?.uid });
+      const rows = data.data?.rows ?? data.rows;
+      if (data.ok && Array.isArray(rows)) {
+        const mapped: Proposal[] = rows.map((p: any) => ({
+          id: p.idproposal.toString(),
+          hiringRequestId: p.p_hiring_request_id.toString(),
+          title: p.p_title,
+          description: p.p_description,
+          proposedBudget: parseFloat(p.p_proposed_budget) || 0,
+          status: p.p_status,
+          submittedAt: p.p_submitted_at,
+          clientName: p.client_name || 'Unknown Client',
+          hiringRequestTitle: p.hiring_request_title || 'Hiring Request',
+        }));
+        setProposals(mapped);
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading proposals:', error);
@@ -103,23 +101,21 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
 
   const loadHiringRequests = async () => {
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/hiring-requests?status=open`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.rows)) {
-          const mapped: HiringRequest[] = data.rows.map((hr: any) => ({
-            id: hr.idhiring_request.toString(),
-            title: hr.hr_title,
-            description: hr.hr_description,
-            budgetMin: parseFloat(hr.hr_budget_min) || 0,
-            budgetMax: parseFloat(hr.hr_budget_max) || 0,
-            startDate: hr.hr_start_date,
-            endDate: hr.hr_end_date,
-            city: hr.hr_city,
-            status: hr.hr_status,
-          }));
-          setHiringRequests(mapped);
-        }
+      const data = await apiClient.get<any>('/api/hiring-requests', { status: 'open' });
+      const rows = data.data?.rows ?? data.rows;
+      if (data.ok && Array.isArray(rows)) {
+        const mapped: HiringRequest[] = rows.map((hr: any) => ({
+          id: hr.idhiring_request.toString(),
+          title: hr.hr_title,
+          description: hr.hr_description,
+          budgetMin: parseFloat(hr.hr_budget_min) || 0,
+          budgetMax: parseFloat(hr.hr_budget_max) || 0,
+          startDate: hr.hr_start_date,
+          endDate: hr.hr_end_date,
+          city: hr.hr_city,
+          status: hr.hr_status,
+        }));
+        setHiringRequests(mapped);
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading hiring requests:', error);
@@ -133,35 +129,27 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ user, onNavigate, 
     }
 
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/proposals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId: user?.uid,
-          hiringRequestId: newProposal.hiringRequestId,
-          title: newProposal.title,
-          description: newProposal.description,
-          proposedBudget: parseFloat(newProposal.proposedBudget),
-          startDate: newProposal.startDate,
-          endDate: newProposal.endDate,
-        }),
+      await apiClient.post('/api/proposals', {
+        providerId: user?.uid,
+        hiringRequestId: newProposal.hiringRequestId,
+        title: newProposal.title,
+        description: newProposal.description,
+        proposedBudget: parseFloat(newProposal.proposedBudget),
+        startDate: newProposal.startDate,
+        endDate: newProposal.endDate,
       });
 
-      if (resp.ok) {
-        Alert.alert('Success', 'Proposal submitted successfully');
-        setNewProposal({
-          hiringRequestId: '',
-          title: '',
-          description: '',
-          proposedBudget: '',
-          startDate: '',
-          endDate: '',
-        });
-        setShowProposalForm(false);
-        loadProposals();
-      } else {
-        Alert.alert('Error', 'Failed to submit proposal');
-      }
+      Alert.alert('Success', 'Proposal submitted successfully');
+      setNewProposal({
+        hiringRequestId: '',
+        title: '',
+        description: '',
+        proposedBudget: '',
+        startDate: '',
+        endDate: '',
+      });
+      setShowProposalForm(false);
+      loadProposals();
     } catch {
       Alert.alert('Error', 'Failed to submit proposal');
     }

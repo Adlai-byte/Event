@@ -16,7 +16,7 @@ import { ProviderDTO as Provider } from '../../types/provider';
 import {
   getCategoryIcon,
   getCategoryLabel,
-  formatPrice,
+  formatPriceDisplay,
   groupByProvider,
 } from '../../utils/serviceHelpers';
 import { getApiBaseUrl } from '../../services/api';
@@ -33,7 +33,6 @@ interface SearchResultsSectionProps {
   filterCategory: string;
   onBack: () => void;
   onNavigateToProviderProfile: (providerEmail: string) => void;
-  onBookNow: (service: Service) => void;
   onViewService: (serviceId: string) => void;
 }
 
@@ -49,7 +48,6 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
   filterCategory,
   onBack,
   onNavigateToProviderProfile,
-  onBookNow,
   onViewService,
 }) => {
   const { isMobile, screenWidth, isMobileWeb } = useBreakpoints();
@@ -251,7 +249,11 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
                                             ) : null;
                                           })()}
                                           <Text style={styles.servicePrice}>
-                                            {formatPrice(item.s_base_price)}
+                                            {formatPriceDisplay(
+                                              item.s_base_price,
+                                              item.min_package_price,
+                                              item.max_package_price,
+                                            ).price}
                                           </Text>
                                           {(item.s_city || item.s_state || item.s_address) && (
                                             <View
@@ -313,20 +315,11 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
                                       </TouchableOpacity>
                                       <View style={styles.serviceActions}>
                                         <TouchableOpacity
-                                          style={styles.viewDetailsButton}
+                                          style={[styles.viewDetailsButton, { flex: 1 }]}
                                           onPress={() => onViewService(item.idservice.toString())}
                                           activeOpacity={0.8}
                                         >
-                                          <Text style={styles.viewDetailsButtonText}>
-                                            View Details
-                                          </Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                          style={styles.bookNowButton}
-                                          onPress={() => onBookNow(item)}
-                                          activeOpacity={0.8}
-                                        >
-                                          <Text style={styles.bookNowButtonText}>Book Now</Text>
+                                          <Text style={styles.viewDetailsButtonText}>View Services</Text>
                                         </TouchableOpacity>
                                       </View>
                                     </View>

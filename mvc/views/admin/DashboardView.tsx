@@ -7,7 +7,6 @@ import { SkeletonCard } from '../../components/ui';
 import { User } from '../../models/User';
 import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
-import { colors, semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface DashboardViewProps {
@@ -98,7 +97,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
           <Feather
             name={icon as any}
             size={isMobile ? 14 : 16}
-            color={color || semantic.textSecondary}
+            color={color || '#64748B'}
           />
         ) : (
           <Text style={styles.metricDot}>•</Text>
@@ -143,21 +142,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                 title="Total Users"
                 value={stats.totalUsers.toString()}
                 icon="users"
-                color={semantic.primary}
+                color="#2563EB"
                 subtitle={`${stats.activeUsers} active`}
               />
               <MetricCard
                 title="Services"
                 value={stats.totalServices.toString()}
                 icon="target"
-                color={semantic.success}
+                color="#10B981"
                 subtitle={`${stats.activeServices} active`}
               />
               <MetricCard
                 title="Bookings"
                 value={stats.totalBookings.toString()}
                 icon="calendar"
-                color={semantic.warning}
+                color="#F59E0B"
                 subtitle={`${stats.pendingBookings} pending`}
               />
             </View>
@@ -165,7 +164,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
             {/* Quick Stats Row */}
             <View style={[styles.row, isMobile && styles.rowMobile]}>
               <View style={[styles.cardLarge, styles.cardGlowBlue]}>
-                <View style={[styles.glowOverlay, { backgroundColor: semantic.primary }]} />
+                <View style={[styles.glowOverlay, { backgroundColor: '#2563EB' }]} />
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Monthly Overview</Text>
                   <TouchableOpacity
@@ -221,21 +220,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   <Text style={styles.cardTitle}>Activity Summary</Text>
                   <View style={styles.activityList}>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.primary }]} />
+                      <View style={[styles.activityDot, { backgroundColor: '#2563EB' }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>New users this month</Text>
                         <Text style={styles.activityValue}>+{stats.newUsersThisMonth}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.success }]} />
+                      <View style={[styles.activityDot, { backgroundColor: '#10B981' }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Services added</Text>
                         <Text style={styles.activityValue}>+{stats.newServicesThisMonth}</Text>
                       </View>
                     </View>
                     <View style={styles.activityItem}>
-                      <View style={[styles.activityDot, { backgroundColor: semantic.warning }]} />
+                      <View style={[styles.activityDot, { backgroundColor: '#F59E0B' }]} />
                       <View style={styles.activityContent}>
                         <Text style={styles.activityText}>Bookings completed</Text>
                         <Text style={styles.activityValue}>{stats.completedBookingsThisMonth}</Text>
@@ -256,7 +255,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   accessibilityRole="button"
                   accessibilityLabel="Manage users"
                 >
-                  <Feather name="users" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
+                  <Feather name="users" size={isMobile ? 20 : 24} color="#0F172A" />
                   <Text style={styles.quickActionLabel}>Manage Users</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -265,7 +264,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   accessibilityRole="button"
                   accessibilityLabel="Manage services"
                 >
-                  <Feather name="grid" size={isMobile ? 20 : 24} color={semantic.textPrimary} />
+                  <Feather name="grid" size={isMobile ? 20 : 24} color="#0F172A" />
                   <Text style={styles.quickActionLabel}>Manage Services</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -277,7 +276,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                   <Feather
                     name="bar-chart-2"
                     size={isMobile ? 20 : 24}
-                    color={semantic.textPrimary}
+                    color="#0F172A"
                   />
                   <Text style={styles.quickActionLabel}>View Reports</Text>
                 </TouchableOpacity>
@@ -311,7 +310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigate, 
                                 : 'briefcase'
                           }
                           size={isMobile ? 14 : 16}
-                          color={semantic.textSecondary}
+                          color="#64748B"
                           style={styles.activityRowIcon}
                         />
                         <Text style={styles.activityCell}>{activity.description}</Text>
@@ -339,6 +338,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     main: {
       flex: 1,
+      backgroundColor: '#F8FAFC',
     },
     mainContent: {
       padding: isMobile ? 12 : 20,
@@ -346,19 +346,16 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     welcomeSection: {
       marginBottom: isMobile ? 16 : 24,
-      paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
     },
     headerTitle: {
       fontSize: isMobile ? 20 : 24,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 4,
     },
     headerSubtitle: {
-      fontSize: isMobile ? 12 : 14,
-      color: semantic.textSecondary,
+      fontSize: isMobile ? 14 : 16,
+      color: '#64748B',
     },
     loadingContainer: {
       alignItems: 'center',
@@ -368,7 +365,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     loadingText: {
       marginTop: 12,
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     metricsRow: {
       flexDirection: 'row',
@@ -380,21 +377,18 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       }),
     },
     metricCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 12 : 16,
       marginRight: isMobile ? 6 : 12,
       marginBottom: isMobile ? 8 : 12,
       width: isMobile ? (screenWidth - 48) / 2 : Math.min(180, (screenWidth - 300) / 4),
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     metricSubtitle: {
       fontSize: isMobile ? 11 : 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 4,
     },
     metricHeader: {
@@ -403,7 +397,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
     },
     metricTitle: {
-      color: semantic.textSecondary,
+      color: '#64748B',
       fontSize: isMobile ? 11 : 12,
       fontWeight: '600',
     },
@@ -411,14 +405,14 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       fontSize: isMobile ? 12 : 14,
     },
     metricDot: {
-      color: colors.neutral[300],
+      color: '#CBD5E1',
       fontSize: isMobile ? 16 : 18,
     },
     metricValue: {
       marginTop: 8,
       fontSize: isMobile ? 18 : 22,
       fontWeight: '700',
-      color: colors.neutral[900],
+      color: '#0F172A',
     },
     row: {
       flexDirection: 'row',
@@ -429,31 +423,20 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     cardLarge: {
       flex: isMobile ? undefined : 1,
       width: isMobile ? '100%' : undefined,
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 12 : 16,
       marginRight: isMobile ? 0 : 12,
       marginBottom: isMobile ? 12 : 0,
-      elevation: 6,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 10,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
       overflow: 'hidden',
       position: 'relative',
     },
     cardGlowBlue: {
-      shadowColor: semantic.primary,
-      elevation: 8,
-      shadowOpacity: 0.3,
-      shadowRadius: 15,
     },
     glowOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 3,
-      opacity: 0.6,
+      display: 'none',
     },
     cardHeader: {
       flexDirection: 'row',
@@ -465,17 +448,19 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     cardTitle: {
       fontSize: isMobile ? 13 : 14,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     ctaButton: {
-      backgroundColor: semantic.background,
-      borderRadius: 8,
+      backgroundColor: '#F8FAFC',
+      borderRadius: 10,
       paddingHorizontal: isMobile ? 8 : 10,
       paddingVertical: isMobile ? 5 : 6,
       marginTop: isMobile ? 4 : 0,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     ctaText: {
-      color: '#0EA5E9',
+      color: '#2563EB',
       fontWeight: '700',
       fontSize: isMobile ? 11 : 12,
     },
@@ -484,7 +469,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     chartLabel: {
       fontSize: isMobile ? 11 : 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginBottom: isMobile ? 8 : 12,
     },
     barChartContainer: {
@@ -499,19 +484,14 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     bar: {
       width: isMobile ? 16 : 20,
-      backgroundColor: semantic.primary,
+      backgroundColor: '#2563EB',
       borderRadius: 4,
       marginBottom: 4,
       minHeight: 4,
-      shadowColor: semantic.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.4,
-      shadowRadius: 4,
-      elevation: 3,
     },
     barLabel: {
       fontSize: isMobile ? 9 : 10,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     activityList: {
       marginTop: isMobile ? 8 : 12,
@@ -535,20 +515,21 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     activityText: {
       fontSize: isMobile ? 12 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     activityValue: {
       fontSize: isMobile ? 13 : 14,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     quickActionsCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 12 : 16,
       marginTop: 12,
       marginBottom: 12,
-      elevation: 2,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     quickActionsGrid: {
       flexDirection: 'row',
@@ -557,14 +538,14 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     quickActionBtn: {
       width: isMobile ? (screenWidth - 48) / 2 : (screenWidth - 300) / 4,
-      backgroundColor: semantic.background,
-      borderRadius: 8,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 10,
       padding: isMobile ? 12 : 16,
       alignItems: 'center',
       marginRight: isMobile ? 6 : 12,
       marginBottom: isMobile ? 8 : 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     quickActionIcon: {
       fontSize: isMobile ? 20 : 24,
@@ -572,7 +553,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     quickActionLabel: {
       fontSize: isMobile ? 11 : 12,
-      color: semantic.textPrimary,
+      color: '#0F172A',
       fontWeight: '600',
       textAlign: 'center',
     },
@@ -585,7 +566,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
       paddingVertical: isMobile ? 10 : 12,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.background,
+      borderBottomColor: '#F1F5F9',
     },
     activityRowLeft: {
       flexDirection: 'row',
@@ -598,13 +579,12 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     activityCell: {
       fontSize: isMobile ? 12 : 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       flex: 1,
     },
     activityCellTime: {
       fontSize: isMobile ? 11 : 12,
-      color: semantic.textSecondary,
-      opacity: 0.7,
+      color: '#94A3B8',
     },
     cardRightCol: {
       width: isMobile ? '100%' : 200,
@@ -613,18 +593,20 @@ const createStyles = (isMobile: boolean, screenWidth: number) =>
       marginTop: 12,
     },
     progressCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 12 : 16,
-      elevation: 2,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
     cardWide: {
       flex: 1,
-      backgroundColor: semantic.surface,
-      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 12 : 16,
       marginTop: 12,
-      elevation: 2,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
     },
   });
 

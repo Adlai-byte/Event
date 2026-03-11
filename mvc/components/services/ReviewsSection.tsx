@@ -24,7 +24,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ reviews, loading
       </View>
       {loadingReviews ? (
         <View style={styles.reviewsLoading}>
-          <ActivityIndicator size="small" color="#4a55e1" />
+          <ActivityIndicator size="small" color="#64748B" />
           <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
         </View>
       ) : reviews.length > 0 ? (

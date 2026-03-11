@@ -315,23 +315,23 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
 
               <View style={styles.rowInputs}>
                 <View style={[styles.inputGroup, styles.halfInput]}>
-                  <Text style={styles.inputLabel}>Min Pax</Text>
+                  <Text style={styles.inputLabel}>Min Guests</Text>
                   <TextInput
                     style={styles.input}
-                    value={pkg.minPax?.toString() || '1'}
-                    onChangeText={(text) => updatePackageField({ minPax: parseInt(text) || 1 })}
+                    value={pkg.minGuests?.toString() || '1'}
+                    onChangeText={(text) => updatePackageField({ minGuests: parseInt(text) || 1 })}
                     placeholder="1"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
                   />
                 </View>
                 <View style={[styles.inputGroup, styles.halfInput]}>
-                  <Text style={styles.inputLabel}>Max Pax</Text>
+                  <Text style={styles.inputLabel}>Max Guests</Text>
                   <TextInput
                     style={styles.input}
-                    value={pkg.maxPax?.toString() || ''}
+                    value={pkg.maxGuests?.toString() || ''}
                     onChangeText={(text) =>
-                      updatePackageField({ maxPax: text ? parseInt(text) : undefined })
+                      updatePackageField({ maxGuests: text ? parseInt(text) : undefined })
                     }
                     placeholder="No limit"
                     placeholderTextColor="#9CA3AF"
@@ -384,6 +384,38 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
                 </View>
               </View>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Billing Type</Text>
+                <View style={styles.priceTypeButtons}>
+                  {(['hourly', 'daily'] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.priceTypeButton,
+                        pkg.billingType === type && styles.priceTypeButtonActive,
+                      ]}
+                      onPress={() => updatePackageField({ billingType: type })}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Feather
+                          name={type === 'hourly' ? 'clock' : 'calendar'}
+                          size={12}
+                          color={pkg.billingType === type ? '#fff' : '#6B7280'}
+                        />
+                        <Text
+                          style={[
+                            styles.priceTypeButtonText,
+                            pkg.billingType === type && styles.priceTypeButtonTextActive,
+                          ]}
+                        >
+                          {type === 'hourly' ? 'Hourly' : 'Daily'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {pkg.priceType !== 'calculated' && (
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>
@@ -430,13 +462,15 @@ export const PackageBuilder: React.FC<PackageBuilderProps> = ({
 
           {/* Footer */}
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving} accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveButton, saving && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save package"
             >
               {saving ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />

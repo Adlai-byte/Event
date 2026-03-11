@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getApiBaseUrl } from '../services/api';
+import { apiClient } from '../services/apiClient';
 import { ServicePackage, calculatePackagePrice } from '../models/Package';
 
 interface TimeSlot {
@@ -34,7 +34,7 @@ export function useBookingCost(
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
   const [removedItems, setRemovedItems] = useState<number[]>([]);
-  const [packagePaxCount, setPackagePaxCount] = useState<number>(1);
+  const [packageGuestCount, setPackageGuestCount] = useState<number>(1);
 
   // Reset cost-related state
   const resetCostState = useCallback(() => {
@@ -42,29 +42,26 @@ export function useBookingCost(
     setAttendees('1');
     setSelectedPackage(null);
     setRemovedItems([]);
-    setPackagePaxCount(1);
+    setPackageGuestCount(1);
   }, []);
 
   // Load service details
   const loadServiceDetails = useCallback(async () => {
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/services/${serviceId}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && data.service) {
-          const service = data.service;
-          const basePrice = parseFloat(service.s_base_price) || 0;
-          const hourlyPrice = service.s_hourly_price ? parseFloat(service.s_hourly_price) : null;
-          const perDayPrice = service.s_per_day_price ? parseFloat(service.s_per_day_price) : null;
-          const duration = parseInt(service.s_duration) || 60;
-          const category = service.s_category || '';
-          setServiceDetails({ basePrice, hourlyPrice, perDayPrice, duration, category });
+      const data = await apiClient.get<any>(`/api/services/${serviceId}`);
+      if (data.ok && data.service) {
+        const service = data.service;
+        const basePrice = parseFloat(service.s_base_price) || 0;
+        const hourlyPrice = service.s_hourly_price ? parseFloat(service.s_hourly_price) : null;
+        const perDayPrice = service.s_per_day_price ? parseFloat(service.s_per_day_price) : null;
+        const duration = parseInt(service.s_duration) || 60;
+        const category = service.s_category || '';
+        setServiceDetails({ basePrice, hourlyPrice, perDayPrice, duration, category });
 
-          if (perDayPrice && !hourlyPrice) {
-            setBookingMode('perday');
-          } else {
-            setBookingMode('hourly');
-          }
+        if (perDayPrice && !hourlyPrice) {
+          setBookingMode('perday');
+        } else {
+          setBookingMode('hourly');
         }
       }
     } catch (error) {
@@ -78,11 +75,9 @@ export function useBookingCost(
 
     try {
       setLoadingPackages(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/services/${serviceId}/packages`);
+      const data = await apiClient.get<any>(`/api/services/${serviceId}/packages`);
 
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.packages)) {
+      if (data.ok && Array.isArray(data.packages)) {
           const mappedPackages: ServicePackage[] = data.packages
             .filter((p: any) => p.sp_is_active)
             .map((p: any) => ({
@@ -90,10 +85,11 @@ export function useBookingCost(
               serviceId: p.sp_service_id,
               name: p.sp_name,
               description: p.sp_description,
-              minPax: p.sp_min_pax,
-              maxPax: p.sp_max_pax,
+              minGuests: p.sp_min_pax,
+              maxGuests: p.sp_max_pax,
               basePrice: p.sp_base_price ? parseFloat(p.sp_base_price) : undefined,
               priceType: p.sp_price_type,
+              billingType: p.sp_billing_type || 'hourly',
               discountPercent: parseFloat(p.sp_discount_percent) || 0,
               calculatedPrice: p.calculated_price,
               isActive: !!p.sp_is_active,
@@ -119,7 +115,6 @@ export function useBookingCost(
             }));
           setPackages(mappedPackages);
         }
-      }
     } catch (error) {
       if (__DEV__) console.error('Error loading packages:', error);
     } finally {
@@ -137,8 +132,8 @@ export function useBookingCost(
   // Get current package price
   const getPackagePrice = useCallback((): number => {
     if (!selectedPackage) return 0;
-    return calculatePackagePrice(selectedPackage, packagePaxCount, removedItems);
-  }, [selectedPackage, packagePaxCount, removedItems]);
+    return calculatePackagePrice(selectedPackage, packageGuestCount, removedItems);
+  }, [selectedPackage, packageGuestCount, removedItems]);
 
   // Calculate total duration from selected slots
   const calculateTotalDuration = useCallback((slots: TimeSlot[]): number => {
@@ -264,15 +259,26 @@ export function useBookingCost(
   }, [selectedSlots, selectedDays, serviceDetails, attendees, bookingMode]);
 
   // Set pre-selected package when provided (by object or by ID)
+  // Also auto-set booking mode based on the package's billing type
   useEffect(() => {
     if (visible && preSelectedPackage) {
       setSelectedPackage(preSelectedPackage);
-      setPackagePaxCount(preSelectedPackage.minPax || 1);
+      setPackageGuestCount(preSelectedPackage.minGuests || 1);
+      if (preSelectedPackage.billingType === 'daily') {
+        setBookingMode('perday');
+      } else if (preSelectedPackage.billingType === 'hourly') {
+        setBookingMode('hourly');
+      }
     } else if (visible && preSelectedPackageId && packages.length > 0) {
       const pkg = packages.find((p) => p.id === preSelectedPackageId);
       if (pkg) {
         setSelectedPackage(pkg);
-        setPackagePaxCount(pkg.minPax || 1);
+        setPackageGuestCount(pkg.minGuests || 1);
+        if (pkg.billingType === 'daily') {
+          setBookingMode('perday');
+        } else if (pkg.billingType === 'hourly') {
+          setBookingMode('hourly');
+        }
       }
     }
   }, [visible, preSelectedPackage, preSelectedPackageId, packages]);
@@ -290,8 +296,8 @@ export function useBookingCost(
     setSelectedPackage,
     removedItems,
     setRemovedItems,
-    packagePaxCount,
-    setPackagePaxCount,
+    packageGuestCount,
+    setPackageGuestCount,
     resetCostState,
     loadServiceDetails,
     loadPackages,

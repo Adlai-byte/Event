@@ -193,7 +193,7 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
             accessibilityRole="button"
             accessibilityLabel="View provider profile"
           >
-            <Feather name="user" size={16} color="#4a55e1" style={{ marginRight: 6 }} />
+            <Feather name="user" size={16} color="#334155" style={{ marginRight: 6 }} />
             <Text style={styles.viewProfileButtonText}>View Profile</Text>
           </TouchableOpacity>
         )}
@@ -227,17 +227,6 @@ export const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({
       onLogout={onLogout}
     >
       <View style={styles.container}>
-        {/* Background Decorative Elements */}
-        <View style={styles.backgroundContainer}>
-          {isWeb ? (
-            <View style={styles.backgroundGradientWeb} />
-          ) : (
-            <View style={styles.backgroundGradient} />
-          )}
-          <View style={styles.backgroundCircle1} />
-          <View style={styles.backgroundCircle2} />
-        </View>
-
         {/* Web: Centered Card Container */}
         {isWeb ? (
           <View style={styles.webCardContainer}>

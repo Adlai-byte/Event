@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { SkeletonListItem } from '../../components/ui';
 import { User as UserModel } from '../../models/User';
-import { getApiBaseUrl } from '../../services/api';
+import { apiClient } from '../../services/apiClient';
 import { AppLayout } from '../../components/layout';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 import { ApplicationDetailsModal } from '../../components/admin/ApplicationDetailsModal';
@@ -60,22 +60,20 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({
   const loadApplications = async () => {
     try {
       setLoading(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/admin/provider-applications`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok && Array.isArray(data.rows)) {
-          const mapped: ProviderApplication[] = data.rows.map((u: any) => ({
-            id: u.iduser,
-            name: [u.u_fname, u.u_lname].filter(Boolean).join(' ').trim() || 'Unknown',
-            email: u.u_email,
-            status: u.u_provider_status || (u.u_role === 'provider' ? 'approved' : 'pending'),
-            appliedAt: u.applied_at || u.u_created_at || new Date().toISOString(),
-            role: u.u_role || 'user',
-            businessDocument: u.u_business_document || null,
-            validIdDocument: u.u_valid_id_document || null,
-          }));
-          setApplications(mapped);
-        }
+      const data = await apiClient.get<any>('/api/admin/provider-applications');
+      const rows = data.data?.rows ?? data.rows;
+      if (data.ok && Array.isArray(rows)) {
+        const mapped: ProviderApplication[] = rows.map((u: any) => ({
+          id: u.iduser,
+          name: [u.u_fname, u.u_lname].filter(Boolean).join(' ').trim() || 'Unknown',
+          email: u.u_email,
+          status: u.u_provider_status || (u.u_role === 'provider' ? 'approved' : 'pending'),
+          appliedAt: u.applied_at || u.u_created_at || new Date().toISOString(),
+          role: u.u_role || 'user',
+          businessDocument: u.u_business_document || null,
+          validIdDocument: u.u_valid_id_document || null,
+        }));
+        setApplications(mapped);
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading provider applications:', error);
@@ -98,13 +96,8 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({
     setShowApproveModal(false);
     setApproveApplicationId(null);
     try {
-      const apiUrl = `${getApiBaseUrl()}/api/admin/provider-applications/${applicationId}/approve`;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await resp.json();
-      if (resp.ok && data.ok) {
+      const data = await apiClient.post<any>(`/api/admin/provider-applications/${applicationId}/approve`, {});
+      if (data.ok) {
         showToast({ message: 'Provider application approved successfully!', type: 'success' });
         setProcessingId(null);
         loadApplications();
@@ -150,21 +143,11 @@ export const ProviderApplicationsView: React.FC<ProviderApplicationsProps> = ({
     setShowRejectModal(false);
 
     try {
-      const apiUrl = `${getApiBaseUrl()}/api/admin/provider-applications/${rejectApplicationId}/reject`;
-
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          rejectionReason: rejectionReason.trim(),
-        }),
+      const data = await apiClient.post<any>(`/api/admin/provider-applications/${rejectApplicationId}/reject`, {
+        rejectionReason: rejectionReason.trim(),
       });
 
-      const data = await resp.json();
-
-      if (resp.ok && data.ok) {
+      if (data.ok) {
         showToast({
           message: 'Provider application rejected. The user has been notified.',
           type: 'success',

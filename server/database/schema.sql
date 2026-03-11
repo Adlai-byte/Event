@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `booking` (
     `b_balance_due_date` DATE DEFAULT NULL,                              -- Phase 2: balance due date
     `b_cancellation_policy_snapshot` JSON DEFAULT NULL,                   -- Phase 2: policy snapshot at booking time
     `b_event_id` INT(11) DEFAULT NULL,                                     -- Phase 3: event workspace association
-    `b_status` ENUM('pending', 'confirmed', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+    `b_status` ENUM('pending', 'confirmed', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
     `b_attendees` INT(11) DEFAULT NULL,
     `b_notes` TEXT,
     `b_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -471,6 +471,7 @@ CREATE TABLE IF NOT EXISTS `service_package` (
     `sp_discount_percent` DECIMAL(5, 2) DEFAULT 0.00,
     `sp_is_active` TINYINT(1) NOT NULL DEFAULT 1,
     `sp_display_order` INT(11) DEFAULT 0,
+    `sp_billing_type` ENUM('hourly','daily') NOT NULL DEFAULT 'hourly',
     `sp_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `sp_updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`idpackage`),

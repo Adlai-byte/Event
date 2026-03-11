@@ -7,10 +7,11 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mysql = require('mysql2/promise');
 const logger = require('./lib/logger');
 
+const isTest = process.env.NODE_ENV === 'test';
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
-const DB_NAME = process.env.DB_NAME || 'event';
+const DB_NAME = isTest ? (process.env.DB_NAME_TEST || 'event_test') : (process.env.DB_NAME || 'event');
 const DB_PORT = Number(process.env.DB_PORT || 3306);
 const DB_POOL_SIZE = Number(process.env.DB_POOL_SIZE || 50);
 const DB_QUEUE_LIMIT = Number(process.env.DB_QUEUE_LIMIT || 100);

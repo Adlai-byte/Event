@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { getApiBaseUrl } from '../services/api';
+import { apiClient } from '../services/apiClient';
 import { getShadowStyle } from '../utils/shadowStyles';
 import { colors, semantic } from '../theme';
 import { useBreakpoints } from '../hooks/useBreakpoints';
@@ -217,16 +217,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       setProcessing(true);
 
-      const apiUrl = `${getApiBaseUrl()}/api/bookings/${booking.id}/pay`;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail }),
-      });
+      const data = await apiClient.post<any>(`/api/bookings/${booking.id}/pay`, { userEmail });
 
-      const data = await resp.json();
-
-      if (resp.ok && data.ok && data.paymentUrl) {
+      if (data.ok && data.paymentUrl) {
         onClose();
         onSuccess();
         redirectToPayment(data.paymentUrl);
@@ -254,16 +247,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       setProcessing(true);
 
-      const apiUrl = `${getApiBaseUrl()}/api/bookings/${booking.id}/pay-cash`;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail }),
-      });
+      const data = await apiClient.post<any>(`/api/bookings/${booking.id}/pay-cash`, { userEmail });
 
-      const data = await resp.json();
-
-      if (resp.ok && data.ok) {
+      if (data.ok) {
         onClose();
         Alert.alert(
           'Payment Recorded',

@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, semantic, typography, spacing, borderRadius } from '../../theme';
 import { Avatar } from '../ui/Avatar';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 
@@ -78,28 +77,16 @@ export function Sidebar({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>E-VENT</Text>
+        <View style={styles.logoRow}>
+          <View style={styles.logoDot} />
+          <Text style={styles.logo}>E-VENT</Text>
+        </View>
         {onClose && (
           <TouchableOpacity onPress={onClose} accessibilityLabel="Close menu">
-            <Feather name="x" size={20} color={colors.neutral[400]} />
+            <Feather name="x" size={20} color="#94A3B8" />
           </TouchableOpacity>
         )}
       </View>
-
-      {/* User info */}
-      {user && (
-        <View style={styles.userSection}>
-          <Avatar uri={user.profilePicture} name={displayName} size={36} />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {displayName}
-            </Text>
-            <Text style={styles.userEmail} numberOfLines={1}>
-              {user.email}
-            </Text>
-          </View>
-        </View>
-      )}
 
       {/* Navigation */}
       <ScrollView style={styles.nav} showsVerticalScrollIndicator={false}>
@@ -116,11 +103,12 @@ export function Sidebar({
               accessibilityLabel={item.label}
               accessibilityState={{ selected: isActive }}
             >
+              {isActive && <View style={styles.activeAccent} />}
               <View style={styles.navIconContainer}>
                 <Feather
                   name={item.icon}
                   size={18}
-                  color={isActive ? colors.neutral[0] : colors.neutral[400]}
+                  color={isActive ? '#2563EB' : '#94A3B8'}
                 />
               </View>
               <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{item.label}</Text>
@@ -136,91 +124,109 @@ export function Sidebar({
         })}
       </ScrollView>
 
-      {/* Logout */}
-      <TouchableOpacity style={styles.logoutButton} onPress={onLogout} accessibilityLabel="Log out">
-        <View style={styles.navIconContainer}>
-          <Feather name="log-out" size={18} color={colors.neutral[400]} />
-        </View>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
+      {/* User + Logout */}
+      <View style={styles.footer}>
+        {user && (
+          <View style={styles.userSection}>
+            <Avatar uri={user.profilePicture} name={displayName} size={32} />
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={styles.userEmail} numberOfLines={1}>
+                {user.email}
+              </Text>
+            </View>
+          </View>
+        )}
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogout} accessibilityLabel="Log out">
+          <Feather name="log-out" size={16} color="#94A3B8" />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const createStyles = (screenWidth: number) => {
-  const isExtraSmall = screenWidth < 360;
   return StyleSheet.create({
     container: {
-      width: Math.min(280, screenWidth * 0.8),
-      backgroundColor: semantic.sidebarBg,
-      paddingVertical: spacing.lg,
+      width: Math.min(260, screenWidth * 0.8),
+      backgroundColor: '#FFFFFF',
+      borderRightWidth: 1,
+      borderRightColor: '#E2E8F0',
       height: '100%',
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.xl,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F1F5F9',
     },
-    logo: {
-      ...typography.h1,
-      color: colors.neutral[0],
-    },
-    userSection: {
+    logoRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.xl,
-      paddingBottom: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.dark[800],
     },
-    userInfo: {
-      marginLeft: spacing.md,
-      flex: 1,
+    logoDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#2563EB',
+      marginRight: 10,
     },
-    userName: {
-      ...typography.label,
-      color: colors.neutral[0],
-    },
-    userEmail: {
-      ...typography.caption,
-      ...(isExtraSmall ? { fontSize: 11 } : {}),
-      color: colors.neutral[400],
+    logo: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#0F172A',
+      letterSpacing: -0.3,
     },
     nav: {
       flex: 1,
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: 8,
+      paddingTop: 12,
     },
     navItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderRadius: borderRadius.md,
-      marginBottom: spacing.xs,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginBottom: 2,
+      position: 'relative',
     },
     navItemActive: {
-      backgroundColor: semantic.sidebarActive,
+      backgroundColor: '#EFF6FF',
+    },
+    activeAccent: {
+      position: 'absolute',
+      left: 0,
+      top: 8,
+      bottom: 8,
+      width: 3,
+      borderRadius: 2,
+      backgroundColor: '#2563EB',
     },
     navIconContainer: {
       width: 28,
       alignItems: 'center',
     },
     navLabel: {
-      ...typography.body,
-      color: colors.neutral[400],
+      fontSize: 14,
+      color: '#64748B',
       flex: 1,
-      marginLeft: spacing.sm,
+      marginLeft: 8,
     },
     navLabelActive: {
-      color: colors.neutral[0],
+      color: '#2563EB',
       fontWeight: '600',
     },
     badge: {
-      backgroundColor: colors.error[500],
-      borderRadius: borderRadius.full,
+      backgroundColor: '#EF4444',
+      borderRadius: 10,
       minWidth: 20,
       height: 20,
       alignItems: 'center',
@@ -228,23 +234,44 @@ const createStyles = (screenWidth: number) => {
       paddingHorizontal: 6,
     },
     badgeText: {
-      ...typography.caption,
-      color: colors.neutral[0],
+      fontSize: 11,
       fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    footer: {
+      borderTopWidth: 1,
+      borderTopColor: '#F1F5F9',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    userSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    userInfo: {
+      marginLeft: 10,
+      flex: 1,
+    },
+    userName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#0F172A',
+    },
+    userEmail: {
+      fontSize: 11,
+      color: '#94A3B8',
     },
     logoutButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderTopWidth: 1,
-      borderTopColor: colors.dark[800],
-      marginTop: spacing.sm,
+      paddingVertical: 8,
+      gap: 8,
     },
     logoutText: {
-      ...typography.body,
-      color: colors.neutral[400],
-      marginLeft: spacing.sm,
+      fontSize: 13,
+      color: '#94A3B8',
+      fontWeight: '500',
     },
   });
 };

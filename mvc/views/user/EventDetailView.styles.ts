@@ -1,12 +1,10 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, semantic } from '../../theme';
-import { getShadowStyle } from '../../utils/shadowStyles';
 
 export const createStyles = (isMobile: boolean, screenWidth: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Platform.OS === 'web' ? '#F0F2F5' : semantic.background,
+      backgroundColor: '#F8FAFC',
     },
     backButton: {
       flexDirection: 'row',
@@ -17,14 +15,14 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     backText: {
       fontSize: 15,
-      color: colors.primary[500],
+      color: '#2563EB',
       fontWeight: '500',
     },
     tabBar: {
       flexDirection: 'row',
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
       paddingHorizontal: isMobile ? 8 : 16,
     },
     tab: {
@@ -34,15 +32,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       borderBottomColor: 'transparent',
     },
     tabActive: {
-      borderBottomColor: colors.primary[500],
+      borderBottomColor: '#2563EB',
     },
     tabText: {
       fontSize: isMobile ? 13 : 15,
       fontWeight: '600',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     tabTextActive: {
-      color: colors.primary[500],
+      color: '#2563EB',
     },
     content: {
       flex: 1,
@@ -55,24 +53,29 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
         : {}),
     },
     card: {
-      backgroundColor: semantic.surface,
-      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 16 : 20,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: semantic.border,
-      ...getShadowStyle(0.06, 4, 2),
+      borderColor: '#E2E8F0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.03,
+      shadowRadius: 3,
+      elevation: 1,
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)' } : {}),
     },
     cardTitle: {
       fontSize: 16,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 12,
     },
     eventName: {
       fontSize: isMobile ? 22 : 26,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 8,
     },
     infoRow: {
@@ -83,15 +86,15 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     infoText: {
       fontSize: 15,
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     infoLabel: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     description: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       lineHeight: 22,
       marginTop: 8,
     },
@@ -114,7 +117,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     statCard: {
       flex: 1,
-      backgroundColor: colors.primary[50],
+      backgroundColor: '#EFF6FF',
       borderRadius: 12,
       padding: 16,
       alignItems: 'center',
@@ -122,36 +125,36 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     statValue: {
       fontSize: 20,
       fontWeight: '700',
-      color: colors.primary[500],
+      color: '#2563EB',
     },
     statLabel: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 4,
     },
     editButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#0F172A',
       borderRadius: 10,
       paddingVertical: 12,
       gap: 8,
       marginTop: 16,
     },
     editButtonText: {
-      color: colors.neutral[0],
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '600',
     },
     // Vendors tab
     vendorCard: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -162,30 +165,30 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     vendorName: {
       fontSize: 16,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     vendorCategory: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 2,
     },
     vendorCost: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.primary[500],
+      color: '#2563EB',
       marginTop: 4,
     },
     unlinkButton: {
       padding: 8,
       borderRadius: 8,
-      backgroundColor: colors.error[50],
+      backgroundColor: '#FEE2E2',
     },
     linkButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: colors.primary[500],
+      borderColor: '#2563EB',
       borderStyle: 'dashed',
       borderRadius: 12,
       paddingVertical: 16,
@@ -195,7 +198,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     linkButtonText: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.primary[500],
+      color: '#2563EB',
     },
     // Timeline tab
     timelineEntry: {
@@ -210,42 +213,42 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     timelineTimeText: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.primary[500],
+      color: '#2563EB',
     },
     timelineEndText: {
       fontSize: 12,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     timelineDot: {
       width: 12,
       height: 12,
       borderRadius: 6,
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#2563EB',
       marginTop: 4,
     },
     timelineLine: {
       width: 2,
       flex: 1,
-      backgroundColor: colors.primary[200],
+      backgroundColor: '#BFDBFE',
       alignSelf: 'center',
       marginTop: 4,
     },
     timelineContent: {
       flex: 1,
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 10,
       padding: 12,
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
     },
     timelineTitle: {
       fontSize: 15,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     timelineDesc: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 4,
     },
     timelineActions: {
@@ -257,20 +260,20 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     // Checklist tab
     progressBar: {
       height: 8,
-      backgroundColor: colors.neutral[200],
+      backgroundColor: '#E2E8F0',
       borderRadius: 4,
       overflow: 'hidden',
       marginBottom: 16,
     },
     progressFill: {
       height: '100%',
-      backgroundColor: colors.success[500],
+      backgroundColor: '#22C55E',
       borderRadius: 4,
     },
     progressText: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 8,
     },
     checklistItem: {
@@ -278,7 +281,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
       padding: 12,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#F1F5F9',
       gap: 12,
     },
     checkbox: {
@@ -286,50 +289,50 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       height: 24,
       borderRadius: 6,
       borderWidth: 2,
-      borderColor: colors.neutral[300],
+      borderColor: '#CBD5E1',
       justifyContent: 'center',
       alignItems: 'center',
     },
     checkboxChecked: {
-      backgroundColor: colors.success[500],
-      borderColor: colors.success[500],
+      backgroundColor: '#22C55E',
+      borderColor: '#22C55E',
     },
     checklistTitle: {
       flex: 1,
       fontSize: 15,
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     checklistTitleCompleted: {
       textDecorationLine: 'line-through',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     dueDateBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 6,
-      backgroundColor: colors.neutral[100],
+      backgroundColor: '#F1F5F9',
     },
     dueDateOverdue: {
-      backgroundColor: colors.error[50],
+      backgroundColor: '#FEE2E2',
     },
     dueDateText: {
       fontSize: 11,
       fontWeight: '500',
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     dueDateOverdueText: {
-      color: colors.error[600],
+      color: '#DC2626',
     },
     categoryTag: {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 6,
-      backgroundColor: colors.primary[50],
+      backgroundColor: '#EFF6FF',
     },
     categoryTagText: {
       fontSize: 11,
       fontWeight: '500',
-      color: colors.primary[500],
+      color: '#2563EB',
     },
     addItemRow: {
       flexDirection: 'row',
@@ -339,28 +342,33 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     addItemInput: {
       flex: 1,
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: 8,
       padding: 10,
       fontSize: 14,
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     addItemButton: {
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#0F172A',
       borderRadius: 8,
       padding: 10,
     },
     // Budget tab
     budgetSummaryCard: {
-      backgroundColor: semantic.surface,
-      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
       padding: isMobile ? 16 : 24,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: semantic.border,
-      ...getShadowStyle(0.06, 4, 2),
+      borderColor: '#E2E8F0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.03,
+      shadowRadius: 3,
+      elevation: 1,
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)' } : {}),
     },
     budgetRow: {
       flexDirection: 'row',
@@ -369,12 +377,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     budgetLabel: {
       fontSize: 15,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     budgetValue: {
       fontSize: 16,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     budgetRemaining: {
       fontSize: 16,
@@ -382,7 +390,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     budgetProgressBar: {
       height: 12,
-      backgroundColor: colors.neutral[200],
+      backgroundColor: '#E2E8F0',
       borderRadius: 6,
       overflow: 'hidden',
       marginVertical: 12,
@@ -397,23 +405,23 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       justifyContent: 'space-between',
       paddingVertical: 10,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#F1F5F9',
     },
     categoryName: {
       fontSize: 14,
       fontWeight: '500',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       textTransform: 'capitalize',
       flex: 1,
     },
     categoryAmount: {
       fontSize: 14,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     categoryBar: {
       height: 4,
-      backgroundColor: colors.neutral[200],
+      backgroundColor: '#E2E8F0',
       borderRadius: 2,
       flex: 1,
       marginHorizontal: 12,
@@ -421,7 +429,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     categoryBarFill: {
       height: '100%',
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#2563EB',
       borderRadius: 2,
     },
     // Shared action buttons
@@ -438,11 +446,16 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       padding: 16,
     },
     linkModalContainer: {
-      backgroundColor: semantic.surface,
+      backgroundColor: '#FFFFFF',
       borderRadius: 16,
       width: isMobile ? '100%' : Math.min(500, screenWidth - 48),
       maxHeight: '70%',
-      ...getShadowStyle(0.15, 8, 4),
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+      ...(Platform.OS === 'web' ? { boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.12)' } : {}),
     },
     linkModalHeader: {
       flexDirection: 'row',
@@ -450,12 +463,12 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       alignItems: 'center',
       padding: 20,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#E2E8F0',
     },
     linkModalTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     linkModalItem: {
       flexDirection: 'row',
@@ -463,16 +476,16 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
       justifyContent: 'space-between',
       padding: 16,
       borderBottomWidth: 1,
-      borderBottomColor: semantic.border,
+      borderBottomColor: '#F1F5F9',
     },
     linkModalItemName: {
       fontSize: 15,
       fontWeight: '500',
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     linkModalItemDate: {
       fontSize: 13,
-      color: semantic.textSecondary,
+      color: '#64748B',
     },
     linkModalEmpty: {
       padding: 32,
@@ -480,7 +493,7 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     },
     linkModalEmptyText: {
       fontSize: 14,
-      color: semantic.textSecondary,
+      color: '#64748B',
       marginTop: 8,
     },
     // Timeline form
@@ -495,28 +508,28 @@ export const createStyles = (isMobile: boolean, screenWidth: number) =>
     formLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: semantic.textPrimary,
+      color: '#0F172A',
       marginBottom: 4,
       marginTop: 8,
     },
     formInput: {
-      backgroundColor: semantic.background,
+      backgroundColor: '#F8FAFC',
       borderWidth: 1,
-      borderColor: semantic.border,
+      borderColor: '#E2E8F0',
       borderRadius: 8,
       padding: 10,
       fontSize: 14,
-      color: semantic.textPrimary,
+      color: '#0F172A',
     },
     formButton: {
-      backgroundColor: colors.primary[500],
+      backgroundColor: '#0F172A',
       borderRadius: 10,
       paddingVertical: 12,
       alignItems: 'center',
       marginTop: 12,
     },
     formButtonText: {
-      color: colors.neutral[0],
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '600',
     },

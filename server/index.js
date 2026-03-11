@@ -56,10 +56,7 @@ app.use(helmet({
 app.use(requestId);
 app.use(requestLogger);
 
-// Global rate limiter (200 req/min per IP)
-app.use(apiLimiter);
-
-// CORS configuration
+// CORS configuration (must be before rate limiter so 429 responses include CORS headers)
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
     : true;
@@ -72,6 +69,9 @@ app.use(cors({
     exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Request-Id'],
     maxAge: 86400,
 }));
+
+// Global rate limiter (200 req/min per IP)
+app.use(apiLimiter);
 
 // Body parser with reduced limit (was 50mb, now 10mb)
 app.use(express.json({ limit: '10mb' }));
@@ -166,8 +166,8 @@ app.use((err, req, res, _next) => {
 // Export app for testing (before listen)
 module.exports = { app };
 
-// Start server (including test mode for E2E tests)
-if (true) {
+// Start server (unless testing with Jest)
+if (!process.env.JEST_WORKER_ID) {
     const server = http.createServer(app);
     const io = new Server(server, {
         cors: {

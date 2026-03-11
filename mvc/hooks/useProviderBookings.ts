@@ -133,8 +133,9 @@ export function useProviderBookings(user?: User) {
       const data = await apiClient.get<{ ok: boolean; rows?: any[] }>('/api/provider/bookings', {
         providerEmail: user!.email,
       });
-      if (data.ok && Array.isArray(data.rows)) {
-        return data.rows.map(mapBooking);
+      const rows = data.rows;
+      if (data.ok && Array.isArray(rows)) {
+        return rows.map(mapBooking);
       }
       return [];
     },

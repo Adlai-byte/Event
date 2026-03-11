@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User as UserModel } from '../models/User';
 import { ServicePackage } from '../models/Package';
@@ -92,8 +92,8 @@ function mapToProviderService(s: any): ProviderService {
     maxCapacity: parseInt(s.s_max_capacity) || 1,
     cancellationPolicyId: s.s_cancellation_policy_id ?? null,
     travelRadiusKm: s.s_travel_radius_km ?? s.travelRadiusKm ?? null,
-    minBookingHours: s.s_min_booking_hours != null ? parseFloat(s.s_min_booking_hours) : (s.minBookingHours != null ? parseFloat(s.minBookingHours) : null),
-    maxBookingHours: s.s_max_booking_hours != null ? parseFloat(s.s_max_booking_hours) : (s.maxBookingHours != null ? parseFloat(s.maxBookingHours) : null),
+    minBookingHours: s.s_min_booking_hours !== null && s.s_min_booking_hours !== undefined ? parseFloat(s.s_min_booking_hours) : (s.minBookingHours !== null && s.minBookingHours !== undefined ? parseFloat(s.minBookingHours) : null),
+    maxBookingHours: s.s_max_booking_hours !== null && s.s_max_booking_hours !== undefined ? parseFloat(s.s_max_booking_hours) : (s.maxBookingHours !== null && s.maxBookingHours !== undefined ? parseFloat(s.maxBookingHours) : null),
     leadTimeDays: parseInt(s.s_lead_time_days ?? s.leadTimeDays ?? '0') || 0,
     tags: parseJsonField(s.s_tags ?? s.tags),
     inclusions: parseJsonField(s.s_inclusions ?? s.inclusions),
@@ -106,10 +106,11 @@ function mapToPackage(p: any): ServicePackage {
     serviceId: p.sp_service_id,
     name: p.sp_name,
     description: p.sp_description,
-    minPax: p.sp_min_pax,
-    maxPax: p.sp_max_pax,
+    minGuests: p.sp_min_pax,
+    maxGuests: p.sp_max_pax,
     basePrice: p.sp_base_price ? parseFloat(p.sp_base_price) : undefined,
     priceType: p.sp_price_type,
+    billingType: p.sp_billing_type || 'hourly',
     discountPercent: parseFloat(p.sp_discount_percent) || 0,
     calculatedPrice: p.calculated_price,
     isActive: !!p.sp_is_active,
@@ -150,8 +151,8 @@ export function useServicesList(user?: UserModel) {
     queryKey: ['provider-services', email],
     queryFn: async () => {
       const data = await apiClient.get('/api/services', { providerEmail: email });
-      if (data.ok && Array.isArray(data.rows)) {
-        return data.rows.map(mapToProviderService);
+      if (data.ok && Array.isArray(data.data)) {
+        return data.data.map(mapToProviderService);
       }
       return [];
     },
@@ -167,8 +168,9 @@ export function useServicesList(user?: UserModel) {
       for (const service of services) {
         try {
           const data = await apiClient.get(`/api/services/${service.id}/packages`);
-          if (data.ok && Array.isArray(data.packages)) {
-            pkgsByService[service.id] = data.packages.map(mapToPackage);
+          const pkgs = data?.data?.packages ?? data?.packages;
+          if (data.ok && Array.isArray(pkgs)) {
+            pkgsByService[service.id] = pkgs.map(mapToPackage);
           }
         } catch (err) {
           if (__DEV__) console.error(`Error loading packages for service ${service.id}:`, err);
@@ -217,10 +219,16 @@ export function useServicesList(user?: UserModel) {
   };
 
   const handleDeletePackage = (pkg: ServicePackage, onSuccess: () => void) => {
-    Alert.alert(
-      'Delete Package',
-      `Are you sure you want to delete "${pkg.name}"? This action cannot be undone.`,
-      [
+    const message = `Are you sure you want to delete "${pkg.name}"? This action cannot be undone.`;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        deletePackageMutation.mutate(pkg.id!, {
+          onSuccess: () => onSuccess(),
+        });
+      }
+    } else {
+      Alert.alert('Delete Package', message, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -231,8 +239,8 @@ export function useServicesList(user?: UserModel) {
             });
           },
         },
-      ],
-    );
+      ]);
+    }
   };
 
   const loadServices = () => {

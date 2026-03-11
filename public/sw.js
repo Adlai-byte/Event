@@ -1,3 +1,4 @@
+/* global self, console, clients */
 // Service Worker for Web Push Notifications
 self.addEventListener('push', function(event) {
   console.log('📬 Push notification received in service worker');
@@ -6,7 +7,7 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     try {
       data = event.data.json();
-    } catch (e) {
+    } catch (_e) {
       data = { body: event.data.text() };
     }
   }

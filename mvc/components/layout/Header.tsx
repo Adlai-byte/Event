@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, typography, spacing, shadow } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
 
 interface HeaderProps {
@@ -24,7 +23,7 @@ export function Header({
   const styles = useMemo(() => createStyles(isMobile, screenWidth), [isMobile, screenWidth]);
 
   return (
-    <View style={[styles.container, shadow('sm')]}>
+    <View style={styles.container}>
       <View style={styles.left}>
         {showMenu && (
           <TouchableOpacity
@@ -32,7 +31,7 @@ export function Header({
             style={styles.menuButton}
             accessibilityLabel="Open menu"
           >
-            <Feather name="menu" size={22} color={colors.neutral[800]} />
+            <Feather name="menu" size={20} color="#0F172A" />
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{title}</Text>
@@ -43,7 +42,7 @@ export function Header({
           style={styles.notifButton}
           accessibilityLabel={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
         >
-          <Feather name="bell" size={20} color={colors.neutral[700]} />
+          <Feather name="bell" size={19} color="#64748B" />
           {notificationCount > 0 && (
             <View style={styles.notifBadge}>
               <Text style={styles.notifBadgeText}>
@@ -64,11 +63,11 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: colors.neutral[0],
-      paddingHorizontal: isMobile ? spacing.md : spacing.lg,
-      paddingVertical: isMobile ? spacing.sm : spacing.md,
+      backgroundColor: '#FFFFFF',
+      paddingHorizontal: isMobile ? 16 : 24,
+      paddingVertical: isMobile ? 12 : 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.neutral[200],
+      borderBottomColor: '#E2E8F0',
       ...(Platform.OS === 'web' ? { position: 'sticky' as any, top: 0, zIndex: 100 } : {}),
     },
     left: {
@@ -77,28 +76,29 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
       flex: 1,
     },
     menuButton: {
-      marginRight: spacing.md,
-      padding: spacing.xs,
+      marginRight: 12,
+      padding: 4,
     },
     title: {
-      ...typography.h2,
-      ...(isExtraSmall ? { fontSize: 16 } : {}),
-      color: colors.neutral[800],
+      fontSize: isExtraSmall ? 16 : isMobile ? 18 : 20,
+      fontWeight: '600',
+      color: '#0F172A',
+      letterSpacing: 0,
     },
     right: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     notifButton: {
-      padding: spacing.sm,
+      padding: 8,
       position: 'relative',
     },
     notifBadge: {
       position: 'absolute',
-      top: 2,
-      right: 2,
-      backgroundColor: colors.error[500],
-      borderRadius: 10,
+      top: 4,
+      right: 4,
+      backgroundColor: '#EF4444',
+      borderRadius: 8,
       minWidth: 16,
       height: 16,
       alignItems: 'center',
@@ -108,7 +108,7 @@ const createStyles = (isMobile: boolean, screenWidth: number) => {
     notifBadgeText: {
       fontSize: 10,
       fontWeight: '700',
-      color: colors.neutral[0],
+      color: '#FFFFFF',
     },
   });
 };

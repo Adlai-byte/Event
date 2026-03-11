@@ -44,7 +44,7 @@ export const PackagesTab: React.FC<PackagesTabProps> = ({
 
       {loadingPackages ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A55E1" />
+          <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.loadingText}>Loading packages...</Text>
         </View>
       ) : services.length === 0 ? (
@@ -105,11 +105,11 @@ export const PackagesTab: React.FC<PackagesTabProps> = ({
                         </View>
 
                         <View style={styles.packageCardMeta}>
-                          {pkg.minPax && (
-                            <Text style={styles.packageMetaText}>Min: {pkg.minPax} pax</Text>
+                          {pkg.minGuests && (
+                            <Text style={styles.packageMetaText}>Min: {pkg.minGuests} guests</Text>
                           )}
-                          {pkg.maxPax && (
-                            <Text style={styles.packageMetaText}>Max: {pkg.maxPax} pax</Text>
+                          {pkg.maxGuests && (
+                            <Text style={styles.packageMetaText}>Max: {pkg.maxGuests} guests</Text>
                           )}
                           <Text style={styles.packageMetaText}>
                             {pkg.categories.length} categories

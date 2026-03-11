@@ -4,88 +4,14 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
-  Platform,
   Image,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
 import { ServiceFormState } from '../../hooks/useServiceForm';
 import { useCancellationPolicies } from '../../hooks/useCancellationPolicies';
-import { generateMapHTML } from '../../utils/leafletMap';
 import { createStyles } from '../../views/provider/ServicesView.styles';
 import { colors, semantic } from '../../theme';
-
-const TagListInput: React.FC<{
-  label: string;
-  items: string[];
-  onAdd: (item: string) => void;
-  onRemove: (index: number) => void;
-  placeholder: string;
-  suggestions?: string[];
-  styles: any;
-}> = ({ label, items, onAdd, onRemove, placeholder, suggestions, styles }) => {
-  const [inputValue, setInputValue] = React.useState('');
-
-  const handleAdd = () => {
-    const trimmed = inputValue.trim();
-    if (trimmed && !items.includes(trimmed)) {
-      onAdd(trimmed);
-      setInputValue('');
-    }
-  };
-
-  return (
-    <View style={{ marginBottom: 16 }}>
-      <Text style={styles.formLabel}>{label}</Text>
-      <View style={styles.tagInputRow}>
-        <TextInput
-          style={styles.tagInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          placeholder={placeholder}
-          onSubmitEditing={handleAdd}
-          accessibilityLabel={label}
-        />
-        <TouchableOpacity
-          style={styles.tagAddButton}
-          onPress={handleAdd}
-          accessibilityRole="button"
-          accessibilityLabel={`Add ${label.toLowerCase()}`}
-        >
-          <Feather name="plus" size={16} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-      {suggestions && suggestions.length > 0 && items.length === 0 && (
-        <View style={[styles.tagChipContainer, { marginBottom: 6 }]}>
-          {suggestions.map((s) => (
-            <TouchableOpacity key={s} onPress={() => onAdd(s)}>
-              <View style={[styles.tagChip, { backgroundColor: '#F1F5F9' }]}>
-                <Text style={[styles.tagChipText, { color: '#64748B' }]}>+ {s}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      <View style={styles.tagChipContainer}>
-        {items.map((item, index) => (
-          <View key={item} style={styles.tagChip}>
-            <Text style={styles.tagChipText}>{item}</Text>
-            <TouchableOpacity
-              style={styles.tagRemove}
-              onPress={() => onRemove(index)}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${item}`}
-            >
-              <Feather name="x" size={10} color="#2563EB" />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-};
 
 const CollapsibleSection: React.FC<{
   title: string;
@@ -122,9 +48,6 @@ interface ServiceFormTabProps {
   submitting: boolean;
   errorMessage: string;
   onDismissError: () => void;
-  mapLocation: { lat: number; lng: number } | null;
-  mapWebViewRef: React.RefObject<WebView | null>;
-  onMapMessage: (event: any) => void;
   onImagePick: () => void;
   onRemoveImage: (index: number) => void;
   onSetPrimaryImage: (index: number) => void;
@@ -143,9 +66,6 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
   submitting,
   errorMessage,
   onDismissError,
-  mapLocation,
-  mapWebViewRef,
-  onMapMessage,
   onImagePick,
   onRemoveImage,
   onSetPrimaryImage,
@@ -274,233 +194,7 @@ export const ServiceFormTab: React.FC<ServiceFormTabProps> = ({
         </View>
       </CollapsibleSection>
 
-      {/* Section 3: Location */}
-      <CollapsibleSection title="Location" required defaultOpen styles={styles}>
-        <Text style={styles.mapHint}>
-          Click on the map or drag the marker to pin your service location
-        </Text>
-        <View style={styles.mapContainer}>
-          {mapLocation ? (
-            Platform.OS === 'web' ? (
-              <View style={styles.map} nativeID="map-container" />
-            ) : (
-              <View style={{ flex: 1, position: 'relative' }}>
-                <WebView
-                  ref={mapWebViewRef}
-                  source={{ html: generateMapHTML(mapLocation.lat, mapLocation.lng) }}
-                  style={styles.map}
-                  onMessage={onMapMessage}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={true}
-                  scalesPageToFit={true}
-                  showsHorizontalScrollIndicator={false}
-                  showsVerticalScrollIndicator={false}
-                  allowFileAccess={true}
-                  mixedContentMode="always"
-                  originWhitelist={['*']}
-                  onError={(syntheticEvent) => {
-                    const { nativeEvent } = syntheticEvent;
-                    if (__DEV__) console.error('WebView error: ', nativeEvent);
-                  }}
-                  onLoadEnd={() => {}}
-                  onLoadStart={() => {}}
-                  renderLoading={() => (
-                    <View style={styles.mapLoadingContainer}>
-                      <ActivityIndicator size="large" color="#4a55e1" />
-                      <Text style={styles.mapLoadingText}>Loading map...</Text>
-                    </View>
-                  )}
-                />
-              </View>
-            )
-          ) : (
-            <View style={styles.mapLoadingContainer}>
-              <ActivityIndicator size="large" color="#4a55e1" />
-              <Text style={styles.mapLoadingText}>Loading map...</Text>
-            </View>
-          )}
-        </View>
-
-        {newService.address && newService.address.trim() ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="map-pin" size={14} color="#64748B" />
-            <Text style={styles.addressText} numberOfLines={3}>
-              {newService.address}
-            </Text>
-          </View>
-        ) : newService.latitude && newService.longitude ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="map-pin" size={14} color="#64748B" />
-            <Text style={styles.addressText} numberOfLines={3}>
-              {newService.latitude}, {newService.longitude}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.addressPlaceholder}>Location will appear here after pinning</Text>
-        )}
-
-        {newService.category !== 'venue' && (
-          <View style={{ marginBottom: 16 }}>
-            <Text style={styles.formLabel}>Service Area (Travel Radius)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput
-                style={[styles.addInputFull, { flex: 1 }]}
-                value={newService.travelRadiusKm}
-                onChangeText={(v) => onFieldChange('travelRadiusKm', v.replace(/[^0-9]/g, ''))}
-                placeholder="e.g. 50"
-                keyboardType="numeric"
-                accessibilityLabel="Travel radius in kilometers"
-              />
-              <Text style={{ fontSize: 14, color: '#64748B' }}>km from base location</Text>
-            </View>
-          </View>
-        )}
-      </CollapsibleSection>
-
-      {/* Section 4: Pricing */}
-      <CollapsibleSection title="Pricing" required defaultOpen styles={styles}>
-        {newService.category === 'catering' ? (
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.formLabel}>Price (₱) *</Text>
-              <TextInput
-                style={styles.addInput}
-                placeholder="Enter price per person"
-                keyboardType="numeric"
-                value={newService.price}
-                onChangeText={(text) => onFieldChange('price', text)}
-              />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.formRow}>
-            <View style={styles.formCol}>
-              <Text style={styles.formLabel}>Hourly Price (₱) *</Text>
-              <TextInput
-                style={styles.addInput}
-                placeholder="Enter hourly price"
-                keyboardType="numeric"
-                value={newService.hourlyPrice}
-                onChangeText={(text) => onFieldChange('hourlyPrice', text)}
-              />
-            </View>
-            <View style={styles.formCol}>
-              <Text style={styles.formLabel}>Per Day Price (₱) *</Text>
-              <TextInput
-                style={styles.addInput}
-                placeholder="Enter per day price"
-                keyboardType="numeric"
-                value={newService.perDayPrice}
-                onChangeText={(text) => onFieldChange('perDayPrice', text)}
-              />
-            </View>
-          </View>
-        )}
-      </CollapsibleSection>
-
-      {/* Section 5: Booking Rules */}
-      <CollapsibleSection title="Booking Rules" styles={styles}>
-        <View style={{ marginBottom: 16 }}>
-          <Text style={styles.formLabel}>Booking Duration Limits</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
-                Minimum (hours)
-              </Text>
-              <TextInput
-                style={styles.addInputFull}
-                value={newService.minBookingHours}
-                onChangeText={(v) => onFieldChange('minBookingHours', v.replace(/[^0-9.]/g, ''))}
-                placeholder="e.g. 2"
-                keyboardType="numeric"
-                accessibilityLabel="Minimum booking hours"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
-                Maximum (hours)
-              </Text>
-              <TextInput
-                style={styles.addInputFull}
-                value={newService.maxBookingHours}
-                onChangeText={(v) => onFieldChange('maxBookingHours', v.replace(/[^0-9.]/g, ''))}
-                placeholder="e.g. 12"
-                keyboardType="numeric"
-                accessibilityLabel="Maximum booking hours"
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={{ marginBottom: 16 }}>
-          <Text style={styles.formLabel}>Advance Booking Required</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TextInput
-              style={[styles.addInputFull, { width: 80 }]}
-              value={newService.leadTimeDays}
-              onChangeText={(v) => onFieldChange('leadTimeDays', v.replace(/[^0-9]/g, ''))}
-              placeholder="0"
-              keyboardType="numeric"
-              accessibilityLabel="Minimum days in advance for booking"
-            />
-            <Text style={{ fontSize: 14, color: '#64748B' }}>days before event date</Text>
-          </View>
-          <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-            Customers must book at least this many days in advance. Set to 0 for no restriction.
-          </Text>
-        </View>
-
-        <Text style={styles.formLabel}>Max Capacity</Text>
-        <TextInput
-          style={styles.addInputFull}
-          placeholder="1"
-          keyboardType="numeric"
-          value={newService.maxCapacity}
-          onChangeText={(text) => onFieldChange('maxCapacity', text)}
-          accessibilityLabel="Max capacity"
-        />
-      </CollapsibleSection>
-
-      {/* Section 6: Details */}
-      <CollapsibleSection title="Details" styles={styles}>
-        <TagListInput
-          label="Tags & Amenities"
-          items={newService.tags}
-          onAdd={(tag) => onServiceChange((prev) => ({ ...prev, tags: [...prev.tags, tag] }))}
-          onRemove={(i) =>
-            onServiceChange((prev) => ({ ...prev, tags: prev.tags.filter((_, idx) => idx !== i) }))
-          }
-          placeholder="e.g. outdoor, parking, wheelchair accessible"
-          suggestions={[
-            'Indoor',
-            'Outdoor',
-            'Parking',
-            'WiFi',
-            'Pet Friendly',
-            'Wheelchair Accessible',
-          ]}
-          styles={styles}
-        />
-
-        <TagListInput
-          label="What's Included"
-          items={newService.inclusions}
-          onAdd={(item) =>
-            onServiceChange((prev) => ({ ...prev, inclusions: [...prev.inclusions, item] }))
-          }
-          onRemove={(i) =>
-            onServiceChange((prev) => ({
-              ...prev,
-              inclusions: prev.inclusions.filter((_, idx) => idx !== i),
-            }))
-          }
-          placeholder="e.g. setup, sound system, 100 edited photos"
-          styles={styles}
-        />
-      </CollapsibleSection>
-
-      {/* Section 7: Cancellation Policy */}
+      {/* Section 3: Cancellation Policy */}
       <CollapsibleSection title="Cancellation Policy" styles={styles}>
         <Text style={policyStyles.helperText}>Sets deposit % and refund rules for bookings</Text>
         <View style={policyStyles.policyList}>

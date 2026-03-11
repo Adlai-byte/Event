@@ -10,7 +10,7 @@ function mapCollaboratorRow(r) {
     status: r.ecol_status,
     invitedBy: r.ecol_invited_by,
     createdAt: r.ecol_created_at,
-    userName: r.u_name || null,
+    userName: r.u_name || r.u_fname ? `${r.u_fname || ''} ${r.u_lname || ''}`.trim() : null,
     userEmail: r.u_email || null,
   };
 }
@@ -47,7 +47,7 @@ async function inviteCollaborator(eventId, ownerEmail, targetEmail, role) {
     [eventId, targetId, role || 'viewer', ownerId],
   );
   const [rows] = await pool.query(
-    `SELECT ec.*, u.u_name, u.u_email FROM event_collaborator ec
+    `SELECT ec.*, CONCAT(u.u_fname, ' ', u.u_lname) AS u_name, u.u_fname, u.u_lname, u.u_email FROM event_collaborator ec
      JOIN user u ON u.iduser = ec.ecol_user_id WHERE ec.id = ?`,
     [result.insertId],
   );
@@ -75,7 +75,7 @@ async function getCollaborators(eventId, email) {
     }
   }
   const [rows] = await pool.query(
-    `SELECT ec.*, u.u_name, u.u_email FROM event_collaborator ec
+    `SELECT ec.*, CONCAT(u.u_fname, ' ', u.u_lname) AS u_name, u.u_fname, u.u_lname, u.u_email FROM event_collaborator ec
      JOIN user u ON u.iduser = ec.ecol_user_id
      WHERE ec.ecol_event_id = ? ORDER BY ec.ecol_created_at ASC`,
     [eventId],
@@ -96,7 +96,7 @@ async function updateCollaboratorStatus(eventId, email, collabId, status) {
     const err = new Error('Collaborator not found'); err.statusCode = 404; err.code = 'NOT_FOUND'; throw err;
   }
   const [rows] = await pool.query(
-    `SELECT ec.*, u.u_name, u.u_email FROM event_collaborator ec
+    `SELECT ec.*, CONCAT(u.u_fname, ' ', u.u_lname) AS u_name, u.u_fname, u.u_lname, u.u_email FROM event_collaborator ec
      JOIN user u ON u.iduser = ec.ecol_user_id WHERE ec.id = ?`,
     [collabId],
   );

@@ -13,18 +13,25 @@ test.describe('Landing Page — sections & content', () => {
     await expect(logo).toBeVisible();
   });
 
-  test('displays top bar with "Plan your perfect event" text', async ({ page }) => {
-    await expect(page.getByText(LANDING_CONTENT.topBarText)).toBeVisible();
+  test('displays Login and Get Started buttons in header', async ({ page }) => {
+    test.skip(page.viewportSize()!.width < 900, 'Header buttons only visible on desktop');
+    await expect(page.getByText('Login').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Get Started').first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test('displays Account link in top bar', async ({ page }) => {
-    // The top bar renders an "Account" link that triggers the login flow
-    await expect(page.getByText('Account').first()).toBeVisible({ timeout: 15_000 });
+  test('displays Account or Login action in header', async ({ page }) => {
+    // Desktop shows Login/Get Started, mobile shows hamburger menu
+    const hasLogin = await page.getByText('Login').first()
+      .isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasHamburger = await page.locator('[aria-label="Open menu"]').first()
+      .isVisible({ timeout: 5_000 }).catch(() => false);
+
+    expect(hasLogin || hasHamburger).toBeTruthy();
   });
 
   test('displays search bar with placeholder', async ({ page }) => {
-    const searchInput = page.locator('input[placeholder="Search events, services..."]');
-    await expect(searchInput).toBeVisible();
+    const searchInput = page.locator(`input[placeholder="${LANDING_CONTENT.searchPlaceholder}"]`);
+    await expect(searchInput).toBeVisible({ timeout: 15_000 });
   });
 
   test('renders hero section', async ({ page }) => {

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SkeletonCard } from '../../components/ui';
 import { User as UserModel } from '../../models/User';
 import { getApiBaseUrl } from '../../services/api';
+import { auth } from '../../services/firebase';
 import { AppLayout } from '../../components/layout';
 import { semantic } from '../../theme';
 import { useBreakpoints } from '../../hooks/useBreakpoints';
@@ -47,11 +48,17 @@ export const AnalyticsView: React.FC<AdminAnalyticsProps> = ({ user, onNavigate,
   const loadAnalytics = async () => {
     try {
       setLoading(true);
-      const resp = await fetch(`${getApiBaseUrl()}/api/admin/analytics`);
+      const headers: Record<string, string> = {};
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try { headers['Authorization'] = `Bearer ${await currentUser.getIdToken()}`; } catch { /* token fetch failed, continue without auth */ }
+      }
+      const resp = await fetch(`${getApiBaseUrl()}/api/admin/analytics`, { headers });
       if (resp.ok) {
         const data = await resp.json();
-        if (data.ok && data.analytics) {
-          setAnalytics(data.analytics);
+        const analytics = data.data?.analytics ?? data.analytics;
+        if (data.ok && analytics) {
+          setAnalytics(analytics);
         }
       }
     } catch (error) {

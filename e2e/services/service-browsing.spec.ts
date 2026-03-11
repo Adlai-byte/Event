@@ -68,7 +68,7 @@ test.describe('Service browsing on landing page', () => {
   });
 
   test('search input submits and updates display', async ({ page }) => {
-    const searchInput = page.locator('input[placeholder="Search events, services..."]');
+    const searchInput = page.locator('input[placeholder="Search venues, photographers, catering..."]');
     await searchInput.fill('photography');
     await searchInput.press('Enter');
     // Search should trigger API call — wait for response
